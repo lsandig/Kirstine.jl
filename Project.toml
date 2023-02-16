@@ -1,0 +1,8 @@
+name = "Kirstine"
+uuid = "e1105e74-6c7c-40f2-a29d-e017ea2ab17b"
+authors = ["Ludger Sandig <ludger.sandig@udo.edu>"]
+version = "0.0.1"
+
+[deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
