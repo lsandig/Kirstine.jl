@@ -1,13 +1,23 @@
 module Kirstine
 
-using LinearAlgebra: diagind, norm
+using LinearAlgebra: diagind, norm, BLAS.syrk!, LAPACK.potrf!, LAPACK.potri!
 using Random: rand
 
-export DesignMeasure,
+export Covariate,
+    CovariateParameterization,
+    DOptimality,
+    DesignMeasure,
     DesignSpace,
+    DiscretePrior,
+    Identity,
+    NonlinearRegression,
+    PriorGuess,
+    PriorSample,
     apportion,
+    gateauxderivative,
     grid_design,
     mixture,
+    objective,
     random_design,
     simplify,
     simplify_drop,
@@ -20,5 +30,7 @@ export DesignMeasure,
 
 include("types.jl")
 include("designmeasure.jl")
+include("design-common.jl")
+include("design-doptimal.jl")
 
 end
