@@ -12,10 +12,12 @@
         cs = [Dose(0) for _ in 1:K]
         return cs
     end
-    function Kirstine.update_model_covariate!(c::Dose,
-                                              cp::CopyDose,
-                                              dp::AbstractVector{<:Real},
-                                              m::EmaxModel)
+    function Kirstine.update_model_covariate!(
+        c::Dose,
+        cp::CopyDose,
+        dp::AbstractVector{<:Real},
+        m::EmaxModel,
+    )
         c.dose = dp[1]
         return c
     end
@@ -24,7 +26,7 @@
         x = c.dose
         jm[1, 1] = 1.0
         jm[1, 2] = x / (x + p.ec50)
-        jm[1, 3] = - p.emax * x / (x + p.ec50)^2
+        jm[1, 3] = -p.emax * x / (x + p.ec50)^2
         return jm
     end
 
@@ -56,10 +58,14 @@
         # sol is optimal for pk1
         sol = uniform_design([[a], [x_star], [b]]),
         # not_sol is not optimal for any of pk1, pk2, pk3
-        not_sol = DesignMeasure([0.2, 0.3, 0.5], [[a + 0.1 * (b-a)], [x_star * 1.1], [a + (0.9 * (b-a))]]),
+        not_sol = DesignMeasure(
+            [0.2, 0.3, 0.5],
+            [[a + 0.1 * (b - a)], [x_star * 1.1], [a + (0.9 * (b - a))]],
+        ),
         to_dirac(d) = map(singleton_design, support(d)),
         gd(g, s, pk) = gateauxderivative(dc, to_dirac(g), s, m, cp, pk, trafo),
-        ob(d, pk) = objective(dc, d, m, cp, pk, trafo);
+        ob(d, pk) = objective(dc, d, m, cp, pk, trafo)
+
         @test all(abs.(gd(sol, sol, pk1)) .<= sqrt(eps()))
         @test all(abs.(gd(not_sol, sol, pk1)) .> 0.01)
         @test all(abs.(gd(not_sol, not_sol, pk2)) .> 0.1)
