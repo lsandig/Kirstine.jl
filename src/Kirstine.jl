@@ -1,7 +1,7 @@
 module Kirstine
 
 using LinearAlgebra: diagind, norm, BLAS.syrk!, LAPACK.potrf!, LAPACK.potri!
-using Random: rand
+using Random: rand, rand!
 
 export Covariate,
     CovariateParameterization,
@@ -13,6 +13,7 @@ export Covariate,
     NonlinearRegression,
     PriorGuess,
     PriorSample,
+    Pso,
     apportion,
     gateauxderivative,
     grid_design,
@@ -30,6 +31,8 @@ export Covariate,
 
 include("types.jl")
 include("designmeasure.jl")
+include("optimize.jl")
+include("pso.jl")
 include("design-common.jl")
 include("design-doptimal.jl")
 

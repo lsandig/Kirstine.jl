@@ -140,7 +140,15 @@ struct DOptimality <: DesignCriterion end
 
 abstract type AbstractPoint end
 abstract type Optimizer end
-abstract type OptimizerState end
+abstract type OptimizerState{T<:AbstractPoint} end
+
+struct OptimizationResult{T<:AbstractPoint,S<:OptimizerState{T}}
+    maximizer::T
+    maximum::Float64
+    trace_x::Vector{T}
+    trace_fx::Vector{Float64}
+    trace_state::Vector{S}
+end
 
 """
     DesignMeasure
