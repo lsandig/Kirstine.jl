@@ -139,6 +139,54 @@ end
 # === utility functions === #
 
 """
+    sort_designpoints(d::DesignMeasure; rev::Bool = false)
+
+Return a representation of `d` where the design points are sorted lexicographically.
+
+See also [`sort_weights`](@ref).
+
+# Example
+
+```jldoctest
+julia> sort_designpoints(uniform_design([[3, 4], [2, 1], [1, 1], [2, 3]]))
+DesignMeasure([0.25, 0.25, 0.25, 0.25], [[1.0, 1.0], [2.0, 1.0], [2.0, 3.0], [3.0, 4.0]])
+```
+"""
+function sort_designpoints(d::DesignMeasure; rev::Bool = false)
+    # note: no (deep)copies needed because indexing with `p` generates a copy
+    dp = d.designpoint
+    w = d.weight
+    for i in length(dp[1]):-1:1
+        p = sortperm(map(x -> x[i], dp); rev = rev)
+        dp = dp[p]
+        w = w[p]
+    end
+    return DesignMeasure(w, dp)
+end
+
+"""
+    sort_weights(d::DesignMeasure; rev::Bool = false)
+
+Return a representation of `d` where the design points are sorted by their
+corresponding weights.
+
+See also [`sort_designpoints`](@ref).
+
+# Example
+
+```@jldoctest
+julia> sort_weights(DesignMeasure([0.5, 0.2, 0.3], [[1], [2], [3]]))
+DesignMeasure([0.2, 0.3, 0.5], [[2.0], [3.0], [1.0]])
+```
+"""
+function sort_weights(d::DesignMeasure; rev::Bool = false)
+    p = sortperm(d.weight; rev = rev)
+    w = d.weight[p]
+    dp = d.designpoint[p]
+    return DesignMeasure(w, dp)
+end
+
+"""
     mixture(alpha, d1::DesignMeasure, d2::DesignMeasure)
 
 Return the mixture ``α d_1 + (1-α) d_2``,
@@ -301,4 +349,168 @@ function simplify_merge(d::DesignMeasure, ds::DesignSpace, mindist::Real)
     # scale back
     dps = [(dp .* width) .+ lowerbound(ds) for dp in dps]
     return DesignMeasure(ws, dps)
+end
+
+# == abstract point methods == #
+
+function randomize!(
+    d::DesignMeasure,
+    (ds, fixw, fixp)::Tuple{DesignSpace{N},Vector{Bool},Vector{Bool}},
+) where N
+    K = length(d.weight)
+    scl = ds.upperbound .- ds.lowerbound
+    for k in 1:K
+        if !fixp[k]
+            rand!(d.designpoint[k])
+            d.designpoint[k] .*= scl
+            d.designpoint[k] .+= ds.lowerbound
+        end
+        if !fixw[k]
+            d.weight[k] = rand()
+        end
+    end
+    d.weight ./= sum(d.weight)
+    return d
+end
+
+function difference!(v::AbstractVector{<:Real}, p::DesignMeasure, q::DesignMeasure)
+    # v layout: concatenate the designpoints, then the first K-1 weights
+    K = length(p.weight)
+    weight_shift = K * length(p.designpoint[1])
+    i = 1
+    flat_dp_p = Iterators.flatten(p.designpoint)
+    flat_dp_q = Iterators.flatten(q.designpoint)
+    for (x, y) in Iterators.zip(flat_dp_p, flat_dp_q)
+        v[i] = x - y
+        i += 1
+    end
+    for k in 1:(K - 1)
+        v[k + weight_shift] = p.weight[k] - q.weight[k]
+    end
+    return v
+end
+
+function flat_length(p::DesignMeasure)
+    return length(p.weight) * (length(p.designpoint[1]) + 1) - 1
+end
+
+function copy!(to::DesignMeasure, from::DesignMeasure)
+    to.weight .= from.weight
+    for k in 1:length(from.designpoint)
+        to.designpoint[k] .= from.designpoint[k]
+    end
+    return to
+end
+
+function move!(
+    p::DesignMeasure,
+    v::AbstractVector{<:Real},
+    (ds, fixw, fixp)::Tuple{DesignSpace{N},Vector{Bool},Vector{Bool}},
+) where N
+    K = length(p.designpoint) # number of design points
+    D = length(p.designpoint[1]) # dimension of the design space
+    weight_shift = K * D # weight offset into displacement vector
+    # ignore velocity components in directions that correspond to fixed weights or points
+    move_handle_fixed!(v, fixw, fixp, K, weight_shift, D)
+    # handle intersections: find maximal 0<=t<=1 such that p+tv remains in the search volume
+    t = move_how_far(p, v, ds, K, weight_shift, D)
+    if t < 0
+        @warn "t=$t means point was already outside search volume" p
+    end
+    # Then, set p to p + tv
+    move_add_v!(p, t, v, K, weight_shift, D)
+    # Stop the particle if the boundary was hit.
+    if t != 1.0
+        v .= 0.0
+    end
+    return p
+end
+
+function move_handle_fixed!(v, fixw, fixp, K, weight_shift, D)
+    # v layout: concatenate the designpoints, then the first K-1 weights
+    for k in 1:(K - 1)
+        if fixw[k]
+            v[weight_shift + k] = 0.0
+        end
+    end
+    for k in 1:K
+        if fixp[k]
+            for j in 1:D
+                flatindex = (k - 1) * D + j
+                v[flatindex] = 0.0
+            end
+        end
+    end
+    return v
+end
+
+function move_how_far(p, v, ds, K, weight_shift, D)
+    # v layout: concatenate the designpoints, then the first K-1 weights.
+    t = 1.0
+    # box constraints
+    for k in 1:K
+        for j in 1:D
+            # design point k element j is flattend to index (k-1)*D+j,
+            # where D is the length of a single designpoint
+            flatindex = (k - 1) * D + j
+            t = how_far_left(p.designpoint[k][j], t, v[flatindex], ds.lowerbound[j])
+            t = how_far_right(p.designpoint[k][j], t, v[flatindex], ds.upperbound[j])
+        end
+    end
+    # simplex constraints
+    for k in 1:(K - 1)
+        t = how_far_left(p.weight[k], t, v[weight_shift + k], 0.0)
+    end
+    sum_x = 1.0 - p.weight[end]
+    sum_v = @views sum(v[(weight_shift + 1):end])
+    t = how_far_simplexdiag(sum_x, t, sum_v)
+    return t
+end
+
+# How far can we go from x in the direction of x + tv, without landing right of ub?
+# if x + tv <= ub, return `t`; else return `s` such that x + sv == ub
+function how_far_right(x, t, v, ub)
+    return x + t * v > ub ? (ub - x) / v : t
+end
+
+# How far can we go from x in the direction of x + tv, without landig left of lb?
+# if x + tv >= lb, return `t`; else return `s` such that x + sv == lb
+function how_far_left(x, t, v, lb)
+    return x + t * v < lb ? (lb - x) / v : t
+end
+
+# How far can we go from x in the direction of x + tv, without crossing the
+# diagonal face of the simplex?
+# Note that the simplex here is {(x_1,...,x_{K-1}) : 0 <= x_k, sum_{k=1}{K-1} x_k <= 1}.
+# if sum_x + t * sum_v <= 1, return `t`; else return `s` such that sum_x + s*sum_v == 1
+function how_far_simplexdiag(sum_x, t, sum_v)
+    return sum_x + t * sum_v > one(sum_x) ? (one(sum_x) - sum_x) / sum_v : t
+end
+
+function move_add_v!(p, t, v, K, weight_shift, D)
+    # first for the design points ...
+    i = 1 # index to flattened structure
+    for dp in p.designpoint
+        for j in 1:D
+            dp[j] += t * v[i]
+            i += 1
+        end
+    end
+    # ... then for the weights.
+    cum_sum = 0.0
+    for k in 1:(K - 1)
+        p.weight[k] += t * v[weight_shift + k]
+        # note: initializing p.weight[end] with 1.0 and subtracting the k-th
+        # weight from it leads to a larger undershoot below 0.0 than adding up
+        # the weights and then subtracting the sum.
+        cum_sum += p.weight[k]
+    end
+    if 1.0 < cum_sum
+        if cum_sum <= 1.0 + 2.0 * eps()
+            cum_sum = 1.0
+        else
+            @warn "cum_sum larger than 1+2*eps(): " cum_sum
+        end
+    end
+    p.weight[end] = 1.0 - cum_sum
 end

@@ -139,9 +139,35 @@ nonlinear response models](https://doi.org/10.1201/b15054).
 struct DOptimality <: DesignCriterion end
 
 abstract type AbstractPoint end
+
+"""
+    Optimizer
+
+Abstract supertype for particle-based optimization algorithms.
+
+See also [`Pso`](@ref).
+"""
 abstract type Optimizer end
 abstract type OptimizerState{T<:AbstractPoint} end
 
+"""
+    OptimizationResult
+
+Wraps results of particle-based optimization.
+
+# Fields
+
+  - `maximizer`: final maximizer
+  - `maximum`: final objective value
+  - `trace_x`: vector of current maximizer in each iteration
+  - `trace_fx`: vector of current objective value in each iteration
+  - `trace_state`: vector of internal optimizer states
+
+Note that `trace_state` may only contain the initial state, if saving all
+states was not requested explicitly.
+
+See also [`optimize_design`](@ref).
+"""
 struct OptimizationResult{T<:AbstractPoint,S<:OptimizerState{T}}
     maximizer::T
     maximum::Float64

@@ -71,4 +71,22 @@
         @test all(s.weight .== ref.weight)
         @test all(s.designpoint .== ref.designpoint)
     end
+
+    # sorting
+    let d = DesignMeasure([0.4, 0.2, 0.3, 0.1], [[3, 4], [2, 1], [1, 1], [2, 3]]),
+        refp = DesignMeasure([0.3, 0.2, 0.1, 0.4], [[1, 1], [2, 1], [2, 3], [3, 4]]),
+        refw = DesignMeasure([0.1, 0.2, 0.3, 0.4], [[2, 3], [2, 1], [1, 1], [3, 4]])
+
+        @test !(sort_designpoints(d) === d)
+        @test sort_designpoints(d).weight == refp.weight
+        @test sort_designpoints(d).designpoint == refp.designpoint
+        @test sort_designpoints(d; rev = true).weight == reverse(refp.weight)
+        @test sort_designpoints(d; rev = true).designpoint == reverse(refp.designpoint)
+
+        @test !(sort_weights(d) === d)
+        @test sort_weights(d).weight == refw.weight
+        @test sort_weights(d).designpoint == refw.designpoint
+        @test sort_weights(d; rev = true).weight == reverse(refw.weight)
+        @test sort_weights(d; rev = true).designpoint == reverse(refw.designpoint)
+    end
 end

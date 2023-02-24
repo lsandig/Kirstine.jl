@@ -13,6 +13,65 @@ function update_model_covariate! end
 # m -> Real or m -> AbstractMatrix
 function invcov end
 
+# == main interface == #
+
+"""
+    optimize_design(optimizer::Optimizer,
+                    dc::DesignCriterion,
+                    ds::DesignSpace,
+                    m::NonlinearRegression,
+                    cp::CovariateParameterization,
+                    pk::PriorKnowledge,
+                    trafo::Transformation;
+                    candidate::DesignMeasure = random_design(parameter_dimension(pk), ds),
+                    fixedweights = Int64[],
+                    fixedpoints = Int64[],
+                    trace_state = false)
+
+Find an optimal experimental design for the nonlinear regression model `m`.
+
+One particle of the [`Optimizer`](@ref) is initialized at `candidate`, the
+remaining ones are randomized. Any weight or design point corresponding to an
+index given in `fixedweights` or `fixedpoints` is not randomized and is kept
+fixed during optimization. This can speed up computation if some weights or
+points are known analytically.
+
+Returns an [`OptimizationResult`](@ref). If `trace_state=true`, the full state
+of the algorithm is saved for every iteration, which can be useful for
+debugging.
+"""
+function optimize_design(
+    optimizer::Optimizer,
+    dc::DesignCriterion,
+    ds::DesignSpace,
+    m::NonlinearRegression,
+    cp::CovariateParameterization,
+    pk::PriorKnowledge,
+    trafo::Transformation;
+    candidate::DesignMeasure = random_design(parameter_dimension(pk), ds),
+    fixedweights = Int64[],
+    fixedpoints = Int64[],
+    trace_state = false,
+)
+    pardim = parameter_dimension(pk)
+    nim = zeros(pardim, pardim)
+    jm = zeros(unit_length(m), pardim)
+    c = allocate_initialize_covariates(candidate, m, cp)
+    f = d -> objective!(nim, jm, c, dc, d, m, cp, pk, trafo)
+    # transform index lists into Bool vectors
+    K = length(c)
+    if any(fixedweights .< 1) || any(fixedweights .> K)
+        error("indices for fixed weights must be between 1 and $K")
+    end
+    if any(fixedpoints .< 1) || any(fixedpoints .> K)
+        error("indices for fixed points must be between 1 and $K")
+    end
+    fixw = [k in fixedweights for k in 1:K]
+    fixp = [k in fixedpoints for k in 1:K]
+    constraints = (ds, fixw, fixp)
+    return optimize(optimizer, f, [candidate], constraints; trace_state = trace_state)
+end
+
 # == various helper functions == #
 
 function parameter_dimension(pk::PriorSample)
