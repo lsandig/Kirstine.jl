@@ -241,7 +241,7 @@ end
 
 """
     simplify(designmeasure, designspace, model, covariateparameterization;
-             minweight = 1e-4, mindist = 1e-3, moreargs...)
+             minweight = 1e-4, mindist = 0, moreargs...)
 
 Convenience wrapper that calls [`simplify_drop`](@ref), [`simplify_unique`](@ref), and
 [`simplify_merge`](@ref).
@@ -252,7 +252,7 @@ function simplify(
     m::Model,
     cp::CovariateParameterization;
     minweight = 1e-4,
-    mindist = 1e-3,
+    mindist = 0,
     moreargs...,
 )
     d = simplify_drop(d, minweight)
@@ -309,13 +309,13 @@ end
 """
     simplify_merge(designmeasure, designspace, mindist)
 
-Merge designpoints that are less than `mindist` apart (relatively).
+Merge designpoints with a normalized distance of at most `mindist`.
 
 The design points are first transformed into unit (hyper)cube.
 The argument `mindist` is intepreted relative to this unit cube,
 i.e. only `0 < mindist < sqrt(N)` make sense for a designspace of dimension `N`.
 
-The following two steps are repeated until all points are at least `mindist` apart:
+The following two steps are repeated until all points are more than `mindist` apart:
 
  1. All pairwise euclidean distances are calculated.
  2. The two points closest to each other are averaged with their relative weights
@@ -331,14 +331,14 @@ function simplify_merge(d::DesignMeasure, ds::DesignSpace, mindist::Real)
     dps = [(dp .- lowerbound(ds)) ./ width for dp in designpoints(d)]
     ws = deepcopy(weights(d))
     cur_min_dist = 0
-    while cur_min_dist < mindist
+    while cur_min_dist <= mindist
         # compute pairwise L2-distances, merge the two designpoints nearest to each other
         dist = map(p -> norm(p[1] .- p[2]), Iterators.product(dps, dps))
         dist[diagind(dist)] .= Inf
         cur_min_dist, idx = findmin(dist) # i > j because rows vary fastest
         i = idx[1]
         j = idx[2]
-        if cur_min_dist < mindist
+        if cur_min_dist <= mindist
             w_new = ws[i] + ws[j]
             dp_new = (ws[i] .* dps[i] .+ ws[j] .* dps[j]) ./ w_new
             to_keep = (1:length(dps) .!= i) .&& (1:length(dps) .!= j)
