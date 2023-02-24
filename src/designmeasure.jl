@@ -418,7 +418,7 @@ function move!(
         @warn "t=$t means point was already outside search volume" p
     end
     # Then, set p to p + tv
-    move_add_v!(p, t, v, K, weight_shift, D)
+    move_add_v!(p, t, v, ds, K, weight_shift, D)
     # Stop the particle if the boundary was hit.
     if t != 1.0
         v .= 0.0
@@ -487,30 +487,41 @@ function how_far_simplexdiag(sum_x, t, sum_v)
     return sum_x + t * sum_v > one(sum_x) ? (one(sum_x) - sum_x) / sum_v : t
 end
 
-function move_add_v!(p, t, v, K, weight_shift, D)
+function move_add_v!(p, t, v, ds, K, weight_shift, D)
     # first for the design points ...
     i = 1 # index to flattened structure
     for dp in p.designpoint
         for j in 1:D
             dp[j] += t * v[i]
+            # Due to rounding errors, design points can be just slightly outside the design
+            # space. We fix this here.
+            if dp[j] > ds.upperbound[j]
+                dp[j] = ds.upperbound[j]
+            end
+            if dp[j] < ds.lowerbound[j]
+                dp[j] = ds.lowerbound[j]
+            end
             i += 1
         end
     end
     # ... then for the weights.
-    cum_sum = 0.0
+    p.weight[end] = 1.0
     for k in 1:(K - 1)
         p.weight[k] += t * v[weight_shift + k]
-        # note: initializing p.weight[end] with 1.0 and subtracting the k-th
-        # weight from it leads to a larger undershoot below 0.0 than adding up
-        # the weights and then subtracting the sum.
-        cum_sum += p.weight[k]
-    end
-    if 1.0 < cum_sum
-        if cum_sum <= 1.0 + 2.0 * eps()
-            cum_sum = 1.0
-        else
-            @warn "cum_sum larger than 1+2*eps(): " cum_sum
+        # Again due to rounding erros, a weight can become slightly negative. We need to fix
+        # this to prevent it snowballing later on.
+        if p.weight[k] < 0.0
+            p.weight[k] = 0.0
         end
+        if p.weight[k] > 1.0
+            @warn "weight would move past 1.0 by $(p.weight[k] - 1.0)"
+            p.weight[k] = 1.0
+        end
+        p.weight[end] -= p.weight[k]
     end
-    p.weight[end] = 1.0 - cum_sum
+    # Fix small rounding erros as above.
+    if p.weight[end] < 0.0
+        p.weight[end] = 0.0
+    end
+    return p
 end
