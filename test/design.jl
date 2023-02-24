@@ -129,4 +129,23 @@
         @test_throws "between 1 and 3" optim(fixedpoints = [-1])
         @test_throws "between 1 and 3" optim(fixedpoints = [5])
     end
+
+    # Does refinement work?
+    let dc = DOptimality(),
+        trafo = Identity(),
+        m = EmaxModel(1),
+        cp = CopyDose(),
+        p = (e0 = 1, emax = 10, ec50 = 5),
+        pk = PriorGuess(p),
+        ds = DesignSpace(:dose => (0, 10)),
+        sol = emax_solution(p, ds),
+        od = Pso(; iterations = 50, swarmsize = 100),
+        ow = Pso(; iterations = 50, swarmsize = 50),
+        _ = seed!(1234),
+        cand = uniform_design([[[5]]; support(sol)[[1, 3]]]),
+        r = refine_design(od, ow, 3, cand, dc, ds, m, cp, pk, trafo)
+
+        @test abs(support(r)[1][1] - support(sol)[2][1]) <
+              abs(support(cand)[1][1] - support(sol)[2][1])
+    end
 end

@@ -72,6 +72,87 @@ function optimize_design(
     return optimize(optimizer, f, [candidate], constraints; trace_state = trace_state)
 end
 
+"""
+    refine_design(od::Optimizer,
+                  ow::Optimizer,
+                  steps::Int64,
+                  candidate::DesignMeasure,
+                  dc::DesignCriterion,
+                  ds::DesignSpace,
+                  m::NonlinearRegression,
+                  cp::CovariateParameterization,
+                  pk::PriorKnowledge,
+                  trafo::Transformation;
+                  simpargs...,)
+
+Improve a `candidate` design by ascending its Gateaux derivative.
+
+This repeats the following `steps` times, starting with `r = candidate`:
+
+ 1. [`simplify`](@ref) the design `r`, passing along `simpargs`.
+ 2. Find the direction (Dirac measure) `d` of steepest
+    [`gateauxderivative`](@ref) at `r` using the [`Optimizer`](@ref) `od`.
+ 3. Re-calculcate optimal weights of a [`mixture`](@ref) of `r` and `d` for the
+    [`DesignCriterion`](@ref) objective using the optimizer `ow`.
+ 4. Set `r` to the result of step 3.
+
+Returns a [`DesignMeasure`](@ref).
+"""
+function refine_design(
+    od::Optimizer,
+    ow::Optimizer,
+    steps::Int64,
+    candidate::DesignMeasure,
+    dc::DesignCriterion,
+    ds::DesignSpace,
+    m::NonlinearRegression,
+    cp::CovariateParameterization,
+    pk::PriorKnowledge,
+    trafo::Transformation;
+    simpargs...,
+)
+    pardim = parameter_dimension(pk)
+    nim = zeros(pardim, pardim)
+    jm = zeros(unit_length(m), pardim)
+    c = allocate_initialize_covariates(singleton_design(candidate.designpoint[1]), m, cp)
+    constraints = (ds, [false], [false])
+
+    res = candidate
+    for i in 1:steps
+        res = simplify(res, ds, m, cp; simpargs...)
+        dir_cand = map(singleton_design, support(res))
+        inv_nim = inverse_information_matrices(res, m, cp, pk)
+        # find direction of steepest ascent
+        gd(d) = gateauxderivative!(nim, jm, dc, d, inv_nim, m, c, cp, pk, trafo)
+        or_gd = optimize(od, gd, dir_cand, constraints)
+        d = or_gd.maximizer
+        # append the new atom
+        K = length(res.weight)
+        if d.designpoint[1] in support(res)
+            # effectivly run the reweighting from the last round for some more iterations
+            res = mixture(0, d, res) # make sure new point is at index 1
+            res = simplify_merge(res, ds, 0)
+        else
+            K += 1
+            res = mixture(1 / K, d, res)
+        end
+        # optimize weights
+        or_w = optimize_design(
+            ow,
+            dc,
+            ds,
+            m,
+            cp,
+            pk,
+            trafo;
+            candidate = res,
+            fixedpoints = 1:K,
+        )
+        res = or_w.maximizer
+    end
+    return simplify(res, ds, m, cp; simpargs...)
+end
+
 # == various helper functions == #
 
 function parameter_dimension(pk::PriorSample)
