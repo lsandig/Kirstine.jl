@@ -14,28 +14,20 @@ support(d::DesignMeasure) = d.designpoint[d.weight .> 0.0]
 """
     designpoints(d::DesignMeasure)
 
-Return all designpoints, including those with zero weight.
-
-!!! note
-
-    The returned vector is a reference, assigning to its elements modifies `d`.
+Return a copy of all designpoints, including those with zero weight.
 
 See also: [`support`](@ref), [`weights`](@ref), [`simplify_drop`](@ref).
 """
-designpoints(d::DesignMeasure) = d.designpoint
+designpoints(d::DesignMeasure) = deepcopy(d.designpoint)
 
 """
     weights(d::DesignMeasure)
 
-Return a vector of design point weights.
-
-!!! note
-
-    The returned vector is a reference, assigning to its elements modifies `d`.
+Return a copy of the design point weights.
 
 See also: [`support`](@ref), [`designpoints`](@ref), [`simplify_drop`](@ref).
 """
-weights(d::DesignMeasure) = d.weight
+weights(d::DesignMeasure) = copy(d.weight)
 
 """
     lowerbound(designspace)
@@ -195,14 +187,14 @@ i.e. the convex combination of `d1` and `d2`.
 The result is not simplified, hence its design points may not be unique.
 """
 function mixture(alpha::Real, d1::DesignMeasure, d2::DesignMeasure)
-    if length(designpoints(d1)[1]) != length(designpoints(d2)[1])
+    if length(d1.designpoint[1]) != length(d2.designpoint[1])
         error("design points must have identical lengths")
     end
     if alpha < 0 || alpha > 1
         error("mixture weight must be between 0 and 1")
     end
     w = vcat(alpha .* weights(d1), (1 - alpha) .* weights(d2))
-    dp = vcat(deepcopy(designpoints(d1)), deepcopy(designpoints(d2)))
+    dp = vcat(designpoints(d1), designpoints(d2))
     return DesignMeasure(w, dp)
 end
 
@@ -270,12 +262,12 @@ Construct a new `DesignMeasure` where all design points with weights smaller tha
 The vector of remaining weights is re-normalized.
 """
 function simplify_drop(d::DesignMeasure, minweight::Real)
-    if length(weights(d)) == 1 # nothing to do for one-point-designs
+    if length(d.weight) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
-    enough_weight = weights(d) .> minweight
-    dps = designpoints(d)[enough_weight]
-    ws = weights(d)[enough_weight]
+    enough_weight = d.weight .> minweight
+    dps = d.designpoint[enough_weight]
+    ws = d.weight[enough_weight]
     ws ./= sum(ws)
     return DesignMeasure(ws, dps)
 end
@@ -323,13 +315,13 @@ The following two steps are repeated until all points are more than `mindist` ap
 Finally the design points are scaled back into the original design space.
 """
 function simplify_merge(d::DesignMeasure, ds::DesignSpace, mindist::Real)
-    if length(weights(d)) == 1 # nothing to do for one-point-designs
+    if length(d.weight) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
     # scale design space into unit cube
     width = collect(upperbound(ds) .- lowerbound(ds))
-    dps = [(dp .- lowerbound(ds)) ./ width for dp in designpoints(d)]
-    ws = deepcopy(weights(d))
+    dps = [(dp .- lowerbound(ds)) ./ width for dp in d.designpoint]
+    ws = weights(d)
     cur_min_dist = 0
     while cur_min_dist <= mindist
         # compute pairwise L2-distances, merge the two designpoints nearest to each other
