@@ -94,9 +94,9 @@ end
 Abstract supertype of posterior transformations.
 
 Consider the regression model
-``y_i | \theta \sim \mathrm{Normal}(\mu(\theta, x_i), \sigma^2)``
+``y_i \mid \theta \sim \mathrm{Normal}(\mu(\theta, x), \sigma^2)``
 with ``\theta\in\Theta\subset\mathbb{R}^q``.
-A `Transformation` representing the function ``T: \Theta\to\mathbb{R}^s``
+A `Transformation` represents the function ``T: \Theta\to\mathbb{R}^s``
 when we want to maximize a [`DesignCriterion`](@ref) for the posterior distribution of
 ``T(\theta) \mid y``.
 """
@@ -123,18 +123,20 @@ abstract type DesignCriterion end
 
 Criterion for (Bayesian or locally) D-optimal experimental design.
 
-For the normalized information matrix
-``\mathrm{M}(\xi, \theta)``
-corresponding to design measure ``\xi``
-and an [`Identity`](@ref) transformation for ``\theta``
-this is
-``\int_{\Theta} \log\det \mathrm{M}(\xi, \theta)\,\mathrm{d}\theta``,
-or
-``\log\det \mathrm{M}``,
-respectively.
+Denote the normalized information matrix for a design measure ``\xi`` by ``\mathrm{M}(\xi,
+\theta)``. Assume for simplicity we are interested in the whole parameter ``\theta``, ie.
+the [`Transformation`](@ref) is [`Identity`](@ref) transformation. Then the objective
+function for Bayesian D-optimal design is
 
-See p.69 in Fedorov, V. V., & Leonov, S. L. (2013). [Optimal design for
-nonlinear response models](https://doi.org/10.1201/b15054).
+``\xi \mapsto \int_{\Theta} \log\det \mathrm{M}(\xi, \theta)\,\mathrm{d}\theta``
+
+and for locally D-optimal design it is
+
+``\xi \mapsto \log\det \mathrm{M}(\xi, \theta_0)``
+
+For details see p. 69 in Fedorov/Leonov [^FL13].
+
+[^FL13]: Valerii V. Fedorov and Sergei L. Leonov, "Optimal design for nonlinear response models", CRC Press, 2013. [doi:10.1201/b15054](https://doi.org/10.1201/b15054)
 """
 struct DOptimality <: DesignCriterion end
 
@@ -182,8 +184,7 @@ end
 A discrete probability measure with finite support
 representing a continuous experimental design.
 
-See p.62 in Fedorov, V. V., & Leonov, S. L. (2013). [Optimal design for
-nonlinear response models](https://doi.org/10.1201/b15054).
+For details see p.62 in Fedorov/Leonov [^FL13].
 """
 struct DesignMeasure <: AbstractPoint
     "the weights of the individual design points"
@@ -196,7 +197,7 @@ struct DesignMeasure <: AbstractPoint
     Construct a design measure with the given weights and a vector of design
     points.
 
-    ## Examples
+    # Examples
     ```jldoctest
     julia> DesignMeasure([0.5, 0.2, 0.3], [[1, 2], [3, 4], [5, 6]])
     DesignMeasure([0.5, 0.2, 0.3], [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
@@ -233,7 +234,7 @@ struct DesignSpace{N}
     Construct a design space with the given dimension names (supplied as
     symbols) and lower / upper bounds.
 
-    ## Examples
+    # Examples
     ```jldoctest
     julia> DesignSpace([:dose, :time], [0, 0], [300, 20])
     DesignSpace{2}((:dose, :time), (0.0, 0.0), (300.0, 20.0))

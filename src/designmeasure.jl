@@ -115,7 +115,7 @@ end
 Convenience constructor that takes pairs of a `Symbol` name and a `Tuple` or 2-element
 `Vector` for bounds.
 
-## Examples
+# Examples
 
 ```jldoctest
 julia> DesignSpace(:dose => (0, 300), :time => (0, 20))
@@ -138,7 +138,7 @@ Return a representation of `d` where the design points are sorted lexicographica
 
 See also [`sort_weights`](@ref).
 
-# Example
+# Examples
 
 ```jldoctest
 julia> sort_designpoints(uniform_design([[3, 4], [2, 1], [1, 1], [2, 3]]))
@@ -165,7 +165,7 @@ corresponding weights.
 
 See also [`sort_designpoints`](@ref).
 
-# Example
+# Examples
 
 ```jldoctest
 julia> sort_weights(DesignMeasure([0.5, 0.2, 0.3], [[1], [2], [3]]))
@@ -182,7 +182,7 @@ end
 """
     mixture(alpha, d1::DesignMeasure, d2::DesignMeasure)
 
-Return the mixture ``α d_1 + (1-α) d_2``,
+Return the mixture ``\alpha d_1 + (1-\alpha) d_2``,
 i.e. the convex combination of `d1` and `d2`.
 
 The result is not simplified, hence its design points may not be unique.
@@ -205,8 +205,9 @@ end
 For a vector of `weights`, find an integer vector `a` with `sum(a) == n`
 such that `a ./ n` best approximates `w`.
 
-This is the _efficient design apportionment procedure_ from p. 309 in Pukelsheim, F. (2006).
-[Optimal design of experiments](https://doi.org/10.1137/1.9780898719109)
+This is the _efficient design apportionment procedure_ from p. 309 in Pukelsheim [^P06].
+
+[^P06]: Friedrich Pukelsheim, "Optimal design of experiments", Wiley, 2006. [doi:10.1137/1.9780898719109](https://doi.org/10.1137/1.9780898719109)
 """
 function apportion(weights::AbstractVector{<:Real}, n::Integer)
     l = length(weights)

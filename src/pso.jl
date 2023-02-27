@@ -16,14 +16,10 @@ Constricted particle swarm optimizer.
 movement towards the global best. In this implementation, a particle's
 neighborhood is the whole swarm.
 
-## References
+There are a huge number of PSO variants published, this one was taken from two [^CK02] publications [^ES00].
 
-  - Clerc, M., and Kennedy, J. (2002).
-    [The particle swarm - explosion, stability, and convergence in a multidimensional complex space](http://dx.doi.org/10.1109/4235.985692).
-    IEEE Transactions on Evolutionary Computation, 6(1), 58–73.
-  - Eberhardt, R.C. and Shi, Y. (2000).
-    [Comparing inertia weights and constriction factors in particle swarm optimization](https://doi.org/10.1109/CEC.2000.870279).
-    Proceedings of the 2000 Congress on Evolutionary Computation
+[^CK02]: M. Clerc and J. Kennedy, "The particle swarm - explosion, stability, and convergence in a multidimensional complex space", IEEE Transactions on Evolutionary Computation, 6(1), 2002, 58–73. [doi:10.1109/4235.985692](http://dx.doi.org/10.1109/4235.985692)
+[^ES00]: R.C. Eberhardt and Y. Shi, "Comparing inertia weights and constriction factors in particle swarm optimization", Proceedings of the 2000 Congress on Evolutionary Computation, 2000. [doi: 10.1109/CEC.2000.870279](https://doi.org/10.1109/CEC.2000.870279)
 """
 struct Pso <: Optimizer
     iterations::Int64
