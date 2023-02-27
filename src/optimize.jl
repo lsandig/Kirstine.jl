@@ -7,12 +7,12 @@ function optimize(
     constraints;
     trace_state = false,
 )
-    state = optimizer_state(optimizer, candidates, f, constraints)
+    state = optimizer_state(f, optimizer, candidates, constraints)
     t_x = [deepcopy(maximizer(state))]
     t_fx = [maximum(state)]
     t_state = [deepcopy(state)]
     for i in 1:iterations(optimizer)
-        tick!(state, optimizer, f, constraints)
+        tick!(f, state, optimizer, constraints)
         push!(t_x, deepcopy(maximizer(state)))
         push!(t_fx, maximum(state))
         if trace_state

@@ -68,9 +68,9 @@ maximizer(state::PsoState) = state.g
 maximum(state::PsoState) = state.fg
 
 function optimizer_state(
+    f,
     o::Pso,
     candidates::AbstractVector{<:AbstractPoint},
-    f,
     constraints,
 )
     if o.swarmsize < length(candidates)
@@ -95,19 +95,19 @@ function optimizer_state(
     diffg = zeros(velocity_length)
     diffp = zeros(velocity_length)
     state = PsoState(x, p, g, v, fx, fp, fg, r1, r2, diffg, diffp)
-    pso_evaluate_objective!(state, f)
+    pso_evaluate_objective!(f, state)
     state.fp .= -Inf # make sure these get updated
     state.fg = -Inf
     pso_update_best!(state)
     return state
 end
 
-function tick!(state::PsoState, optimizer::Pso, f, constraints)
+function tick!(f, state::PsoState, optimizer::Pso, constraints)
     phi = optimizer.c1 + optimizer.c2
     chi = 2 / abs(2 - phi - sqrt(phi^2 - 4 * phi))
     pso_update_velocity!(state, optimizer.c1, optimizer.c2, chi)
     pso_update_position!(state, constraints)
-    pso_evaluate_objective!(state, f)
+    pso_evaluate_objective!(f, state)
     pso_update_best!(state)
     return state
 end
@@ -124,18 +124,21 @@ function pso_update_velocity!(state::PsoState, c1, c2, chi)
     end
     return state
 end
+
 function pso_update_position!(state::PsoState, constraints)
     for i in 1:length(state.x)
         move!(state.x[i], state.v[i], constraints)
     end
     return state
 end
-function pso_evaluate_objective!(state::PsoState, f)
+
+function pso_evaluate_objective!(f, state::PsoState)
     for i in 1:length(state.x)
         state.fx[i] = f(state.x[i])
     end
     return state
 end
+
 function pso_update_best!(state::PsoState)
     for i in 1:length(state.x)
         if state.fx[i] > state.fp[i]
