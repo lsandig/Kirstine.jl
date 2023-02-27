@@ -197,8 +197,9 @@ struct DesignMeasure <: AbstractPoint
     points.
 
     ## Examples
-    ```@example
-    DesignMeasure([0.5, 0.2, 0.3], [[1, 2], [3, 4], [5, 6]])
+    ```jldoctest
+    julia> DesignMeasure([0.5, 0.2, 0.3], [[1, 2], [3, 4], [5, 6]])
+    DesignMeasure([0.5, 0.2, 0.3], [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
     ```
     """
     function DesignMeasure(weight, designpoint)
@@ -233,8 +234,9 @@ struct DesignSpace{N}
     symbols) and lower / upper bounds.
 
     ## Examples
-    ```@example
-     DesignSpace([:dose, :time], [0, 0], [300, 20])
+    ```jldoctest
+    julia> DesignSpace([:dose, :time], [0, 0], [300, 20])
+    DesignSpace{2}((:dose, :time), (0.0, 0.0), (300.0, 20.0))
     ```
     """
     function DesignSpace(name, lowerbound, upperbound)

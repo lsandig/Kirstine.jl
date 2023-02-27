@@ -117,8 +117,9 @@ Convenience constructor that takes pairs of a `Symbol` name and a `Tuple` or 2-e
 
 ## Examples
 
-```@example
-DesignSpace(:dose => (0, 300), :time => (0, 20))
+```jldoctest
+julia> DesignSpace(:dose => (0, 300), :time => (0, 20))
+DesignSpace{2}((:dose, :time), (0.0, 0.0), (300.0, 20.0))
 ```
 """
 function DesignSpace(pairs::Pair...)
@@ -166,7 +167,7 @@ See also [`sort_designpoints`](@ref).
 
 # Example
 
-```@jldoctest
+```jldoctest
 julia> sort_weights(DesignMeasure([0.5, 0.2, 0.3], [[1], [2], [3]]))
 DesignMeasure([0.2, 0.3, 0.5], [[2.0], [3.0], [1.0]])
 ```

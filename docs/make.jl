@@ -1,6 +1,13 @@
 using Documenter, Kirstine
 
-makedocs(sitename="Kirstine.jl",
-         format = Documenter.HTML(prettyurls = false, edit_link = nothing,
-                                  footer = nothing),
-         pages = ["Home" => "index.md"])
+DocMeta.setdocmeta!(Kirstine, :DocTestSetup, :(using Kirstine); recursive=true)
+
+makedocs(modules = [Kirstine],
+         sitename = "Kirstine.jl",
+         strict = true,
+         format = Documenter.HTML(prettyurls = false,
+                                  edit_link = nothing,
+                                  footer = nothing,
+                                  ),
+         pages = ["Home" => "index.md"],
+         )
