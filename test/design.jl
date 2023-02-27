@@ -80,6 +80,11 @@
         @test ob(not_sol, pk1) < ob(sol, pk1)
         # a design with less than 3 support points is singular
         @test isinf(ob(uniform_design([[a], [b]]), pk1))
+        # sol is better than not_sol for pk1 (by construction)
+        @test efficiency(sol, not_sol, m, cp, pk1, trafo) > 1
+        # it also happens to be better for pk2 and pk3
+        @test efficiency(sol, not_sol, m, cp, pk2, trafo) > 1
+        @test efficiency(sol, not_sol, m, cp, pk3, trafo) > 1
     end
 
     # Can we find the locally D-optimal design?
