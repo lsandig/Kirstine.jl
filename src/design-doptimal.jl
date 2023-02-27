@@ -18,7 +18,7 @@ end
 """
     efficiency(d1::DesignMeasure,
                d2::DesignMeasure,
-               m::Model,
+               m::NonlinearRegression,
                cp::CovariateParameterization,
                pk::PriorKnowledge,
                trafo::Transformation)
@@ -28,7 +28,7 @@ Relative D-efficiency of `d1` to `d2` under prior knowledge `pk`.
 function efficiency(
     d1::DesignMeasure,
     d2::DesignMeasure,
-    m::Model,
+    m::NonlinearRegression,
     cp::CovariateParameterization,
     pk::PriorKnowledge,
     trafo::Transformation,

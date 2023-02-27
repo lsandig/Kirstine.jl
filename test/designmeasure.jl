@@ -27,14 +27,14 @@
         @test all(d.weight .== ref.weight)
         @test all(d.designpoint .== ref.designpoint)
     end
-    let d = grid_design(4, DesignSpace(:a => (1, 4)))
+    let d = grid_design(DesignSpace(:a => (1, 4)), 4)
         ref = DesignMeasure(fill(0.25, 4), [[i] for i in 1:4])
         @test all(d.weight .== ref.weight)
         @test all(d.designpoint .== ref.designpoint)
     end
 
     # mixtures
-    let d = grid_design(4, DesignSpace(:a => (1, 4))),
+    let d = grid_design(DesignSpace(:a => (1, 4)), 4),
         dirac = singleton_design([5]),
         dirac2d = singleton_design([5, 6]),
         mix = mixture(0.2, dirac, d)

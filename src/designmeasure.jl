@@ -80,19 +80,19 @@ function uniform_design(designpoints::AbstractVector{<:AbstractVector{<:Real}})
 end
 
 """
-    grid_design(K::Integer, ds::DesignSpace{1})
+    grid_design(ds::DesignSpace{1}, K::Integer)
 
 Construct a DesignMeasure with an equally-spaced grid of `K` design points
 and uniform weights on the given 1-dimensional design space.
 """
-function grid_design(K::Integer, ds::DesignSpace{1})
+function grid_design(ds::DesignSpace{1}, K::Integer)
     val = range(lowerbound(ds)[1], upperbound(ds)[1]; length = K)
     designpoints = [[dp] for dp in val]
     return uniform_design(designpoints)
 end
 
 """
-    random_design(K::Integer, ds::DesignSpace)
+    random_design(ds::DesignSpace, K::Integer)
 
 Construct a DesignMeasure with design points drawn independently
 from a uniform distribution on the design space.
@@ -100,7 +100,7 @@ from a uniform distribution on the design space.
 Independent weights weights are drawn from a uniform distribution on [0, 1]
 and then normalized to sum to one.
 """
-function random_design(K::Integer, ds::DesignSpace{N}) where N
+function random_design(ds::DesignSpace{N}, K::Integer) where N
     scl = upperbound(ds) .- lowerbound(ds)
     dp = [lowerbound(ds) .+ scl .* rand(N) for _ in 1:K]
     u = rand(K)
@@ -199,23 +199,23 @@ function mixture(alpha::Real, d1::DesignMeasure, d2::DesignMeasure)
 end
 
 """
-    apportion(w, n::Integer)
+    apportion(weights, n::Integer)
 
-For a vector of weights `w`, find an integer vector `a` with `sum(a) == n`
+For a vector of `weights`, find an integer vector `a` with `sum(a) == n`
 such that `a ./ n` best approximates `w`.
 
 This is the _efficient design apportionment procedure_ from p. 309 in Pukelsheim, F. (2006).
 [Optimal design of experiments](https://doi.org/10.1137/1.9780898719109)
 """
-function apportion(w::AbstractVector{<:Real}, n::Integer)
-    l = length(w)
-    m = @. ceil((n - 0.5 * l) * w)
+function apportion(weights::AbstractVector{<:Real}, n::Integer)
+    l = length(weights)
+    m = @. ceil((n - 0.5 * l) * weights)
     while abs(sum(m) - n) > 0.5 # don't check Floats for != 0.0
         if sum(m) - n < -0.5
-            j = argmin(m ./ w)
+            j = argmin(m ./ weights)
             m[j] += 1
         elseif sum(m) - n > 0.5
-            k = argmax((m .- 1) ./ w)
+            k = argmax((m .- 1) ./ weights)
             m[k] -= 1
         end
     end
@@ -233,7 +233,7 @@ end
 
 """
     simplify(designmeasure, designspace, model, covariateparameterization;
-             minweight = 0, mindist = 0, moreargs...)
+             minweight = 0, mindist = 0, uargs...)
 
 Convenience wrapper that calls [`simplify_drop`](@ref), [`simplify_unique`](@ref), and
 [`simplify_merge`](@ref).
@@ -245,10 +245,10 @@ function simplify(
     cp::CovariateParameterization;
     minweight = 0,
     mindist = 0,
-    moreargs...,
+    uargs...,
 )
     d = simplify_drop(d, minweight)
-    d = simplify_unique(d, ds, m, cp; moreargs...)
+    d = simplify_unique(d, ds, m, cp; uargs...)
     d = simplify_merge(d, ds, mindist)
     return d
 end
@@ -274,7 +274,7 @@ end
 
 """
     simplify_unique(designmeasure, designspace, model, covariateparameterization;
-                    moreargs...)
+                    uargs...)
 
 Construct a new DesignMeasure that corresponds uniquely to its implied normalized
 information matrix.
@@ -292,7 +292,7 @@ function simplify_unique(
     ds::DesignSpace,
     m::Model,
     cp::CovariateParameterization;
-    moreargs...,
+    uargs...,
 )
     # fallback no-op when no model-specific simplification is defined
     return deepcopy(d)

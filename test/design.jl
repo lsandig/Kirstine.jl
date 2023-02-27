@@ -14,15 +14,15 @@
     end
     function Kirstine.update_model_covariate!(
         c::Dose,
-        cp::CopyDose,
         dp::AbstractVector{<:Real},
         m::EmaxModel,
+        cp::CopyDose,
     )
         c.dose = dp[1]
         return c
     end
     # p must be a NamedTuple with elements `e0`, `emax` `ec50`
-    function Kirstine.update_jacobian_matrix!(jm, c::Dose, m::EmaxModel, p)
+    function Kirstine.jacobianmatrix!(jm, m::EmaxModel, c::Dose, p)
         x = c.dose
         jm[1, 1] = 1.0
         jm[1, 2] = x / (x + p.ec50)
@@ -104,7 +104,7 @@
         d1 = sort_designpoints(o1.maximizer),
         # search with lower and upper bound already known and fixed, uniform weights
         _ = seed!(4711),
-        cand = grid_design(3, ds),
+        cand = grid_design(ds, 3),
         o2 = optim(; candidate = cand, fixedweights = 1:3, fixedpoints = [1, 3]),
         d2 = sort_designpoints(o2.maximizer)
 

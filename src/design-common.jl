@@ -6,9 +6,9 @@
 function unit_length end
 # (m::NonlinearRegression, K::Integer) -> Vector{<:Covariate}
 function allocate_covariates end
-# (jm::AbstractMatrix, c::Covariate, m::NonlinearRegression, p) -> jm
-function update_jacobian_matrix! end
-# (c::Covariate, cp::CovariateParameterization, dp::AbstractVector{<:Real}, m::NonlinearRegression) -> c
+# (jm::AbstractMatrix, m::NonlinearRegression, c::Covariate, p) -> jm
+function jacobianmatrix! end
+# (c::Covariate, dp::AbstractVector{<:Real}, m::NonlinearRegression, cp::CovariateParameterization) -> c
 function update_model_covariate! end
 # m -> Real or m -> AbstractMatrix
 function invcov end
@@ -23,7 +23,7 @@ function invcov end
                     cp::CovariateParameterization,
                     pk::PriorKnowledge,
                     trafo::Transformation;
-                    candidate::DesignMeasure = random_design(parameter_dimension(pk), ds),
+                    candidate::DesignMeasure = random_design(ds, parameter_dimension(pk)),
                     fixedweights = Int64[],
                     fixedpoints = Int64[],
                     trace_state = false)
@@ -48,7 +48,7 @@ function optimize_design(
     cp::CovariateParameterization,
     pk::PriorKnowledge,
     trafo::Transformation;
-    candidate::DesignMeasure = random_design(parameter_dimension(pk), ds),
+    candidate::DesignMeasure = random_design(ds, parameter_dimension(pk)),
     fixedweights = Int64[],
     fixedpoints = Int64[],
     trace_state = false,
@@ -178,7 +178,7 @@ function informationmatrix!(
 )
     fill!(nim, 0.0)
     for k in 1:length(w)
-        update_jacobian_matrix!(jm, c[k], m, p)
+        jacobianmatrix!(jm, m, c[k], p)
         # The call to syrk! is equivalent to
         #
         #   nim = w[k] * invcov * jm' * jm + 1 * nim
@@ -194,7 +194,7 @@ function allocate_initialize_covariates(d, m, cp)
     K = length(d.weight)
     cs = allocate_covariates(m, K)
     for k in 1:K
-        update_model_covariate!(cs[k], cp, d.designpoint[k], m)
+        update_model_covariate!(cs[k], d.designpoint[k], m, cp)
     end
     return cs
 end
@@ -229,7 +229,7 @@ function log_det!(A::AbstractMatrix)
     return 2 * acc
 end
 
-# == objective function helpes for each type of `PriorKnowledge` == #
+# == objective function helpers for each type of `PriorKnowledge` == #
 function obj_integral(nim, jm, dc, w, m, c, pk::DiscretePrior, trafo)
     acc = 0
     for i in 1:length(pk.p)
@@ -266,7 +266,7 @@ function objective!(
     trafo::Transformation,
 )
     for k in 1:length(c)
-        update_model_covariate!(c[k], cp, d.designpoint[k], m)
+        update_model_covariate!(c[k], d.designpoint[k], m, cp)
     end
     return obj_integral(nim, jm, dc, d.weight, m, c, pk, trafo)
 end
@@ -369,7 +369,7 @@ function gateauxderivative!(
     pk::PriorKnowledge,
     trafo::Transformation,
 )
-    update_model_covariate!(c[1], cp, direction.designpoint[1], m)
+    update_model_covariate!(c[1], direction.designpoint[1], m, cp)
     return gd_integral(nim, jm, c, dc, direction.weight, inv_nim_at, m, pk, trafo)
 end
 
