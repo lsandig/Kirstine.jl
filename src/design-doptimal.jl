@@ -5,12 +5,12 @@ function criterion_integrand!(nim::AbstractMatrix, dc::DOptimality, trafo::Ident
 end
 
 function gateaux_integrand(
-    nim_x::AbstractMatrix,
-    nim_candidate::AbstractMatrix,
+    inv_nim_at::AbstractMatrix,
+    nim_direction::AbstractMatrix,
     dc::DOptimality,
     trafo::Identity,
 )
-    return tr_prod(nim_x, nim_candidate) - size(nim_candidate, 1)
+    return tr_prod(nim_direction, inv_nim_at) - size(inv_nim_at, 1)
 end
 
 # == relative D-efficiency == #

@@ -123,7 +123,7 @@ function refine_design(
         dir_cand = map(singleton_design, support(res))
         inv_nim = inverse_information_matrices(res, m, cp, pk)
         # find direction of steepest ascent
-        gd(d) = gateauxderivative!(nim, jm, dc, d, inv_nim, m, c, cp, pk, trafo)
+        gd(d) = gateauxderivative!(nim, jm, c, dc, inv_nim, d, m, cp, pk, trafo)
         or_gd = optimize(od, gd, dir_cand, constraints)
         d = or_gd.maximizer
         # append the new atom
@@ -332,76 +332,79 @@ function inverse_information_matrices(
     return inv_nims
 end
 
-function gd_integral(nim_x, jm, dc, w, inv_nim_candidate, m, c, pk::DiscretePrior, trafo)
+function gd_integral(nim, jm, c, dc, w, inv_nim_at, m, pk::DiscretePrior, trafo)
     acc = 0
     n = length(pk.p)
     for i in 1:n
-        informationmatrix!(nim_x, jm, w, m, invcov(m), c, pk.p[i])
-        acc += pk.weight[i] * gateaux_integrand(nim_x, inv_nim_candidate[i], dc, trafo)
+        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i])
+        acc += pk.weight[i] * gateaux_integrand(inv_nim_at[i], nim, dc, trafo)
     end
     return acc
 end
 
-function gd_integral(nim_x, jm, dc, w, inv_nim_candidate, m, c, pk::PriorSample, trafo)
+function gd_integral(nim, jm, c, dc, w, inv_nim_at, m, pk::PriorSample, trafo)
     acc = 0
     n = length(pk.p)
     for i in 1:n
-        informationmatrix!(nim_x, jm, w, m, invcov(m), c, pk.p[i])
-        acc += gateaux_integrand(nim_x, inv_nim_candidate[i], dc, trafo)
+        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i])
+        acc += gateaux_integrand(inv_nim_at[i], nim, dc, trafo)
     end
     return acc / n
 end
 
-function gd_integral(nim_x, jm, dc, w, inv_nim_candidate, m, c, pk::PriorGuess, trafo)
-    informationmatrix!(nim_x, jm, w, m, invcov(m), c, pk.p)
-    return gateaux_integrand(nim_x, inv_nim_candidate[1], dc, trafo)
+function gd_integral(nim, jm, c, dc, w, inv_nim_at, m, pk::PriorGuess, trafo)
+    informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p)
+    return gateaux_integrand(inv_nim_at[1], nim, dc, trafo)
 end
 
 function gateauxderivative!(
-    nim_x::AbstractMatrix,
+    nim::AbstractMatrix,
     jm::AbstractMatrix,
+    c::AbstractVector{<:Covariate}, # only one element, but passed to `informationmatrix!`
     dc::DesignCriterion,
-    dirac::DesignMeasure,
-    inv_nim_candidate::AbstractVector{<:AbstractMatrix},
+    inv_nim_at::AbstractVector{<:AbstractMatrix},
+    direction::DesignMeasure,
     m::NonlinearRegression,
-    c::AbstractVector{<:Covariate}, # passed through to informationmatrix!
     cp::CovariateParameterization,
     pk::PriorKnowledge,
     trafo::Transformation,
 )
-    update_model_covariate!(c[1], cp, dirac.designpoint[1], m)
-    return gd_integral(nim_x, jm, dc, dirac.weight, inv_nim_candidate, m, c, pk, trafo)
+    update_model_covariate!(c[1], cp, direction.designpoint[1], m)
+    return gd_integral(nim, jm, c, dc, direction.weight, inv_nim_at, m, pk, trafo)
 end
 
 """
     gateauxderivative(dc::DesignCriterion,
-                      x::AbstractArray{DesignMeasure},
-                      candidate::DesignMeasure,
+                      at::DesignMeasure,
+                      directions::AbstractArray{DesignMeasure},
                       m::NonlinearRegression,
                       cp::CovariateParameterization,
                       pk::PriorKnowledge,
                       trafo::Transformation,
                       )
 
-Gateaux derivative of the [`objective`](@ref) at the `candidate` design measure into the
-direction of each of the singleton designs in `x`.
+Gateaux derivative of the [`objective`](@ref) function `at` the the given design measure
+into each of the `directions`, which must be singleton designs.
 """
 function gateauxderivative(
     dc::DesignCriterion,
-    x::AbstractArray{DesignMeasure},
-    candidate::DesignMeasure,
+    at::DesignMeasure,
+    directions::AbstractArray{DesignMeasure},
     m::NonlinearRegression,
     cp::CovariateParameterization,
     pk::PriorKnowledge,
     trafo::Transformation,
 )
+    if any(d -> length(d.weight) != 1, directions)
+        error("Gateaux derivatives are only implemented for singleton design directions")
+    end
     pardim = parameter_dimension(pk)
     nim = zeros(pardim, pardim)
     jm = zeros(unit_length(m), pardim)
-    inv_nim = inverse_information_matrices(candidate, m, cp, pk)
-    cs = allocate_initialize_covariates(x[1], m, cp)
-    gd = map(x) do d
-        gateauxderivative!(nim, jm, dc, d, inv_nim, m, cs, cp, pk, trafo)
+    inv_nim_at = inverse_information_matrices(at, m, cp, pk)
+    cs = allocate_initialize_covariates(directions[1], m, cp)
+    gd = map(directions) do d
+        gateauxderivative!(nim, jm, cs, dc, inv_nim_at, d, m, cp, pk, trafo)
     end
     return gd
 end

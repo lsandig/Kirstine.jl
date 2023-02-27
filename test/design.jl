@@ -70,11 +70,11 @@
             [[a + 0.1 * (b - a)], [x_star * 1.1], [a + (0.9 * (b - a))]],
         ),
         to_dirac(d) = map(singleton_design, support(d)),
-        gd(g, s, pk) = gateauxderivative(dc, to_dirac(g), s, m, cp, pk, trafo),
+        gd(s, d, pk) = gateauxderivative(dc, s, to_dirac(d), m, cp, pk, trafo),
         ob(d, pk) = objective(dc, d, m, cp, pk, trafo)
 
         @test all(abs.(gd(sol, sol, pk1)) .<= sqrt(eps()))
-        @test all(abs.(gd(not_sol, sol, pk1)) .> 0.01)
+        @test all(abs.(gd(sol, not_sol, pk1)) .> 0.01)
         @test all(abs.(gd(not_sol, not_sol, pk2)) .> 0.1)
         @test all(abs.(gd(not_sol, not_sol, pk3)) .> 0.1)
         @test ob(not_sol, pk1) < ob(sol, pk1)
