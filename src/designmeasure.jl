@@ -233,7 +233,7 @@ end
 
 """
     simplify(designmeasure, designspace, model, covariateparameterization;
-             minweight = 1e-4, mindist = 0, moreargs...)
+             minweight = 0, mindist = 0, moreargs...)
 
 Convenience wrapper that calls [`simplify_drop`](@ref), [`simplify_unique`](@ref), and
 [`simplify_merge`](@ref).
@@ -243,7 +243,7 @@ function simplify(
     ds::DesignSpace,
     m::Model,
     cp::CovariateParameterization;
-    minweight = 1e-4,
+    minweight = 0,
     mindist = 0,
     moreargs...,
 )
@@ -256,8 +256,8 @@ end
 """
     simplify_drop(designmeasure, minweight)
 
-Construct a new `DesignMeasure` where all design points with weights smaller than
-`minweight` are removed.
+Construct a new `DesignMeasure` where only design points with weights strictly larger than
+`minweight` are kept.
 
 The vector of remaining weights is re-normalized.
 """
@@ -301,7 +301,7 @@ end
 """
     simplify_merge(designmeasure, designspace, mindist)
 
-Merge designpoints with a normalized distance of at most `mindist`.
+Merge designpoints with a normalized distance smaller or equal to `mindist`.
 
 The design points are first transformed into unit (hyper)cube.
 The argument `mindist` is intepreted relative to this unit cube,
