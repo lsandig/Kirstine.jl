@@ -32,10 +32,7 @@ end
     struct CopyDose <: CovariateParameterization end
     Kirstine.unit_length(m::EmaxModel) = 1
     Kirstine.invcov(m::EmaxModel) = m.inv_sigma_sq
-    function Kirstine.allocate_covariates(m::EmaxModel, K::Integer)
-        cs = [Dose(0) for _ in 1:K]
-        return cs
-    end
+    Kirstine.allocate_covariate(m::EmaxModel) = Dose(0)
     function Kirstine.update_model_covariate!(
         c::Dose,
         dp::AbstractVector{<:Real},

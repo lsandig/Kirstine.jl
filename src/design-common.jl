@@ -4,8 +4,8 @@
 #
 # (m::NonlinearRegression) -> Real
 function unit_length end
-# (m::NonlinearRegression, K::Integer) -> Vector{<:Covariate}
-function allocate_covariates end
+# m::NonlinearRegression -> Covariate
+function allocate_covariate end
 # (jm::AbstractMatrix, m::NonlinearRegression, c::Covariate, p) -> jm
 function jacobianmatrix! end
 # (c::Covariate, dp::AbstractVector{<:Real}, m::NonlinearRegression, cp::CovariateParameterization) -> c
@@ -192,7 +192,7 @@ end
 
 function allocate_initialize_covariates(d, m, cp)
     K = length(d.weight)
-    cs = allocate_covariates(m, K)
+    cs = [allocate_covariate(m) for _ in 1:K]
     for k in 1:K
         update_model_covariate!(cs[k], d.designpoint[k], m, cp)
     end
