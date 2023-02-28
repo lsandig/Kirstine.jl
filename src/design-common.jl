@@ -4,8 +4,8 @@
 #
 # (m::NonlinearRegression) -> Real
 function unit_length end
-# (m::NonlinearRegression, K::Integer) -> Vector{<:Covariate}
-function allocate_covariates end
+# m::NonlinearRegression -> Covariate
+function allocate_covariate end
 # (jm::AbstractMatrix, m::NonlinearRegression, c::Covariate, p) -> jm
 function jacobianmatrix! end
 # (c::Covariate, dp::AbstractVector{<:Real}, m::NonlinearRegression, cp::CovariateParameterization) -> c
@@ -192,7 +192,7 @@ end
 
 function allocate_initialize_covariates(d, m, cp)
     K = length(d.weight)
-    cs = allocate_covariates(m, K)
+    cs = [allocate_covariate(m) for _ in 1:K]
     for k in 1:K
         update_model_covariate!(cs[k], d.designpoint[k], m, cp)
     end
@@ -200,18 +200,29 @@ function allocate_initialize_covariates(d, m, cp)
 end
 
 # Calculate the Frobenius inner product tr(A*B). Both matrices are implicitly treated as
-# symmetric, i.e. only the uppr triangles are used.
-function tr_prod(A::AbstractMatrix, B::AbstractMatrix)
+# symmetric, i.e. only the `uplo` triangles are used.
+function tr_prod(A::AbstractMatrix, B::AbstractMatrix, uplo::Symbol)
     if size(A) != size(B)
-        error("A and B must have identical size")
+        throw(ArgumentError("A and B must have identical size"))
     end
     k = size(A, 1)
     acc = 0.0
-    for i in 1:k
-        acc += A[i, i] * B[i, i]
-        for j in (i + 1):k
-            acc += 2 * A[i, j] * B[i, j]
+    if uplo == :U
+        for i in 1:k
+            acc += A[i, i] * B[i, i]
+            for j in (i + 1):k
+                acc += 2 * A[i, j] * B[i, j]
+            end
         end
+    elseif uplo == :L
+        for j in 1:k
+            acc += A[j, j] * B[j, j]
+            for i in (j + 1):k
+                acc += 2 * A[i, j] * B[i, j]
+            end
+        end
+    else
+        throw(ArgumentError("uplo argument must be either :U or :L, got $uplo"))
     end
     return acc
 end

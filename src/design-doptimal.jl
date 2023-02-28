@@ -10,7 +10,7 @@ function gateaux_integrand(
     dc::DOptimality,
     trafo::Identity,
 )
-    return tr_prod(nim_direction, inv_nim_at) - size(inv_nim_at, 1)
+    return tr_prod(nim_direction, inv_nim_at, :U) - size(inv_nim_at, 1)
 end
 
 # == relative D-efficiency == #

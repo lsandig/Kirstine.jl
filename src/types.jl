@@ -125,12 +125,12 @@ Criterion for (Bayesian or locally) D-optimal experimental design.
 
 Denote the normalized information matrix for a design measure ``\xi`` by ``\mathrm{M}(\xi,
 \theta)``. Assume for simplicity we are interested in the whole parameter ``\theta``, ie.
-the [`Transformation`](@ref) is [`Identity`](@ref) transformation. Then the objective
-function for Bayesian D-optimal design is
+the [`Transformation`](@ref) is [`Identity`](@ref). Then the objective function for Bayesian
+D-optimal design with respect to a prior density $p(\theta)$ is
 
-``\xi \mapsto \int_{\Theta} \log\det \mathrm{M}(\xi, \theta)\,\mathrm{d}\theta``
+``\xi \mapsto \int_{\Theta} \log\det \mathrm{M}(\xi, \theta)\,p(\theta)\,\mathrm{d}\theta``
 
-and for locally D-optimal design it is
+and for locally D-optimal design with respect to a prior guess $\theta_0$ it is
 
 ``\xi \mapsto \log\det \mathrm{M}(\xi, \theta_0)``
 
@@ -157,13 +157,15 @@ abstract type OptimizerState{T<:AbstractPoint} end
 
 Wraps results of particle-based optimization.
 
-# Fields
+# `OptimizationResult` fields
 
-  - `maximizer`: final maximizer
-  - `maximum`: final objective value
-  - `trace_x`: vector of current maximizer in each iteration
-  - `trace_fx`: vector of current objective value in each iteration
-  - `trace_state`: vector of internal optimizer states
+| Field       | Description                                          |
+|:----------- |:---------------------------------------------------- |
+| maximizer   | final maximizer                                      |
+| maximum     | final objective value                                |
+| trace_x     | vector of current maximizer in each iteration        |
+| trace_fx    | vector of current objective value in each iteration  |
+| trace_state | vector of internal optimizer state in each iteration |
 
 Note that `trace_state` may only contain the initial state, if saving all
 states was not requested explicitly.
