@@ -1,3 +1,27 @@
+@testset "design-common" begin
+    # error handling in constructors
+    @test_throws "must be equal" DiscretePrior([0], [[1], [2]])
+    @test_throws "non-negative" DiscretePrior([-0.5, 1.5], [[1], [2]])
+
+    # helpers
+    let A = reshape(collect(1:9), 3, 3),
+        B = reshape(collect(11:19), 3, 3),
+        C = reshape(collect(1:12), 3, 4)
+
+        @test tr(Symmetric(A) * Symmetric(B)) == Kirstine.tr_prod(A, B, :U)
+        @test tr(Symmetric(A, :L) * Symmetric(B, :L)) == Kirstine.tr_prod(A, B, :L)
+        @test_throws "identical size" Kirstine.tr_prod(A, C, :U)
+        @test_throws "either :U or :L" Kirstine.tr_prod(A, B, :F)
+    end
+
+    let A = rand(Float64, 3, 3)
+        B = A * A'
+
+        # note: log_det! overwrites B, so it can't be called first
+        @test log(det(B)) ≈ Kirstine.log_det!(B)
+    end
+end
+
 @testset "doptimal" begin
     struct EmaxModel <: NonlinearRegression
         inv_sigma_sq::Float64
@@ -43,10 +67,6 @@
         x_star = (a * (b + p.ec50) + b * (a + p.ec50)) / (a + b + 2 * p.ec50)
         return uniform_design([[a], [x_star], [b]])
     end
-
-    # error handling in constructors
-    @test_throws "must be equal" DiscretePrior([0], [[1], [2]])
-    @test_throws "non-negative" DiscretePrior([-0.5, 1.5], [[1], [2]])
 
     # Gateaux derivatives
     let dc = DOptimality(),
