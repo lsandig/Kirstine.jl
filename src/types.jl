@@ -157,13 +157,15 @@ abstract type OptimizerState{T<:AbstractPoint} end
 
 Wraps results of particle-based optimization.
 
-# Fields
+# `OptimizationResult` fields
 
-  - `maximizer`: final maximizer
-  - `maximum`: final objective value
-  - `trace_x`: vector of current maximizer in each iteration
-  - `trace_fx`: vector of current objective value in each iteration
-  - `trace_state`: vector of internal optimizer states
+| Field       | Description                                          |
+|:----------- |:---------------------------------------------------- |
+| maximizer   | final maximizer                                      |
+| maximum     | final objective value                                |
+| trace_x     | vector of current maximizer in each iteration        |
+| trace_fx    | vector of current objective value in each iteration  |
+| trace_state | vector of internal optimizer state in each iteration |
 
 Note that `trace_state` may only contain the initial state, if saving all
 states was not requested explicitly.
