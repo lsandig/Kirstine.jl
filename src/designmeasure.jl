@@ -60,6 +60,28 @@ dimnames(ds::DesignSpace) = ds.name
 # === additional constructors === #
 
 """
+    DesignMeasure(dp_w::Pair...)
+
+Construct a design measure out of `designpoint => weight` pairs.
+
+# Examples
+
+```jldoctest
+julia> DesignMeasure([1] => 0.2, [42] => 0.3, [9] => 0.5)
+DesignMeasure(
+ [1.0] => 0.2,
+ [42.0] => 0.3,
+ [9.0] => 0.5
+)
+```
+"""
+function DesignMeasure(dp_w::Pair...)
+    ws = [w for (_, w) in dp_w]
+    dps = [dp for (dp, _) in dp_w]
+    return DesignMeasure(ws, dps)
+end
+
+"""
     singleton_design(designpoint)
 
 Construct a one-point DesignMeasure.
@@ -131,6 +153,15 @@ end
 
 # === utility functions === #
 
+function Base.show(io::IO, ::MIME"text/plain", d::DesignMeasure)
+    pairs = map(weights(d), designpoints(d)) do w, dp
+        return string(dp) * " => " * string(w)
+    end
+    print(io, typeof(d), "(\n")
+    print(io, " ", join(pairs, ",\n "))
+    print(io, " \n)")
+end
+
 """
     sort_designpoints(d::DesignMeasure; rev::Bool = false)
 
@@ -142,7 +173,12 @@ See also [`sort_weights`](@ref).
 
 ```jldoctest
 julia> sort_designpoints(uniform_design([[3, 4], [2, 1], [1, 1], [2, 3]]))
-DesignMeasure([0.25, 0.25, 0.25, 0.25], [[1.0, 1.0], [2.0, 1.0], [2.0, 3.0], [3.0, 4.0]])
+DesignMeasure(
+ [1.0, 1.0] => 0.25,
+ [2.0, 1.0] => 0.25,
+ [2.0, 3.0] => 0.25,
+ [3.0, 4.0] => 0.25
+)
 ```
 """
 function sort_designpoints(d::DesignMeasure; rev::Bool = false)
@@ -169,7 +205,11 @@ See also [`sort_designpoints`](@ref).
 
 ```jldoctest
 julia> sort_weights(DesignMeasure([0.5, 0.2, 0.3], [[1], [2], [3]]))
-DesignMeasure([0.2, 0.3, 0.5], [[2.0], [3.0], [1.0]])
+DesignMeasure(
+ [2.0] => 0.2,
+ [3.0] => 0.3,
+ [1.0] => 0.5
+)
 ```
 """
 function sort_weights(d::DesignMeasure; rev::Bool = false)

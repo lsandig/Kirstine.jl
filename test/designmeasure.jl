@@ -32,6 +32,28 @@
         @test all(d.weight .== ref.weight)
         @test all(d.designpoint .== ref.designpoint)
     end
+    let d = DesignMeasure([1] => 0.2, [42] => 0.3, [9] => 0.5),
+        ref = DesignMeasure([0.2, 0.3, 0.5], [[1], [42], [9]])
+
+        @test all(d.weight .== ref.weight)
+        @test all(d.designpoint .== ref.designpoint)
+    end
+
+    # check that both compact and pretty representation are parseable
+    let d = DesignMeasure([0.2, 0.3, 0.5], [[1], [42], [9]]),
+        str_compact = repr(d),
+        io = IOBuffer(),
+        ioc = IOContext(io, :limit => false),
+        _ = show(ioc, "text/plain", d),
+        str_pretty = String(take!(io)),
+        d_compact = eval(Meta.parse(str_compact)),
+        d_pretty = eval(Meta.parse(str_pretty))
+
+        @test d.weight == d_compact.weight
+        @test d.designpoint == d_compact.designpoint
+        @test d.weight == d_pretty.weight
+        @test d.designpoint == d_pretty.designpoint
+    end
 
     # mixtures
     let d = grid_design(DesignSpace(:a => (1, 4)), 4),
