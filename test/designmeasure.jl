@@ -11,24 +11,26 @@
     @test_throws "strictly larger" DesignSpace([:a, :b], [1, 2], [1, 4])
 
     # outer constructors
-    let ds = DesignSpace(:a => (0, 1), :b => (0, 2))
+    let ds = DesignSpace(:a => (0, 1), :b => (0, 2)),
         ref = DesignSpace((:a, :b), (0, 0), (1, 2))
+
         @test all(ref.name .== ds.name)
         @test all(ref.lowerbound .== ds.lowerbound)
         @test all(ref.upperbound .== ds.upperbound)
     end
-    let d = singleton_design([42])
-        ref = DesignMeasure([1], [[42]])
+    let d = singleton_design([42]), ref = DesignMeasure([1], [[42]])
         @test all(d.weight .== ref.weight)
         @test all(d.designpoint .== ref.designpoint)
     end
-    let d = uniform_design([[1], [2], [3], [4]])
+    let d = uniform_design([[1], [2], [3], [4]]),
         ref = DesignMeasure(fill(0.25, 4), [[i] for i in 1:4])
+
         @test all(d.weight .== ref.weight)
         @test all(d.designpoint .== ref.designpoint)
     end
-    let d = grid_design(DesignSpace(:a => (1, 4)), 4)
+    let d = grid_design(DesignSpace(:a => (1, 4)), 4),
         ref = DesignMeasure(fill(0.25, 4), [[i] for i in 1:4])
+
         @test all(d.weight .== ref.weight)
         @test all(d.designpoint .== ref.designpoint)
     end

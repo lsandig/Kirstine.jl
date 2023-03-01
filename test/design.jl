@@ -14,8 +14,7 @@
         @test_throws "either :U or :L" Kirstine.tr_prod(A, B, :F)
     end
 
-    let A = rand(Float64, 3, 3)
-        B = A * A'
+    let A = rand(Float64, 3, 3), B = A * A'
 
         # note: log_det! overwrites B, so it can't be called first
         @test log(det(B)) ≈ Kirstine.log_det!(B)
