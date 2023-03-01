@@ -82,6 +82,42 @@ function DesignMeasure(dp_w::Pair...)
 end
 
 """
+    DesignMeasure(m::AbstractMatrix{<:Real})
+
+Construct a design measure from its matrix representation `m`.
+
+The `(N+1, K)` matrix `m` represents a `DesignMeasure` with `K` design points from an
+`N`-dimensional design space. The first row of `m` must contain the weights.
+
+See also [`as_matrix`](@ref).
+
+# Examples
+
+```jldoctest
+julia> m = [0.5 0.2 0.3; 7.0 8.0 9.0; 4.0 5.0 6.0]
+3×3 Matrix{Float64}:
+ 0.5  0.2  0.3
+ 7.0  8.0  9.0
+ 4.0  5.0  6.0
+
+julia> DesignMeasure(m)
+DesignMeasure(
+ [7.0, 4.0] => 0.5,
+ [8.0, 5.0] => 0.2,
+ [9.0, 6.0] => 0.3
+)
+```
+"""
+function DesignMeasure(m::AbstractMatrix{<:Real})
+    if size(m, 1) < 2
+        throw(ArgumentError("m must have at least two rows"))
+    end
+    ws = m[1, :]
+    dps = [m[2:end, k] for k in 1:size(m, 2)]
+    return DesignMeasure(ws, dps)
+end
+
+"""
     singleton_design(designpoint)
 
 Construct a one-point DesignMeasure.
@@ -160,6 +196,31 @@ function Base.show(io::IO, ::MIME"text/plain", d::DesignMeasure)
     print(io, typeof(d), "(\n")
     print(io, " ", join(pairs, ",\n "))
     print(io, " \n)")
+end
+
+"""
+    as_matrix(d::DesignMeasure)
+
+Return a matrix representation of `d`.
+
+A [`DesignMeasure`](@ref) with `K` design points from an `N`-dimensional
+[`DesignSpace`](@ref) corresponds to a `(N+1, K)` matrix.
+The first row contains the weights.
+
+See also [`DesignMeasure`](@ref).
+
+# Examples
+
+```jldoctest
+julia> as_matrix(DesignMeasure([0.5, 0.2, 0.3], [[7, 4], [8, 5], [9, 6]]))
+3×3 Matrix{Float64}:
+ 0.5  0.2  0.3
+ 7.0  8.0  9.0
+ 4.0  5.0  6.0
+```
+"""
+function as_matrix(d::DesignMeasure)
+    return vcat(transpose(weights(d)), reduce(hcat, designpoints(d)))
 end
 
 """

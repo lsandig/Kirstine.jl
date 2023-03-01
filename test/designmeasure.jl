@@ -4,6 +4,7 @@
     @test_throws "identical lengths" DesignMeasure([0.5, 0.5], [[1], [2, 3]])
     @test_throws "non-negative" DesignMeasure([-0.5, 1.5], [[1], [2]])
     @test_throws "sum to one" DesignMeasure([0.1, 0.2], [[1], [2]])
+    @test_throws "at least two rows" DesignMeasure([1 2 3])
     @test_throws "must be identical" DesignSpace([:a], [1, 2], [3, 4])
     @test_throws "must be identical" DesignSpace([:a, :b], [2], [3, 4])
     @test_throws "must be identical" DesignSpace([:a, :b], [1, 2], [4])
@@ -39,6 +40,26 @@
 
         @test all(d.weight .== ref.weight)
         @test all(d.designpoint .== ref.designpoint)
+    end
+    let d = DesignMeasure([0.5, 0.2, 0.3], [[7, 4], [8, 5], [9, 6]]),
+        d_as_matrix = [0.5 0.2 0.3; 7 8 9; 4 5 6],
+        m = [0.1 0.2 0.3 0.4; 1 2 3 4],
+        m_as_designmeasure = DesignMeasure([0.1, 0.2, 0.3, 0.4], [[1], [2], [3], [4]]),
+        dirac = singleton_design([2, 3]),
+        dirac_as_matrix = reshape([1, 2, 3], :, 1)
+
+        # conversion in both directions
+        @test d.weight == DesignMeasure(d_as_matrix).weight
+        @test d.designpoint == DesignMeasure(d_as_matrix).designpoint
+        @test m == as_matrix(m_as_designmeasure)
+        # roundtrips
+        @test d.weight == DesignMeasure(as_matrix(d)).weight
+        @test d.designpoint == DesignMeasure(as_matrix(d)).designpoint
+        @test m == as_matrix(DesignMeasure(m))
+        # one-point designs work as expected
+        @test dirac_as_matrix == as_matrix(dirac)
+        @test dirac.designpoint == DesignMeasure(dirac_as_matrix).designpoint
+        @test dirac.designpoint == DesignMeasure(dirac_as_matrix).designpoint
     end
 
     # check that both compact and pretty representation are parseable
