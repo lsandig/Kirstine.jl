@@ -58,8 +58,8 @@ function optimize_design(
     jm = zeros(unit_length(m), pardim)
     c = allocate_initialize_covariates(candidate, m, cp)
     f = d -> objective!(nim, jm, c, dc, d, m, cp, pk, trafo)
-    # transform index lists into Bool vectors
     K = length(c)
+    # set up constraints
     if any(fixedweights .< 1) || any(fixedweights .> K)
         error("indices for fixed weights must be between 1 and $K")
     end
@@ -68,6 +68,11 @@ function optimize_design(
     end
     fixw = [k in fixedweights for k in 1:K]
     fixp = [k in fixedpoints for k in 1:K]
+    # Fixing all weights but one is equivalent to fixing them all. For
+    # numerical stability it is better to explicitly fix them all.
+    if count(fixw) == K - 1
+        fixw .= true
+    end
     constraints = (ds, fixw, fixp)
     return optimize(optimizer, f, [candidate], constraints; trace_state = trace_state)
 end

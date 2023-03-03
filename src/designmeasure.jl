@@ -532,7 +532,7 @@ function move!(
         @warn "t=$t means point was already outside search volume" p
     end
     # Then, set p to p + tv
-    move_add_v!(p, t, v, ds, K, weight_shift, D)
+    move_add_v!(p, t, v, ds, fixw, K, weight_shift, D)
     # Stop the particle if the boundary was hit.
     if t != 1.0
         v .= 0.0
@@ -542,9 +542,28 @@ end
 
 function move_handle_fixed!(v, fixw, fixp, K, weight_shift, D)
     # v layout: concatenate the designpoints, then the first K-1 weights
+    sum_vw_free = 0.0
     for k in 1:(K - 1)
         if fixw[k]
             v[weight_shift + k] = 0.0
+        else
+            sum_vw_free += v[weight_shift + k]
+        end
+    end
+    # When the implicit last weight is fixed we must make sure only to move
+    # parallel to the simplex diagonal face, i.e. that
+    #
+    #   sum(v[.! fixw]) == 0.
+    #
+    # In oder not to prefer one direction over the others, we subtract the mean
+    # from every non-fixed element of v.
+    n_fixw = count(fixw)
+    if n_fixw != K && fixw[K]
+        mean_free = sum_vw_free / (K - n_fixw)
+        for k in 1:(K - 1)
+            if !fixw[k]
+                v[weight_shift + k] -= mean_free
+            end
         end
     end
     for k in 1:K
@@ -601,7 +620,7 @@ function how_far_simplexdiag(sum_x, t, sum_v)
     return sum_x + t * sum_v > one(sum_x) ? (one(sum_x) - sum_x) / sum_v : t
 end
 
-function move_add_v!(p, t, v, ds, K, weight_shift, D)
+function move_add_v!(p, t, v, ds, fixw, K, weight_shift, D)
     # first for the design points ...
     i = 1 # index to flattened structure
     for dp in p.designpoint
@@ -619,7 +638,7 @@ function move_add_v!(p, t, v, ds, K, weight_shift, D)
         end
     end
     # ... then for the weights.
-    p.weight[end] = 1.0
+    weight_K = 1.0
     for k in 1:(K - 1)
         p.weight[k] += t * v[weight_shift + k]
         # Again due to rounding erros, a weight can become slightly negative. We need to fix
@@ -631,7 +650,16 @@ function move_add_v!(p, t, v, ds, K, weight_shift, D)
             @warn "weight would move past 1.0 by $(p.weight[k] - 1.0)"
             p.weight[k] = 1.0
         end
-        p.weight[end] -= p.weight[k]
+        weight_K -= p.weight[k]
+    end
+    # In `handle_fixed()` we made sure that mathematically we have
+    #
+    #   weight_K == 1 - sum(weight[1:(K-1)]),
+    #
+    # but due to rounding errors this is not the case numerically. Hence we
+    # just don't touch p.weight[K] that case.
+    if !fixw[K]
+        p.weight[K] = weight_K
     end
     # Fix small rounding erros as above.
     if p.weight[end] < 0.0

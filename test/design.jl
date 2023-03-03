@@ -177,12 +177,19 @@ end
         _ = seed!(4711),
         o1 = opt(; fw = [2], fp = [2]),
         o2 = opt(; fw = [2]),
-        o3 = opt(; fp = [2])
+        o3 = opt(; fp = [2]),
+        o4 = opt(; fw = [5], fp = [5]),
+        o5 = opt(; fw = [1, 5], fp = [5])
 
         @test is_const_w(o1, candidate, 2)
         @test is_const_d(o1, candidate, 2)
         @test is_const_w(o2, candidate, 2)
         @test is_const_d(o3, candidate, 2)
+        @test is_const_w(o4, candidate, 5)
+        @test is_const_d(o4, candidate, 5)
+        @test is_const_w(o5, candidate, 1)
+        @test is_const_w(o5, candidate, 5)
+        @test is_const_d(o5, candidate, 5)
 
         @test_logs(
             (:warn, "fixed weights already sum to one"),
