@@ -7,7 +7,7 @@
 
 Return a vector containing all design points with positive weight.
 
-See also: [`designpoints`](@ref), [`weights`](@ref), [`simplify_drop`](@ref).
+See also [`designpoints`](@ref), [`weights`](@ref), [`simplify_drop`](@ref).
 """
 support(d::DesignMeasure) = d.designpoint[d.weight .> 0.0]
 
@@ -16,7 +16,7 @@ support(d::DesignMeasure) = d.designpoint[d.weight .> 0.0]
 
 Return a copy of all designpoints, including those with zero weight.
 
-See also: [`support`](@ref), [`weights`](@ref), [`simplify_drop`](@ref).
+See also [`support`](@ref), [`weights`](@ref), [`simplify_drop`](@ref).
 """
 designpoints(d::DesignMeasure) = deepcopy(d.designpoint)
 
@@ -25,7 +25,7 @@ designpoints(d::DesignMeasure) = deepcopy(d.designpoint)
 
 Return a copy of the design point weights.
 
-See also: [`support`](@ref), [`designpoints`](@ref), [`simplify_drop`](@ref).
+See also [`support`](@ref), [`designpoints`](@ref), [`simplify_drop`](@ref).
 """
 weights(d::DesignMeasure) = copy(d.weight)
 
@@ -58,6 +58,64 @@ Return the names of the designspace's dimensions.
 dimnames(ds::DesignSpace) = ds.name
 
 # === additional constructors === #
+
+"""
+    DesignMeasure(dp_w::Pair...)
+
+Construct a design measure out of `designpoint => weight` pairs.
+
+# Examples
+
+```jldoctest
+julia> DesignMeasure([1] => 0.2, [42] => 0.3, [9] => 0.5)
+DesignMeasure(
+ [1.0] => 0.2,
+ [42.0] => 0.3,
+ [9.0] => 0.5
+)
+```
+"""
+function DesignMeasure(dp_w::Pair...)
+    ws = [w for (_, w) in dp_w]
+    dps = [dp for (dp, _) in dp_w]
+    return DesignMeasure(ws, dps)
+end
+
+"""
+    DesignMeasure(m::AbstractMatrix{<:Real})
+
+Construct a design measure from its matrix representation `m`.
+
+The `(N+1, K)` matrix `m` represents a `DesignMeasure` with `K` design points from an
+`N`-dimensional design space. The first row of `m` must contain the weights.
+
+See also [`as_matrix`](@ref).
+
+# Examples
+
+```jldoctest
+julia> m = [0.5 0.2 0.3; 7.0 8.0 9.0; 4.0 5.0 6.0]
+3×3 Matrix{Float64}:
+ 0.5  0.2  0.3
+ 7.0  8.0  9.0
+ 4.0  5.0  6.0
+
+julia> DesignMeasure(m)
+DesignMeasure(
+ [7.0, 4.0] => 0.5,
+ [8.0, 5.0] => 0.2,
+ [9.0, 6.0] => 0.3
+)
+```
+"""
+function DesignMeasure(m::AbstractMatrix{<:Real})
+    if size(m, 1) < 2
+        throw(ArgumentError("m must have at least two rows"))
+    end
+    ws = m[1, :]
+    dps = [m[2:end, k] for k in 1:size(m, 2)]
+    return DesignMeasure(ws, dps)
+end
 
 """
     singleton_design(designpoint)
@@ -131,6 +189,58 @@ end
 
 # === utility functions === #
 
+function Base.show(io::IO, ::MIME"text/plain", d::DesignMeasure)
+    pairs = map(weights(d), designpoints(d)) do w, dp
+        return string(dp) * " => " * string(w)
+    end
+    print(io, typeof(d), "(\n")
+    print(io, " ", join(pairs, ",\n "))
+    print(io, " \n)")
+end
+
+"""
+    as_matrix(d::DesignMeasure)
+
+Return a matrix representation of `d`.
+
+A [`DesignMeasure`](@ref) with `K` design points from an `N`-dimensional
+[`DesignSpace`](@ref) corresponds to a `(N+1, K)` matrix.
+The first row contains the weights.
+
+See also [`DesignMeasure`](@ref).
+
+# Examples
+
+```jldoctest
+julia> as_matrix(DesignMeasure([0.5, 0.2, 0.3], [[7, 4], [8, 5], [9, 6]]))
+3×3 Matrix{Float64}:
+ 0.5  0.2  0.3
+ 7.0  8.0  9.0
+ 4.0  5.0  6.0
+```
+"""
+function as_matrix(d::DesignMeasure)
+    return vcat(transpose(weights(d)), reduce(hcat, designpoints(d)))
+end
+
+function check_compatible(d::DesignMeasure, ds::DesignSpace)
+    lb = ds.lowerbound
+    ub = ds.upperbound
+    for dp in d.designpoint
+        if length(dp) != length(lb)
+            error("designpoint length must match design space dimension")
+        end
+        if any(dp .< lb) || any(dp .> ub)
+            sandwich = hcat([:lb, :dp, :ub], permutedims([[lb...] dp [ub...]]))
+            # error() does not pretty print matrices, so we manually format it
+            b = IOBuffer()
+            show(b, "text/plain", sandwich)
+            sstr = String(take!(b))
+            error("designpoint is outside design space\n $sstr")
+        end
+    end
+end
+
 """
     sort_designpoints(d::DesignMeasure; rev::Bool = false)
 
@@ -142,7 +252,12 @@ See also [`sort_weights`](@ref).
 
 ```jldoctest
 julia> sort_designpoints(uniform_design([[3, 4], [2, 1], [1, 1], [2, 3]]))
-DesignMeasure([0.25, 0.25, 0.25, 0.25], [[1.0, 1.0], [2.0, 1.0], [2.0, 3.0], [3.0, 4.0]])
+DesignMeasure(
+ [1.0, 1.0] => 0.25,
+ [2.0, 1.0] => 0.25,
+ [2.0, 3.0] => 0.25,
+ [3.0, 4.0] => 0.25
+)
 ```
 """
 function sort_designpoints(d::DesignMeasure; rev::Bool = false)
@@ -169,7 +284,11 @@ See also [`sort_designpoints`](@ref).
 
 ```jldoctest
 julia> sort_weights(DesignMeasure([0.5, 0.2, 0.3], [[1], [2], [3]]))
-DesignMeasure([0.2, 0.3, 0.5], [[2.0], [3.0], [1.0]])
+DesignMeasure(
+ [2.0] => 0.2,
+ [3.0] => 0.3,
+ [1.0] => 0.5
+)
 ```
 """
 function sort_weights(d::DesignMeasure; rev::Bool = false)
@@ -275,19 +394,27 @@ function simplify_drop(d::DesignMeasure, minweight::Real)
 end
 
 """
-    simplify_unique(designmeasure, designspace, model, covariateparameterization;
-                    uargs...)
+    simplify_unique(d::DesignMeasure, ds::DesignSpace, m::M, cp::C; uargs...)
 
 Construct a new DesignMeasure that corresponds uniquely to its implied normalized
 information matrix.
 
-Users should specialize this method for their concrete `Model` and
-`CovariateParameterization` subtypes. It is intended for cases where the mapping from design
-measure to normalized information matrix is not one-to-one. This depends on the model and
-covariate parameterization used. In such a case, `simplify_unique` should be used to
-canonicalize the design.
+Users can specialize this method for their concrete subtypes `M <: Model` and
+`C <: CovariateParameterization`. It is intended for cases where the mapping from design measure
+to normalized information matrix is not one-to-one. This depends on the model and covariate
+parameterization used. In such a case, `simplify_unique` should be implemented to select a
+canonical version of the design.
 
-The default function simply returns the given `designmeasure`.
+The package default is a catch-all with the abstract types `M = Model` and
+`C = CovariateParameterization`, which simply returns a copy of `d`.
+
+When called via [`simplify`](@ref), user-model specific keyword arguments will be passed in
+`uargs`.
+
+!!! note
+
+    User-defined versions must have type annotations on all arguments to resolve method
+    ambiguity.
 """
 function simplify_unique(
     d::DesignMeasure,
@@ -359,11 +486,30 @@ function randomize!(
             d.designpoint[k] .*= scl
             d.designpoint[k] .+= ds.lowerbound
         end
-        if !fixw[k]
-            d.weight[k] = rand()
+    end
+    if !all(fixw)
+        # Due to rounding errors, a sum > 1.0 can happen.
+        # We need to prevent negative normalizing constants later on.
+        cum_sum_fix = min(1.0, sum(d.weight[fixw]))
+        if cum_sum_fix == 1.0
+            @warn "fixed weights already sum to one"
+        end
+        cum_sum_rand = 0.0
+        while cum_sum_rand < eps() # we don't want to divide by too small numbers
+            for k in 1:K
+                if !fixw[k]
+                    d.weight[k] = rand()
+                    cum_sum_rand += d.weight[k]
+                end
+            end
+        end
+        norm_const = (1 - cum_sum_fix) / cum_sum_rand
+        for k in 1:K
+            if !fixw[k]
+                d.weight[k] *= norm_const
+            end
         end
     end
-    d.weight ./= sum(d.weight)
     return d
 end
 
@@ -412,7 +558,7 @@ function move!(
         @warn "t=$t means point was already outside search volume" p
     end
     # Then, set p to p + tv
-    move_add_v!(p, t, v, ds, K, weight_shift, D)
+    move_add_v!(p, t, v, ds, fixw, K, weight_shift, D)
     # Stop the particle if the boundary was hit.
     if t != 1.0
         v .= 0.0
@@ -422,9 +568,28 @@ end
 
 function move_handle_fixed!(v, fixw, fixp, K, weight_shift, D)
     # v layout: concatenate the designpoints, then the first K-1 weights
+    sum_vw_free = 0.0
     for k in 1:(K - 1)
         if fixw[k]
             v[weight_shift + k] = 0.0
+        else
+            sum_vw_free += v[weight_shift + k]
+        end
+    end
+    # When the implicit last weight is fixed we must make sure only to move
+    # parallel to the simplex diagonal face, i.e. that
+    #
+    #   sum(v[.! fixw]) == 0.
+    #
+    # In oder not to prefer one direction over the others, we subtract the mean
+    # from every non-fixed element of v.
+    n_fixw = count(fixw)
+    if n_fixw != K && fixw[K]
+        mean_free = sum_vw_free / (K - n_fixw)
+        for k in 1:(K - 1)
+            if !fixw[k]
+                v[weight_shift + k] -= mean_free
+            end
         end
     end
     for k in 1:K
@@ -455,7 +620,7 @@ function move_how_far(p, v, ds, K, weight_shift, D)
     for k in 1:(K - 1)
         t = how_far_left(p.weight[k], t, v[weight_shift + k], 0.0)
     end
-    sum_x = 1.0 - p.weight[end]
+    sum_x = 1.0 - p.weight[K]
     sum_v = @views sum(v[(weight_shift + 1):end])
     t = how_far_simplexdiag(sum_x, t, sum_v)
     return t
@@ -481,7 +646,7 @@ function how_far_simplexdiag(sum_x, t, sum_v)
     return sum_x + t * sum_v > one(sum_x) ? (one(sum_x) - sum_x) / sum_v : t
 end
 
-function move_add_v!(p, t, v, ds, K, weight_shift, D)
+function move_add_v!(p, t, v, ds, fixw, K, weight_shift, D)
     # first for the design points ...
     i = 1 # index to flattened structure
     for dp in p.designpoint
@@ -499,7 +664,7 @@ function move_add_v!(p, t, v, ds, K, weight_shift, D)
         end
     end
     # ... then for the weights.
-    p.weight[end] = 1.0
+    weight_K = 1.0
     for k in 1:(K - 1)
         p.weight[k] += t * v[weight_shift + k]
         # Again due to rounding erros, a weight can become slightly negative. We need to fix
@@ -511,11 +676,20 @@ function move_add_v!(p, t, v, ds, K, weight_shift, D)
             @warn "weight would move past 1.0 by $(p.weight[k] - 1.0)"
             p.weight[k] = 1.0
         end
-        p.weight[end] -= p.weight[k]
+        weight_K -= p.weight[k]
+    end
+    # In `handle_fixed()` we made sure that mathematically we have
+    #
+    #   weight_K == 1 - sum(weight[1:(K-1)]),
+    #
+    # but due to rounding errors this is not the case numerically. Hence we
+    # just don't touch p.weight[K] that case.
+    if !fixw[K]
+        p.weight[K] = weight_K
     end
     # Fix small rounding erros as above.
-    if p.weight[end] < 0.0
-        p.weight[end] = 0.0
+    if p.weight[K] < 0.0
+        p.weight[K] = 0.0
     end
     return p
 end

@@ -4,6 +4,7 @@
     @test_throws "identical lengths" DesignMeasure([0.5, 0.5], [[1], [2, 3]])
     @test_throws "non-negative" DesignMeasure([-0.5, 1.5], [[1], [2]])
     @test_throws "sum to one" DesignMeasure([0.1, 0.2], [[1], [2]])
+    @test_throws "at least two rows" DesignMeasure([1 2 3])
     @test_throws "must be identical" DesignSpace([:a], [1, 2], [3, 4])
     @test_throws "must be identical" DesignSpace([:a, :b], [2], [3, 4])
     @test_throws "must be identical" DesignSpace([:a, :b], [1, 2], [4])
@@ -11,26 +12,70 @@
     @test_throws "strictly larger" DesignSpace([:a, :b], [1, 2], [1, 4])
 
     # outer constructors
-    let ds = DesignSpace(:a => (0, 1), :b => (0, 2))
+    let ds = DesignSpace(:a => (0, 1), :b => (0, 2)),
         ref = DesignSpace((:a, :b), (0, 0), (1, 2))
+
         @test all(ref.name .== ds.name)
         @test all(ref.lowerbound .== ds.lowerbound)
         @test all(ref.upperbound .== ds.upperbound)
     end
-    let d = singleton_design([42])
-        ref = DesignMeasure([1], [[42]])
+    let d = singleton_design([42]), ref = DesignMeasure([1], [[42]])
         @test all(d.weight .== ref.weight)
         @test all(d.designpoint .== ref.designpoint)
     end
-    let d = uniform_design([[1], [2], [3], [4]])
+    let d = uniform_design([[1], [2], [3], [4]]),
         ref = DesignMeasure(fill(0.25, 4), [[i] for i in 1:4])
+
         @test all(d.weight .== ref.weight)
         @test all(d.designpoint .== ref.designpoint)
     end
-    let d = grid_design(DesignSpace(:a => (1, 4)), 4)
+    let d = grid_design(DesignSpace(:a => (1, 4)), 4),
         ref = DesignMeasure(fill(0.25, 4), [[i] for i in 1:4])
+
         @test all(d.weight .== ref.weight)
         @test all(d.designpoint .== ref.designpoint)
+    end
+    let d = DesignMeasure([1] => 0.2, [42] => 0.3, [9] => 0.5),
+        ref = DesignMeasure([0.2, 0.3, 0.5], [[1], [42], [9]])
+
+        @test all(d.weight .== ref.weight)
+        @test all(d.designpoint .== ref.designpoint)
+    end
+    let d = DesignMeasure([0.5, 0.2, 0.3], [[7, 4], [8, 5], [9, 6]]),
+        d_as_matrix = [0.5 0.2 0.3; 7 8 9; 4 5 6],
+        m = [0.1 0.2 0.3 0.4; 1 2 3 4],
+        m_as_designmeasure = DesignMeasure([0.1, 0.2, 0.3, 0.4], [[1], [2], [3], [4]]),
+        dirac = singleton_design([2, 3]),
+        dirac_as_matrix = reshape([1, 2, 3], :, 1)
+
+        # conversion in both directions
+        @test d.weight == DesignMeasure(d_as_matrix).weight
+        @test d.designpoint == DesignMeasure(d_as_matrix).designpoint
+        @test m == as_matrix(m_as_designmeasure)
+        # roundtrips
+        @test d.weight == DesignMeasure(as_matrix(d)).weight
+        @test d.designpoint == DesignMeasure(as_matrix(d)).designpoint
+        @test m == as_matrix(DesignMeasure(m))
+        # one-point designs work as expected
+        @test dirac_as_matrix == as_matrix(dirac)
+        @test dirac.designpoint == DesignMeasure(dirac_as_matrix).designpoint
+        @test dirac.designpoint == DesignMeasure(dirac_as_matrix).designpoint
+    end
+
+    # check that both compact and pretty representation are parseable
+    let d = DesignMeasure([0.2, 0.3, 0.5], [[1], [42], [9]]),
+        str_compact = repr(d),
+        io = IOBuffer(),
+        ioc = IOContext(io, :limit => false),
+        _ = show(ioc, "text/plain", d),
+        str_pretty = String(take!(io)),
+        d_compact = eval(Meta.parse(str_compact)),
+        d_pretty = eval(Meta.parse(str_pretty))
+
+        @test d.weight == d_compact.weight
+        @test d.designpoint == d_compact.designpoint
+        @test d.weight == d_pretty.weight
+        @test d.designpoint == d_pretty.designpoint
     end
 
     # mixtures
@@ -88,5 +133,28 @@
         @test sort_weights(d).designpoint == refw.designpoint
         @test sort_weights(d; rev = true).weight == reverse(refw.weight)
         @test sort_weights(d; rev = true).designpoint == reverse(refw.designpoint)
+    end
+
+    # abstract point methods: randomization with fixed weights and/or points
+    let ds = DesignSpace(:a => (0, 1)),
+        d = DesignMeasure([0.1, 0.42, 0.48], [[1], [4.2], [3]]),
+        fw1 = [false, true, false],
+        fp1 = fill(false, 3),
+        r1 = Kirstine.randomize!(deepcopy(d), (ds, fw1, fp1)),
+        fw2 = fill(false, 3),
+        fp2 = [false, true, false],
+        r2 = Kirstine.randomize!(deepcopy(d), (ds, fw2, fp2)),
+        fw3 = [false, false, true],
+        fp3 = [false, false, true],
+        r3 = Kirstine.randomize!(deepcopy(d), (ds, fw3, fp3))
+
+        @test r1.weight[2] == d.weight[2]
+        @test all(r1.weight[[1, 3]] .!= d.weight[[1, 3]])
+        @test r2.designpoint[2] == d.designpoint[2]
+        @test all(r2.designpoint[[1, 3]] .!= d.designpoint[[1, 3]])
+        @test r3.weight[3] == d.weight[3]
+        @test r3.designpoint[3] == d.designpoint[3]
+        @test all(r3.weight[1:2] .!= d.weight[1:2])
+        @test all(r3.designpoint[1:2] .!= d.designpoint[1:2])
     end
 end

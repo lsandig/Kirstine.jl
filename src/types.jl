@@ -35,7 +35,7 @@ abstract type CovariateParameterization end
 
 Abstract supertype for structs representing prior knowlege of the model parameters.
 
-See also: [`PriorSample`](@ref), [`PriorGuess`](@ref), and [`DiscretePrior`](@ref).
+See also [`PriorSample`](@ref), [`PriorGuess`](@ref), [`DiscretePrior`](@ref).
 """
 abstract type PriorKnowledge end
 
@@ -114,7 +114,7 @@ struct Identity <: Transformation end
 
 Abstract supertype of criteria for optimal experimental design.
 
-See also: [`DOptimality`](@ref)
+See also [`DOptimality`](@ref).
 """
 abstract type DesignCriterion end
 
@@ -202,7 +202,11 @@ struct DesignMeasure <: AbstractPoint
     # Examples
     ```jldoctest
     julia> DesignMeasure([0.5, 0.2, 0.3], [[1, 2], [3, 4], [5, 6]])
-    DesignMeasure([0.5, 0.2, 0.3], [[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
+    DesignMeasure(
+     [1.0, 2.0] => 0.5,
+     [3.0, 4.0] => 0.2,
+     [5.0, 6.0] => 0.3
+    )
     ```
     """
     function DesignMeasure(weight, designpoint)
