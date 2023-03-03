@@ -394,19 +394,27 @@ function simplify_drop(d::DesignMeasure, minweight::Real)
 end
 
 """
-    simplify_unique(designmeasure, designspace, model, covariateparameterization;
-                    uargs...)
+    simplify_unique(d::DesignMeasure, ds::DesignSpace, m::M, cp::C; uargs...)
 
 Construct a new DesignMeasure that corresponds uniquely to its implied normalized
 information matrix.
 
-Users should specialize this method for their concrete `Model` and
-`CovariateParameterization` subtypes. It is intended for cases where the mapping from design
-measure to normalized information matrix is not one-to-one. This depends on the model and
-covariate parameterization used. In such a case, `simplify_unique` should be used to
-canonicalize the design.
+Users can specialize this method for their concrete subtypes `M <: Model` and
+`C <: CovariateParameterization`. It is intended for cases where the mapping from design measure
+to normalized information matrix is not one-to-one. This depends on the model and covariate
+parameterization used. In such a case, `simplify_unique` should be implemented to select a
+canonical version of the design.
 
-The default function simply returns the given `designmeasure`.
+The package default is a catch-all with the abstract types `M = Model` and
+`C = CovariateParameterization`, which simply returns a copy of `d`.
+
+When called via [`simplify`](@ref), user-model specific keyword arguments will be passed in
+`uargs`.
+
+!!! note
+
+    User-defined versions must have type annotations on all arguments to resolve method
+    ambiguity.
 """
 function simplify_unique(
     d::DesignMeasure,
