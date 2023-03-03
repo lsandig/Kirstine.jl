@@ -460,11 +460,30 @@ function randomize!(
             d.designpoint[k] .*= scl
             d.designpoint[k] .+= ds.lowerbound
         end
-        if !fixw[k]
-            d.weight[k] = rand()
+    end
+    if !all(fixw)
+        # Due to rounding errors, a sum > 1.0 can happen.
+        # We need to prevent negative normalizing constants later on.
+        cum_sum_fix = min(1.0, sum(d.weight[fixw]))
+        if cum_sum_fix == 1.0
+            @warn "fixed weights already sum to one"
+        end
+        cum_sum_rand = 0.0
+        while cum_sum_rand < eps() # we don't want to divide by too small numbers
+            for k in 1:K
+                if !fixw[k]
+                    d.weight[k] = rand()
+                    cum_sum_rand += d.weight[k]
+                end
+            end
+        end
+        norm_const = (1 - cum_sum_fix) / cum_sum_rand
+        for k in 1:K
+            if !fixw[k]
+                d.weight[k] *= norm_const
+            end
         end
     end
-    d.weight ./= sum(d.weight)
     return d
 end
 

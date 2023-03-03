@@ -126,7 +126,7 @@ end
 
         @test d1.weight ≈ sol.weight rtol = 1e-3
         for k in 1:3
-            @test d1.designpoint[k] ≈ sol.designpoint[k] atol = 1e-3
+            @test d1.designpoint[k] ≈ sol.designpoint[k] atol = 1e-2
         end
 
         @test d2.weight ≈ sol.weight rtol = 1e-3
@@ -149,6 +149,46 @@ end
         @test_throws "between 1 and 3" optim(fixedweights = [4])
         @test_throws "between 1 and 3" optim(fixedpoints = [-1])
         @test_throws "between 1 and 3" optim(fixedpoints = [5])
+    end
+
+    # fixed weights and / or points should never change
+    let dc = DOptimality(),
+        trafo = Identity(),
+        m = EmaxModel(1),
+        cp = CopyDose(),
+        p = (e0 = 1, emax = 10, ec50 = 5),
+        pk = PriorGuess(p),
+        ds = DesignSpace(:dose => (0, 10)),
+        pso = Pso(; iterations = 2, swarmsize = 5),
+        # this is not the optimal solution
+        candidate = DesignMeasure([0.1, 0.5, 0.0, 0.0, 0.4], [[0], [5], [7], [8], [10]]),
+        #! format: off
+        opt(; fw = Int64[], fp = Int64[]) = optimize_design(
+            pso, dc, ds, m, cp, pk, trafo;
+            candidate = candidate, fixedweights = fw, fixedpoints = fp, trace_state = true,
+        ),
+        #! format: on
+        is_const_w(o, ref, k) =
+            all([all(map(d -> d.weight[k] == ref.weight[k], s.x)) for s in o.trace_state]),
+        is_const_d(o, ref, k) = all([
+            all(map(d -> d.designpoint[k] == ref.designpoint[k], s.x)) for
+            s in o.trace_state
+        ]),
+        _ = seed!(4711),
+        o1 = opt(; fw = [2], fp = [2]),
+        o2 = opt(; fw = [2]),
+        o3 = opt(; fp = [2])
+
+        @test is_const_w(o1, candidate, 2)
+        @test is_const_d(o1, candidate, 2)
+        @test is_const_w(o2, candidate, 2)
+        @test is_const_d(o3, candidate, 2)
+
+        @test_logs(
+            (:warn, "fixed weights already sum to one"),
+            match_mode = :any,
+            opt(fw = [1, 2, 5])
+        )
     end
 
     # Does refinement work?

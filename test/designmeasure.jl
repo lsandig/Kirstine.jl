@@ -134,4 +134,27 @@
         @test sort_weights(d; rev = true).weight == reverse(refw.weight)
         @test sort_weights(d; rev = true).designpoint == reverse(refw.designpoint)
     end
+
+    # abstract point methods: randomization with fixed weights and/or points
+    let ds = DesignSpace(:a => (0, 1)),
+        d = DesignMeasure([0.1, 0.42, 0.48], [[1], [4.2], [3]]),
+        fw1 = [false, true, false],
+        fp1 = fill(false, 3),
+        r1 = Kirstine.randomize!(deepcopy(d), (ds, fw1, fp1)),
+        fw2 = fill(false, 3),
+        fp2 = [false, true, false],
+        r2 = Kirstine.randomize!(deepcopy(d), (ds, fw2, fp2)),
+        fw3 = [false, false, true],
+        fp3 = [false, false, true],
+        r3 = Kirstine.randomize!(deepcopy(d), (ds, fw3, fp3))
+
+        @test r1.weight[2] == d.weight[2]
+        @test all(r1.weight[[1, 3]] .!= d.weight[[1, 3]])
+        @test r2.designpoint[2] == d.designpoint[2]
+        @test all(r2.designpoint[[1, 3]] .!= d.designpoint[[1, 3]])
+        @test r3.weight[3] == d.weight[3]
+        @test r3.designpoint[3] == d.designpoint[3]
+        @test all(r3.weight[1:2] .!= d.weight[1:2])
+        @test all(r3.designpoint[1:2] .!= d.designpoint[1:2])
+    end
 end
