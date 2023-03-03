@@ -223,6 +223,24 @@ function as_matrix(d::DesignMeasure)
     return vcat(transpose(weights(d)), reduce(hcat, designpoints(d)))
 end
 
+function check_compatible(d::DesignMeasure, ds::DesignSpace)
+    lb = ds.lowerbound
+    ub = ds.upperbound
+    for dp in d.designpoint
+        if length(dp) != length(lb)
+            error("designpoint length must match design space dimension")
+        end
+        if any(dp .< lb) || any(dp .> ub)
+            sandwich = hcat([:lb, :dp, :ub], permutedims([[lb...] dp [ub...]]))
+            # error() does not pretty print matrices, so we manually format it
+            b = IOBuffer()
+            show(b, "text/plain", sandwich)
+            sstr = String(take!(b))
+            error("designpoint is outside design space\n $sstr")
+        end
+    end
+end
+
 """
     sort_designpoints(d::DesignMeasure; rev::Bool = false)
 

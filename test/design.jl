@@ -149,6 +149,8 @@ end
         @test_throws "between 1 and 3" optim(fixedweights = [4])
         @test_throws "between 1 and 3" optim(fixedpoints = [-1])
         @test_throws "between 1 and 3" optim(fixedpoints = [5])
+        @test_throws "outside design space" optim(candidate = uniform_design([[0], [20]]))
+        @test_throws "must match" optim(candidate = uniform_design([[0, 1], [1, 0]]))
     end
 
     # fixed weights and / or points should never change

@@ -53,6 +53,7 @@ function optimize_design(
     fixedpoints = Int64[],
     trace_state = false,
 )
+    check_compatible(candidate, ds)
     pardim = parameter_dimension(pk)
     nim = zeros(pardim, pardim)
     jm = zeros(unit_length(m), pardim)
@@ -116,6 +117,7 @@ function refine_design(
     trafo::Transformation;
     simpargs...,
 )
+    check_compatible(candidate, ds)
     pardim = parameter_dimension(pk)
     nim = zeros(pardim, pardim)
     jm = zeros(unit_length(m), pardim)
