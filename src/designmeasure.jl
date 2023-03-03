@@ -594,7 +594,7 @@ function move_how_far(p, v, ds, K, weight_shift, D)
     for k in 1:(K - 1)
         t = how_far_left(p.weight[k], t, v[weight_shift + k], 0.0)
     end
-    sum_x = 1.0 - p.weight[end]
+    sum_x = 1.0 - p.weight[K]
     sum_v = @views sum(v[(weight_shift + 1):end])
     t = how_far_simplexdiag(sum_x, t, sum_v)
     return t
@@ -662,8 +662,8 @@ function move_add_v!(p, t, v, ds, fixw, K, weight_shift, D)
         p.weight[K] = weight_K
     end
     # Fix small rounding erros as above.
-    if p.weight[end] < 0.0
-        p.weight[end] = 0.0
+    if p.weight[K] < 0.0
+        p.weight[K] = 0.0
     end
     return p
 end
