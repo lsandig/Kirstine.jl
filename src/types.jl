@@ -35,7 +35,7 @@ abstract type CovariateParameterization end
 
 Abstract supertype for structs representing prior knowlege of the model parameters.
 
-See also: [`PriorSample`](@ref), [`PriorGuess`](@ref), and [`DiscretePrior`](@ref).
+See also [`PriorSample`](@ref), [`PriorGuess`](@ref), [`DiscretePrior`](@ref).
 """
 abstract type PriorKnowledge end
 
@@ -114,7 +114,7 @@ struct Identity <: Transformation end
 
 Abstract supertype of criteria for optimal experimental design.
 
-See also: [`DOptimality`](@ref)
+See also [`DOptimality`](@ref).
 """
 abstract type DesignCriterion end
 
