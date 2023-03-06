@@ -26,7 +26,8 @@ function invcov end
                     candidate::DesignMeasure = random_design(ds, parameter_dimension(pk)),
                     fixedweights = Int64[],
                     fixedpoints = Int64[],
-                    trace_state = false)
+                    trace_state = false,
+                    sargs...)
 
 Find an optimal experimental design for the nonlinear regression model `m`.
 
@@ -36,9 +37,13 @@ index given in `fixedweights` or `fixedpoints` is not randomized and is kept
 fixed during optimization. This can speed up computation if some weights or
 points are known analytically.
 
-Returns an [`OptimizationResult`](@ref). If `trace_state=true`, the full state
-of the algorithm is saved for every iteration, which can be useful for
-debugging.
+Returns a Tuple:
+
+  - The best design found. As postprocessing, [`simplify`](@ref) is called with `sargs` and
+    the design points are sorted with [`sort_designpoints`](@ref).
+
+  - The full [`OptimizationResult`](@ref). If `trace_state=true`, the full state of the
+    algorithm is saved for every iteration, which can be useful for debugging.
 """
 function optimize_design(
     optimizer::Optimizer,
@@ -52,6 +57,7 @@ function optimize_design(
     fixedweights = Int64[],
     fixedpoints = Int64[],
     trace_state = false,
+    sargs...,
 )
     check_compatible(candidate, ds)
     pardim = parameter_dimension(pk)
@@ -75,7 +81,9 @@ function optimize_design(
         fixw .= true
     end
     constraints = (ds, fixw, fixp)
-    return optimize(optimizer, f, [candidate], constraints; trace_state = trace_state)
+    or = optimize(optimizer, f, [candidate], constraints; trace_state = trace_state)
+    dopt = sort_designpoints(simplify(or.maximizer, ds, m, cp; sargs...))
+    return dopt, or
 end
 
 """
@@ -89,20 +97,30 @@ end
                   cp::CovariateParameterization,
                   pk::PriorKnowledge,
                   trafo::Transformation;
-                  simpargs...,)
+                  trace_state = false,
+                  sargs...)
 
 Improve a `candidate` design by ascending its Gateaux derivative.
 
 This repeats the following `steps` times, starting with `r = candidate`:
 
- 1. [`simplify`](@ref) the design `r`, passing along `simpargs`.
+ 1. [`simplify`](@ref) the design `r`, passing along `sargs`.
  2. Find the direction (Dirac measure) `d` of steepest
     [`gateauxderivative`](@ref) at `r` using the [`Optimizer`](@ref) `od`.
  3. Re-calculcate optimal weights of a [`mixture`](@ref) of `r` and `d` for the
     [`DesignCriterion`](@ref) objective using the optimizer `ow`.
  4. Set `r` to the result of step 3.
 
-Returns a [`DesignMeasure`](@ref).
+Returns a 3-Tuple:
+
+  - The best design found after the final refinement step. As postprocessing,
+    [`simplify`](@ref) is called with `sargs` and the design points are sorted with
+    [`sort_designpoints`](@ref).
+
+  - A vector of [`OptimizationResult`](@ref) from the derivative-maximizing steps. If
+    `trace_state=true`, the full state of the algorithm is saved for every iteration.
+  - A vector of [`OptimizationResult`](@ref) from the re-weighting steps. If
+    `trace_state=true`, the full state of the algorithm is saved for every iteration
 """
 function refine_design(
     od::Optimizer,
@@ -115,23 +133,27 @@ function refine_design(
     cp::CovariateParameterization,
     pk::PriorKnowledge,
     trafo::Transformation;
-    simpargs...,
+    trace_state = false,
+    sargs...,
 )
     check_compatible(candidate, ds)
     pardim = parameter_dimension(pk)
     nim = zeros(pardim, pardim)
     jm = zeros(unit_length(m), pardim)
     c = allocate_initialize_covariates(singleton_design(candidate.designpoint[1]), m, cp)
+    ors_d = OptimizationResult[]
+    ors_w = OptimizationResult[]
     constraints = (ds, [false], [false])
 
     res = candidate
     for i in 1:steps
-        res = simplify(res, ds, m, cp; simpargs...)
+        res = simplify(res, ds, m, cp; sargs...)
         dir_cand = map(singleton_design, support(res))
         inv_nim = inverse_information_matrices(res, m, cp, pk)
         # find direction of steepest ascent
         gd(d) = gateauxderivative!(nim, jm, c, dc, inv_nim, d, m, cp, pk, trafo)
-        or_gd = optimize(od, gd, dir_cand, constraints)
+        or_gd = optimize(od, gd, dir_cand, constraints; trace_state = trace_state)
+        push!(ors_d, or_gd)
         d = or_gd.maximizer
         # append the new atom
         K = length(res.weight)
@@ -144,7 +166,7 @@ function refine_design(
             res = mixture(1 / K, d, res)
         end
         # optimize weights
-        or_w = optimize_design(
+        _, or_w = optimize_design(
             ow,
             dc,
             ds,
@@ -154,10 +176,14 @@ function refine_design(
             trafo;
             candidate = res,
             fixedpoints = 1:K,
+            trace_state = trace_state,
+            sargs...,
         )
+        push!(ors_w, or_w)
         res = or_w.maximizer
     end
-    return simplify(res, ds, m, cp; simpargs...)
+    dopt = sort_designpoints(simplify(res, ds, m, cp; sargs...))
+    return dopt, ors_d, ors_w
 end
 
 # == various helper functions == #
