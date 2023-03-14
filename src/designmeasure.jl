@@ -423,6 +423,9 @@ function simplify_unique(
     cp::CovariateParameterization;
     uargs...,
 )
+    if !isempty(uargs)
+        @warn "unused keyword arguments given to generic `simplify_unique` method" uargs
+    end
     # fallback no-op when no model-specific simplification is defined
     return deepcopy(d)
 end

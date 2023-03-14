@@ -149,6 +149,15 @@ end
         @test_throws "between 1 and 3" optim(fixedpoints = [5])
         @test_throws "outside design space" optim(candidate = uniform_design([[0], [20]]))
         @test_throws "must match" optim(candidate = uniform_design([[0, 1], [1, 0]]))
+        # `minposdist` doesn't exist, the correct argument name is `mindist`. Because we
+        # have not implemented `simplify_unique()` for EmaxModel, the generic method should
+        # complain about gobbling up `minposdist` in its varargs. (We can't test this in
+        # designmeasure.jl because we need a Model and a CovariateParameterization in order
+        # to call `simplify()`.)
+        @test_logs(
+            (:warn, "unused keyword arguments given to generic `simplify_unique` method"),
+            optim(minposdist = 1e-2)
+        )
     end
 
     # fixed weights and / or points should never change
