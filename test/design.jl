@@ -116,13 +116,11 @@ end
         optim(; kwargs...) = optimize_design(pso, dc, ds, m, cp, pk, trafo; kwargs...),
         # search from a random starting design
         _ = seed!(4711),
-        o1 = optim(),
-        d1 = sort_designpoints(o1.maximizer),
+        (d1, o1) = optim(),
         # search with lower and upper bound already known and fixed, uniform weights
         _ = seed!(4711),
         cand = grid_design(ds, 3),
-        o2 = optim(; candidate = cand, fixedweights = 1:3, fixedpoints = [1, 3]),
-        d2 = sort_designpoints(o2.maximizer)
+        (d2, o2) = optim(; candidate = cand, fixedweights = 1:3, fixedpoints = [1, 3])
 
         @test d1.weight ≈ sol.weight rtol = 1e-3
         for k in 1:3
@@ -151,6 +149,15 @@ end
         @test_throws "between 1 and 3" optim(fixedpoints = [5])
         @test_throws "outside design space" optim(candidate = uniform_design([[0], [20]]))
         @test_throws "must match" optim(candidate = uniform_design([[0, 1], [1, 0]]))
+        # `minposdist` doesn't exist, the correct argument name is `mindist`. Because we
+        # have not implemented `simplify_unique()` for EmaxModel, the generic method should
+        # complain about gobbling up `minposdist` in its varargs. (We can't test this in
+        # designmeasure.jl because we need a Model and a CovariateParameterization in order
+        # to call `simplify()`.)
+        @test_logs(
+            (:warn, "unused keyword arguments given to generic `simplify_unique` method"),
+            optim(minposdist = 1e-2)
+        )
     end
 
     # fixed weights and / or points should never change
@@ -177,11 +184,11 @@ end
             s in o.trace_state
         ]),
         _ = seed!(4711),
-        o1 = opt(; fw = [2], fp = [2]),
-        o2 = opt(; fw = [2]),
-        o3 = opt(; fp = [2]),
-        o4 = opt(; fw = [5], fp = [5]),
-        o5 = opt(; fw = [1, 5], fp = [5])
+        (_, o1) = opt(; fw = [2], fp = [2]),
+        (_, o2) = opt(; fw = [2]),
+        (_, o3) = opt(; fp = [2]),
+        (_, o4) = opt(; fw = [5], fp = [5]),
+        (_, o5) = opt(; fw = [1, 5], fp = [5])
 
         @test is_const_w(o1, candidate, 2)
         @test is_const_d(o1, candidate, 2)
@@ -213,9 +220,11 @@ end
         ow = Pso(; iterations = 50, swarmsize = 50),
         _ = seed!(1234),
         cand = uniform_design([[[5]]; support(sol)[[1, 3]]]),
-        r = refine_design(od, ow, 3, cand, dc, ds, m, cp, pk, trafo)
+        (r, rd, rw) = refine_design(od, ow, 3, cand, dc, ds, m, cp, pk, trafo)
 
-        @test abs(support(r)[1][1] - support(sol)[2][1]) <
+        @test abs(support(r)[2][1] - support(sol)[2][1]) <
               abs(support(cand)[1][1] - support(sol)[2][1])
+        @test issorted([r.maximum for r in rw])
+        @test all([r.maximum > 0 for r in rd])
     end
 end
