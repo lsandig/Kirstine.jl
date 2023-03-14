@@ -329,18 +329,21 @@ This is the _efficient design apportionment procedure_ from p. 309 in Pukelsheim
 [^P06]: Friedrich Pukelsheim, "Optimal design of experiments", Wiley, 2006. [doi:10.1137/1.9780898719109](https://doi.org/10.1137/1.9780898719109)
 """
 function apportion(weights::AbstractVector{<:Real}, n::Integer)
-    l = length(weights)
-    m = @. ceil((n - 0.5 * l) * weights)
-    while abs(sum(m) - n) > 0.5 # don't check Floats for != 0.0
-        if sum(m) - n < -0.5
-            j = argmin(m ./ weights)
-            m[j] += 1
-        elseif sum(m) - n > 0.5
-            k = argmax((m .- 1) ./ weights)
-            m[k] -= 1
+    # Phase 1: initial multipliers
+    a = ceil.(Int64, (n - 0.5 * length(weights)) .* weights)
+    # Phase 2: loop until discrepancy is zero
+    discrepancy = sum(a) - n
+    while discrepancy != 0
+        if discrepancy < 0
+            j = argmin(a ./ weights)
+            a[j] += 1
+        else # discrepancy > 0
+            k = argmax((a .- 1) ./ weights)
+            a[k] -= 1
         end
+        discrepancy = sum(a) - n
     end
-    return m
+    return a
 end
 
 """
