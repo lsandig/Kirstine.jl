@@ -39,8 +39,8 @@ points are known analytically.
 
 Returns a Tuple:
 
-  - The best design found. As postprocessing, [`simplify`](@ref) is called with `sargs` and
-    the design points are sorted with [`sort_designpoints`](@ref).
+  - The best [`DesignMeasure`](@ref) found. As postprocessing, [`simplify`](@ref) is called
+    with `sargs` and the design points are sorted with [`sort_designpoints`](@ref).
 
   - The full [`OptimizationResult`](@ref). If `trace_state=true`, the full state of the
     algorithm is saved for every iteration, which can be useful for debugging.
@@ -113,13 +113,12 @@ This repeats the following `steps` times, starting with `r = candidate`:
 
 Returns a 3-Tuple:
 
-  - The best design found after the final refinement step. As postprocessing,
-    [`simplify`](@ref) is called with `sargs` and the design points are sorted with
-    [`sort_designpoints`](@ref).
-
-  - A vector of [`OptimizationResult`](@ref) from the derivative-maximizing steps. If
+  - The best [`DesignMeasure`](@ref) found after the last refinement step. As
+    postprocessing, [`simplify`](@ref) is called with `sargs` and the design points are
+    sorted with [`sort_designpoints`](@ref).
+  - A vector of [`OptimizationResult`](@ref)s from the derivative-maximizing steps. If
     `trace_state=true`, the full state of the algorithm is saved for every iteration.
-  - A vector of [`OptimizationResult`](@ref) from the re-weighting steps. If
+  - A vector of [`OptimizationResult`](@ref)s from the re-weighting steps. If
     `trace_state=true`, the full state of the algorithm is saved for every iteration
 """
 function refine_design(
