@@ -9,4 +9,5 @@ using Kirstine
     include("pso.jl")
     include("designmeasure.jl")
     include("design.jl")
+    include("util.jl")
 end

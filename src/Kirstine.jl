@@ -4,7 +4,8 @@ using LinearAlgebra: diagind, norm, BLAS.syrk!, LAPACK.potrf!, LAPACK.potri!
 using Random: rand, rand!
 using RecipesBase
 
-export Covariate,
+export @define_scalar_unit_model,
+    Covariate,
     CovariateParameterization,
     DOptimality,
     DesignMeasure,
@@ -46,6 +47,7 @@ include("optimize.jl")
 include("pso.jl")
 include("design-common.jl")
 include("design-doptimal.jl")
+include("util.jl")
 include("plot.jl")
 
 end
