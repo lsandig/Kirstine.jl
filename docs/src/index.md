@@ -14,6 +14,13 @@ Modules = [Kirstine]
 Order = [:type]
 ```
 
+## Autodocs: Macros
+
+```@autodocs
+Modules = [Kirstine]
+Order = [:macro]
+```
+
 ## Autodocs: Functions
 
 ```@autodocs
