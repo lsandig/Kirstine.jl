@@ -122,7 +122,7 @@ grid over the given [`DesignSpace`](@ref), together with the design points of `d
 
 Currently only implemented for 1- and 2-dimensional design spaces.
 
-The default color gradient for the heatmap is `:diverging_bwr_55_98_c37_n256`, which is
+The default color gradient for the heat map is `:diverging_bwr_55_98_c37_n256`, which is
 perceptually uniform from blue via white to red. Custom gradients can be set via the
 `fillcolor` keyword argument. The standard plotting keyword arguments (`markershape`,
 `markercolor`, `markersize`, `linecolor`, `linestyle`, `clims`, ...) are supported. By
@@ -131,7 +131,7 @@ default, `markersize` indicates the design weights.
 # Additional Keyword Arguments
 
   - `subdivisions::Union{Integer, Tuple{Integer, Integer}}`: number of points in the grid.
-    Must match the dimension of the designspace.
+    Must match the dimension of the design space.
 """
 function plot_gateauxderivative(args...; kw...)
     plt_gd = RecipesBase.plot(DerivativePlot(args...); kw...)
