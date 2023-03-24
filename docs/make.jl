@@ -10,5 +10,7 @@ makedocs(modules = [Kirstine],
                                   edit_link = nothing,
                                   footer = nothing,
                                   ),
-         pages = ["Home" => "index.md"],
+         pages = ["Home" => "index.md",
+                  "Getting Started" => "getting-started.md",
+                  ],
          )
