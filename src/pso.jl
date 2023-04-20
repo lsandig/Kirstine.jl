@@ -58,10 +58,12 @@ mutable struct PsoState{T} <: OptimizerState{T}
     r2::Vector{Float64} # uniformly random velocity vector
     diffg::Vector{Float64} # temporary variable for g - x
     diffp::Vector{Float64} # temporary variable for p - x
+    n_eval::Int64 # cumulative number of objective evaluations
 end
 
 maximizer(state::PsoState) = state.g
 maximum(state::PsoState) = state.fg
+n_eval(state::PsoState) = state.n_eval
 
 function optimizer_state(
     f,
@@ -90,7 +92,8 @@ function optimizer_state(
     r2 = zeros(velocity_length)
     diffg = zeros(velocity_length)
     diffp = zeros(velocity_length)
-    state = PsoState(x, p, g, v, fx, fp, fg, r1, r2, diffg, diffp)
+    n_eval = 0
+    state = PsoState(x, p, g, v, fx, fp, fg, r1, r2, diffg, diffp, n_eval)
     pso_evaluate_objective!(f, state)
     state.fp .= -Inf # make sure these get updated
     state.fg = -Inf
@@ -132,6 +135,7 @@ function pso_evaluate_objective!(f, state::PsoState)
     for i in 1:length(state.x)
         state.fx[i] = f(state.x[i])
     end
+    state.n_eval += length(state.x)
     return state
 end
 

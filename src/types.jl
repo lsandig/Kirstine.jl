@@ -159,13 +159,15 @@ Wraps results of particle-based optimization.
 
 # `OptimizationResult` fields
 
-| Field       | Description                                          |
-|:----------- |:---------------------------------------------------- |
-| maximizer   | final maximizer                                      |
-| maximum     | final objective value                                |
-| trace_x     | vector of current maximizer in each iteration        |
-| trace_fx    | vector of current objective value in each iteration  |
-| trace_state | vector of internal optimizer state in each iteration |
+| Field           | Description                                          |
+|:--------------- |:---------------------------------------------------- |
+| maximizer       | final maximizer                                      |
+| maximum         | final objective value                                |
+| trace_x         | vector of current maximizer in each iteration        |
+| trace_fx        | vector of current objective value in each iteration  |
+| trace_state     | vector of internal optimizer state in each iteration |
+| n_eval          | total number of objective evaluations                |
+| seconds_elapsed | total runtime                                        |
 
 Note that `trace_state` may only contain the initial state, if saving all
 states was not requested explicitly.
@@ -178,6 +180,8 @@ struct OptimizationResult{T<:AbstractPoint,S<:OptimizerState{T}}
     trace_x::Vector{T}
     trace_fx::Vector{Float64}
     trace_state::Vector{S}
+    n_eval::Int64
+    seconds_elapsed::Float64
 end
 
 """

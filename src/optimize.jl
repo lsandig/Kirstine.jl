@@ -7,6 +7,7 @@ function optimize(
     constraints;
     trace_state = false,
 )
+    time_start = time()
     state = optimizer_state(f, optimizer, candidates, constraints)
     t_x = [deepcopy(maximizer(state))]
     t_fx = [maximum(state)]
@@ -19,5 +20,9 @@ function optimize(
             push!(t_state, deepcopy(state))
         end
     end
-    return OptimizationResult(maximizer(state), maximum(state), t_x, t_fx, t_state)
+    time_end = time()
+    twall = time_end - time_start
+    x = maximizer(state)
+    fx = maximum(state)
+    return OptimizationResult(x, fx, t_x, t_fx, t_state, n_eval(state), twall)
 end
