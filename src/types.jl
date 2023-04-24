@@ -191,6 +191,12 @@ A discrete probability measure with finite support
 representing a continuous experimental design.
 
 For details see p.62 in Fedorov/Leonov [^FL13].
+
+Special kinds of design measures can be constructed with [`singleton_design`](@ref),
+[`uniform_design`](@ref), [`grid_design`](@ref), [`random_design`](@ref).
+
+See also [`weights`](@ref), [`designpoints`](@ref), [`support`](@ref), [`as_matrix`](@ref),
+[`apportion`](@ref).
 """
 struct DesignMeasure <: AbstractPoint
     "the weights of the individual design points"

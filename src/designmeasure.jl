@@ -120,7 +120,7 @@ end
 """
     singleton_design(designpoint)
 
-Construct a one-point DesignMeasure.
+Construct a one-point [`DesignMeasure`](@ref).
 """
 function singleton_design(designpoint::AbstractVector{<:Real})
     return DesignMeasure([1.0], [designpoint])
@@ -129,7 +129,7 @@ end
 """
     uniform_design(designpoints)
 
-Construct a DesignMeasure with equal weights on the given designpoints.
+Construct a [`DesignMeasure`](@ref) with equal weights on the given designpoints.
 """
 function uniform_design(designpoints::AbstractVector{<:AbstractVector{<:Real}})
     K = length(designpoints)
@@ -140,7 +140,7 @@ end
 """
     grid_design(ds::DesignSpace{1}, K::Integer)
 
-Construct a DesignMeasure with an equally-spaced grid of `K` design points
+Construct a [`DesignMeasure`](@ref) with an equally-spaced grid of `K` design points
 and uniform weights on the given 1-dimensional design space.
 """
 function grid_design(ds::DesignSpace{1}, K::Integer)
@@ -152,7 +152,7 @@ end
 """
     random_design(ds::DesignSpace, K::Integer)
 
-Construct a DesignMeasure with design points drawn independently
+Construct a [`DesignMeasure`](@ref) with design points drawn independently
 from a uniform distribution on the design space.
 
 Independent weights weights are drawn from a uniform distribution on [0, 1]
@@ -301,7 +301,7 @@ end
 """
     mixture(alpha, d1::DesignMeasure, d2::DesignMeasure)
 
-Return the mixture ``\alpha d_1 + (1-\alpha) d_2``,
+Return the mixture ``\\alpha d_1 + (1-\\alpha) d_2``,
 i.e. the convex combination of `d1` and `d2`.
 
 The result is not simplified, hence its design points may not be unique.
