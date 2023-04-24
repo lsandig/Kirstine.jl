@@ -93,7 +93,7 @@ function eff_integral(nim1, nim2, jm1, jm2, c1, c2, d1, d2, m1, m2, cp1, cp2,
         ld2 = log_det!(nim2)
         log_det_diff += ld1 - ld2
     end
-    return log_det_diff
+    return log_det_diff / length(pk.p)
 end
 
 #! format: off

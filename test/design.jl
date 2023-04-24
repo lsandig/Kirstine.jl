@@ -64,7 +64,7 @@ end
         return uniform_design([[a], [x_star], [b]])
     end
 
-    # Gateaux derivatives
+    # Gateaux derivatives and efficiency
     let dc = DOptimality(),
         trafo = Identity(),
         m = EmaxModel(1),
@@ -101,6 +101,9 @@ end
         # it also happens to be better for pk2 and pk3
         @test efficiency(sol, not_sol, m, cp, pk2, trafo) > 1
         @test efficiency(sol, not_sol, m, cp, pk3, trafo) > 1
+        # check that efficiency wrt prior sample divides by length of sample vector
+        @test efficiency(sol, not_sol, m, cp, PriorSample([p1, p1]), trafo) ==
+              efficiency(sol, not_sol, m, cp, PriorSample([p1]), trafo)
     end
 
     # Can we find the locally D-optimal design?
