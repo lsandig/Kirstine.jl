@@ -66,6 +66,8 @@ end
 
     # Gateaux derivatives and efficiency
     let dc = DOptimality(),
+        na_ml = MLApproximation(),
+        na_map = MAPApproximation(zeros(3, 3)),
         trafo = Identity(),
         m = EmaxModel(1),
         cp = CopyDose(),
@@ -86,28 +88,36 @@ end
             [[a + 0.1 * (b - a)], [x_star * 1.1], [a + (0.9 * (b - a))]],
         ),
         to_dirac(d) = map(singleton_design, support(d)),
-        gd(s, d, pk) = gateauxderivative(dc, s, to_dirac(d), m, cp, pk, trafo),
-        ob(d, pk) = objective(dc, d, m, cp, pk, trafo)
+        gd(s, d, pk, na) = gateauxderivative(dc, s, to_dirac(d), m, cp, pk, trafo, na),
+        ob(d, pk, na) = objective(dc, d, m, cp, pk, trafo, na)
 
-        @test all(abs.(gd(sol, sol, pk1)) .<= sqrt(eps()))
-        @test all(abs.(gd(sol, not_sol, pk1)) .> 0.01)
-        @test all(abs.(gd(not_sol, not_sol, pk2)) .> 0.1)
-        @test all(abs.(gd(not_sol, not_sol, pk3)) .> 0.1)
-        @test ob(not_sol, pk1) < ob(sol, pk1)
+        @test all(abs.(gd(sol, sol, pk1, na_ml)) .<= sqrt(eps()))
+        @test all(abs.(gd(sol, not_sol, pk1, na_ml)) .> 0.01)
+        @test all(abs.(gd(not_sol, not_sol, pk2, na_ml)) .> 0.1)
+        @test all(abs.(gd(not_sol, not_sol, pk3, na_ml)) .> 0.1)
+        @test ob(not_sol, pk1, na_ml) < ob(sol, pk1, na_ml)
         # a design with less than 3 support points is singular
-        @test isinf(ob(uniform_design([[a], [b]]), pk1))
+        @test isinf(ob(uniform_design([[a], [b]]), pk1, na_ml))
         # sol is better than not_sol for pk1 (by construction)
-        @test efficiency(sol, not_sol, m, cp, pk1, trafo) > 1
+        @test efficiency(sol, not_sol, m, cp, pk1, trafo, na_ml) > 1
         # it also happens to be better for pk2 and pk3
-        @test efficiency(sol, not_sol, m, cp, pk2, trafo) > 1
-        @test efficiency(sol, not_sol, m, cp, pk3, trafo) > 1
+        @test efficiency(sol, not_sol, m, cp, pk2, trafo, na_ml) > 1
+        @test efficiency(sol, not_sol, m, cp, pk3, trafo, na_ml) > 1
         # check that efficiency wrt prior sample divides by length of sample vector
-        @test efficiency(sol, not_sol, m, cp, PriorSample([p1, p1]), trafo) ==
-              efficiency(sol, not_sol, m, cp, PriorSample([p1]), trafo)
+        @test efficiency(sol, not_sol, m, cp, PriorSample([p1, p1]), trafo, na_ml) ==
+              efficiency(sol, not_sol, m, cp, PriorSample([p1]), trafo, na_ml)
+        # check that MAPApproximation is correct in a special case
+        @test ob(sol, pk1, na_ml) ≈ ob(sol, pk1, na_map)
+        @test ob(sol, pk2, na_ml) ≈ ob(sol, pk2, na_map)
+        @test ob(sol, pk3, na_ml) ≈ ob(sol, pk3, na_map)
+        @test gd(sol, not_sol, pk1, na_ml) ≈ gd(sol, not_sol, pk1, na_map)
+        @test gd(sol, not_sol, pk2, na_ml) ≈ gd(sol, not_sol, pk2, na_map)
+        @test gd(sol, not_sol, pk3, na_ml) ≈ gd(sol, not_sol, pk3, na_map)
     end
 
     # Can we find the locally D-optimal design?
     let dc = DOptimality(),
+        na = MLApproximation(),
         trafo = Identity(),
         m = EmaxModel(1),
         cp = CopyDose(),
@@ -116,7 +126,7 @@ end
         ds = DesignSpace(:dose => (0, 10)),
         sol = emax_solution(p, ds),
         pso = Pso(; iterations = 50, swarmsize = 20),
-        optim(; kwargs...) = optimize_design(pso, dc, ds, m, cp, pk, trafo; kwargs...),
+        optim(; kwargs...) = optimize_design(pso, dc, ds, m, cp, pk, trafo, na; kwargs...),
         # search from a random starting design
         _ = seed!(4711),
         (d1, o1) = optim(),
@@ -165,6 +175,7 @@ end
 
     # fixed weights and / or points should never change
     let dc = DOptimality(),
+        na = MLApproximation(),
         trafo = Identity(),
         m = EmaxModel(1),
         cp = CopyDose(),
@@ -176,7 +187,7 @@ end
         candidate = DesignMeasure([0.1, 0.5, 0.0, 0.0, 0.4], [[0], [5], [7], [8], [10]]),
         #! format: off
         opt(; fw = Int64[], fp = Int64[]) = optimize_design(
-            pso, dc, ds, m, cp, pk, trafo;
+            pso, dc, ds, m, cp, pk, trafo, na;
             candidate = candidate, fixedweights = fw, fixedpoints = fp, trace_state = true,
         ),
         #! format: on
@@ -212,6 +223,7 @@ end
 
     # Does refinement work?
     let dc = DOptimality(),
+        na = MLApproximation(),
         trafo = Identity(),
         m = EmaxModel(1),
         cp = CopyDose(),
@@ -223,7 +235,7 @@ end
         ow = Pso(; iterations = 50, swarmsize = 50),
         _ = seed!(1234),
         cand = uniform_design([[[5]]; support(sol)[[1, 3]]]),
-        (r, rd, rw) = refine_design(od, ow, 3, cand, dc, ds, m, cp, pk, trafo)
+        (r, rd, rw) = refine_design(od, ow, 3, cand, dc, ds, m, cp, pk, trafo, na)
 
         @test abs(support(r)[2][1] - support(sol)[2][1]) <
               abs(support(cand)[1][1] - support(sol)[2][1])

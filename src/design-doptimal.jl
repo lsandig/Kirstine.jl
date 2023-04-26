@@ -21,7 +21,8 @@ end
                m::NonlinearRegression,
                cp::CovariateParameterization,
                pk::PriorKnowledge,
-               trafo::Transformation)
+               trafo::Transformation,
+               na::NormalApproximation)
 
 Relative D-efficiency of `d1` to `d2` under prior knowledge `pk`.
 """
@@ -32,8 +33,9 @@ function efficiency(
     cp::CovariateParameterization,
     pk::PriorKnowledge,
     trafo::Transformation,
+    na::NormalApproximation,
 )
-    return efficiency(d1, d2, m, m, cp, cp, pk, trafo)
+    return efficiency(d1, d2, m, m, cp, cp, pk, trafo, na)
 end
 
 """
@@ -44,7 +46,8 @@ end
                cp1::CovariateParameterization,
                cp2::CovariateParameterization,
                pk::PriorKnowledge,
-               trafo::Transformation)
+               trafo::Transformation,
+               na::NormalApproximation)
 
 Relative D-efficiency of `d1` to `d2` under prior knowledge `pk`.
 
@@ -59,6 +62,7 @@ function efficiency(
     cp2::CovariateParameterization,
     pk::PriorKnowledge,
     trafo::Transformation,
+    na::NormalApproximation,
 )
     pardim = parameter_dimension(pk)
     nim1 = zeros(pardim, pardim)
@@ -68,27 +72,27 @@ function efficiency(
     jm2 = zeros(unit_length(m2), pardim)
     c2 = allocate_initialize_covariates(d2, m2, cp2)
 
-    ei = eff_integral(nim1, nim2, jm1, jm2, c1, c2, d1, d2, m1, m2, cp1, cp2, pk, trafo)
+    ei = eff_integral(nim1, nim2, jm1, jm2, c1, c2, d1, d2, m1, m2, cp1, cp2, pk, trafo, na)
     return exp(ei / pardim)
 end
 
 #! format: off
 function eff_integral(nim1, nim2, jm1, jm2, c1, c2, d1, d2, m1, m2, cp1, cp2,
-                      pk::PriorGuess, trafo::Identity)
+                      pk::PriorGuess, trafo::Identity, na)
 #! format: on
-    informationmatrix!(nim1, jm1, d1.weight, m1, invcov(m1), c1, pk.p)
-    informationmatrix!(nim2, jm2, d2.weight, m2, invcov(m2), c2, pk.p)
+    informationmatrix!(nim1, jm1, d1.weight, m1, invcov(m1), c1, pk.p, na)
+    informationmatrix!(nim2, jm2, d2.weight, m2, invcov(m2), c2, pk.p, na)
     return log_det!(nim1) - log_det!(nim2)
 end
 
 #! format: off
 function eff_integral(nim1, nim2, jm1, jm2, c1, c2, d1, d2, m1, m2, cp1, cp2,
-                      pk::PriorSample, trafo::Identity)
+                      pk::PriorSample, trafo::Identity, na)
 #! format: on
     log_det_diff = 0.0
     for i in 1:length(pk.p)
-        informationmatrix!(nim1, jm1, d1.weight, m1, invcov(m1), c1, pk.p[i])
-        informationmatrix!(nim2, jm2, d2.weight, m2, invcov(m2), c2, pk.p[i])
+        informationmatrix!(nim1, jm1, d1.weight, m1, invcov(m1), c1, pk.p[i], na)
+        informationmatrix!(nim2, jm2, d2.weight, m2, invcov(m2), c2, pk.p[i], na)
         ld1 = log_det!(nim1)
         ld2 = log_det!(nim2)
         log_det_diff += ld1 - ld2
@@ -98,12 +102,12 @@ end
 
 #! format: off
 function eff_integral(nim1, nim2, jm1, jm2, c1, c2, d1, d2, m1, m2, cp1, cp2,
-                      pk::DiscretePrior, trafo::Identity)
+                      pk::DiscretePrior, trafo::Identity, na)
 #! format: on
     log_det_diff = 0.0
     for i in 1:length(pk.p)
-        informationmatrix!(nim1, jm1, d1.weight, m1, invcov(m1), c1, pk.p[i])
-        informationmatrix!(nim2, jm2, d2.weight, m2, invcov(m2), c2, pk.p[i])
+        informationmatrix!(nim1, jm1, d1.weight, m1, invcov(m1), c1, pk.p[i], na)
+        informationmatrix!(nim2, jm2, d2.weight, m2, invcov(m2), c2, pk.p[i], na)
         ld1 = log_det!(nim1)
         ld2 = log_det!(nim2)
         log_det_diff += pk.weight[i] * (ld1 - ld2)

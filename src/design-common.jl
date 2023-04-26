@@ -22,7 +22,8 @@ function invcov end
                     m::NonlinearRegression,
                     cp::CovariateParameterization,
                     pk::PriorKnowledge,
-                    trafo::Transformation;
+                    trafo::Transformation,
+                    na::NormalApproximation;
                     candidate::DesignMeasure = random_design(ds, parameter_dimension(pk)),
                     fixedweights = Int64[],
                     fixedpoints = Int64[],
@@ -52,7 +53,8 @@ function optimize_design(
     m::NonlinearRegression,
     cp::CovariateParameterization,
     pk::PriorKnowledge,
-    trafo::Transformation;
+    trafo::Transformation,
+    na::NormalApproximation;
     candidate::DesignMeasure = random_design(ds, parameter_dimension(pk)),
     fixedweights = Int64[],
     fixedpoints = Int64[],
@@ -64,7 +66,7 @@ function optimize_design(
     nim = zeros(pardim, pardim)
     jm = zeros(unit_length(m), pardim)
     c = allocate_initialize_covariates(candidate, m, cp)
-    f = d -> objective!(nim, jm, c, dc, d, m, cp, pk, trafo)
+    f = d -> objective!(nim, jm, c, dc, d, m, cp, pk, trafo, na)
     K = length(c)
     # set up constraints
     if any(fixedweights .< 1) || any(fixedweights .> K)
@@ -96,7 +98,8 @@ end
                   m::NonlinearRegression,
                   cp::CovariateParameterization,
                   pk::PriorKnowledge,
-                  trafo::Transformation;
+                  trafo::Transformation,
+                  na::NormalApproximation;
                   trace_state = false,
                   sargs...)
 
@@ -131,7 +134,8 @@ function refine_design(
     m::NonlinearRegression,
     cp::CovariateParameterization,
     pk::PriorKnowledge,
-    trafo::Transformation;
+    trafo::Transformation,
+    na::NormalApproximation;
     trace_state = false,
     sargs...,
 )
@@ -148,9 +152,9 @@ function refine_design(
     for i in 1:steps
         res = simplify(res, ds, m, cp; sargs...)
         dir_cand = map(singleton_design, support(res))
-        inv_nim = inverse_information_matrices(res, m, cp, pk)
+        inv_nim = inverse_information_matrices(res, m, cp, pk, na)
         # find direction of steepest ascent
-        gd(d) = gateauxderivative!(nim, jm, c, dc, inv_nim, d, m, cp, pk, trafo)
+        gd(d) = gateauxderivative!(nim, jm, c, dc, inv_nim, d, m, cp, pk, trafo, na)
         or_gd = optimize(od, gd, dir_cand, constraints; trace_state = trace_state)
         push!(ors_d, or_gd)
         d = or_gd.maximizer
@@ -172,7 +176,8 @@ function refine_design(
             m,
             cp,
             pk,
-            trafo;
+            trafo,
+            na;
             candidate = res,
             fixedpoints = 1:K,
             trace_state = trace_state,
@@ -207,7 +212,28 @@ function informationmatrix!(
     invcov::Real,
     c::AbstractVector{<:Covariate},
     p,
+    na::MLApproximation,
 )
+    im_helper!(nim, jm, w, m, invcov, c, p)
+    return nim
+end
+
+function informationmatrix!(
+    nim::AbstractMatrix,
+    jm::AbstractMatrix,
+    w::AbstractVector,
+    m::NonlinearRegression,
+    invcov::Real,
+    c::AbstractVector{<:Covariate},
+    p,
+    na::MAPApproximation,
+)
+    im_helper!(nim, jm, w, m, invcov, c, p)
+    nim .+= na.scaled_prior_precision
+    return nim
+end
+
+function im_helper!(nim, jm, w, m, invcov, c, p)
     fill!(nim, 0.0)
     for k in 1:length(w)
         jacobianmatrix!(jm, m, c[k], p)
@@ -273,27 +299,27 @@ function log_det!(A::AbstractMatrix)
 end
 
 # == objective function helpers for each type of `PriorKnowledge` == #
-function obj_integral(nim, jm, dc, w, m, c, pk::DiscretePrior, trafo)
+function obj_integral(nim, jm, dc, w, m, c, pk::DiscretePrior, trafo, na)
     acc = 0
     for i in 1:length(pk.p)
-        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i])
+        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i], na)
         acc += pk.weight[i] * criterion_integrand!(nim, dc, trafo)
     end
     return acc
 end
 
-function obj_integral(nim, jm, dc, w, m, c, pk::PriorSample, trafo)
+function obj_integral(nim, jm, dc, w, m, c, pk::PriorSample, trafo, na)
     acc = 0
     n = length(pk.p)
     for i in 1:n
-        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i])
+        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i], na)
         acc += criterion_integrand!(nim, dc, trafo)
     end
     return acc / n
 end
 
-function obj_integral(nim, jm, dc, w, m, c, pk::PriorGuess, trafo)
-    informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p)
+function obj_integral(nim, jm, dc, w, m, c, pk::PriorGuess, trafo, na)
+    informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p, na)
     return criterion_integrand!(nim, dc, trafo)
 end
 
@@ -307,11 +333,12 @@ function objective!(
     cp::CovariateParameterization,
     pk::PriorKnowledge,
     trafo::Transformation,
+    na::NormalApproximation,
 )
     for k in 1:length(c)
         update_model_covariate!(c[k], d.designpoint[k], m, cp)
     end
-    return obj_integral(nim, jm, dc, d.weight, m, c, pk, trafo)
+    return obj_integral(nim, jm, dc, d.weight, m, c, pk, trafo, na)
 end
 
 """
@@ -321,6 +348,7 @@ end
               cp::CovariateParameterization,
               pk::PriorKnowledge,
               trafo::Transformation,
+              na::NormalApproximation,
               )
 
 Objective function corresponding to the [`DesignCriterion`](@ref) evaluated at `d`.
@@ -332,25 +360,26 @@ function objective(
     cp::CovariateParameterization,
     pk::PriorKnowledge,
     trafo::Transformation,
+    na::NormalApproximation,
 )
     pardim = parameter_dimension(pk)
     nim = zeros(pardim, pardim)
     jm = zeros(unit_length(m), pardim)
     c = allocate_initialize_covariates(d, m, cp)
-    return objective!(nim, jm, c, dc, d, m, cp, pk, trafo)
+    return objective!(nim, jm, c, dc, d, m, cp, pk, trafo, na)
 end
 
 # == Gateaux derivative function helpes for each type of `PriorKnowledge` == #
-function allocate_infomatrices(q, jm, w, m, invcov, c, pk::DiscretePrior)
-    return [informationmatrix!(zeros(q, q), jm, w, m, invcov, c, p) for p in pk.p]
+function allocate_infomatrices(q, jm, w, m, invcov, c, pk::DiscretePrior, na)
+    return [informationmatrix!(zeros(q, q), jm, w, m, invcov, c, p, na) for p in pk.p]
 end
 
-function allocate_infomatrices(q, jm, w, m, invcov, c, pk::PriorSample)
-    return [informationmatrix!(zeros(q, q), jm, w, m, invcov, c, p) for p in pk.p]
+function allocate_infomatrices(q, jm, w, m, invcov, c, pk::PriorSample, na)
+    return [informationmatrix!(zeros(q, q), jm, w, m, invcov, c, p, na) for p in pk.p]
 end
 
-function allocate_infomatrices(q, jm, w, m, invcov, c, pk::PriorGuess)
-    return [informationmatrix!(zeros(q, q), jm, w, m, invcov, c, pk.p)]
+function allocate_infomatrices(q, jm, w, m, invcov, c, pk::PriorGuess, na)
+    return [informationmatrix!(zeros(q, q), jm, w, m, invcov, c, pk.p, na)]
 end
 
 function inverse_information_matrices(
@@ -358,6 +387,7 @@ function inverse_information_matrices(
     m::NonlinearRegression,
     cp::CovariateParameterization,
     pk::PriorKnowledge,
+    na::NormalApproximation,
 )
     # Calculate inverse of normalized information matrix for each parameter Note: the
     # jacobian matrix is re-usable, while the FisherMatrix needs to be allocated anew each
@@ -366,7 +396,7 @@ function inverse_information_matrices(
     c = allocate_initialize_covariates(d, m, cp)
     q = parameter_dimension(pk)
     jm = zeros(unit_length(m), q)
-    nims = allocate_infomatrices(q, jm, d.weight, m, invcov(m), c, pk)
+    nims = allocate_infomatrices(q, jm, d.weight, m, invcov(m), c, pk, na)
     # The documentation of `potri!` is not very clear that it expects a Cholesky factor as
     # input, and does _not_ call `potrf!` itself.
     # See also https://netlib.org/lapack/explore-html/d1/d7a/group__double_p_ocomputational_ga9dfc04beae56a3b1c1f75eebc838c14c.html
@@ -375,28 +405,28 @@ function inverse_information_matrices(
     return inv_nims
 end
 
-function gd_integral(nim, jm, c, dc, w, inv_nim_at, m, pk::DiscretePrior, trafo)
+function gd_integral(nim, jm, c, dc, w, inv_nim_at, m, pk::DiscretePrior, trafo, na)
     acc = 0
     n = length(pk.p)
     for i in 1:n
-        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i])
+        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i], na)
         acc += pk.weight[i] * gateaux_integrand(inv_nim_at[i], nim, dc, trafo)
     end
     return acc
 end
 
-function gd_integral(nim, jm, c, dc, w, inv_nim_at, m, pk::PriorSample, trafo)
+function gd_integral(nim, jm, c, dc, w, inv_nim_at, m, pk::PriorSample, trafo, na)
     acc = 0
     n = length(pk.p)
     for i in 1:n
-        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i])
+        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i], na)
         acc += gateaux_integrand(inv_nim_at[i], nim, dc, trafo)
     end
     return acc / n
 end
 
-function gd_integral(nim, jm, c, dc, w, inv_nim_at, m, pk::PriorGuess, trafo)
-    informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p)
+function gd_integral(nim, jm, c, dc, w, inv_nim_at, m, pk::PriorGuess, trafo, na)
+    informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p, na)
     return gateaux_integrand(inv_nim_at[1], nim, dc, trafo)
 end
 
@@ -411,9 +441,10 @@ function gateauxderivative!(
     cp::CovariateParameterization,
     pk::PriorKnowledge,
     trafo::Transformation,
+    na::NormalApproximation,
 )
     update_model_covariate!(c[1], direction.designpoint[1], m, cp)
-    return gd_integral(nim, jm, c, dc, direction.weight, inv_nim_at, m, pk, trafo)
+    return gd_integral(nim, jm, c, dc, direction.weight, inv_nim_at, m, pk, trafo, na)
 end
 
 """
@@ -424,6 +455,7 @@ end
                       cp::CovariateParameterization,
                       pk::PriorKnowledge,
                       trafo::Transformation,
+                      na::NormalApproximation,
                       )
 
 Gateaux derivative of the [`objective`](@ref) function `at` the the given design measure
@@ -437,6 +469,7 @@ function gateauxderivative(
     cp::CovariateParameterization,
     pk::PriorKnowledge,
     trafo::Transformation,
+    na::NormalApproximation,
 )
     if any(d -> length(d.weight) != 1, directions)
         error("Gateaux derivatives are only implemented for singleton design directions")
@@ -444,10 +477,10 @@ function gateauxderivative(
     pardim = parameter_dimension(pk)
     nim = zeros(pardim, pardim)
     jm = zeros(unit_length(m), pardim)
-    inv_nim_at = inverse_information_matrices(at, m, cp, pk)
+    inv_nim_at = inverse_information_matrices(at, m, cp, pk, na)
     cs = allocate_initialize_covariates(directions[1], m, cp)
     gd = map(directions) do d
-        gateauxderivative!(nim, jm, cs, dc, inv_nim_at, d, m, cp, pk, trafo)
+        gateauxderivative!(nim, jm, cs, dc, inv_nim_at, d, m, cp, pk, trafo, na)
     end
     return gd
 end
