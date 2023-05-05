@@ -6,8 +6,7 @@ function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::DOptimalit
     return sgn * log_det!(tnim)
 end
 
-# Note: If we don't specialize on trafo here, we can't exploit the special structure for
-# Identity(), resulting in an 8-fold slowdown.
+# Note: We must specialize on trafo here to exploit the special structure for Identity()
 function gateaux_integrand(dc::DOptimality, inv_nim_at, _, nim_direction, trafo::Identity)
     # Note: the dummy argument (inv_nim_at_mul_B) will always be the identity matrix for trafo::Identity
     return tr_prod(inv_nim_at, nim_direction, :U) - size(inv_nim_at, 1)
@@ -20,10 +19,23 @@ function gateaux_integrand(
     nim_direction,
     trafo::DeltaMethod,
 )
-    # note: inv_nim_at_mul_B is already dense
-    A = inv_nim_at_mul_B * Symmetric(inv_nim_at) * Symmetric(nim_direction)
-    C = inv_nim_at_mul_B
-    return tr(A) - tr(C)
+    X = inv_nim_at_mul_B # dense and _not_ symmetric
+    # Note: A benchmark suggests that the Symmetric() views do not incur dynamic memory
+    # allocations. Writing out the index swapping by hand would make the for loops much less
+    # readable.
+    Y = Symmetric(inv_nim_at)
+    Z = Symmetric(nim_direction)
+    # explcitly calculate tr[XYZ] = sum_{i,k,j} X_{ij} Y_{jk} Z_{ki}
+    tr_XYZ = 0.0
+    r = size(inv_nim_at_mul_B, 1)
+    for i in 1:r
+        for j in 1:r
+            for k in 1:r
+                tr_XYZ += X[i, j] * Y[j, k] * Z[k, i]
+            end
+        end
+    end
+    return tr_XYZ - tr(inv_nim_at_mul_B)
 end
 
 function calc_inv_nim_at_mul_B(dc::DOptimality, pk::PriorGuess, trafo::Identity, inv_nim_at)
@@ -59,10 +71,11 @@ function calc_inv_nim_at_mul_B(
 )
     t = codomain_dimension(trafo, pk)
     ina_copy = deepcopy(inv_nim_at[1])
-    inv_tnim, _ = apply_transformation!(zeros(t, t), ina_copy, true, trafo, 1)
-    tnim = inv(Symmetric(inv_tnim))
+    r = parameter_dimension(pk)
+    work = zeros(r, t)
+    inv_tnim, _ = apply_transformation!(zeros(t, t), work, ina_copy, true, trafo, 1)
     J = trafo.tjm[1]
-    B = J' * tnim * J
+    B = J' * (Symmetric(inv_tnim) \ J)
     return [Symmetric(inv_nim_at[1]) * B]
 end
 
@@ -74,11 +87,13 @@ function calc_inv_nim_at_mul_B(
 )
     t = codomain_dimension(trafo, pk)
     ina_copy = deepcopy(inv_nim_at[1])
+    r = parameter_dimension(pk)
+    work = zeros(r, t)
     res = map(1:length(pk.p)) do i
         ina_copy .= inv_nim_at[i] # Note: this matrix gets overwritten
-        inv_tnim, _ = apply_transformation!(zeros(t, t), ina_copy, true, trafo, i)
+        inv_tnim, _ = apply_transformation!(zeros(t, t), work, ina_copy, true, trafo, i)
         J = trafo.tjm[i]
-        B = J' * inv(Symmetric(inv_tnim)) * J
+        B = J' * (Symmetric(inv_tnim) \ J)
         return Symmetric(inv_nim_at[i]) * B
     end
     return res
@@ -92,11 +107,13 @@ function calc_inv_nim_at_mul_B(
 )
     t = codomain_dimension(trafo, pk)
     ina_copy = deepcopy(inv_nim_at[1])
+    r = parameter_dimension(pk)
+    work = zeros(r, t)
     res = map(1:length(pk.p)) do i
         ina_copy .= inv_nim_at[i]
-        inv_tnim, _ = apply_transformation!(zeros(t, t), ina_copy, true, trafo, i)
+        inv_tnim, _ = apply_transformation!(zeros(t, t), work, ina_copy, true, trafo, i)
         J = trafo.tjm[i]
-        B = J' * inv(Symmetric(inv_tnim)) * J
+        B = J' * (Symmetric(inv_tnim) \ J)
         return Symmetric(inv_nim_at[i]) * B
     end
     return res
@@ -155,6 +172,7 @@ function efficiency(
 )
     pardim = parameter_dimension(pk)
     tpardim = codomain_dimension(trafo, pk)
+    work = zeros(pardim, tpardim)
     tnim1 = zeros(tpardim, tpardim)
     nim1 = zeros(pardim, pardim)
     jm1 = zeros(unit_length(m1), pardim)
@@ -165,14 +183,14 @@ function efficiency(
     c2 = allocate_initialize_covariates(d2, m2, cp2)
 
     #! format: off
-    ei = eff_integral!(tnim1, tnim2, nim1, nim2, jm1, jm2, d1.weight, d2.weight,
+    ei = eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, d1.weight, d2.weight,
                        m1, m2, c1, c2, pk, trafo, na)
     #! format: on
     return exp(ei / tpardim)
 end
 
 #! format: off
-function eff_integral!(tnim1, tnim2, nim1, nim2, jm1, jm2, w1, w2,
+function eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, w1, w2,
                        m1, m2, c1, c2, pk::DiscretePrior, trafo, na)
 #! format: on
     n = length(pk.p)
@@ -180,15 +198,15 @@ function eff_integral!(tnim1, tnim2, nim1, nim2, jm1, jm2, w1, w2,
     for i in 1:n
         informationmatrix!(nim1, jm1, w1, m1, invcov(m1), c1, pk.p[i], na)
         informationmatrix!(nim2, jm2, w2, m2, invcov(m2), c2, pk.p[i], na)
-        _, is_inv1 = apply_transformation!(tnim1, nim1, false, trafo, i)
-        _, is_inv2 = apply_transformation!(tnim2, nim2, false, trafo, i)
+        _, is_inv1 = apply_transformation!(tnim1, work, nim1, false, trafo, i)
+        _, is_inv2 = apply_transformation!(tnim2, work, nim2, false, trafo, i)
         acc += pk.weight[i] * eff_integrand!(tnim1, tnim2, is_inv1, is_inv2)
     end
     return acc
 end
 
 #! format: off
-function eff_integral!(tnim1, tnim2, nim1, nim2, jm1, jm2, w1, w2,
+function eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, w1, w2,
                        m1, m2, c1, c2, pk::PriorSample, trafo, na)
 #! format: on
     n = length(pk.p)
@@ -196,21 +214,21 @@ function eff_integral!(tnim1, tnim2, nim1, nim2, jm1, jm2, w1, w2,
     for i in 1:n
         informationmatrix!(nim1, jm1, w1, m1, invcov(m1), c1, pk.p[i], na)
         informationmatrix!(nim2, jm2, w2, m2, invcov(m2), c2, pk.p[i], na)
-        _, is_inv1 = apply_transformation!(tnim1, nim1, false, trafo, i)
-        _, is_inv2 = apply_transformation!(tnim2, nim2, false, trafo, i)
+        _, is_inv1 = apply_transformation!(tnim1, work, nim1, false, trafo, i)
+        _, is_inv2 = apply_transformation!(tnim2, work, nim2, false, trafo, i)
         acc += eff_integrand!(tnim1, tnim2, is_inv1, is_inv2)
     end
     return acc / n
 end
 
 #! format: off
-function eff_integral!(tnim1, tnim2, nim1, nim2, jm1, jm2, w1, w2,
+function eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, w1, w2,
                        m1, m2, c1, c2, pk::PriorGuess, trafo, na)
 #! format: on
     informationmatrix!(nim1, jm1, w1, m1, invcov(m1), c1, pk.p, na)
     informationmatrix!(nim2, jm2, w2, m2, invcov(m2), c2, pk.p, na)
-    _, is_inv1 = apply_transformation!(tnim1, nim1, false, trafo, 1)
-    _, is_inv2 = apply_transformation!(tnim2, nim2, false, trafo, 1)
+    _, is_inv1 = apply_transformation!(tnim1, work, nim1, false, trafo, 1)
+    _, is_inv2 = apply_transformation!(tnim2, work, nim2, false, trafo, 1)
     return eff_integrand!(tnim1, tnim2, is_inv1, is_inv2)
 end
 

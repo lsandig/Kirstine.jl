@@ -65,10 +65,11 @@ function optimize_design(
     pardim = parameter_dimension(pk)
     tpardim = codomain_dimension(trafo, pk)
     nim = zeros(pardim, pardim)
+    work = zeros(pardim, tpardim)
     tnim = zeros(tpardim, tpardim)
     jm = zeros(unit_length(m), pardim)
     c = allocate_initialize_covariates(candidate, m, cp)
-    f = d -> objective!(tnim, nim, jm, c, dc, d, m, cp, pk, trafo, na)
+    f = d -> objective!(tnim, work, nim, jm, c, dc, d, m, cp, pk, trafo, na)
     K = length(c)
     # set up constraints
     if any(fixedweights .< 1) || any(fixedweights .> K)
@@ -259,19 +260,33 @@ function im_helper!(nim, jm, w, m, invcov, c, p)
     return nim
 end
 
-function apply_transformation!(tnim, nim, is_inv::Bool, trafo::Identity, index::Int64)
+# We just copy nim to tnim and don't care whether it is inverted or not.
+function apply_transformation!(tnim, _, nim, is_inv::Bool, trafo::Identity, index)
     tnim .= nim
     return tnim, is_inv
 end
 
-function apply_transformation!(tnim, nim, is_inv::Bool, trafo::DeltaMethod, index::Int64)
+# Notes:
+#  * The first _three_ arguments are modified by this function.
+#  * When trafo maps from ℝ^r to ℝ^t, the preallocated matrices need to have dimensions
+#    - tnim: (t, t)
+#    - work: (r, t)
+#    - nim: (r, r)
+#  * We always return a dense _inverse_ of the transformed information matrix.
+function apply_transformation!(tnim, work, nim, is_inv::Bool, trafo::DeltaMethod, index)
     if is_inv
-        inv_nim = nim
+        # update work = 1 * Symmetric(nim) * trafo.tjm[index]' + 0 * work, i.e.
+        #  * nim on the 'L'eft of the multiplication
+        #  * and only use its 'U'pper triangle.
+        symm!('L', 'U', 1.0, nim, permutedims(trafo.tjm[index]), 0.0, work)
     else
-        inv_nim = inv(Symmetric(nim))
+        work .= trafo.tjm[index]'
+        # calculate inv(Symmetric(nim)) * trafo.tjm[index]' by solving
+        # Symmetric(nim) * X = trafo.tjm[index]' for X
+        posv!('U', nim, work) # overwrites nim with potrf!(nim) and work with the solution
     end
-    # This is the _inverse_ of the transformed information matrix
-    tnim .= trafo.tjm[index] * inv_nim * trafo.tjm[index]'
+    # set tnim to trafo.tjm[index] * work
+    mul!(tnim, trafo.tjm[index], work)
     return tnim, true
 end
 
@@ -326,35 +341,36 @@ function log_det!(A::AbstractMatrix)
 end
 
 # == objective function helpers for each type of `PriorKnowledge` == #
-function obj_integral(tnim, nim, jm, dc, w, m, c, pk::DiscretePrior, trafo, na)
+function obj_integral(tnim, work, nim, jm, dc, w, m, c, pk::DiscretePrior, trafo, na)
     acc = 0
     for i in 1:length(pk.p)
         informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i], na)
-        _, is_inv = apply_transformation!(tnim, nim, false, trafo, i)
+        _, is_inv = apply_transformation!(tnim, work, nim, false, trafo, i)
         acc += pk.weight[i] * criterion_integrand!(tnim, is_inv, dc)
     end
     return acc
 end
 
-function obj_integral(tnim, nim, jm, dc, w, m, c, pk::PriorSample, trafo, na)
+function obj_integral(tnim, work, nim, jm, dc, w, m, c, pk::PriorSample, trafo, na)
     acc = 0
     n = length(pk.p)
     for i in 1:n
         informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i], na)
-        _, is_inv = apply_transformation!(tnim, nim, false, trafo, i)
+        _, is_inv = apply_transformation!(tnim, work, nim, false, trafo, i)
         acc += criterion_integrand!(tnim, is_inv, dc)
     end
     return acc / n
 end
 
-function obj_integral(tnim, nim, jm, dc, w, m, c, pk::PriorGuess, trafo, na)
+function obj_integral(tnim, work, nim, jm, dc, w, m, c, pk::PriorGuess, trafo, na)
     informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p, na)
-    _, is_inv = apply_transformation!(tnim, nim, false, trafo, 1)
+    _, is_inv = apply_transformation!(tnim, work, nim, false, trafo, 1)
     return criterion_integrand!(tnim, is_inv, dc)
 end
 
 function objective!(
     tnim::AbstractMatrix,
+    work::AbstractMatrix,
     nim::AbstractMatrix,
     jm::AbstractMatrix,
     c::AbstractVector{<:Covariate},
@@ -369,7 +385,7 @@ function objective!(
     for k in 1:length(c)
         update_model_covariate!(c[k], d.designpoint[k], m, cp)
     end
-    return obj_integral(tnim, nim, jm, dc, d.weight, m, c, pk, trafo, na)
+    return obj_integral(tnim, work, nim, jm, dc, d.weight, m, c, pk, trafo, na)
 end
 
 """
@@ -396,10 +412,11 @@ function objective(
     pardim = parameter_dimension(pk)
     tpardim = codomain_dimension(trafo, pk)
     nim = zeros(pardim, pardim)
+    work = zeros(pardim, tpardim)
     tnim = zeros(tpardim, tpardim)
     jm = zeros(unit_length(m), pardim)
     c = allocate_initialize_covariates(d, m, cp)
-    return objective!(tnim, nim, jm, c, dc, d, m, cp, pk, trafo, na)
+    return objective!(tnim, work, nim, jm, c, dc, d, m, cp, pk, trafo, na)
 end
 
 # == Gateaux derivative function helpes for each type of `PriorKnowledge` == #

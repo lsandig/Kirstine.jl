@@ -39,11 +39,12 @@
         nim2 = deepcopy(inv_nim),
         nim3 = deepcopy(nim),
         nim4 = deepcopy(inv_nim),
-        (tnim1, _) = Kirstine.apply_transformation!(zeros(3, 3), nim1, false, tid, 1),
-        (tnim2, _) = Kirstine.apply_transformation!(zeros(3, 3), nim2, true, tid, 1),
+        work = zeros(3, 3),
+        (tnim1, _) = Kirstine.apply_transformation!(zeros(3, 3), work, nim1, false, tid, 1),
+        (tnim2, _) = Kirstine.apply_transformation!(zeros(3, 3), work, nim2, true, tid, 1),
         # scaling parameters should be able to be pulled out
-        (tnim3, _) = Kirstine.apply_transformation!(zeros(3, 3), nim3, false, tsc, 1),
-        (tnim4, _) = Kirstine.apply_transformation!(zeros(3, 3), nim4, true, tsc, 1)
+        (tnim3, _) = Kirstine.apply_transformation!(zeros(3, 3), work, nim3, false, tsc, 1),
+        (tnim4, _) = Kirstine.apply_transformation!(zeros(3, 3), work, nim4, true, tsc, 1)
 
         @test Symmetric(tnim1) ≈ Symmetric(inv_nim)
         @test Symmetric(tnim2) ≈ Symmetric(inv_nim)
