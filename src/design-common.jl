@@ -211,6 +211,10 @@ function codomain_dimension(trafo::Identity, pk)
     return parameter_dimension(pk)
 end
 
+function codomain_dimension(trafo::DeltaMethod, pk)
+    return size(trafo.tjm[1], 1)
+end
+
 function informationmatrix!(
     nim::AbstractMatrix,
     jm::AbstractMatrix,
@@ -258,6 +262,17 @@ end
 function apply_transformation!(tnim, nim, is_inv::Bool, trafo::Identity, index::Int64)
     tnim .= nim
     return tnim, is_inv
+end
+
+function apply_transformation!(tnim, nim, is_inv::Bool, trafo::DeltaMethod, index::Int64)
+    if is_inv
+        inv_nim = nim
+    else
+        inv_nim = inv(Symmetric(nim))
+    end
+    # This is the _inverse_ of the transformed information matrix
+    tnim .= trafo.tjm[index] * inv_nim * trafo.tjm[index]'
+    return tnim, true
 end
 
 function allocate_initialize_covariates(d, m, cp)

@@ -19,6 +19,37 @@
         # note: log_det! overwrites B, so it can't be called first
         @test log(det(B)) ≈ Kirstine.log_det!(B)
     end
+
+    # Applying a DeltaMethod transformation should give the same results whether the
+    # incoming normalized information matrix is already inverted or not. For a DeltaMethod
+    # that is actually an identity transformation in disguise, the result should simply be
+    # the inverse of the argument.
+    #
+    # Note: we have to recreate the circumstances in which apply_transformation! is called:
+    # nim is allowed to be only upper triangular, and is allowed to be overwritten. Hence we
+    # must use deepcopys, and Symmetric wrappers where necessary.
+    let pk = PriorGuess((dummy = 42,)),
+        tid = DeltaMethod(p -> diagm(ones(3)), pk),
+        tsc = DeltaMethod(p -> diagm([0.5, 2.0, 4.0]), pk),
+        _ = seed!(4321),
+        A = reshape(rand(9), 3, 3),
+        nim = collect(UpperTriangular(A' * A)),
+        inv_nim = collect(UpperTriangular(inv(A' * A))),
+        nim1 = deepcopy(nim),
+        nim2 = deepcopy(inv_nim),
+        nim3 = deepcopy(nim),
+        nim4 = deepcopy(inv_nim),
+        (tnim1, _) = Kirstine.apply_transformation!(zeros(3, 3), nim1, false, tid, 1),
+        (tnim2, _) = Kirstine.apply_transformation!(zeros(3, 3), nim2, true, tid, 1),
+        # scaling parameters should be able to be pulled out
+        (tnim3, _) = Kirstine.apply_transformation!(zeros(3, 3), nim3, false, tsc, 1),
+        (tnim4, _) = Kirstine.apply_transformation!(zeros(3, 3), nim4, true, tsc, 1)
+
+        @test Symmetric(tnim1) ≈ Symmetric(inv_nim)
+        @test Symmetric(tnim2) ≈ Symmetric(inv_nim)
+        @test Symmetric(tnim3) ≈ Symmetric(tnim4)
+        @test det(Symmetric(tnim3)) ≈ 4^2 * det(Symmetric(inv_nim))
+    end
 end
 
 @testset "doptimal" begin
@@ -62,6 +93,63 @@ end
         b = ds.upperbound[1]
         x_star = (a * (b + p.ec50) + b * (a + p.ec50)) / (a + b + 2 * p.ec50)
         return uniform_design([[a], [x_star], [b]])
+    end
+
+    # Three-parameter compartmental model from
+    # Atkinson, A. C., Chaloner, K., Herzberg, A. M., & Juritz, J. (1993).
+    # Optimum experimental designs for properties of a compartmental model.
+    # Biometrics, 49(2), 325–337. http://dx.doi.org/10.2307/2532547
+    @define_scalar_unit_model Kirstine TPCMod time
+    struct CopyTime <: CovariateParameterization end
+    function Kirstine.jacobianmatrix!(jm, m::TPCMod, c::TPCModCovariate, p)
+        # names(p) == a, e, s
+        A = exp(-p.a * c.time)
+        E = exp(-p.e * c.time)
+        jm[1, 1] = A * p.s * c.time
+        jm[1, 2] = -E * p.s * c.time
+        jm[1, 3] = E - A
+        return m
+    end
+    function Kirstine.update_model_covariate!(
+        c::TPCModCovariate,
+        dp::AbstractVector{<:Real},
+        m::TPCMod,
+        cp::CopyTime,
+    )
+        c.time = dp[1]
+        return c
+    end
+    # response, area under the curve, time-to-maximum, maximum concentration
+    mu(c, p) = p.s * (exp(-p.e * c.time) - exp(-p.a * c.time))
+    auc(p) = p.s * (1 / p.e - 1 / p.a)
+    ttm(p) = log(p.a / p.e) / (p.a - p.e)
+    cmax(p) = mu(TPCModCovariate(ttm(p)), p)
+    # jacobian matrices (transposed gradients) from Appendix 1
+    function Dauc(p)
+        da = p.s / p.a^2
+        de = -p.s / p.e^2
+        ds = 1 / p.e - 1 / p.a
+        return [da de ds]
+    end
+    function Dttm(p)
+        A = p.a - p.e
+        A2 = A^2
+        B = log(p.a / p.e)
+        da = (A / p.a - B) / A2
+        de = (B - A / p.e) / A2
+        ds = 0
+        return [da de ds]
+    end
+    function Dcmax(p)
+        tmax = ttm(p)
+        A = exp(-p.a * tmax)
+        E = exp(-p.e * tmax)
+        F = p.a * A - p.e * E
+        da_ttm, de_ttm, ds_ttm = Dttm(p)
+        da = p.s * (tmax * A - F * da_ttm)
+        de = p.s * (-tmax * E + F * de_ttm)
+        ds = E - A
+        return [da de ds]
     end
 
     # Gateaux derivatives and efficiency
@@ -113,6 +201,72 @@ end
         @test gd(sol, not_sol, pk1, na_ml) ≈ gd(sol, not_sol, pk1, na_map)
         @test gd(sol, not_sol, pk2, na_ml) ≈ gd(sol, not_sol, pk2, na_map)
         @test gd(sol, not_sol, pk3, na_ml) ≈ gd(sol, not_sol, pk3, na_map)
+    end
+
+    # DeltaMethod for Atkinson et al. examples
+    let ds = DesignSpace(:time => [0, 48]),
+        g0 = PriorGuess((a = 4.298, e = 0.05884, s = 21.80)),
+        m = TPCMod(1),
+        cp = CopyTime(),
+        dc = DOptimality(),
+        na_ml = MLApproximation(),
+        na_map_nonreg = MAPApproximation(zeros(3, 3)),
+        na_map = MAPApproximation(diagm(fill(1e-5, 3))),
+        # first four designs of Table 1, and corresponding transformations
+        #! format: off
+        a1  = DesignMeasure([0.2288] => 1/3,    [1.3886] => 1/3,    [18.417] => 1/3),
+        a2  = DesignMeasure([0.2327] => 0.0135, [17.633] => 0.9865),
+        a3  = DesignMeasure([0.1793] => 0.6062, [3.5671] => 0.3938),
+        a4  = DesignMeasure([1.0122] => 1.0),
+        a5 = DesignMeasure([0.2176] => 0.2337, [1.4343] => 0.3878, [18.297] => 0.3785),
+        a0_time = [1/6, 1/3, 1/2, 2/3, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12, 24, 30, 48],
+        a0 = uniform_design([[t] for t in a0_time]),
+        #! format: on
+        t1 = Identity(),
+        t1_delta = DeltaMethod(p -> diagm(ones(3)), g0),
+        t2 = DeltaMethod(Dauc, g0),
+        t3 = DeltaMethod(Dttm, g0),
+        t4 = DeltaMethod(Dcmax, g0),
+        dir = [singleton_design([t]) for t in range(0, 48; length = 21)],
+        #! format: off
+        teff = [100     34.31  66.02  36.10;
+                  0    100      0      0   ;
+                  0      0    100      0   ;
+                  0      0      0    100   ;
+                 97.36  38.97  52.89  41.26;
+                 67.61  24.00  28.60  36.77],
+        #! format: on
+        ob(a, t, na) = objective(dc, a, m, cp, g0, t, na),
+        gd(a, t, na) = gateauxderivative(dc, a, dir, m, cp, g0, t, na),
+        ef(a, zs, ts) = map((z, t) -> 100 * efficiency(a, z, m, cp, g0, t, na_map), zs, ts)
+
+        # check Atkinson's solutions
+        @test ob(a1, t1, na_map) ≈ 7.3887 rtol = 1e-4
+        @test exp(-ob(a2, t2, na_map)) ≈ 2194 rtol = 1e-4
+        @test exp(-ob(a3, t3, na_map)) ≈ 0.02815 rtol = 1e-3
+        @test exp(-ob(a4, t4, na_map)) ≈ 1.000 rtol = 1e-3
+        @test maximum(gd(a1, t1, na_map)) <= 0
+        # Gateaux derivative is sensitive to more than the four published decimal places
+        @test_broken maximum(gd(a2, t2, na_map)) <= 0
+        @test_broken maximum(gd(a3, t3, na_map)) <= 0
+        @test_broken maximum(gd(a4, t4, na_map)) <= 0
+        # compare DeltaMethod identity with actual Identity
+        @test ob(a1, t1, na_map) ≈ ob(a1, t1_delta, na_map)
+        @test gd(a1, t1, na_map) ≈ gd(a1, t1_delta, na_map)
+        @test ob(a1, t1, na_ml) ≈ ob(a1, t1_delta, na_ml)
+        @test gd(a1, t1, na_ml) ≈ gd(a1, t1_delta, na_ml)
+        # full-rank information matrices should work with a non-regularizing approximation
+        @test ob(a1, t1, na_map_nonreg) ≈ ob(a1, t1_delta, na_map_nonreg)
+        @test gd(a1, t1, na_map_nonreg) ≈ gd(a1, t1_delta, na_map_nonreg)
+        # Table 4 from the article ([2, 1] and [3, 1] are off)
+        @test teff[1, :] ≈ ef(a1, [a1, a2, a3, a4], [t1, t2, t3, t4]) rtol = 1e-3
+        @test_broken teff[2, 1] ≈ ef(a2, [a1], [t1])[1] rtol = 1e-3
+        @test teff[2, 2:4] ≈ ef(a2, [a2, a3, a4], [t2, t3, t4]) rtol = 1e-3
+        @test_broken teff[3, 1] ≈ ef(a3, [a1], [t1])[1] rtol = 1e-3
+        @test teff[3, 2:4] ≈ ef(a3, [a2, a3, a4], [t2, t3, t4]) rtol = 1e-3
+        @test teff[4, :] ≈ ef(a4, [a1, a2, a3, a4], [t1, t2, t3, t4]) rtol = 1e-3
+        @test teff[5, :] ≈ ef(a5, [a1, a2, a3, a4], [t1, t2, t3, t4]) rtol = 1e-3
+        @test teff[6, :] ≈ ef(a0, [a1, a2, a3, a4], [t1, t2, t3, t4]) rtol = 1e-3
     end
 
     # Can we find the locally D-optimal design?

@@ -13,6 +13,19 @@ function gateaux_integrand(dc::DOptimality, inv_nim_at, _, nim_direction, trafo:
     return tr_prod(inv_nim_at, nim_direction, :U) - size(inv_nim_at, 1)
 end
 
+function gateaux_integrand(
+    dc::DOptimality,
+    inv_nim_at,
+    inv_nim_at_mul_B,
+    nim_direction,
+    trafo::DeltaMethod,
+)
+    # note: inv_nim_at_mul_B is already dense
+    A = inv_nim_at_mul_B * Symmetric(inv_nim_at) * Symmetric(nim_direction)
+    C = inv_nim_at_mul_B
+    return tr(A) - tr(C)
+end
+
 function calc_inv_nim_at_mul_B(dc::DOptimality, pk::PriorGuess, trafo::Identity, inv_nim_at)
     r = parameter_dimension(pk)
     return [diagm(ones(r))]
@@ -36,6 +49,57 @@ function calc_inv_nim_at_mul_B(
 )
     r = parameter_dimension(pk)
     return [diagm(ones(r)) for _ in 1:length(pk.p)]
+end
+
+function calc_inv_nim_at_mul_B(
+    dc::DOptimality,
+    pk::PriorGuess,
+    trafo::DeltaMethod,
+    inv_nim_at,
+)
+    t = codomain_dimension(trafo, pk)
+    ina_copy = deepcopy(inv_nim_at[1])
+    inv_tnim, _ = apply_transformation!(zeros(t, t), ina_copy, true, trafo, 1)
+    tnim = inv(Symmetric(inv_tnim))
+    J = trafo.tjm[1]
+    B = J' * tnim * J
+    return [Symmetric(inv_nim_at[1]) * B]
+end
+
+function calc_inv_nim_at_mul_B(
+    dc::DOptimality,
+    pk::PriorSample,
+    trafo::DeltaMethod,
+    inv_nim_at,
+)
+    t = codomain_dimension(trafo, pk)
+    ina_copy = deepcopy(inv_nim_at[1])
+    res = map(1:length(pk.p)) do i
+        ina_copy .= inv_nim_at[i] # Note: this matrix gets overwritten
+        inv_tnim, _ = apply_transformation!(zeros(t, t), ina_copy, true, trafo, i)
+        J = trafo.tjm[i]
+        B = J' * inv(Symmetric(inv_tnim)) * J
+        return Symmetric(inv_nim_at[i]) * B
+    end
+    return res
+end
+
+function calc_inv_nim_at_mul_B(
+    dc::DOptimality,
+    pk::DiscretePrior,
+    trafo::DeltaMethod,
+    inv_nim_at,
+)
+    t = codomain_dimension(trafo, pk)
+    ina_copy = deepcopy(inv_nim_at[1])
+    res = map(1:length(pk.p)) do i
+        ina_copy .= inv_nim_at[i]
+        inv_tnim, _ = apply_transformation!(zeros(t, t), ina_copy, true, trafo, i)
+        J = trafo.tjm[i]
+        B = J' * inv(Symmetric(inv_tnim)) * J
+        return Symmetric(inv_nim_at[i]) * B
+    end
+    return res
 end
 
 # == relative D-efficiency == #

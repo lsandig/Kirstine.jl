@@ -141,6 +141,31 @@ Represents the [`Transformation`](@ref) that maps a parameter to itself.
 struct Identity <: Transformation end
 
 """
+    DeltaMethod
+
+TODO
+"""
+struct DeltaMethod <: Transformation
+    tjm::Vector{Matrix{Float64}} # pre-calculated jacobian matrix of transformation
+    # TODO: keep a pointer to the actual transformation?
+end
+
+"""
+    DeltaMethod(Dt, pk::DiscretePrior)
+
+TODO
+"""
+function DeltaMethod(Dt, pk::Union{PriorSample,DiscretePrior})
+    tjm = [Dt(p) for p in pk.p]
+    DeltaMethod(tjm)
+end
+
+function DeltaMethod(Dt, pk::PriorGuess)
+    tjm = [Dt(pk.p)]
+    DeltaMethod(tjm)
+end
+
+"""
     DesignCriterion
 
 Abstract supertype of criteria for optimal experimental design.

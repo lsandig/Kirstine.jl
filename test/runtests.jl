@@ -1,5 +1,5 @@
 using Test
-using LinearAlgebra: Symmetric, norm, tr, det
+using LinearAlgebra: Symmetric, UpperTriangular, norm, tr, det, diagm
 using Statistics: mean
 using Random: seed!, rand!
 using Plots: plot
