@@ -63,10 +63,12 @@ function optimize_design(
 )
     check_compatible(candidate, ds)
     pardim = parameter_dimension(pk)
+    tpardim = codomain_dimension(trafo, pk)
     nim = zeros(pardim, pardim)
+    tnim = zeros(tpardim, tpardim)
     jm = zeros(unit_length(m), pardim)
     c = allocate_initialize_covariates(candidate, m, cp)
-    f = d -> objective!(nim, jm, c, dc, d, m, cp, pk, trafo, na)
+    f = d -> objective!(tnim, nim, jm, c, dc, d, m, cp, pk, trafo, na)
     K = length(c)
     # set up constraints
     if any(fixedweights .< 1) || any(fixedweights .> K)
@@ -153,8 +155,9 @@ function refine_design(
         res = simplify(res, ds, m, cp; sargs...)
         dir_cand = map(singleton_design, support(res))
         inv_nim = inverse_information_matrices(res, m, cp, pk, na)
+        inmB = calc_inv_nim_at_mul_B(dc, pk, trafo, inv_nim)
         # find direction of steepest ascent
-        gd(d) = gateauxderivative!(nim, jm, c, dc, inv_nim, d, m, cp, pk, trafo, na)
+        gd(d) = gateauxderivative!(nim, jm, c, dc, inv_nim, inmB, d, m, cp, pk, trafo, na)
         or_gd = optimize(od, gd, dir_cand, constraints; trace_state = trace_state)
         push!(ors_d, or_gd)
         d = or_gd.maximizer
@@ -204,6 +207,10 @@ function parameter_dimension(pk::DiscretePrior)
     return length(pk.p[1])
 end
 
+function codomain_dimension(trafo::Identity, pk)
+    return parameter_dimension(pk)
+end
+
 function informationmatrix!(
     nim::AbstractMatrix,
     jm::AbstractMatrix,
@@ -242,10 +249,15 @@ function im_helper!(nim, jm, w, m, invcov, c, p)
         #   nim = w[k] * invcov * jm' * jm + 1 * nim
         #
         # The result is symmetric, and only the 'U'pper triangle of nim is actually written
-        # to. The lower triangle is not touched and is allowed to contain arbitrary garbabe.
+        # to. The lower triangle is not touched and is allowed to contain arbitrary garbage.
         syrk!('U', 'T', w[k] * invcov, jm, 1.0, nim)
     end
     return nim
+end
+
+function apply_transformation!(tnim, nim, is_inv::Bool, trafo::Identity, index::Int64)
+    tnim .= nim
+    return tnim, is_inv
 end
 
 function allocate_initialize_covariates(d, m, cp)
@@ -299,31 +311,35 @@ function log_det!(A::AbstractMatrix)
 end
 
 # == objective function helpers for each type of `PriorKnowledge` == #
-function obj_integral(nim, jm, dc, w, m, c, pk::DiscretePrior, trafo, na)
+function obj_integral(tnim, nim, jm, dc, w, m, c, pk::DiscretePrior, trafo, na)
     acc = 0
     for i in 1:length(pk.p)
         informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i], na)
-        acc += pk.weight[i] * criterion_integrand!(nim, dc, trafo)
+        _, is_inv = apply_transformation!(tnim, nim, false, trafo, i)
+        acc += pk.weight[i] * criterion_integrand!(tnim, is_inv, dc)
     end
     return acc
 end
 
-function obj_integral(nim, jm, dc, w, m, c, pk::PriorSample, trafo, na)
+function obj_integral(tnim, nim, jm, dc, w, m, c, pk::PriorSample, trafo, na)
     acc = 0
     n = length(pk.p)
     for i in 1:n
         informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i], na)
-        acc += criterion_integrand!(nim, dc, trafo)
+        _, is_inv = apply_transformation!(tnim, nim, false, trafo, i)
+        acc += criterion_integrand!(tnim, is_inv, dc)
     end
     return acc / n
 end
 
-function obj_integral(nim, jm, dc, w, m, c, pk::PriorGuess, trafo, na)
+function obj_integral(tnim, nim, jm, dc, w, m, c, pk::PriorGuess, trafo, na)
     informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p, na)
-    return criterion_integrand!(nim, dc, trafo)
+    _, is_inv = apply_transformation!(tnim, nim, false, trafo, 1)
+    return criterion_integrand!(tnim, is_inv, dc)
 end
 
 function objective!(
+    tnim::AbstractMatrix,
     nim::AbstractMatrix,
     jm::AbstractMatrix,
     c::AbstractVector{<:Covariate},
@@ -338,7 +354,7 @@ function objective!(
     for k in 1:length(c)
         update_model_covariate!(c[k], d.designpoint[k], m, cp)
     end
-    return obj_integral(nim, jm, dc, d.weight, m, c, pk, trafo, na)
+    return obj_integral(tnim, nim, jm, dc, d.weight, m, c, pk, trafo, na)
 end
 
 """
@@ -363,10 +379,12 @@ function objective(
     na::NormalApproximation,
 )
     pardim = parameter_dimension(pk)
+    tpardim = codomain_dimension(trafo, pk)
     nim = zeros(pardim, pardim)
+    tnim = zeros(tpardim, tpardim)
     jm = zeros(unit_length(m), pardim)
     c = allocate_initialize_covariates(d, m, cp)
-    return objective!(nim, jm, c, dc, d, m, cp, pk, trafo, na)
+    return objective!(tnim, nim, jm, c, dc, d, m, cp, pk, trafo, na)
 end
 
 # == Gateaux derivative function helpes for each type of `PriorKnowledge` == #
@@ -405,29 +423,40 @@ function inverse_information_matrices(
     return inv_nims
 end
 
-function gd_integral(nim, jm, c, dc, w, inv_nim_at, m, pk::DiscretePrior, trafo, na)
+#! format: off
+function gd_integral(nim, jm, c, dc, w, inv_nim_at, inv_nim_at_mul_B, m,
+                     pk::DiscretePrior, trafo, na)
+#! format: on
     acc = 0
     n = length(pk.p)
     for i in 1:n
         informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i], na)
-        acc += pk.weight[i] * gateaux_integrand(inv_nim_at[i], nim, dc, trafo)
+        acc +=
+            pk.weight[i] *
+            gateaux_integrand(dc, inv_nim_at[i], inv_nim_at_mul_B[i], nim, trafo)
     end
     return acc
 end
 
-function gd_integral(nim, jm, c, dc, w, inv_nim_at, m, pk::PriorSample, trafo, na)
+#! format: off
+function gd_integral(nim, jm, c, dc, w, inv_nim_at, inv_nim_at_mul_B, m,
+                     pk::PriorSample, trafo, na)
+#! format: on
     acc = 0
     n = length(pk.p)
     for i in 1:n
         informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i], na)
-        acc += gateaux_integrand(inv_nim_at[i], nim, dc, trafo)
+        acc += gateaux_integrand(dc, inv_nim_at[i], inv_nim_at_mul_B[i], nim, trafo)
     end
     return acc / n
 end
 
-function gd_integral(nim, jm, c, dc, w, inv_nim_at, m, pk::PriorGuess, trafo, na)
+#! format: off
+function gd_integral(nim, jm, c, dc, w, inv_nim_at, inv_nim_at_mul_B, m,
+                     pk::PriorGuess, trafo, na)
+#! format: on
     informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p, na)
-    return gateaux_integrand(inv_nim_at[1], nim, dc, trafo)
+    return gateaux_integrand(dc, inv_nim_at[1], inv_nim_at_mul_B[1], nim, trafo)
 end
 
 function gateauxderivative!(
@@ -436,6 +465,7 @@ function gateauxderivative!(
     c::AbstractVector{<:Covariate}, # only one element, but passed to `informationmatrix!`
     dc::DesignCriterion,
     inv_nim_at::AbstractVector{<:AbstractMatrix},
+    inv_nim_at_mul_B::AbstractVector{<:AbstractMatrix},
     direction::DesignMeasure,
     m::NonlinearRegression,
     cp::CovariateParameterization,
@@ -444,7 +474,10 @@ function gateauxderivative!(
     na::NormalApproximation,
 )
     update_model_covariate!(c[1], direction.designpoint[1], m, cp)
-    return gd_integral(nim, jm, c, dc, direction.weight, inv_nim_at, m, pk, trafo, na)
+    #! format: off
+    return gd_integral(nim, jm, c, dc, direction.weight, inv_nim_at, inv_nim_at_mul_B,
+                       m, pk, trafo, na)
+    #! format: on
 end
 
 """
@@ -478,9 +511,13 @@ function gateauxderivative(
     nim = zeros(pardim, pardim)
     jm = zeros(unit_length(m), pardim)
     inv_nim_at = inverse_information_matrices(at, m, cp, pk, na)
+    inv_nim_at_mul_B = calc_inv_nim_at_mul_B(dc, pk, trafo, inv_nim_at)
     cs = allocate_initialize_covariates(directions[1], m, cp)
     gd = map(directions) do d
-        gateauxderivative!(nim, jm, cs, dc, inv_nim_at, d, m, cp, pk, trafo, na)
+        #! format: off
+        gateauxderivative!(nim, jm, cs, dc, inv_nim_at, inv_nim_at_mul_B, d,
+                           m, cp, pk, trafo, na)
+        #! format: on
     end
     return gd
 end

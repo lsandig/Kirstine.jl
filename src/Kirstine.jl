@@ -1,6 +1,7 @@
 module Kirstine
 
 using LinearAlgebra: diagind, norm, BLAS.syrk!, LAPACK.potrf!, LAPACK.potri!
+using LinearAlgebra: diagm
 using Random: rand, rand!
 using RecipesBase
 
