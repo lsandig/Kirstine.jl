@@ -239,7 +239,10 @@ end
         #! format: on
         ob(a, t, na) = objective(dc, a, m, cp, g0, t, na),
         gd(a, t, na) = gateauxderivative(dc, a, dir, m, cp, g0, t, na),
-        ef(a, zs, ts) = map((z, t) -> 100 * efficiency(a, z, m, cp, g0, t, na_map), zs, ts)
+        ef(a, zs, ts) = map((z, t) -> 100 * efficiency(a, z, m, cp, g0, t, na_map), zs, ts),
+        dp2dir(d) = [singleton_design(dp) for dp in designpoints(d)],
+        abs_gd_at_sol_dp(a, t) =
+            abs.(gateauxderivative(dc, a, dp2dir(a), m, cp, g0, t, na_map))
 
         # check Atkinson's solutions
         @test ob(a1, t1, na_map) ≈ 7.3887 rtol = 1e-4
@@ -251,6 +254,11 @@ end
         @test_broken maximum(gd(a2, t2, na_map)) <= 0
         @test_broken maximum(gd(a3, t3, na_map)) <= 0
         @test_broken maximum(gd(a4, t4, na_map)) <= 0
+        # the Gateaux derivative should be about zero at the design points of the solution
+        @test all(abs_gd_at_sol_dp(a1, t1) .< 1e-4)
+        @test all(abs_gd_at_sol_dp(a2, t2) .< 1e-3)
+        @test all(abs_gd_at_sol_dp(a3, t3) .< 1e-4)
+        @test all(abs_gd_at_sol_dp(a4, t4) .< 1e-4)
         # compare DeltaMethod identity with actual Identity
         @test ob(a1, t1, na_map) ≈ ob(a1, t1_delta, na_map)
         @test gd(a1, t1, na_map) ≈ gd(a1, t1_delta, na_map)
