@@ -165,6 +165,18 @@ function DeltaMethod(Dt, pk::PriorGuess)
     DeltaMethod(tjm)
 end
 
+abstract type GateauxConstants end
+
+struct GCDIdentity <: GateauxConstants
+    invM::Vector{Matrix{Float64}}
+    parameter_length::Int64
+end
+
+struct GCDDeltaMethod <: GateauxConstants
+    invM_B_invM::Vector{Matrix{Float64}}
+    transformed_parameter_length::Int64
+end
+
 """
     DesignCriterion
 

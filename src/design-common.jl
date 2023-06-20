@@ -155,10 +155,9 @@ function refine_design(
     for i in 1:steps
         res = simplify(res, ds, m, cp; sargs...)
         dir_cand = map(singleton_design, support(res))
-        inv_nim = inverse_information_matrices(res, m, cp, pk, na)
-        inmB = calc_inv_nim_at_mul_B(dc, pk, trafo, inv_nim)
+        gconst = precalculate_gateaux_constants(dc, res, m, cp, pk, trafo, na)
         # find direction of steepest ascent
-        gd(d) = gateauxderivative!(nim, jm, c, dc, inv_nim, inmB, d, m, cp, pk, trafo, na)
+        gd(d) = gateauxderivative!(nim, jm, c, gconst, d, m, cp, pk, trafo, na)
         or_gd = optimize(od, gd, dir_cand, constraints; trace_state = trace_state)
         push!(ors_d, or_gd)
         d = or_gd.maximizer
@@ -455,49 +454,37 @@ function inverse_information_matrices(
     return inv_nims
 end
 
-#! format: off
-function gd_integral(nim, jm, c, dc, w, inv_nim_at, inv_nim_at_mul_B, m,
-                     pk::DiscretePrior, trafo, na)
-#! format: on
+function gd_integral!(nim, jm, gconst, w, m, c, pk::DiscretePrior, trafo, na)
     acc = 0
     n = length(pk.p)
     for i in 1:n
         informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i], na)
-        acc +=
-            pk.weight[i] *
-            gateaux_integrand(dc, inv_nim_at[i], inv_nim_at_mul_B[i], nim, trafo)
+        acc += pk.weight[i] * gateaux_integrand(gconst, nim, i)
     end
     return acc
 end
 
-#! format: off
-function gd_integral(nim, jm, c, dc, w, inv_nim_at, inv_nim_at_mul_B, m,
-                     pk::PriorSample, trafo, na)
-#! format: on
+function gd_integral!(nim, jm, gconst, w, m, c, pk::PriorSample, trafo, na)
     acc = 0
     n = length(pk.p)
     for i in 1:n
         informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i], na)
-        acc += gateaux_integrand(dc, inv_nim_at[i], inv_nim_at_mul_B[i], nim, trafo)
+        acc += gateaux_integrand(gconst, nim, i)
     end
     return acc / n
 end
 
-#! format: off
-function gd_integral(nim, jm, c, dc, w, inv_nim_at, inv_nim_at_mul_B, m,
-                     pk::PriorGuess, trafo, na)
-#! format: on
+function gd_integral!(nim, jm, gconst, w, m, c, pk::PriorGuess, trafo, na)
     informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p, na)
-    return gateaux_integrand(dc, inv_nim_at[1], inv_nim_at_mul_B[1], nim, trafo)
+    dummy_index = 1
+    return gateaux_integrand(gconst, nim, dummy_index)
 end
 
 function gateauxderivative!(
     nim::AbstractMatrix,
     jm::AbstractMatrix,
     c::AbstractVector{<:Covariate}, # only one element, but passed to `informationmatrix!`
-    dc::DesignCriterion,
-    inv_nim_at::AbstractVector{<:AbstractMatrix},
-    inv_nim_at_mul_B::AbstractVector{<:AbstractMatrix},
+    gconst::GateauxConstants,
     direction::DesignMeasure,
     m::NonlinearRegression,
     cp::CovariateParameterization,
@@ -506,10 +493,7 @@ function gateauxderivative!(
     na::NormalApproximation,
 )
     update_model_covariate!(c[1], direction.designpoint[1], m, cp)
-    #! format: off
-    return gd_integral(nim, jm, c, dc, direction.weight, inv_nim_at, inv_nim_at_mul_B,
-                       m, pk, trafo, na)
-    #! format: on
+    return gd_integral!(nim, jm, gconst, direction.weight, m, c, pk, trafo, na)
 end
 
 """
@@ -542,14 +526,10 @@ function gateauxderivative(
     pardim = parameter_dimension(pk)
     nim = zeros(pardim, pardim)
     jm = zeros(unit_length(m), pardim)
-    inv_nim_at = inverse_information_matrices(at, m, cp, pk, na)
-    inv_nim_at_mul_B = calc_inv_nim_at_mul_B(dc, pk, trafo, inv_nim_at)
+    gconst = precalculate_gateaux_constants(dc, at, m, cp, pk, trafo, na)
     cs = allocate_initialize_covariates(directions[1], m, cp)
     gd = map(directions) do d
-        #! format: off
-        gateauxderivative!(nim, jm, cs, dc, inv_nim_at, inv_nim_at_mul_B, d,
-                           m, cp, pk, trafo, na)
-        #! format: on
+        gateauxderivative!(nim, jm, cs, gconst, d, m, cp, pk, trafo, na)
     end
     return gd
 end

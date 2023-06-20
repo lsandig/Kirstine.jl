@@ -6,117 +6,56 @@ function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::DOptimalit
     return sgn * log_det!(tnim)
 end
 
-# Note: We must specialize on trafo here to exploit the special structure for Identity()
-function gateaux_integrand(dc::DOptimality, inv_nim_at, _, nim_direction, trafo::Identity)
-    # Note: the dummy argument (inv_nim_at_mul_B) will always be the identity matrix for trafo::Identity
-    return tr_prod(inv_nim_at, nim_direction, :U) - size(inv_nim_at, 1)
+# == Gateaux derivative for identity transformation == #
+function gateaux_integrand(c::GCDIdentity, nim_direction, index)
+    return tr_prod(c.invM[index], nim_direction, :U) - c.parameter_length
 end
 
-function gateaux_integrand(
-    dc::DOptimality,
-    inv_nim_at,
-    inv_nim_at_mul_B,
-    nim_direction,
-    trafo::DeltaMethod,
-)
-    X = inv_nim_at_mul_B # dense and _not_ symmetric
-    # Note: A benchmark suggests that the Symmetric() views do not incur dynamic memory
-    # allocations. Writing out the index swapping by hand would make the for loops much less
-    # readable.
-    Y = Symmetric(inv_nim_at)
-    Z = Symmetric(nim_direction)
-    # explcitly calculate tr[XYZ] = sum_{i,k,j} X_{ij} Y_{jk} Z_{ki}
-    tr_XYZ = 0.0
-    r = size(inv_nim_at_mul_B, 1)
-    for i in 1:r
-        for j in 1:r
-            for k in 1:r
-                tr_XYZ += X[i, j] * Y[j, k] * Z[k, i]
-            end
-        end
-    end
-    return tr_XYZ - tr(inv_nim_at_mul_B)
+function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk, trafo::Identity, na)
+    invM = inverse_information_matrices(d, m, cp, pk, na)
+    parameter_length = parameter_dimension(pk)
+    return GCDIdentity(invM, parameter_length)
 end
 
-function calc_inv_nim_at_mul_B(dc::DOptimality, pk::PriorGuess, trafo::Identity, inv_nim_at)
+# == Gateaux derivative for delta method transformation == #
+function gateaux_integrand(c::GCDDeltaMethod, nim_direction, index)
+    # Note: invM_B_invM[index] is dense and symmetric, we can use the upper triangle
+    return tr_prod(c.invM_B_invM[index], nim_direction, :U) - c.transformed_parameter_length
+end
+
+#! format: off
+function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::DiscretePrior, trafo::DeltaMethod, na)
+#! format: on
+    invM = inverse_information_matrices(d, m, cp, pk, na)
     r = parameter_dimension(pk)
-    return [diagm(ones(r))]
-end
-
-function calc_inv_nim_at_mul_B(
-    dc::DOptimality,
-    pk::PriorSample,
-    trafo::Identity,
-    inv_nim_at,
-)
-    r = parameter_dimension(pk)
-    return [diagm(ones(r)) for _ in 1:length(pk.p)]
-end
-
-function calc_inv_nim_at_mul_B(
-    dc::DOptimality,
-    pk::DiscretePrior,
-    trafo::Identity,
-    inv_nim_at,
-)
-    r = parameter_dimension(pk)
-    return [diagm(ones(r)) for _ in 1:length(pk.p)]
-end
-
-function calc_inv_nim_at_mul_B(
-    dc::DOptimality,
-    pk::PriorGuess,
-    trafo::DeltaMethod,
-    inv_nim_at,
-)
     t = codomain_dimension(trafo, pk)
-    ina_copy = deepcopy(inv_nim_at[1])
-    r = parameter_dimension(pk)
+    invM_copy = deepcopy(invM[1])
     work = zeros(r, t)
-    inv_tnim, _ = apply_transformation!(zeros(t, t), work, ina_copy, true, trafo, 1)
-    J = trafo.tjm[1]
-    B = J' * (Symmetric(inv_tnim) \ J)
-    return [Symmetric(inv_nim_at[1]) * B]
-end
-
-function calc_inv_nim_at_mul_B(
-    dc::DOptimality,
-    pk::PriorSample,
-    trafo::DeltaMethod,
-    inv_nim_at,
-)
-    t = codomain_dimension(trafo, pk)
-    ina_copy = deepcopy(inv_nim_at[1])
-    r = parameter_dimension(pk)
-    work = zeros(r, t)
-    res = map(1:length(pk.p)) do i
-        ina_copy .= inv_nim_at[i] # Note: this matrix gets overwritten
-        inv_tnim, _ = apply_transformation!(zeros(t, t), work, ina_copy, true, trafo, i)
+    invM_B_invM = map(1:length(pk.p)) do i
+        invM_copy .= invM[i] # Note: will be modified
+        inv_tnim, _ =
+            apply_transformation!(zeros(t, t), work, invM_copy, true, trafo, i)
         J = trafo.tjm[i]
         B = J' * (Symmetric(inv_tnim) \ J)
-        return Symmetric(inv_nim_at[i]) * B
+        sym_invM = Symmetric(invM[i])
+        return sym_invM * B * sym_invM
     end
-    return res
+    return GCDDeltaMethod(invM_B_invM, t)
 end
 
-function calc_inv_nim_at_mul_B(
-    dc::DOptimality,
-    pk::DiscretePrior,
-    trafo::DeltaMethod,
-    inv_nim_at,
-)
-    t = codomain_dimension(trafo, pk)
-    ina_copy = deepcopy(inv_nim_at[1])
-    r = parameter_dimension(pk)
-    work = zeros(r, t)
-    res = map(1:length(pk.p)) do i
-        ina_copy .= inv_nim_at[i]
-        inv_tnim, _ = apply_transformation!(zeros(t, t), work, ina_copy, true, trafo, i)
-        J = trafo.tjm[i]
-        B = J' * (Symmetric(inv_tnim) \ J)
-        return Symmetric(inv_nim_at[i]) * B
-    end
-    return res
+# Note: precalculating constants is not that time critical, so we can get away with this wrapping strategy.
+#! format: off
+function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::PriorSample, trafo::DeltaMethod, na)
+#! format: on
+    pk_wrap = DiscretePrior(fill(1 / length(pk.p), length(pk.p)), pk.p)
+    return precalculate_gateaux_constants(dc, d, m, cp, pk_wrap, trafo, na)
+end
+
+#! format: off
+function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::PriorGuess, trafo::DeltaMethod, na)
+#! format: on
+    pk_wrap = DiscretePrior([1.0], [pk.p])
+    return precalculate_gateaux_constants(dc, d, m, cp, pk_wrap, trafo, na)
 end
 
 # == relative D-efficiency == #
