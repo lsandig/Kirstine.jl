@@ -69,6 +69,9 @@ end
                na::NormalApproximation)
 
 Relative D-efficiency of `d1` to `d2` under prior knowledge `pk`.
+
+Note that the interpretation as a ratio of sample sizes is only valid when a
+non-regularizing [`FisherMatrix`](@ref) normal approximation is used.
 """
 function efficiency(
     d1::DesignMeasure,
@@ -79,7 +82,7 @@ function efficiency(
     trafo::Transformation,
     na::NormalApproximation,
 )
-    return efficiency(d1, d2, m, m, cp, cp, pk, trafo, na)
+    return efficiency(d1, d2, m, m, cp, cp, pk, trafo, na, na)
 end
 
 """
@@ -91,11 +94,13 @@ end
                cp2::CovariateParameterization,
                pk::PriorKnowledge,
                trafo::Transformation,
-               na::NormalApproximation)
+               na1::NormalApproximation,
+               na2::NormalApproximation)
 
 Relative D-efficiency of `d1` to `d2` under prior knowledge `pk`.
 
-Note that the models and/or covariate parameterizations need not be identical.
+Note that the models, covariate parameterizations or normal approximations need not be
+identical.
 """
 function efficiency(
     d1::DesignMeasure,
@@ -106,7 +111,8 @@ function efficiency(
     cp2::CovariateParameterization,
     pk::PriorKnowledge,
     trafo::Transformation,
-    na::NormalApproximation,
+    na1::NormalApproximation,
+    na2::NormalApproximation,
 )
     tc = precalculate_trafo_constants(trafo, pk)
     pardim = parameter_dimension(pk)
@@ -123,20 +129,20 @@ function efficiency(
 
     #! format: off
     ei = eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, d1.weight, d2.weight,
-                       m1, m2, c1, c2, pk, tc, na)
+                       m1, m2, c1, c2, pk, tc, na1, na2)
     #! format: on
     return exp(ei / tpardim)
 end
 
 #! format: off
 function eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, w1, w2,
-                       m1, m2, c1, c2, pk::DiscretePrior, tc, na)
+                       m1, m2, c1, c2, pk::DiscretePrior, tc, na1, na2)
 #! format: on
     n = length(pk.p)
     acc = 0.0
     for i in 1:n
-        informationmatrix!(nim1, jm1, w1, m1, invcov(m1), c1, pk.p[i], na)
-        informationmatrix!(nim2, jm2, w2, m2, invcov(m2), c2, pk.p[i], na)
+        informationmatrix!(nim1, jm1, w1, m1, invcov(m1), c1, pk.p[i], na1)
+        informationmatrix!(nim2, jm2, w2, m2, invcov(m2), c2, pk.p[i], na2)
         _, is_inv1 = apply_transformation!(tnim1, work, nim1, false, tc, i)
         _, is_inv2 = apply_transformation!(tnim2, work, nim2, false, tc, i)
         acc += pk.weight[i] * eff_integrand!(tnim1, tnim2, is_inv1, is_inv2)
@@ -146,13 +152,13 @@ end
 
 #! format: off
 function eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, w1, w2,
-                       m1, m2, c1, c2, pk::PriorSample, tc, na)
+                       m1, m2, c1, c2, pk::PriorSample, tc, na1, na2)
 #! format: on
     n = length(pk.p)
     acc = 0.0
     for i in 1:n
-        informationmatrix!(nim1, jm1, w1, m1, invcov(m1), c1, pk.p[i], na)
-        informationmatrix!(nim2, jm2, w2, m2, invcov(m2), c2, pk.p[i], na)
+        informationmatrix!(nim1, jm1, w1, m1, invcov(m1), c1, pk.p[i], na1)
+        informationmatrix!(nim2, jm2, w2, m2, invcov(m2), c2, pk.p[i], na2)
         _, is_inv1 = apply_transformation!(tnim1, work, nim1, false, tc, i)
         _, is_inv2 = apply_transformation!(tnim2, work, nim2, false, tc, i)
         acc += eff_integrand!(tnim1, tnim2, is_inv1, is_inv2)
@@ -162,10 +168,10 @@ end
 
 #! format: off
 function eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, w1, w2,
-                       m1, m2, c1, c2, pk::PriorGuess, tc, na)
+                       m1, m2, c1, c2, pk::PriorGuess, tc, na1, na2)
 #! format: on
-    informationmatrix!(nim1, jm1, w1, m1, invcov(m1), c1, pk.p, na)
-    informationmatrix!(nim2, jm2, w2, m2, invcov(m2), c2, pk.p, na)
+    informationmatrix!(nim1, jm1, w1, m1, invcov(m1), c1, pk.p, na1)
+    informationmatrix!(nim2, jm2, w2, m2, invcov(m2), c2, pk.p, na2)
     _, is_inv1 = apply_transformation!(tnim1, work, nim1, false, tc, 1)
     _, is_inv2 = apply_transformation!(tnim2, work, nim2, false, tc, 1)
     return eff_integrand!(tnim1, tnim2, is_inv1, is_inv2)

@@ -102,6 +102,8 @@ abstract type NormalApproximation end
 Normal approximation based on the maximum-likelihood approach. The information matrix is
 obtained as the average of the Fisher information matrix with respect to the design measure.
 Singular information matrices can occur.
+
+See also [`RegularizedFisherMatrix`](@ref).
 """
 struct FisherMatrix <: NormalApproximation end
 
@@ -112,6 +114,8 @@ The information matrix is obtained as the average of the Fisher information matr
 respect to the design measure plus the square matrix `R`. The frequentist interpretation of
 `R` is as in Tikhonov regularization. If `R` is positive definite, the resulting information
 matrix will never be singular.
+
+See also [`FisherMatrix`](@ref).
 """
 struct RegularizedFisherMatrix <: NormalApproximation
     scaled_prior_precision::Matrix{Float64}
