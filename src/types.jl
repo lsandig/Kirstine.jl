@@ -140,29 +140,59 @@ Represents the [`Transformation`](@ref) that maps a parameter to itself.
 """
 struct Identity <: Transformation end
 
-"""
-    DeltaMethod
+@doc raw"""
+    DeltaMethod(jacobian_matrix)
 
-TODO
+Represents a nonlinear [`Transformation`](@ref) of the model parameter.
+
+The [delta method](https://en.wikipedia.org/wiki/Delta_method)
+maps the asymptotic multivariate normal distribution of ``\theta``
+to the asymptotic multivariate normal distribution of ``T(\theta)``,
+using the Jacobian matrix ``\mathrm{D}T``.
+To construct a `DeltaMethod` object,
+the argument `jacobian_matrix` must be a function
+that maps a parameter value `p`
+to the Jacobian matrix of ``T`` evaluated at `p`.
+
+# Example
+Suppose `p` has the fields `a` and `b`, and ``T(a, b) = (ab, b/a)'``.
+Then the Jacobian matrix of ``T`` is
+```math
+\mathrm{D}T(a, b) =
+  \begin{bmatrix}
+    b      & a   \\
+    -b/a^2 & 1/a \\
+  \end{bmatrix}.
+```
+In Julia this is equivalent to
+```jldoctest; output = false
+jm1(p) = [p.b p.a; -p.b/p.a^2 1/p.a]
+DeltaMethod(jm1)
+# output
+DeltaMethod{typeof(jm1)}(jm1)
+```
+Note that for a scalar quantity,
+e.g. ``T(a, b) = \sqrt{ab}``,
+the Jacobian matrix is a _row_ vector.
+```jldoctest; output = false
+jm2(p) = [b a] ./ (2 * sqrt(p.a * p.b))
+DeltaMethod(jm2)
+# output
+DeltaMethod{typeof(jm2)}(jm2)
+```
 """
-struct DeltaMethod <: Transformation
-    tjm::Vector{Matrix{Float64}} # pre-calculated jacobian matrix of transformation
-    # TODO: keep a pointer to the actual transformation?
+struct DeltaMethod{T<:Function} <: Transformation
+    jacobian_matrix::T # parameter -> Matrix{Float64}
 end
 
-"""
-    DeltaMethod(Dt, pk::DiscretePrior)
+abstract type TrafoConstants end
 
-TODO
-"""
-function DeltaMethod(Dt, pk::Union{PriorSample,DiscretePrior})
-    tjm = [Dt(p) for p in pk.p]
-    DeltaMethod(tjm)
+struct TCIdentity <: TrafoConstants
+    codomain_dimension::Int64
 end
-
-function DeltaMethod(Dt, pk::PriorGuess)
-    tjm = [Dt(pk.p)]
-    DeltaMethod(tjm)
+struct TCDeltaMethod <: TrafoConstants
+    codomain_dimension::Int64
+    jm::Vector{Matrix{Float64}}
 end
 
 abstract type GateauxConstants end

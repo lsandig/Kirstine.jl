@@ -14,6 +14,16 @@
         @test_throws "either :U or :L" Kirstine.tr_prod(A, B, :F)
     end
 
+    let pk = PriorSample([(a = 1, b = 2), (a = -1, b = -2)]),
+        dt1 = p -> [p.a; p.b], # too few columns
+        D1 = DeltaMethod(dt1),
+        dt2 = p -> p.a > 0 ? [p.a p.b] : [p.a p.b; p.a p.b], # different number of rows
+        D2 = DeltaMethod(dt2)
+
+        @test_throws "2 columns" Kirstine.precalculate_trafo_constants(D1, pk)
+        @test_throws "identical" Kirstine.precalculate_trafo_constants(D2, pk)
+    end
+
     let A = rand(Float64, 3, 3), B = A * A'
 
         # note: log_det! overwrites B, so it can't be called first
@@ -28,9 +38,11 @@
     # Note: we have to recreate the circumstances in which apply_transformation! is called:
     # nim is allowed to be only upper triangular, and is allowed to be overwritten. Hence we
     # must use deepcopys, and Symmetric wrappers where necessary.
-    let pk = PriorGuess((dummy = 42,)),
-        tid = DeltaMethod(p -> diagm(ones(3)), pk),
-        tsc = DeltaMethod(p -> diagm([0.5, 2.0, 4.0]), pk),
+    let pk = PriorGuess((a = 1, b = 2, c = 3)),
+        tid = DeltaMethod(p -> diagm(ones(3))),
+        ctid = Kirstine.precalculate_trafo_constants(tid, pk),
+        tsc = DeltaMethod(p -> diagm([0.5, 2.0, 4.0])),
+        ctsc = Kirstine.precalculate_trafo_constants(tsc, pk),
         _ = seed!(4321),
         A = reshape(rand(9), 3, 3),
         nim = collect(UpperTriangular(A' * A)),
@@ -40,11 +52,13 @@
         nim3 = deepcopy(nim),
         nim4 = deepcopy(inv_nim),
         work = zeros(3, 3),
-        (tnim1, _) = Kirstine.apply_transformation!(zeros(3, 3), work, nim1, false, tid, 1),
-        (tnim2, _) = Kirstine.apply_transformation!(zeros(3, 3), work, nim2, true, tid, 1),
+        (tnim1, _) =
+            Kirstine.apply_transformation!(zeros(3, 3), work, nim1, false, ctid, 1),
+        (tnim2, _) = Kirstine.apply_transformation!(zeros(3, 3), work, nim2, true, ctid, 1),
         # scaling parameters should be able to be pulled out
-        (tnim3, _) = Kirstine.apply_transformation!(zeros(3, 3), work, nim3, false, tsc, 1),
-        (tnim4, _) = Kirstine.apply_transformation!(zeros(3, 3), work, nim4, true, tsc, 1)
+        (tnim3, _) =
+            Kirstine.apply_transformation!(zeros(3, 3), work, nim3, false, ctsc, 1),
+        (tnim4, _) = Kirstine.apply_transformation!(zeros(3, 3), work, nim4, true, ctsc, 1)
 
         @test Symmetric(tnim1) ≈ Symmetric(inv_nim)
         @test Symmetric(tnim2) ≈ Symmetric(inv_nim)
@@ -224,10 +238,10 @@ end
         a0 = uniform_design([[t] for t in a0_time]),
         #! format: on
         t1 = Identity(),
-        t1_delta = DeltaMethod(p -> diagm(ones(3)), g0),
-        t2 = DeltaMethod(Dauc, g0),
-        t3 = DeltaMethod(Dttm, g0),
-        t4 = DeltaMethod(Dcmax, g0),
+        t1_delta = DeltaMethod(p -> diagm(ones(3))),
+        t2 = DeltaMethod(Dauc),
+        t3 = DeltaMethod(Dttm),
+        t4 = DeltaMethod(Dcmax),
         dir = [singleton_design([t]) for t in range(0, 48; length = 21)],
         #! format: off
         teff = [100     34.31  66.02  36.10;
