@@ -97,25 +97,23 @@ distribution.
 abstract type NormalApproximation end
 
 """
-    MLApproximation
+    FisherMatrix
 
 Normal approximation based on the maximum-likelihood approach. The information matrix is
 obtained as the average of the Fisher information matrix with respect to the design measure.
 Singular information matrices can occur.
 """
-struct MLApproximation <: NormalApproximation end
+struct FisherMatrix <: NormalApproximation end
 
 """
-    MAPApproximation(R::Matrix{Float64})
+    RegularizedFisherMatrix(R::Matrix{Float64})
 
-Normal approximation based on the maximum-a-posteriori approach. The information matrix is
-obtained as the average of the Fisher information matrix with respect to the design measure
-plus the square matrix `R`. The Bayesian interpretation of `R` is the prior precision
-divided by planned sample size. The frequentist interpretation of `R` is as in Tikhonov
-regularization. If `R` is positive definite, the resulting information matrix can not be
-singular.
+The information matrix is obtained as the average of the Fisher information matrix with
+respect to the design measure plus the square matrix `R`. The frequentist interpretation of
+`R` is as in Tikhonov regularization. If `R` is positive definite, the resulting information
+matrix will never be singular.
 """
-struct MAPApproximation <: NormalApproximation
+struct RegularizedFisherMatrix <: NormalApproximation
     scaled_prior_precision::Matrix{Float64}
 end
 

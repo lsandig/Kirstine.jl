@@ -264,7 +264,7 @@ function informationmatrix!(
     invcov::Real,
     c::AbstractVector{<:Covariate},
     p,
-    na::MLApproximation,
+    na::FisherMatrix,
 )
     im_helper!(nim, jm, w, m, invcov, c, p)
     return nim
@@ -278,7 +278,7 @@ function informationmatrix!(
     invcov::Real,
     c::AbstractVector{<:Covariate},
     p,
-    na::MAPApproximation,
+    na::RegularizedFisherMatrix,
 )
     im_helper!(nim, jm, w, m, invcov, c, p)
     nim .+= na.scaled_prior_precision

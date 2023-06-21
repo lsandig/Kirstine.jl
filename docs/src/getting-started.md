@@ -156,7 +156,7 @@ mod = SigEmax(1)
 cpar = CopyDose()
 guess = PriorGuess((e0 = 1, emax = 2, ed50 = 4, h = 5))
 trafo = Identity()
-na = MLApproximation()
+na = FisherMatrix()
 nothing # hide
 ```
 There are a couple of things to note here:
@@ -169,7 +169,7 @@ There are a couple of things to note here:
 - The argument to [`PriorGuess`](@ref) is a [`NamedTuple`](https://docs.julialang.org/en/v1/base/base/#Core.NamedTuple),
   and its names correspond to those that we have used in `jacobianmatrix!`.
 - `trafo = Identity()` simply means that we are interested in all elements of the parameter as they are.
-- With choosing an [`MLApproximation`](@ref) we say
+- With choosing an [`FisherMatrix`](@ref) we say
   that we only want to use the likelihood for the approximation of the posterior information matrix,
   without including any additional regularization.
 

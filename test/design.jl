@@ -169,8 +169,8 @@ end
 
     # Gateaux derivatives and efficiency
     let dc = DOptimality(),
-        na_ml = MLApproximation(),
-        na_map = MAPApproximation(zeros(3, 3)),
+        na_ml = FisherMatrix(),
+        na_map = RegularizedFisherMatrix(zeros(3, 3)),
         trafo = Identity(),
         m = EmaxModel(1),
         cp = CopyDose(),
@@ -209,7 +209,7 @@ end
         # check that efficiency wrt prior sample divides by length of sample vector
         @test efficiency(sol, not_sol, m, cp, PriorSample([p1, p1]), trafo, na_ml) ==
               efficiency(sol, not_sol, m, cp, PriorSample([p1]), trafo, na_ml)
-        # check that MAPApproximation is correct in a special case
+        # check that RegularizedFisherMatrix is correct in a special case
         @test ob(sol, pk1, na_ml) ≈ ob(sol, pk1, na_map)
         @test ob(sol, pk2, na_ml) ≈ ob(sol, pk2, na_map)
         @test ob(sol, pk3, na_ml) ≈ ob(sol, pk3, na_map)
@@ -224,9 +224,9 @@ end
         m = TPCMod(1),
         cp = CopyTime(),
         dc = DOptimality(),
-        na_ml = MLApproximation(),
-        na_map_nonreg = MAPApproximation(zeros(3, 3)),
-        na_map = MAPApproximation(diagm(fill(1e-5, 3))),
+        na_ml = FisherMatrix(),
+        na_map_nonreg = RegularizedFisherMatrix(zeros(3, 3)),
+        na_map = RegularizedFisherMatrix(diagm(fill(1e-5, 3))),
         # first four designs of Table 1, and corresponding transformations
         #! format: off
         a1  = DesignMeasure([0.2288] => 1/3,    [1.3886] => 1/3,    [18.417] => 1/3),
@@ -294,7 +294,7 @@ end
 
     # Can we find the locally D-optimal design?
     let dc = DOptimality(),
-        na = MLApproximation(),
+        na = FisherMatrix(),
         trafo = Identity(),
         m = EmaxModel(1),
         cp = CopyDose(),
@@ -352,7 +352,7 @@ end
 
     # fixed weights and / or points should never change
     let dc = DOptimality(),
-        na = MLApproximation(),
+        na = FisherMatrix(),
         trafo = Identity(),
         m = EmaxModel(1),
         cp = CopyDose(),
@@ -400,7 +400,7 @@ end
 
     # Does refinement work?
     let dc = DOptimality(),
-        na = MLApproximation(),
+        na = FisherMatrix(),
         trafo = Identity(),
         m = EmaxModel(1),
         cp = CopyDose(),
