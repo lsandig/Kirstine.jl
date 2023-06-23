@@ -1,7 +1,8 @@
 module Kirstine
 
 using LinearAlgebra: diagind, norm, BLAS.syrk!, LAPACK.potrf!, LAPACK.potri!
-using LinearAlgebra: Symmetric, diagm, tr, LAPACK.posv!, mul!, BLAS.symm!
+using LinearAlgebra:
+    Symmetric, diagm, tr, LAPACK.posv!, mul!, BLAS.symm!, PosDefException, SingularException
 using Random: rand, rand!
 using RecipesBase
 

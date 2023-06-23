@@ -405,7 +405,19 @@ function objective!(
     for k in 1:length(c)
         update_model_covariate!(c[k], d.designpoint[k], m, cp)
     end
-    return obj_integral(tnim, work, nim, jm, dc, d.weight, m, c, pk, tc, na)
+    # When the information matrix is singular, the objective function is undefined. Lower
+    # level calls may throw a PosDefException. This also means that `d` can not be a
+    # solution to the maximization problem, hence we return negative infinity in these
+    # cases.
+    try
+        return obj_integral(tnim, work, nim, jm, dc, d.weight, m, c, pk, tc, na)
+    catch e
+        if isa(e, PosDefException)
+            return (-Inf)
+        else
+            rethrow(e)
+        end
+    end
 end
 
 """
@@ -548,7 +560,16 @@ function gateauxderivative(
     nim = zeros(pardim, pardim)
     jm = zeros(unit_length(m), pardim)
     tc = precalculate_trafo_constants(trafo, pk)
-    gconst = precalculate_gateaux_constants(dc, at, m, cp, pk, tc, na)
+    gconst = try
+        precalculate_gateaux_constants(dc, at, m, cp, pk, tc, na)
+    catch e
+        if isa(e, SingularException)
+            # undefined objective implies no well-defined derivative
+            return fill(NaN, size(directions))
+        else
+            rethrow(e)
+        end
+    end
     cs = allocate_initialize_covariates(directions[1], m, cp)
     gd = map(directions) do d
         gateauxderivative!(nim, jm, cs, gconst, d, m, cp, pk, na)

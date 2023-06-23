@@ -176,6 +176,26 @@ end
         return PriorSample(map((a, e, s) -> (a = a, e = e, s = s), as, es, ss))
     end
 
+    # correct handling of singular designs
+    let dc = DOptimality(),
+        na = FisherMatrix(),
+        t1 = Identity(),
+        t2 = DeltaMethod(p -> diagm([1, 1, 1])),
+        m = EmaxModel(1),
+        cp = CopyDose(),
+        pk = PriorGuess((e0 = 1, emax = 10, ec50 = 5)),
+        ds = DesignSpace(:dose => (0, 10)),
+        d = singleton_design([5])
+
+        # no explicit inversion
+        @test objective(dc, d, m, cp, pk, t1, na) == -Inf
+        # with explicit inversion
+        @test objective(dc, d, m, cp, pk, t2, na) == -Inf
+        # explicit inversions in both cases
+        @test isnan(gateauxderivative(dc, d, [d], m, cp, pk, t1, na)[1])
+        @test isnan(gateauxderivative(dc, d, [d], m, cp, pk, t2, na)[1])
+    end
+
     # Gateaux derivatives and efficiency
     let dc = DOptimality(),
         na_ml = FisherMatrix(),

@@ -1,9 +1,13 @@
 # D-optimal design
 
 function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::DOptimality)
-    # TODO: try to catch the SingularException further up and print the offending design!
     sgn = is_inv ? -1 : 1
-    return sgn * log_det!(tnim)
+    ld = log_det!(tnim)
+    # With the DeltaMethod, `tnim` can be singular without having raised an exception up to
+    # now. Similarly to how we handle the PosDefException in `objective!`, we
+    # unconditionally return -Inf.
+    cv = ld != -Inf ? sgn * ld : ld
+    return cv
 end
 
 # == Gateaux derivative for identity transformation == #
