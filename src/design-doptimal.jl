@@ -69,9 +69,6 @@ end
                na::NormalApproximation)
 
 Relative D-efficiency of `d1` to `d2` under prior knowledge `pk`.
-
-Note that the interpretation as a ratio of sample sizes is only valid when a
-non-regularizing [`FisherMatrix`](@ref) normal approximation is used.
 """
 function efficiency(
     d1::DesignMeasure,

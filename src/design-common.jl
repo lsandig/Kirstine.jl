@@ -266,26 +266,6 @@ function informationmatrix!(
     p,
     na::FisherMatrix,
 )
-    im_helper!(nim, jm, w, m, invcov, c, p)
-    return nim
-end
-
-function informationmatrix!(
-    nim::AbstractMatrix,
-    jm::AbstractMatrix,
-    w::AbstractVector,
-    m::NonlinearRegression,
-    invcov::Real,
-    c::AbstractVector{<:Covariate},
-    p,
-    na::RegularizedFisherMatrix,
-)
-    im_helper!(nim, jm, w, m, invcov, c, p)
-    nim .+= na.scaled_prior_precision
-    return nim
-end
-
-function im_helper!(nim, jm, w, m, invcov, c, p)
     fill!(nim, 0.0)
     for k in 1:length(w)
         jacobianmatrix!(jm, m, c[k], p)

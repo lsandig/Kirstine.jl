@@ -179,7 +179,6 @@ end
     # Gateaux derivatives and efficiency
     let dc = DOptimality(),
         na_ml = FisherMatrix(),
-        na_map = RegularizedFisherMatrix(zeros(3, 3)),
         trafo = Identity(),
         m = EmaxModel(1),
         cp = CopyDose(),
@@ -218,13 +217,6 @@ end
         # check that efficiency wrt prior sample divides by length of sample vector
         @test efficiency(sol, not_sol, m, cp, PriorSample([p1, p1]), trafo, na_ml) ==
               efficiency(sol, not_sol, m, cp, PriorSample([p1]), trafo, na_ml)
-        # check that RegularizedFisherMatrix is correct in a special case
-        @test ob(sol, pk1, na_ml) ≈ ob(sol, pk1, na_map)
-        @test ob(sol, pk2, na_ml) ≈ ob(sol, pk2, na_map)
-        @test ob(sol, pk3, na_ml) ≈ ob(sol, pk3, na_map)
-        @test gd(sol, not_sol, pk1, na_ml) ≈ gd(sol, not_sol, pk1, na_map)
-        @test gd(sol, not_sol, pk2, na_ml) ≈ gd(sol, not_sol, pk2, na_map)
-        @test gd(sol, not_sol, pk3, na_ml) ≈ gd(sol, not_sol, pk3, na_map)
     end
 
     # DeltaMethod for Atkinson et al. examples
@@ -236,15 +228,9 @@ end
         cp = CopyTime(),
         dc = DOptimality(),
         na_ml = FisherMatrix(),
-        na_map_nonreg = RegularizedFisherMatrix(zeros(3, 3)),
-        na_map = RegularizedFisherMatrix(diagm(fill(1e-5, 3))),
-        # first four designs of Table 1, and corresponding transformations
+        # Some designs from Tables 1 and 2, and corresponding transformations
         #! format: off
         a1  = DesignMeasure([0.2288] => 1/3,    [1.3886] => 1/3,    [18.417] => 1/3),
-        a2  = DesignMeasure([0.2327] => 0.0135, [17.633] => 0.9865),
-        a3  = DesignMeasure([0.1793] => 0.6062, [3.5671] => 0.3938),
-        a4  = DesignMeasure([1.0122] => 1.0),
-        a5 = DesignMeasure([0.2176] => 0.2337, [1.4343] => 0.3878, [18.297] => 0.3785),
         a6  = DesignMeasure([0.2288] => 1/3,    [1.4170] => 1/3,    [18.4513] => 1/3),
         a7  = DesignMeasure([0.2449] => 0.0129, [1.4950] => 0.0387, [18.4903] => 0.9484),
         a8  = DesignMeasure([0.1829] => 0.6023, [2.4639] => 0.2979, [8.8542]  => 0.0998),
@@ -260,12 +246,6 @@ end
         t4 = DeltaMethod(Dcmax),
         dir = [singleton_design([t]) for t in range(0, 48; length = 21)],
         #! format: off
-        eloc = [100     34.31  66.02  36.10;
-                  0    100      0      0   ;
-                  0      0    100      0   ;
-                  0      0      0    100   ;
-                 97.36  38.97  52.89  41.26;
-                 67.61  24.00  28.60  36.77],
         ebay = [100    37    67.2  39.3;
                  23.4 100     3.2   4.5;
                  57.4   5.1 100    19.6;
@@ -276,44 +256,19 @@ end
         ob(a, t, na) = objective(dc, a, m, cp, g0, t, na),
         ob1(a, t, na) = objective(dc, a, m, cp, g1, t, na),
         gd(a, t, na) = gateauxderivative(dc, a, dir, m, cp, g0, t, na),
-        ef(a, zs, ts) = map((z, t) -> 100 * efficiency(a, z, m, cp, g0, t, na_map), zs, ts),
         ef1(a, zs, ts) = map((z, t) -> 100 * efficiency(a, z, m, cp, g1, t, na_ml), zs, ts),
         dp2dir(d) = [singleton_design(dp) for dp in designpoints(d)],
         abs_gd_at_sol_dp(a, t) =
-            abs.(gateauxderivative(dc, a, dp2dir(a), m, cp, g0, t, na_map))
+            abs.(gateauxderivative(dc, a, dp2dir(a), m, cp, g0, t, na_ml))
 
-        # check Atkinson's solutions
-        @test ob(a1, t1, na_map) ≈ 7.3887 rtol = 1e-4
-        @test exp(-ob(a2, t2, na_map)) ≈ 2194 rtol = 1e-4
-        @test exp(-ob(a3, t3, na_map)) ≈ 0.02815 rtol = 1e-3
-        @test exp(-ob(a4, t4, na_map)) ≈ 1.000 rtol = 1e-3
-        @test maximum(gd(a1, t1, na_map)) <= 0
-        # Gateaux derivative is sensitive to more than the four published decimal places
-        @test_broken maximum(gd(a2, t2, na_map)) <= 0
-        @test_broken maximum(gd(a3, t3, na_map)) <= 0
-        @test_broken maximum(gd(a4, t4, na_map)) <= 0
+        # Locally optimal solution for estimating the whole of θ
+        @test ob(a1, t1, na_ml) ≈ 7.3887 rtol = 1e-4
+        @test maximum(gd(a1, t1, na_ml)) <= 0
         # the Gateaux derivative should be about zero at the design points of the solution
         @test all(abs_gd_at_sol_dp(a1, t1) .< 1e-4)
-        @test all(abs_gd_at_sol_dp(a2, t2) .< 1e-3)
-        @test all(abs_gd_at_sol_dp(a3, t3) .< 1e-4)
-        @test all(abs_gd_at_sol_dp(a4, t4) .< 1e-4)
         # compare DeltaMethod identity with actual Identity
-        @test ob(a1, t1, na_map) ≈ ob(a1, t1_delta, na_map)
-        @test gd(a1, t1, na_map) ≈ gd(a1, t1_delta, na_map)
         @test ob(a1, t1, na_ml) ≈ ob(a1, t1_delta, na_ml)
         @test gd(a1, t1, na_ml) ≈ gd(a1, t1_delta, na_ml)
-        # full-rank information matrices should work with a non-regularizing approximation
-        @test ob(a1, t1, na_map_nonreg) ≈ ob(a1, t1_delta, na_map_nonreg)
-        @test gd(a1, t1, na_map_nonreg) ≈ gd(a1, t1_delta, na_map_nonreg)
-        # Table 4 from the article ([2, 1] and [3, 1] are off)
-        @test eloc[1, :] ≈ ef(a1, [a1, a2, a3, a4], [t1, t2, t3, t4]) rtol = 1e-3
-        @test_broken eloc[2, 1] ≈ ef(a2, [a1], [t1])[1] rtol = 1e-3
-        @test eloc[2, 2:4] ≈ ef(a2, [a2, a3, a4], [t2, t3, t4]) rtol = 1e-3
-        @test_broken eloc[3, 1] ≈ ef(a3, [a1], [t1])[1] rtol = 1e-3
-        @test eloc[3, 2:4] ≈ ef(a3, [a2, a3, a4], [t2, t3, t4]) rtol = 1e-3
-        @test eloc[4, :] ≈ ef(a4, [a1, a2, a3, a4], [t1, t2, t3, t4]) rtol = 1e-3
-        @test eloc[5, :] ≈ ef(a5, [a1, a2, a3, a4], [t1, t2, t3, t4]) rtol = 1e-3
-        @test eloc[6, :] ≈ ef(a0, [a1, a2, a3, a4], [t1, t2, t3, t4]) rtol = 1e-3
         # Now the Bayesian design problems with the strong prior
         # Due to MC error the published solutions are not very precise, checking gateaux
         # derivatives makes not mutch sense here.
