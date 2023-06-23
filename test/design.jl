@@ -166,6 +166,15 @@ end
         ds = E - A
         return [da de ds]
     end
+    function draw_from_prior(n, se_factor)
+        # a, e, s
+        mn = [4.298, 0.05884, 21.8]
+        se = [0.5, 0.005, 0]
+        as = mn[1] .+ se_factor .* se[1] .* (2 .* rand(n) .- 1)
+        es = mn[2] .+ se_factor .* se[2] .* (2 .* rand(n) .- 1)
+        ss = mn[3] .+ se_factor .* se[3] .* (2 .* rand(n) .- 1)
+        return PriorSample(map((a, e, s) -> (a = a, e = e, s = s), as, es, ss))
+    end
 
     # Gateaux derivatives and efficiency
     let dc = DOptimality(),
@@ -221,6 +230,8 @@ end
     # DeltaMethod for Atkinson et al. examples
     let ds = DesignSpace(:time => [0, 48]),
         g0 = PriorGuess((a = 4.298, e = 0.05884, s = 21.80)),
+        _ = seed!(4711),
+        g1 = draw_from_prior(1000, 2),
         m = TPCMod(1),
         cp = CopyTime(),
         dc = DOptimality(),
@@ -234,6 +245,11 @@ end
         a3  = DesignMeasure([0.1793] => 0.6062, [3.5671] => 0.3938),
         a4  = DesignMeasure([1.0122] => 1.0),
         a5 = DesignMeasure([0.2176] => 0.2337, [1.4343] => 0.3878, [18.297] => 0.3785),
+        a6  = DesignMeasure([0.2288] => 1/3,    [1.4170] => 1/3,    [18.4513] => 1/3),
+        a7  = DesignMeasure([0.2449] => 0.0129, [1.4950] => 0.0387, [18.4903] => 0.9484),
+        a8  = DesignMeasure([0.1829] => 0.6023, [2.4639] => 0.2979, [8.8542]  => 0.0998),
+        a9  = DesignMeasure([0.3608] => 0.0730, [1.1446] => 0.9094, [20.9218] => 0.0176),
+        a10 = DesignMeasure([0.2235] => 0.2366, [1.4875] => 0.3838, [18.8293] => 0.3796),
         a0_time = [1/6, 1/3, 1/2, 2/3, 1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10, 12, 24, 30, 48],
         a0 = uniform_design([[t] for t in a0_time]),
         #! format: on
@@ -244,16 +260,24 @@ end
         t4 = DeltaMethod(Dcmax),
         dir = [singleton_design([t]) for t in range(0, 48; length = 21)],
         #! format: off
-        teff = [100     34.31  66.02  36.10;
+        eloc = [100     34.31  66.02  36.10;
                   0    100      0      0   ;
                   0      0    100      0   ;
                   0      0      0    100   ;
                  97.36  38.97  52.89  41.26;
                  67.61  24.00  28.60  36.77],
+        ebay = [100    37    67.2  39.3;
+                 23.4 100     3.2   4.5;
+                 57.4   5.1 100    19.6;
+                 28.2   1.9  12.4 100  ;
+                 97.5  42.1  53.9  45.2;
+                 68.4  26    30.2  41  ],
         #! format: on
         ob(a, t, na) = objective(dc, a, m, cp, g0, t, na),
+        ob1(a, t, na) = objective(dc, a, m, cp, g1, t, na),
         gd(a, t, na) = gateauxderivative(dc, a, dir, m, cp, g0, t, na),
         ef(a, zs, ts) = map((z, t) -> 100 * efficiency(a, z, m, cp, g0, t, na_map), zs, ts),
+        ef1(a, zs, ts) = map((z, t) -> 100 * efficiency(a, z, m, cp, g1, t, na_ml), zs, ts),
         dp2dir(d) = [singleton_design(dp) for dp in designpoints(d)],
         abs_gd_at_sol_dp(a, t) =
             abs.(gateauxderivative(dc, a, dp2dir(a), m, cp, g0, t, na_map))
@@ -282,14 +306,28 @@ end
         @test ob(a1, t1, na_map_nonreg) ≈ ob(a1, t1_delta, na_map_nonreg)
         @test gd(a1, t1, na_map_nonreg) ≈ gd(a1, t1_delta, na_map_nonreg)
         # Table 4 from the article ([2, 1] and [3, 1] are off)
-        @test teff[1, :] ≈ ef(a1, [a1, a2, a3, a4], [t1, t2, t3, t4]) rtol = 1e-3
-        @test_broken teff[2, 1] ≈ ef(a2, [a1], [t1])[1] rtol = 1e-3
-        @test teff[2, 2:4] ≈ ef(a2, [a2, a3, a4], [t2, t3, t4]) rtol = 1e-3
-        @test_broken teff[3, 1] ≈ ef(a3, [a1], [t1])[1] rtol = 1e-3
-        @test teff[3, 2:4] ≈ ef(a3, [a2, a3, a4], [t2, t3, t4]) rtol = 1e-3
-        @test teff[4, :] ≈ ef(a4, [a1, a2, a3, a4], [t1, t2, t3, t4]) rtol = 1e-3
-        @test teff[5, :] ≈ ef(a5, [a1, a2, a3, a4], [t1, t2, t3, t4]) rtol = 1e-3
-        @test teff[6, :] ≈ ef(a0, [a1, a2, a3, a4], [t1, t2, t3, t4]) rtol = 1e-3
+        @test eloc[1, :] ≈ ef(a1, [a1, a2, a3, a4], [t1, t2, t3, t4]) rtol = 1e-3
+        @test_broken eloc[2, 1] ≈ ef(a2, [a1], [t1])[1] rtol = 1e-3
+        @test eloc[2, 2:4] ≈ ef(a2, [a2, a3, a4], [t2, t3, t4]) rtol = 1e-3
+        @test_broken eloc[3, 1] ≈ ef(a3, [a1], [t1])[1] rtol = 1e-3
+        @test eloc[3, 2:4] ≈ ef(a3, [a2, a3, a4], [t2, t3, t4]) rtol = 1e-3
+        @test eloc[4, :] ≈ ef(a4, [a1, a2, a3, a4], [t1, t2, t3, t4]) rtol = 1e-3
+        @test eloc[5, :] ≈ ef(a5, [a1, a2, a3, a4], [t1, t2, t3, t4]) rtol = 1e-3
+        @test eloc[6, :] ≈ ef(a0, [a1, a2, a3, a4], [t1, t2, t3, t4]) rtol = 1e-3
+        # Now the Bayesian design problems with the strong prior
+        # Due to MC error the published solutions are not very precise, checking gateaux
+        # derivatives makes not mutch sense here.
+        @test ob1(a6, t1, na_ml) ≈ 7.3760 rtol = 1e-1
+        @test exp(-ob1(a7, t2, na_ml)) ≈ 2463.3 rtol = 1e-1
+        @test exp(-ob1(a8, t3, na_ml)) ≈ 0.030303 rtol = 1e-1
+        @test exp(-ob1(a9, t4, na_ml)) ≈ 1.1133 rtol = 1e-1
+        # Table 5 from the article, precise to 1 percentage point
+        @test ebay[1, :] ≈ ef1(a6, [a6, a7, a8, a9], [t1, t2, t3, t4]) atol = 1
+        @test ebay[2, :] ≈ ef1(a7, [a6, a7, a8, a9], [t1, t2, t3, t4]) atol = 1
+        @test ebay[3, :] ≈ ef1(a8, [a6, a7, a8, a9], [t1, t2, t3, t4]) atol = 1
+        @test ebay[4, :] ≈ ef1(a9, [a6, a7, a8, a9], [t1, t2, t3, t4]) atol = 1
+        @test ebay[5, :] ≈ ef1(a10, [a6, a7, a8, a9], [t1, t2, t3, t4]) atol = 1
+        @test ebay[6, :] ≈ ef1(a0, [a6, a7, a8, a9], [t1, t2, t3, t4]) atol = 1
     end
 
     # Can we find the locally D-optimal design?
