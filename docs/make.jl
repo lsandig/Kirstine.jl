@@ -12,5 +12,6 @@ makedocs(modules = [Kirstine],
                                   ),
          pages = ["Home" => "index.md",
                   "Getting Started" => "getting-started.md",
+                  "Handling Transformations" => "handling-transformations.md",
                   ],
          )
