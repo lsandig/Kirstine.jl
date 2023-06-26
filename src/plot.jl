@@ -68,6 +68,7 @@ struct DerivativePlot{N}
     cp::CovariateParameterization
     pk::PriorKnowledge
     trafo::Transformation
+    na::NormalApproximation
 end
 
 @recipe function f(dp::DerivativePlot{1}; subdivisions = 101)
@@ -75,7 +76,7 @@ end
     dsgpts = collect(Iterators.flatten(designpoints(dp.d)))
     all_x = sort(vcat(range_x, dsgpts))
     directions = [singleton_design([d]) for d in all_x]
-    gd = gateauxderivative(dp.dc, dp.d, directions, dp.m, dp.cp, dp.pk, dp.trafo)
+    gd = gateauxderivative(dp.dc, dp.d, directions, dp.m, dp.cp, dp.pk, dp.trafo, dp.na)
 
     seriestype := :line
     markershape := :none
@@ -93,7 +94,7 @@ end
     range_y = range(lb[2], ub[2]; length = subdivisions[2])
     xy_grid = collect(Iterators.product(range_x, range_y))
     directions = [singleton_design([d...]) for d in xy_grid]
-    gd = gateauxderivative(dp.dc, dp.d, directions, dp.m, dp.cp, dp.pk, dp.trafo)
+    gd = gateauxderivative(dp.dc, dp.d, directions, dp.m, dp.cp, dp.pk, dp.trafo, dp.na)
     ex = extrema(gd)
 
     xguide --> (dimnames(dp.ds)[1])
@@ -115,7 +116,8 @@ end
                            m::NonlinearRegression,
                            cp::CovariateParameterization,
                            pk::PriorKnowledge,
-                           trafo::Transformation)
+                           trafo::Transformation,
+                           na::NormalApproximation)
 
 Plot the [`gateauxderivative`](@ref) at candidate solution `d` in directions taken from a
 grid over the given [`DesignSpace`](@ref), together with the design points of `d`.

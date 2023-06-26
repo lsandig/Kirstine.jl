@@ -1,16 +1,64 @@
 # D-optimal design
 
-function criterion_integrand!(nim::AbstractMatrix, dc::DOptimality, trafo::Identity)
-    return log_det!(nim)
+function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::DOptimality)
+    sgn = is_inv ? -1 : 1
+    ld = log_det!(tnim)
+    # With the DeltaMethod, `tnim` can be singular without having raised an exception up to
+    # now. Similarly to how we handle the PosDefException in `objective!`, we
+    # unconditionally return -Inf.
+    cv = ld != -Inf ? sgn * ld : ld
+    return cv
 end
 
-function gateaux_integrand(
-    inv_nim_at::AbstractMatrix,
-    nim_direction::AbstractMatrix,
-    dc::DOptimality,
-    trafo::Identity,
-)
-    return tr_prod(nim_direction, inv_nim_at, :U) - size(inv_nim_at, 1)
+# == Gateaux derivative for identity transformation == #
+function gateaux_integrand(c::GCDIdentity, nim_direction, index)
+    return tr_prod(c.invM[index], nim_direction, :U) - c.parameter_length
+end
+
+function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk, tc::TCIdentity, na)
+    invM = inverse_information_matrices(d, m, cp, pk, na)
+    parameter_length = parameter_dimension(pk)
+    return GCDIdentity(invM, parameter_length)
+end
+
+# == Gateaux derivative for delta method transformation == #
+function gateaux_integrand(c::GCDDeltaMethod, nim_direction, index)
+    # Note: invM_B_invM[index] is dense and symmetric, we can use the upper triangle
+    return tr_prod(c.invM_B_invM[index], nim_direction, :U) - c.transformed_parameter_length
+end
+
+#! format: off
+function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::DiscretePrior, tc::TCDeltaMethod, na)
+#! format: on
+    invM = inverse_information_matrices(d, m, cp, pk, na)
+    r = parameter_dimension(pk)
+    t = codomain_dimension(tc)
+    invM_copy = deepcopy(invM[1])
+    work = zeros(r, t)
+    invM_B_invM = map(1:length(pk.p)) do i
+        invM_copy .= invM[i] # Note: will be modified
+        inv_tnim, _ = apply_transformation!(zeros(t, t), work, invM_copy, true, tc, i)
+        J = tc.jm[i]
+        B = J' * (Symmetric(inv_tnim) \ J)
+        sym_invM = Symmetric(invM[i])
+        return sym_invM * B * sym_invM
+    end
+    return GCDDeltaMethod(invM_B_invM, t)
+end
+
+# Note: precalculating constants is not that time critical, so we can get away with this wrapping strategy.
+#! format: off
+function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::PriorSample, tc::TCDeltaMethod, na)
+#! format: on
+    pk_wrap = DiscretePrior(fill(1 / length(pk.p), length(pk.p)), pk.p)
+    return precalculate_gateaux_constants(dc, d, m, cp, pk_wrap, tc, na)
+end
+
+#! format: off
+function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::PriorGuess, tc::TCDeltaMethod, na)
+#! format: on
+    pk_wrap = DiscretePrior([1.0], [pk.p])
+    return precalculate_gateaux_constants(dc, d, m, cp, pk_wrap, tc, na)
 end
 
 # == relative D-efficiency == #
@@ -21,7 +69,8 @@ end
                m::NonlinearRegression,
                cp::CovariateParameterization,
                pk::PriorKnowledge,
-               trafo::Transformation)
+               trafo::Transformation,
+               na::NormalApproximation)
 
 Relative D-efficiency of `d1` to `d2` under prior knowledge `pk`.
 """
@@ -32,8 +81,9 @@ function efficiency(
     cp::CovariateParameterization,
     pk::PriorKnowledge,
     trafo::Transformation,
+    na::NormalApproximation,
 )
-    return efficiency(d1, d2, m, m, cp, cp, pk, trafo)
+    return efficiency(d1, d2, m, m, cp, cp, pk, trafo, na, na)
 end
 
 """
@@ -44,11 +94,14 @@ end
                cp1::CovariateParameterization,
                cp2::CovariateParameterization,
                pk::PriorKnowledge,
-               trafo::Transformation)
+               trafo::Transformation,
+               na1::NormalApproximation,
+               na2::NormalApproximation)
 
 Relative D-efficiency of `d1` to `d2` under prior knowledge `pk`.
 
-Note that the models and/or covariate parameterizations need not be identical.
+Note that the models, covariate parameterizations or normal approximations need not be
+identical.
 """
 function efficiency(
     d1::DesignMeasure,
@@ -59,54 +112,76 @@ function efficiency(
     cp2::CovariateParameterization,
     pk::PriorKnowledge,
     trafo::Transformation,
+    na1::NormalApproximation,
+    na2::NormalApproximation,
 )
+    tc = precalculate_trafo_constants(trafo, pk)
     pardim = parameter_dimension(pk)
+    tpardim = codomain_dimension(tc)
+    work = zeros(pardim, tpardim)
+    tnim1 = zeros(tpardim, tpardim)
     nim1 = zeros(pardim, pardim)
     jm1 = zeros(unit_length(m1), pardim)
     c1 = allocate_initialize_covariates(d1, m1, cp1)
+    tnim2 = zeros(tpardim, tpardim)
     nim2 = zeros(pardim, pardim)
     jm2 = zeros(unit_length(m2), pardim)
     c2 = allocate_initialize_covariates(d2, m2, cp2)
 
-    ei = eff_integral(nim1, nim2, jm1, jm2, c1, c2, d1, d2, m1, m2, cp1, cp2, pk, trafo)
-    return exp(ei / pardim)
+    #! format: off
+    ei = eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, d1.weight, d2.weight,
+                       m1, m2, c1, c2, pk, tc, na1, na2)
+    #! format: on
+    return exp(ei / tpardim)
 end
 
 #! format: off
-function eff_integral(nim1, nim2, jm1, jm2, c1, c2, d1, d2, m1, m2, cp1, cp2,
-                      pk::PriorGuess, trafo::Identity)
+function eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, w1, w2,
+                       m1, m2, c1, c2, pk::DiscretePrior, tc, na1, na2)
 #! format: on
-    informationmatrix!(nim1, jm1, d1.weight, m1, invcov(m1), c1, pk.p)
-    informationmatrix!(nim2, jm2, d2.weight, m2, invcov(m2), c2, pk.p)
-    return log_det!(nim1) - log_det!(nim2)
-end
-
-#! format: off
-function eff_integral(nim1, nim2, jm1, jm2, c1, c2, d1, d2, m1, m2, cp1, cp2,
-                      pk::PriorSample, trafo::Identity)
-#! format: on
-    log_det_diff = 0.0
-    for i in 1:length(pk.p)
-        informationmatrix!(nim1, jm1, d1.weight, m1, invcov(m1), c1, pk.p[i])
-        informationmatrix!(nim2, jm2, d2.weight, m2, invcov(m2), c2, pk.p[i])
-        ld1 = log_det!(nim1)
-        ld2 = log_det!(nim2)
-        log_det_diff += ld1 - ld2
+    n = length(pk.p)
+    acc = 0.0
+    for i in 1:n
+        informationmatrix!(nim1, jm1, w1, m1, invcov(m1), c1, pk.p[i], na1)
+        informationmatrix!(nim2, jm2, w2, m2, invcov(m2), c2, pk.p[i], na2)
+        _, is_inv1 = apply_transformation!(tnim1, work, nim1, false, tc, i)
+        _, is_inv2 = apply_transformation!(tnim2, work, nim2, false, tc, i)
+        acc += pk.weight[i] * eff_integrand!(tnim1, tnim2, is_inv1, is_inv2)
     end
-    return log_det_diff / length(pk.p)
+    return acc
 end
 
 #! format: off
-function eff_integral(nim1, nim2, jm1, jm2, c1, c2, d1, d2, m1, m2, cp1, cp2,
-                      pk::DiscretePrior, trafo::Identity)
+function eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, w1, w2,
+                       m1, m2, c1, c2, pk::PriorSample, tc, na1, na2)
 #! format: on
-    log_det_diff = 0.0
-    for i in 1:length(pk.p)
-        informationmatrix!(nim1, jm1, d1.weight, m1, invcov(m1), c1, pk.p[i])
-        informationmatrix!(nim2, jm2, d2.weight, m2, invcov(m2), c2, pk.p[i])
-        ld1 = log_det!(nim1)
-        ld2 = log_det!(nim2)
-        log_det_diff += pk.weight[i] * (ld1 - ld2)
+    n = length(pk.p)
+    acc = 0.0
+    for i in 1:n
+        informationmatrix!(nim1, jm1, w1, m1, invcov(m1), c1, pk.p[i], na1)
+        informationmatrix!(nim2, jm2, w2, m2, invcov(m2), c2, pk.p[i], na2)
+        _, is_inv1 = apply_transformation!(tnim1, work, nim1, false, tc, i)
+        _, is_inv2 = apply_transformation!(tnim2, work, nim2, false, tc, i)
+        acc += eff_integrand!(tnim1, tnim2, is_inv1, is_inv2)
     end
-    return log_det_diff
+    return acc / n
+end
+
+#! format: off
+function eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, w1, w2,
+                       m1, m2, c1, c2, pk::PriorGuess, tc, na1, na2)
+#! format: on
+    informationmatrix!(nim1, jm1, w1, m1, invcov(m1), c1, pk.p, na1)
+    informationmatrix!(nim2, jm2, w2, m2, invcov(m2), c2, pk.p, na2)
+    _, is_inv1 = apply_transformation!(tnim1, work, nim1, false, tc, 1)
+    _, is_inv2 = apply_transformation!(tnim2, work, nim2, false, tc, 1)
+    return eff_integrand!(tnim1, tnim2, is_inv1, is_inv2)
+end
+
+function eff_integrand!(tnim1, tnim2, is_inv1, is_inv2)
+    sgn1 = is_inv1 ? -1 : 1
+    sgn2 = is_inv2 ? -1 : 1
+    log_num = sgn1 * log_det!(tnim1)
+    log_den = sgn2 * log_det!(tnim2)
+    return log_num - log_den
 end

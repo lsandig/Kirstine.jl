@@ -1,6 +1,17 @@
 module Kirstine
 
-using LinearAlgebra: diagind, norm, BLAS.syrk!, LAPACK.potrf!, LAPACK.potri!
+using LinearAlgebra:
+    BLAS.symm!,
+    BLAS.syrk!,
+    LAPACK.posv!,
+    LAPACK.potrf!,
+    LAPACK.potri!,
+    PosDefException,
+    SingularException,
+    Symmetric,
+    diagind,
+    mul!,
+    norm
 using Random: rand, rand!
 using RecipesBase
 
@@ -8,9 +19,11 @@ export @define_scalar_unit_model,
     Covariate,
     CovariateParameterization,
     DOptimality,
+    DeltaMethod,
     DesignMeasure,
     DesignSpace,
     DiscretePrior,
+    FisherMatrix,
     Identity,
     NonlinearRegression,
     OptimizationResult,

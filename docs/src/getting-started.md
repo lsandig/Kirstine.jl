@@ -156,6 +156,7 @@ mod = SigEmax(1)
 cpar = CopyDose()
 guess = PriorGuess((e0 = 1, emax = 2, ed50 = 4, h = 5))
 trafo = Identity()
+na = FisherMatrix()
 nothing # hide
 ```
 There are a couple of things to note here:
@@ -168,6 +169,9 @@ There are a couple of things to note here:
 - The argument to [`PriorGuess`](@ref) is a [`NamedTuple`](https://docs.julialang.org/en/v1/base/base/#Core.NamedTuple),
   and its names correspond to those that we have used in `jacobianmatrix!`.
 - `trafo = Identity()` simply means that we are interested in all elements of the parameter as they are.
+- With choosing an [`FisherMatrix`](@ref) we say
+  that we only want to use the likelihood for the approximation of the posterior information matrix,
+  without including any additional regularization.
 
 We will use [particle swarm optimization](https://en.wikipedia.org/wiki/Particle_swarm_optimization) to do the actual work:
 
@@ -180,7 +184,7 @@ Now we can call [`optimize_design`](@ref):
 ```@example main
 import Random
 Random.seed!(4711)
-s1, r1 = optimize_design(pso, dc, ds, mod, cpar, guess, trafo)
+s1, r1 = optimize_design(pso, dc, ds, mod, cpar, guess, trafo, na)
 nothing # hide
 ```
 It returns two objects:
@@ -209,7 +213,7 @@ should be non-positive.
 
 ```@example main
 using Plots
-plot_gateauxderivative(dc, s1, ds, mod, cpar, guess, trafo; legend = :outerright)
+plot_gateauxderivative(dc, s1, ds, mod, cpar, guess, trafo, na; legend = :outerright)
 savefig(ans, "getting-started-pg1.png"); nothing # hide
 ```
 
@@ -246,7 +250,7 @@ We can pass this information to [`optimize_design`](@ref):
 
 ```@example main
 Random.seed!(4711)
-s2, r2 = optimize_design(pso, dc, ds, mod, cpar, guess, trafo;
+s2, r2 = optimize_design(pso, dc, ds, mod, cpar, guess, trafo, na;
                          candidate = grid_design(ds, 4),
                          fixedweights = 1:4, fixedpoints = [1, 4])
 nothing # hide
@@ -272,7 +276,7 @@ However, the solutions differ more in terms of aesthetics than in terms of perfo
 as their relative [`efficiency`](@ref) clearly shows:
 
 ```@example main
-efficiency(s1, s2, mod, cpar, guess, trafo)
+efficiency(s1, s2, mod, cpar, guess, trafo, na)
 ```
 
 ## Bayesian Optimal Design
@@ -309,8 +313,8 @@ and also increase the number of iterations and the swarm size.
 ```@example main
 pso = Pso(iterations = 100, swarmsize = 50)
 Random.seed!(31415)
-s3, r3 = optimize_design(pso, dc, ds, mod, cpar, dpr, trafo; candidate = grid_design(ds, 10))
-plot_gateauxderivative(dc, s3, ds, mod, cpar, dpr, trafo)
+s3, r3 = optimize_design(pso, dc, ds, mod, cpar, dpr, trafo, na; candidate = grid_design(ds, 10))
+plot_gateauxderivative(dc, s3, ds, mod, cpar, dpr, trafo, na)
 savefig(ans, "getting-started-pg3.png"); nothing # hide
 ```
 
@@ -344,9 +348,9 @@ By setting `minweight=1e-4` and `mindist=1e-3`, we can simplify the result more 
 
 ```@example main
 Random.seed!(31415)
-s4, r4 = optimize_design(pso, dc, ds, mod, cpar, dpr, trafo;
+s4, r4 = optimize_design(pso, dc, ds, mod, cpar, dpr, trafo, na;
                          candidate = grid_design(ds, 10), minweight = 1e-4, mindist = 1e-3);
-plot_gateauxderivative(dc, s4, ds, mod, cpar, dpr, trafo)
+plot_gateauxderivative(dc, s4, ds, mod, cpar, dpr, trafo, na)
 savefig(ans, "getting-started-pg4.png"); nothing # hide
 ```
 
@@ -393,11 +397,11 @@ yet `s5` is still far from the solution.
 ```@example main
 Random.seed!(31415)
 pso = Pso(iterations = 25, swarmsize = 50)
-s5, r5 = optimize_design(pso, dc, ds, mod, cpar, mcpr, trafo;
+s5, r5 = optimize_design(pso, dc, ds, mod, cpar, mcpr, trafo, na;
                          candidate = grid_design(ds, 6), fixedpoints = [1, 6],
                          minweight = 1e-4, mindist = 1e-3)
 plot(plot(r5),
-     plot_gateauxderivative(dc, s5, ds, mod, cpar, mcpr, trafo))
+     plot_gateauxderivative(dc, s5, ds, mod, cpar, mcpr, trafo, na))
 savefig(ans, "getting-started-pg5-pd5.png") ; nothing # hide
 ```
 
@@ -419,9 +423,9 @@ Now we use 5 refinement iterations:
 psod = Pso(iterations = 10, swarmsize = 50)
 psow = Pso(iterations = 15, swarmsize = 25)
 Random.seed!(31415)
-s6, r6d, r6w = refine_design(psod, psow, 5, s5, dc, ds, mod, cpar, mcpr, trafo)
+s6, r6d, r6w = refine_design(psod, psow, 5, s5, dc, ds, mod, cpar, mcpr, trafo, na)
 plot(plot(r6w),
-     plot_gateauxderivative(dc, s6, ds, mod, cpar, mcpr, trafo))
+     plot_gateauxderivative(dc, s6, ds, mod, cpar, mcpr, trafo, na))
 savefig(ans, "getting-started-pg6-pd6.png") ; nothing # hide
 ```
 
@@ -435,10 +439,10 @@ so that they can be merged more easily.
 ```@example main
 pso = Pso(iterations = 150, swarmsize = 50)
 Random.seed!(31415)
-s7, r7 = optimize_design(pso, dc, ds, mod, cpar, mcpr, trafo; candidate = s6,
+s7, r7 = optimize_design(pso, dc, ds, mod, cpar, mcpr, trafo, na; candidate = s6,
                          minweight = 1e-4, mindist = 5e-3,)
 plot(plot(r7),
-     plot_gateauxderivative(dc, s7, ds, mod, cpar, mcpr, trafo))
+     plot_gateauxderivative(dc, s7, ds, mod, cpar, mcpr, trafo, na))
 savefig(ans, "getting-started-pg7-pd7.png") ; nothing # hide
 ```
 
@@ -448,9 +452,9 @@ This time, the efficiency gains are greater,
 especially when going from `s5` to `s6`.
 
 ```@example main
-efficiency(s6, s5, mod, cpar, mcpr, trafo)
+efficiency(s6, s5, mod, cpar, mcpr, trafo, na)
 ```
 
 ```@example main
-efficiency(s7, s6, mod, cpar, mcpr, trafo)
+efficiency(s7, s6, mod, cpar, mcpr, trafo, na)
 ```

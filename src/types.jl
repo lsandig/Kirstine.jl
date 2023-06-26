@@ -88,6 +88,23 @@ struct DiscretePrior{T} <: PriorKnowledge
     end
 end
 
+"""
+    NormalApproximation
+
+Abstract supertype for different possible normal approximations to the posterior
+distribution.
+"""
+abstract type NormalApproximation end
+
+"""
+    FisherMatrix
+
+Normal approximation based on the maximum-likelihood approach. The information matrix is
+obtained as the average of the Fisher information matrix with respect to the design measure.
+Singular information matrices can occur.
+"""
+struct FisherMatrix <: NormalApproximation end
+
 @doc raw"""
     Transformation
 
@@ -108,6 +125,73 @@ abstract type Transformation end
 Represents the [`Transformation`](@ref) that maps a parameter to itself.
 """
 struct Identity <: Transformation end
+
+@doc raw"""
+    DeltaMethod(jacobian_matrix)
+
+Represents a nonlinear [`Transformation`](@ref) of the model parameter.
+
+The [delta method](https://en.wikipedia.org/wiki/Delta_method)
+maps the asymptotic multivariate normal distribution of ``\theta``
+to the asymptotic multivariate normal distribution of ``T(\theta)``,
+using the Jacobian matrix ``\mathrm{D}T``.
+To construct a `DeltaMethod` object,
+the argument `jacobian_matrix` must be a function
+that maps a parameter value `p`
+to the Jacobian matrix of ``T`` evaluated at `p`.
+
+# Example
+Suppose `p` has the fields `a` and `b`, and ``T(a, b) = (ab, b/a)'``.
+Then the Jacobian matrix of ``T`` is
+```math
+\mathrm{D}T(a, b) =
+  \begin{bmatrix}
+    b      & a   \\
+    -b/a^2 & 1/a \\
+  \end{bmatrix}.
+```
+In Julia this is equivalent to
+```jldoctest; output = false
+jm1(p) = [p.b p.a; -p.b/p.a^2 1/p.a]
+DeltaMethod(jm1)
+# output
+DeltaMethod{typeof(jm1)}(jm1)
+```
+Note that for a scalar quantity,
+e.g. ``T(a, b) = \sqrt{ab}``,
+the Jacobian matrix is a _row_ vector.
+```jldoctest; output = false
+jm2(p) = [b a] ./ (2 * sqrt(p.a * p.b))
+DeltaMethod(jm2)
+# output
+DeltaMethod{typeof(jm2)}(jm2)
+```
+"""
+struct DeltaMethod{T<:Function} <: Transformation
+    jacobian_matrix::T # parameter -> Matrix{Float64}
+end
+
+abstract type TrafoConstants end
+
+struct TCIdentity <: TrafoConstants
+    codomain_dimension::Int64
+end
+struct TCDeltaMethod <: TrafoConstants
+    codomain_dimension::Int64
+    jm::Vector{Matrix{Float64}}
+end
+
+abstract type GateauxConstants end
+
+struct GCDIdentity <: GateauxConstants
+    invM::Vector{Matrix{Float64}}
+    parameter_length::Int64
+end
+
+struct GCDDeltaMethod <: GateauxConstants
+    invM_B_invM::Vector{Matrix{Float64}}
+    transformed_parameter_length::Int64
+end
 
 """
     DesignCriterion
