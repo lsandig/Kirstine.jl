@@ -78,7 +78,7 @@ end
                m2::NonlinearRegression,
                cp1::CovariateParameterization,
                cp2::CovariateParameterization,
-               pk::PriorKnowledge,
+               pk::DiscretePrior,
                trafo::Transformation,
                na1::NormalApproximation,
                na2::NormalApproximation)
@@ -95,7 +95,7 @@ function efficiency(
     m2::NonlinearRegression,
     cp1::CovariateParameterization,
     cp2::CovariateParameterization,
-    pk::PriorKnowledge,
+    pk::DiscretePrior,
     trafo::Transformation,
     na1::NormalApproximation,
     na2::NormalApproximation,

@@ -332,17 +332,6 @@ function log_det!(A::AbstractMatrix)
     return 2 * acc
 end
 
-# == objective function helpers for each type of `PriorKnowledge` == #
-function obj_integral(tnim, work, nim, jm, dc, w, m, c, pk::DiscretePrior, tc, na)
-    acc = 0
-    for i in 1:length(pk.p)
-        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i], na)
-        _, is_inv = apply_transformation!(tnim, work, nim, false, tc, i)
-        acc += pk.weight[i] * criterion_integrand!(tnim, is_inv, dc)
-    end
-    return acc
-end
-
 function objective!(
     tnim::AbstractMatrix,
     work::AbstractMatrix,
@@ -353,7 +342,7 @@ function objective!(
     d::DesignMeasure,
     m::NonlinearRegression,
     cp::CovariateParameterization,
-    pk::PriorKnowledge,
+    pk::DiscretePrior,
     tc::TrafoConstants,
     na::NormalApproximation,
 )
@@ -365,7 +354,13 @@ function objective!(
     # solution to the maximization problem, hence we return negative infinity in these
     # cases.
     try
-        return obj_integral(tnim, work, nim, jm, dc, d.weight, m, c, pk, tc, na)
+        acc = 0
+        for i in 1:length(pk.p)
+            informationmatrix!(nim, jm, d.weight, m, invcov(m), c, pk.p[i], na)
+            _, is_inv = apply_transformation!(tnim, work, nim, false, tc, i)
+            acc += pk.weight[i] * criterion_integrand!(tnim, is_inv, dc)
+        end
+        return acc
     catch e
         if isa(e, PosDefException)
             return (-Inf)
@@ -407,16 +402,11 @@ function objective(
     return objective!(tnim, work, nim, jm, c, dc, d, m, cp, pk, tc, na)
 end
 
-# == Gateaux derivative function helpes for each type of `PriorKnowledge` == #
-function allocate_infomatrices(q, jm, w, m, invcov, c, pk::DiscretePrior, na)
-    return [informationmatrix!(zeros(q, q), jm, w, m, invcov, c, p, na) for p in pk.p]
-end
-
 function inverse_information_matrices(
     d::DesignMeasure,
     m::NonlinearRegression,
     cp::CovariateParameterization,
-    pk::PriorKnowledge,
+    pk::DiscretePrior,
     na::NormalApproximation,
 )
     # Calculate inverse of normalized information matrix for each parameter Note: the
@@ -426,23 +416,14 @@ function inverse_information_matrices(
     c = allocate_initialize_covariates(d, m, cp)
     q = parameter_dimension(pk)
     jm = zeros(unit_length(m), q)
-    nims = allocate_infomatrices(q, jm, d.weight, m, invcov(m), c, pk, na)
+    ic = invcov(m)
+    nims = [informationmatrix!(zeros(q, q), jm, d.weight, m, ic, c, p, na) for p in pk.p]
     # The documentation of `potri!` is not very clear that it expects a Cholesky factor as
     # input, and does _not_ call `potrf!` itself.
     # See also https://netlib.org/lapack/explore-html/d1/d7a/group__double_p_ocomputational_ga9dfc04beae56a3b1c1f75eebc838c14c.html
     map(M -> potrf!('U', M), nims)
     inv_nims = [potri!('U', M) for M in nims]
     return inv_nims
-end
-
-function gd_integral!(nim, jm, gconst, w, m, c, pk::DiscretePrior, na)
-    acc = 0
-    n = length(pk.p)
-    for i in 1:n
-        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i], na)
-        acc += pk.weight[i] * gateaux_integrand(gconst, nim, i)
-    end
-    return acc
 end
 
 function gateauxderivative!(
@@ -453,11 +434,17 @@ function gateauxderivative!(
     direction::DesignMeasure,
     m::NonlinearRegression,
     cp::CovariateParameterization,
-    pk::PriorKnowledge,
+    pk::DiscretePrior,
     na::NormalApproximation,
 )
     update_model_covariate!(c[1], direction.designpoint[1], m, cp)
-    return gd_integral!(nim, jm, gconst, direction.weight, m, c, pk, na)
+    acc = 0
+    n = length(pk.p)
+    for i in 1:n
+        informationmatrix!(nim, jm, direction.weight, m, invcov(m), c, pk.p[i], na)
+        acc += pk.weight[i] * gateaux_integrand(gconst, nim, i)
+    end
+    return acc
 end
 
 """
