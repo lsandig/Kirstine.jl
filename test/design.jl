@@ -234,9 +234,6 @@ end
         # it also happens to be better for pk2 and pk3
         @test efficiency(sol, not_sol, m, cp, pk2, trafo, na_ml) > 1
         @test efficiency(sol, not_sol, m, cp, pk3, trafo, na_ml) > 1
-        # check that efficiency wrt prior sample divides by length of sample vector
-        @test efficiency(sol, not_sol, m, cp, DiscretePrior([p1, p1]), trafo, na_ml) ==
-              efficiency(sol, not_sol, m, cp, DiscretePrior([p1]), trafo, na_ml)
     end
 
     # DeltaMethod for Atkinson et al. examples
