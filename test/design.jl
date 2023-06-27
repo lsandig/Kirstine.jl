@@ -218,6 +218,9 @@ end
             [0.2, 0.3, 0.5],
             [[a + 0.1 * (b - a)], [x_star * 1.1], [a + (0.9 * (b - a))]],
         ),
+        # a design with fewer than three points is singular
+        sng1 = uniform_design([[a]]),
+        sng2 = uniform_design([[a], [b]]),
         to_dirac(d) = map(singleton_design, designpoints(simplify_drop(d, 0))),
         gd(s, d, pk, na) = gateauxderivative(dc, s, to_dirac(d), m, cp, pk, trafo, na),
         ob(d, pk, na) = objective(dc, d, m, cp, pk, trafo, na)
@@ -228,12 +231,19 @@ end
         @test all(abs.(gd(not_sol, not_sol, pk3, na_ml)) .> 0.1)
         @test ob(not_sol, pk1, na_ml) < ob(sol, pk1, na_ml)
         # a design with less than 3 support points is singular
-        @test isinf(ob(uniform_design([[a], [b]]), pk1, na_ml))
+        @test isinf(ob(sng2, pk1, na_ml))
         # sol is better than not_sol for pk1 (by construction)
         @test efficiency(sol, not_sol, m, cp, pk1, trafo, na_ml) > 1
         # it also happens to be better for pk2 and pk3
         @test efficiency(sol, not_sol, m, cp, pk2, trafo, na_ml) > 1
         @test efficiency(sol, not_sol, m, cp, pk3, trafo, na_ml) > 1
+        # check that `efficiency` correctly deals with singular designs
+        @test efficiency(sng2, sol, m, cp, pk1, trafo, na_ml) == 0
+        @test efficiency(sol, sng2, m, cp, pk1, trafo, na_ml) == Inf
+        @test isnan(efficiency(sng1, sng2, m, cp, pk1, trafo, na_ml))
+        # Note: although a mathematical argument could be made that the efficiency should be
+        # equal to 1 in the following case, we still want it to be NaN:
+        @test isnan(efficiency(sng1, sng1, m, cp, pk1, trafo, na_ml))
     end
 
     # DeltaMethod for Atkinson et al. examples
