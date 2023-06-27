@@ -329,7 +329,7 @@ end
         (d1, o1) = optim(),
         # search with lower and upper bound already known and fixed, uniform weights
         _ = seed!(4711),
-        cand = grid_design(ds, 3),
+        cand = equidistant_design(ds, 3),
         (d2, o2) = optim(; candidate = cand, fixedweights = 1:3, fixedpoints = [1, 3])
 
         @test d1.weight ≈ sol.weight rtol = 1e-3

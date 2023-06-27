@@ -129,12 +129,12 @@ function uniform_design(designpoints::AbstractVector{<:AbstractVector{<:Real}})
 end
 
 """
-    grid_design(ds::DesignSpace{1}, K::Integer)
+    equidistant_design(ds::DesignSpace{1}, K::Integer)
 
 Construct a [`DesignMeasure`](@ref) with an equally-spaced grid of `K` design points
 and uniform weights on the given 1-dimensional design space.
 """
-function grid_design(ds::DesignSpace{1}, K::Integer)
+function equidistant_design(ds::DesignSpace{1}, K::Integer)
     val = range(lowerbound(ds)[1], upperbound(ds)[1]; length = K)
     designpoints = [[dp] for dp in val]
     return uniform_design(designpoints)
