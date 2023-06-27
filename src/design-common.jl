@@ -156,7 +156,7 @@ function refine_design(
     res = candidate
     for i in 1:steps
         res = simplify(res, ds, m, cp; sargs...)
-        dir_cand = map(singleton_design, support(res))
+        dir_cand = map(singleton_design, designpoints(simplify_drop(res, 0)))
         gconst = precalculate_gateaux_constants(dc, res, m, cp, pk, tc, na)
         # find direction of steepest ascent
         gd(d) = gateauxderivative!(nim, jm, c, gconst, d, m, cp, pk, na)
@@ -165,7 +165,7 @@ function refine_design(
         d = or_gd.maximizer
         # append the new atom
         K = length(res.weight)
-        if d.designpoint[1] in support(res)
+        if d.designpoint[1] in designpoints(simplify_drop(res, 0))
             # effectivly run the reweighting from the last round for some more iterations
             res = mixture(0, d, res) # make sure new point is at index 1
             res = simplify_merge(res, ds, 0)

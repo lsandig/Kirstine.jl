@@ -218,7 +218,7 @@ end
             [0.2, 0.3, 0.5],
             [[a + 0.1 * (b - a)], [x_star * 1.1], [a + (0.9 * (b - a))]],
         ),
-        to_dirac(d) = map(singleton_design, support(d)),
+        to_dirac(d) = map(singleton_design, designpoints(simplify_drop(d, 0))),
         gd(s, d, pk, na) = gateauxderivative(dc, s, to_dirac(d), m, cp, pk, trafo, na),
         ob(d, pk, na) = objective(dc, d, m, cp, pk, trafo, na)
 
@@ -421,11 +421,11 @@ end
         od = Pso(; iterations = 50, swarmsize = 100),
         ow = Pso(; iterations = 50, swarmsize = 50),
         _ = seed!(1234),
-        cand = uniform_design([[[5]]; support(sol)[[1, 3]]]),
+        cand = uniform_design([[[5]]; designpoints(sol)[[1, 3]]]),
         (r, rd, rw) = refine_design(od, ow, 3, cand, dc, ds, m, cp, pk, trafo, na)
 
-        @test abs(support(r)[2][1] - support(sol)[2][1]) <
-              abs(support(cand)[1][1] - support(sol)[2][1])
+        @test abs(designpoints(r)[2][1] - designpoints(sol)[2][1]) <
+              abs(designpoints(cand)[1][1] - designpoints(sol)[2][1])
         @test issorted([r.maximum for r in rw])
         @test all([r.maximum > 0 for r in rd])
     end

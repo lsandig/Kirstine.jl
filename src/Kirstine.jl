@@ -49,7 +49,6 @@ export @define_scalar_unit_model,
     singleton_design,
     sort_designpoints,
     sort_weights,
-    support,
     uniform_design,
     upperbound,
     weights

@@ -3,20 +3,11 @@
 # === accessor functions === #
 
 """
-    support(d::DesignMeasure)
-
-Return a vector containing all design points with positive weight.
-
-See also [`designpoints`](@ref), [`weights`](@ref), [`simplify_drop`](@ref).
-"""
-support(d::DesignMeasure) = d.designpoint[d.weight .> 0.0]
-
-"""
     designpoints(d::DesignMeasure)
 
 Return a copy of all designpoints, including those with zero weight.
 
-See also [`support`](@ref), [`weights`](@ref), [`simplify_drop`](@ref).
+See also [`weights`](@ref), [`simplify_drop`](@ref).
 """
 designpoints(d::DesignMeasure) = deepcopy(d.designpoint)
 
@@ -25,7 +16,7 @@ designpoints(d::DesignMeasure) = deepcopy(d.designpoint)
 
 Return a copy of the design point weights.
 
-See also [`support`](@ref), [`designpoints`](@ref), [`simplify_drop`](@ref).
+See also [`designpoints`](@ref), [`simplify_drop`](@ref).
 """
 weights(d::DesignMeasure) = copy(d.weight)
 
