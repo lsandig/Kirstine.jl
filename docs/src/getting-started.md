@@ -154,7 +154,7 @@ dc = DOptimality()
 ds = DesignSpace(:dose => (0, 10))
 mod = SigEmax(1)
 cpar = CopyDose()
-guess = PriorGuess((e0 = 1, emax = 2, ed50 = 4, h = 5))
+guess = DiscretePrior((e0 = 1, emax = 2, ed50 = 4, h = 5))
 trafo = Identity()
 na = FisherMatrix()
 nothing # hide
@@ -166,7 +166,7 @@ There are a couple of things to note here:
 - The name of the design space's single dimension is given by the symbol `:dose`,
   and it can be chosen independently from however we have named the field of our `SigEmaxCovariate`.
   They _do not_ have to be the same.
-- The argument to [`PriorGuess`](@ref) is a [`NamedTuple`](https://docs.julialang.org/en/v1/base/base/#Core.NamedTuple),
+- The argument to [`DiscretePrior`](@ref) is a [`NamedTuple`](https://docs.julialang.org/en/v1/base/base/#Core.NamedTuple),
   and its names correspond to those that we have used in `jacobianmatrix!`.
 - `trafo = Identity()` simply means that we are interested in all elements of the parameter as they are.
 - With choosing an [`FisherMatrix`](@ref) we say
@@ -283,11 +283,10 @@ efficiency(s1, s2, mod, cpar, guess, trafo, na)
 
 For a Bayesian D-optimal design,
 we replace the single guess for ``\theta`` by a full prior distribution.
-Two kinds of priors are supported:
-- A [`DiscretePrior`](@ref) represents a set of parameter values and corresponding weights.
-  This is useful if only a few parameter values are thought to be possible.
-- A [`PriorSample`](@ref) represents a draw from a prior distribution.
-  This is useful with draws obtained by MCMC from a model fitted to data of a pilot experiment.
+A [`DiscretePrior`](@ref) represents a set of parameter values and corresponding weights.
+When the weights are uniform it can represent draws obtained by MCMC,
+e.g. from a model fitted to data of a pilot experiment.
+Non-uniform weights are useful if only a few parameter values are thought to be possible.
 
 ### Discrete Prior
 
@@ -377,7 +376,7 @@ apportion(s4, 30)
 
 ### Prior Sample
 
-Next we look at how to use a [`PriorSample`](@ref).
+Next we look at how to use equally weighted draws.
 We generate 1000 independent draws for each element of ``\theta`` from a normal distribution.
 We enforce some lower bounds on to prevent singular information matrices.
 (Using [stan](https://mc-stan.org) to draw a real prior sample from (simulated) pilot data is out of scope for this introduction.)
@@ -386,7 +385,7 @@ We enforce some lower bounds on to prevent singular information matrices.
 Random.seed!(31415)
 sample_mat = max.([0 0.1 1 1], [1 2 4 5] .+ [0.5 0.5 0.5 0.5] .* randn(1000, 4))
 sample = [(e0 = a, emax = b, ed50 = c, h = d) for (a, b, c, d) in eachrow(sample_mat)];
-mcpr = PriorSample(sample)
+mcpr = DiscretePrior(sample)
 nothing # hide
 ```
 

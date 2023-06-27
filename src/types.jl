@@ -35,41 +35,17 @@ abstract type CovariateParameterization end
 
 Abstract supertype for structs representing prior knowlege of the model parameters.
 
-See also [`PriorSample`](@ref), [`PriorGuess`](@ref), [`DiscretePrior`](@ref).
+See also [`DiscretePrior`](@ref).
 """
 abstract type PriorKnowledge end
 
 """
-    PriorSample(p::AbstractVector{T}) where T
+    DiscretePrior([weights,] p::AbstractVector{T}) where T
 
-Wraps a vector of samples from a prior distribution, which is used for Bayesian optimal
-design.
+Represents a sample from a prior distribution, or a discrete prior distribution with finite
+support.
 
-`T` can be any type for which `length(p::T)` can be interpreted as the dimension of the
-parameter space in which `p` lives.
-"""
-struct PriorSample{T} <: PriorKnowledge
-    p::Vector{T}
-end
-
-"""
-    PriorGuess(p::T) where T
-
-Wraps a single best guess at the unknown parameter value, which is used for locally optimal
-design.
-
-`T` can be any type for which `length(p::T)` can be interpreted as the dimension of the
-parameter space in which `p` lives.
-"""
-struct PriorGuess{T} <: PriorKnowledge
-    p::T
-end
-
-"""
-    DiscretePrior(weights, p::AbstractVector{T}) where T
-
-Represents a discrete prior distribution with finite support, which is used for Bayesian
-optimal design.
+If no `weights` are given, a uniform distribution on the elements of `p` is assumed.
 
 `T` can be any type for which `length(p::T)` can be interpreted as the dimension of the
 parameter space in which `p` lives.
@@ -86,6 +62,20 @@ struct DiscretePrior{T} <: PriorKnowledge
         end
         return new{T}(weights, parameters)
     end
+end
+
+function DiscretePrior(p::AbstractVector{T}) where T
+    n = length(p)
+    return DiscretePrior(fill(1 / n, n), p)
+end
+
+"""
+    DiscretePrior(p::T) where T
+
+Construct a one-point (Dirac) prior distribution at `p`.
+"""
+function DiscretePrior(p::T) where T
+    return DiscretePrior([1.0], [p])
 end
 
 """

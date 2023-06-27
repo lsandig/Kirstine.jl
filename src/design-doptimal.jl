@@ -46,21 +46,6 @@ function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::DiscreteP
     return GCDDeltaMethod(invM_B_invM, t)
 end
 
-# Note: precalculating constants is not that time critical, so we can get away with this wrapping strategy.
-#! format: off
-function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::PriorSample, tc::TCDeltaMethod, na)
-#! format: on
-    pk_wrap = DiscretePrior(fill(1 / length(pk.p), length(pk.p)), pk.p)
-    return precalculate_gateaux_constants(dc, d, m, cp, pk_wrap, tc, na)
-end
-
-#! format: off
-function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::PriorGuess, tc::TCDeltaMethod, na)
-#! format: on
-    pk_wrap = DiscretePrior([1.0], [pk.p])
-    return precalculate_gateaux_constants(dc, d, m, cp, pk_wrap, tc, na)
-end
-
 # == relative D-efficiency == #
 
 """
@@ -149,33 +134,6 @@ function eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, w1, w2,
         acc += pk.weight[i] * eff_integrand!(tnim1, tnim2, is_inv1, is_inv2)
     end
     return acc
-end
-
-#! format: off
-function eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, w1, w2,
-                       m1, m2, c1, c2, pk::PriorSample, tc, na1, na2)
-#! format: on
-    n = length(pk.p)
-    acc = 0.0
-    for i in 1:n
-        informationmatrix!(nim1, jm1, w1, m1, invcov(m1), c1, pk.p[i], na1)
-        informationmatrix!(nim2, jm2, w2, m2, invcov(m2), c2, pk.p[i], na2)
-        _, is_inv1 = apply_transformation!(tnim1, work, nim1, false, tc, i)
-        _, is_inv2 = apply_transformation!(tnim2, work, nim2, false, tc, i)
-        acc += eff_integrand!(tnim1, tnim2, is_inv1, is_inv2)
-    end
-    return acc / n
-end
-
-#! format: off
-function eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, w1, w2,
-                       m1, m2, c1, c2, pk::PriorGuess, tc, na1, na2)
-#! format: on
-    informationmatrix!(nim1, jm1, w1, m1, invcov(m1), c1, pk.p, na1)
-    informationmatrix!(nim2, jm2, w2, m2, invcov(m2), c2, pk.p, na2)
-    _, is_inv1 = apply_transformation!(tnim1, work, nim1, false, tc, 1)
-    _, is_inv2 = apply_transformation!(tnim2, work, nim2, false, tc, 1)
-    return eff_integrand!(tnim1, tnim2, is_inv1, is_inv2)
 end
 
 function eff_integrand!(tnim1, tnim2, is_inv1, is_inv2)

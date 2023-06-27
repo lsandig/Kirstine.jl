@@ -197,14 +197,6 @@ end
 
 # == various helper functions == #
 
-function precalculate_trafo_constants(trafo::Identity, pk::PriorGuess)
-    return TCIdentity(parameter_dimension(pk))
-end
-
-function precalculate_trafo_constants(trafo::Identity, pk::PriorSample)
-    return TCIdentity(parameter_dimension(pk))
-end
-
 function precalculate_trafo_constants(trafo::Identity, pk::DiscretePrior)
     return TCIdentity(parameter_dimension(pk))
 end
@@ -222,30 +214,10 @@ function check_trafo_jm_dimensions(jm, pk)
     return nothing
 end
 
-function precalculate_trafo_constants(trafo::DeltaMethod, pk::PriorGuess)
-    jm = [trafo.jacobian_matrix(pk.p)]
-    check_trafo_jm_dimensions(jm, pk)
-    return TCDeltaMethod(size(jm[1], 1), jm)
-end
-
-function precalculate_trafo_constants(trafo::DeltaMethod, pk::PriorSample)
-    jm = [trafo.jacobian_matrix(p) for p in pk.p]
-    check_trafo_jm_dimensions(jm, pk)
-    return TCDeltaMethod(size(jm[1], 1), jm)
-end
-
 function precalculate_trafo_constants(trafo::DeltaMethod, pk::DiscretePrior)
     jm = [trafo.jacobian_matrix(p) for p in pk.p]
     check_trafo_jm_dimensions(jm, pk)
     return TCDeltaMethod(size(jm[1], 1), jm)
-end
-
-function parameter_dimension(pk::PriorSample)
-    return length(pk.p[1])
-end
-
-function parameter_dimension(pk::PriorGuess)
-    return length(pk.p)
 end
 
 function parameter_dimension(pk::DiscretePrior)
@@ -371,23 +343,6 @@ function obj_integral(tnim, work, nim, jm, dc, w, m, c, pk::DiscretePrior, tc, n
     return acc
 end
 
-function obj_integral(tnim, work, nim, jm, dc, w, m, c, pk::PriorSample, tc, na)
-    acc = 0
-    n = length(pk.p)
-    for i in 1:n
-        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i], na)
-        _, is_inv = apply_transformation!(tnim, work, nim, false, tc, i)
-        acc += criterion_integrand!(tnim, is_inv, dc)
-    end
-    return acc / n
-end
-
-function obj_integral(tnim, work, nim, jm, dc, w, m, c, pk::PriorGuess, tc, na)
-    informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p, na)
-    _, is_inv = apply_transformation!(tnim, work, nim, false, tc, 1)
-    return criterion_integrand!(tnim, is_inv, dc)
-end
-
 function objective!(
     tnim::AbstractMatrix,
     work::AbstractMatrix,
@@ -457,14 +412,6 @@ function allocate_infomatrices(q, jm, w, m, invcov, c, pk::DiscretePrior, na)
     return [informationmatrix!(zeros(q, q), jm, w, m, invcov, c, p, na) for p in pk.p]
 end
 
-function allocate_infomatrices(q, jm, w, m, invcov, c, pk::PriorSample, na)
-    return [informationmatrix!(zeros(q, q), jm, w, m, invcov, c, p, na) for p in pk.p]
-end
-
-function allocate_infomatrices(q, jm, w, m, invcov, c, pk::PriorGuess, na)
-    return [informationmatrix!(zeros(q, q), jm, w, m, invcov, c, pk.p, na)]
-end
-
 function inverse_information_matrices(
     d::DesignMeasure,
     m::NonlinearRegression,
@@ -496,22 +443,6 @@ function gd_integral!(nim, jm, gconst, w, m, c, pk::DiscretePrior, na)
         acc += pk.weight[i] * gateaux_integrand(gconst, nim, i)
     end
     return acc
-end
-
-function gd_integral!(nim, jm, gconst, w, m, c, pk::PriorSample, na)
-    acc = 0
-    n = length(pk.p)
-    for i in 1:n
-        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i], na)
-        acc += gateaux_integrand(gconst, nim, i)
-    end
-    return acc / n
-end
-
-function gd_integral!(nim, jm, gconst, w, m, c, pk::PriorGuess, na)
-    informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p, na)
-    dummy_index = 1
-    return gateaux_integrand(gconst, nim, dummy_index)
 end
 
 function gateauxderivative!(

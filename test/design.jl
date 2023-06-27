@@ -14,7 +14,7 @@
         @test_throws "either :U or :L" Kirstine.tr_prod(A, B, :F)
     end
 
-    let pk = PriorSample([(a = 1, b = 2), (a = -1, b = -2)]),
+    let pk = DiscretePrior([(a = 1, b = 2), (a = -1, b = -2)]),
         dt1 = p -> [p.a; p.b], # too few columns
         D1 = DeltaMethod(dt1),
         dt2 = p -> p.a > 0 ? [p.a p.b] : [p.a p.b; p.a p.b], # different number of rows
@@ -38,7 +38,7 @@
     # Note: we have to recreate the circumstances in which apply_transformation! is called:
     # nim is allowed to be only upper triangular, and is allowed to be overwritten. Hence we
     # must use deepcopys, and Symmetric wrappers where necessary.
-    let pk = PriorGuess((a = 1, b = 2, c = 3)),
+    let pk = DiscretePrior((a = 1, b = 2, c = 3)),
         tid = DeltaMethod(p -> diagm(ones(3))),
         ctid = Kirstine.precalculate_trafo_constants(tid, pk),
         tsc = DeltaMethod(p -> diagm([0.5, 2.0, 4.0])),
@@ -173,7 +173,7 @@ end
         as = mn[1] .+ se_factor .* se[1] .* (2 .* rand(n) .- 1)
         es = mn[2] .+ se_factor .* se[2] .* (2 .* rand(n) .- 1)
         ss = mn[3] .+ se_factor .* se[3] .* (2 .* rand(n) .- 1)
-        return PriorSample(map((a, e, s) -> (a = a, e = e, s = s), as, es, ss))
+        return DiscretePrior(map((a, e, s) -> (a = a, e = e, s = s), as, es, ss))
     end
 
     # correct handling of singular designs
@@ -183,7 +183,7 @@ end
         t2 = DeltaMethod(p -> diagm([1, 1, 1])),
         m = EmaxModel(1),
         cp = CopyDose(),
-        pk = PriorGuess((e0 = 1, emax = 10, ec50 = 5)),
+        pk = DiscretePrior((e0 = 1, emax = 10, ec50 = 5)),
         ds = DesignSpace(:dose => (0, 10)),
         d = singleton_design([5])
 
@@ -204,9 +204,9 @@ end
         cp = CopyDose(),
         p1 = (e0 = 1, emax = 10, ec50 = 5),
         p2 = (e0 = 5, emax = -3, ec50 = 2),
-        pk1 = PriorGuess(p1),
+        pk1 = DiscretePrior(p1),
         pk2 = DiscretePrior([0.75, 0.25], [p1, p2]),
-        pk3 = PriorSample([p1, p2]),
+        pk3 = DiscretePrior([p1, p2]),
         ds = DesignSpace(:dose => (0, 10)),
         # sol is optimal for pk1
         sol = emax_solution(p1, ds),
@@ -235,13 +235,13 @@ end
         @test efficiency(sol, not_sol, m, cp, pk2, trafo, na_ml) > 1
         @test efficiency(sol, not_sol, m, cp, pk3, trafo, na_ml) > 1
         # check that efficiency wrt prior sample divides by length of sample vector
-        @test efficiency(sol, not_sol, m, cp, PriorSample([p1, p1]), trafo, na_ml) ==
-              efficiency(sol, not_sol, m, cp, PriorSample([p1]), trafo, na_ml)
+        @test efficiency(sol, not_sol, m, cp, DiscretePrior([p1, p1]), trafo, na_ml) ==
+              efficiency(sol, not_sol, m, cp, DiscretePrior([p1]), trafo, na_ml)
     end
 
     # DeltaMethod for Atkinson et al. examples
     let ds = DesignSpace(:time => [0, 48]),
-        g0 = PriorGuess((a = 4.298, e = 0.05884, s = 21.80)),
+        g0 = DiscretePrior((a = 4.298, e = 0.05884, s = 21.80)),
         _ = seed!(4711),
         g1 = draw_from_prior(1000, 2),
         m = TPCMod(1),
@@ -312,7 +312,7 @@ end
         m = EmaxModel(1),
         cp = CopyDose(),
         p = (e0 = 1, emax = 10, ec50 = 5),
-        pk = PriorGuess(p),
+        pk = DiscretePrior(p),
         ds = DesignSpace(:dose => (0, 10)),
         sol = emax_solution(p, ds),
         pso = Pso(; iterations = 50, swarmsize = 20),
@@ -370,7 +370,7 @@ end
         m = EmaxModel(1),
         cp = CopyDose(),
         p = (e0 = 1, emax = 10, ec50 = 5),
-        pk = PriorGuess(p),
+        pk = DiscretePrior(p),
         ds = DesignSpace(:dose => (0, 10)),
         pso = Pso(; iterations = 2, swarmsize = 5),
         # this is not the optimal solution
@@ -418,7 +418,7 @@ end
         m = EmaxModel(1),
         cp = CopyDose(),
         p = (e0 = 1, emax = 10, ec50 = 5),
-        pk = PriorGuess(p),
+        pk = DiscretePrior(p),
         ds = DesignSpace(:dose => (0, 10)),
         sol = emax_solution(p, ds),
         od = Pso(; iterations = 50, swarmsize = 100),
