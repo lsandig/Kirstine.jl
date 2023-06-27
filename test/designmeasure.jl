@@ -19,7 +19,7 @@
         @test all(ref.lowerbound .== ds.lowerbound)
         @test all(ref.upperbound .== ds.upperbound)
     end
-    let d = singleton_design([42]), ref = DesignMeasure([1], [[42]])
+    let d = one_point_design([42]), ref = DesignMeasure([1], [[42]])
         @test all(d.weight .== ref.weight)
         @test all(d.designpoint .== ref.designpoint)
     end
@@ -45,7 +45,7 @@
         d_as_matrix = [0.5 0.2 0.3; 7 8 9; 4 5 6],
         m = [0.1 0.2 0.3 0.4; 1 2 3 4],
         m_as_designmeasure = DesignMeasure([0.1, 0.2, 0.3, 0.4], [[1], [2], [3], [4]]),
-        dirac = singleton_design([2, 3]),
+        dirac = one_point_design([2, 3]),
         dirac_as_matrix = reshape([1, 2, 3], :, 1)
 
         # conversion in both directions
@@ -80,8 +80,8 @@
 
     # mixtures
     let d = equidistant_design(DesignSpace(:a => (1, 4)), 4),
-        dirac = singleton_design([5]),
-        dirac2d = singleton_design([5, 6]),
+        dirac = one_point_design([5]),
+        dirac2d = one_point_design([5, 6]),
         mix = mixture(0.2, dirac, d)
 
         @test all(mix.weight .== 0.2)

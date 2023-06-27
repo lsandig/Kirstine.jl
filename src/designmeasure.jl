@@ -109,11 +109,11 @@ function DesignMeasure(m::AbstractMatrix{<:Real})
 end
 
 """
-    singleton_design(designpoint)
+    one_point_design(designpoint)
 
 Construct a one-point [`DesignMeasure`](@ref).
 """
-function singleton_design(designpoint::AbstractVector{<:Real})
+function one_point_design(designpoint::AbstractVector{<:Real})
     return DesignMeasure([1.0], [designpoint])
 end
 

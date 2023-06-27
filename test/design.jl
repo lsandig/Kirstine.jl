@@ -185,7 +185,7 @@ end
         cp = CopyDose(),
         pk = DiscretePrior((e0 = 1, emax = 10, ec50 = 5)),
         ds = DesignSpace(:dose => (0, 10)),
-        d = singleton_design([5])
+        d = one_point_design([5])
 
         # no explicit inversion
         @test objective(dc, d, m, cp, pk, t1, na) == -Inf
@@ -221,7 +221,7 @@ end
         # a design with fewer than three points is singular
         sng1 = uniform_design([[a]]),
         sng2 = uniform_design([[a], [b]]),
-        to_dirac(d) = map(singleton_design, designpoints(simplify_drop(d, 0))),
+        to_dirac(d) = map(one_point_design, designpoints(simplify_drop(d, 0))),
         gd(s, d, pk, na) = gateauxderivative(dc, s, to_dirac(d), m, cp, pk, trafo, na),
         ob(d, pk, na) = objective(dc, d, m, cp, pk, trafo, na)
 
@@ -271,7 +271,7 @@ end
         t2 = DeltaMethod(Dauc),
         t3 = DeltaMethod(Dttm),
         t4 = DeltaMethod(Dcmax),
-        dir = [singleton_design([t]) for t in range(0, 48; length = 21)],
+        dir = [one_point_design([t]) for t in range(0, 48; length = 21)],
         #! format: off
         ebay = [100    37    67.2  39.3;
                  23.4 100     3.2   4.5;
@@ -284,7 +284,7 @@ end
         ob1(a, t, na) = objective(dc, a, m, cp, g1, t, na),
         gd(a, t, na) = gateauxderivative(dc, a, dir, m, cp, g0, t, na),
         ef1(a, zs, ts) = map((z, t) -> 100 * efficiency(a, z, m, cp, g1, t, na_ml), zs, ts),
-        dp2dir(d) = [singleton_design(dp) for dp in designpoints(d)],
+        dp2dir(d) = [one_point_design(dp) for dp in designpoints(d)],
         abs_gd_at_sol_dp(a, t) =
             abs.(gateauxderivative(dc, a, dp2dir(a), m, cp, g0, t, na_ml))
 

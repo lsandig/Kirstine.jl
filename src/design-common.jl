@@ -148,7 +148,7 @@ function refine_design(
     pardim = parameter_dimension(pk)
     nim = zeros(pardim, pardim)
     jm = zeros(unit_length(m), pardim)
-    c = allocate_initialize_covariates(singleton_design(candidate.designpoint[1]), m, cp)
+    c = allocate_initialize_covariates(one_point_design(candidate.designpoint[1]), m, cp)
     ors_d = OptimizationResult[]
     ors_w = OptimizationResult[]
     constraints = (ds, [false], [false])
@@ -156,7 +156,7 @@ function refine_design(
     res = candidate
     for i in 1:steps
         res = simplify(res, ds, m, cp; sargs...)
-        dir_cand = map(singleton_design, designpoints(simplify_drop(res, 0)))
+        dir_cand = map(one_point_design, designpoints(simplify_drop(res, 0)))
         gconst = precalculate_gateaux_constants(dc, res, m, cp, pk, tc, na)
         # find direction of steepest ascent
         gd(d) = gateauxderivative!(nim, jm, c, gconst, d, m, cp, pk, na)

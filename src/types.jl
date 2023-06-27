@@ -266,7 +266,7 @@ representing a continuous experimental design.
 
 For details see p.62 in Fedorov/Leonov [^FL13].
 
-Special kinds of design measures can be constructed with [`singleton_design`](@ref),
+Special kinds of design measures can be constructed with [`one_point_design`](@ref),
 [`uniform_design`](@ref), [`equidistant_design`](@ref), [`random_design`](@ref).
 
 See also [`weights`](@ref), [`designpoints`](@ref), [`as_matrix`](@ref),

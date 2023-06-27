@@ -75,7 +75,7 @@ end
     range_x = range(lowerbound(dp.ds)[1], upperbound(dp.ds)[1]; length = subdivisions)
     dsgpts = collect(Iterators.flatten(designpoints(dp.d)))
     all_x = sort(vcat(range_x, dsgpts))
-    directions = [singleton_design([d]) for d in all_x]
+    directions = [one_point_design([d]) for d in all_x]
     gd = gateauxderivative(dp.dc, dp.d, directions, dp.m, dp.cp, dp.pk, dp.trafo, dp.na)
 
     seriestype := :line
@@ -93,7 +93,7 @@ end
     range_x = range(lb[1], ub[1]; length = subdivisions[1])
     range_y = range(lb[2], ub[2]; length = subdivisions[2])
     xy_grid = collect(Iterators.product(range_x, range_y))
-    directions = [singleton_design([d...]) for d in xy_grid]
+    directions = [one_point_design([d...]) for d in xy_grid]
     gd = gateauxderivative(dp.dc, dp.d, directions, dp.m, dp.cp, dp.pk, dp.trafo, dp.na)
     ex = extrema(gd)
 
