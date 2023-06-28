@@ -245,31 +245,61 @@ function informationmatrix!(
     return nim
 end
 
+# Calling conventions for `apply_transformation!`
+#
+# * `wm.r_x_r` holds the information matrix or its inverse, depending on the `is_inv` flag.
+# * Only the upper triangle of `wm.r_x_r` is used.
+# * `wm.t_x_t` will be overwritten with the transformed information matrix or its inverse.
+# * The return value are `wm.t_x_t` and a flag that indicates whether it is inverted.
+# * Only the upper triangle of `wm.t_x_t` is guaranteed to make sense, but specific methods
+#   are free to return a dense matrix.
+# * Whether the returned matrix will be inverted is _not_ controlled by `is_inv`.
+
 function apply_transformation!(wm::WorkMatrices, is_inv::Bool, tc::TCIdentity, index)
-    # The normalized information matrix is in wm.r_x_r, the transformed one should be
-    # written to wm.t_x_t. For the Identity transformation we just pass it through.
+    # For the Identity transformation we just pass through the information matrix.
     wm.t_x_t .= wm.r_x_r
     return wm.t_x_t, is_inv
 end
 
 function apply_transformation!(wm::WorkMatrices, is_inv::Bool, tc::TCDeltaMethod, index)
-    # The normalized information matrix is in wm.r_x_r, the transformed one should be
-    # written to wm.t_x_t. We branch on whether the input is already inverted.
-    # Note that for the DeltaMethod, wm.t_x_t will always be inverted and dense.
+    # Denote the Jacobian matrix of T by J and the normalized information matrix by M. We
+    # want to efficiently calculate J * inv(M) * J'.
+    #
+    # A precalculated J is given in tc.jm[index].
+    #
+    # Depending on whether wm.r_x_r contains (the upper triangle of) M or inv(M) we use
+    # different BLAS routines and a different order of multiplication.
     if is_inv
-        # update wm.r_x_t = 1 * Symmetric(wm.r_x_r) * tc.jm[index]' + 0 * wm.r_x_t, i.e.
-        #  * wm.r_x_r on the 'L'eft of the multiplication
-        #  * and only use its 'U'pper triangle.
-        symm!('L', 'U', 1.0, wm.r_x_r, permutedims(tc.jm[index]), 0.0, wm.r_x_t)
+        # Denote the given inverse of M by invM.
+        # We first calculate A := (J * invM) and store it in wm.t_x_r.
+        #
+        # The `symm!` call performes the following in-place update:
+        #
+        #   wm.t_x_r = 1 * tc.jm[index] * Symmetric(wm.r_x_r) + 0 * wm.t_x_r
+        #
+        # That is,
+        #  * the symmetric matrix wm.r_x_r is the factor on the 'R'ight, and
+        #  * the data is contained in the 'U'pper triangle.
+        symm!('R', 'U', 1.0, wm.r_x_r, tc.jm[index], 0.0, wm.t_x_r)
+        # Next we calculate the result A * J' and store it in wm.t_x_t.
+        mul!(wm.t_x_t, wm.t_x_r, tc.jm[index]')
     else
+        # When the input is not yet inverted, we don't want to calculate inv(M) explicitly.
+        # As a first step we calculate B := inv(M) * J and store it in wm.r_x_t.
+        # We do this by solving the linear system M * B == J in place.
+        # As we do not want to overwrite J, we copy J' into a work matrix.
         wm.r_x_t .= tc.jm[index]'
-        # calculate inv(Symmetric(wm.r_x_r)) * tc.jm[index]' by solving
-        # Symmetric(wm.r_x_r) * X = tc.jm[index]' for X.
-        # This overwrites wm.r_x_r with potrf!(wm.r_x_r) and wm.r_x_t with the solution:
+        # The `posv!` call performs the following in-place update:
+        #
+        #  * Overwrite wm.r_x_r with its Cholesky factor `potrf!(wm.r_x_r)`, using the data
+        #    in the 'U'pper triangle.
+        #  * Overwrite wm.r_x_t by the solution of the linear system.
         posv!('U', wm.r_x_r, wm.r_x_t)
+        # Next, we calculate the result J * B and store it in wm.t_x_t.
+        mul!(wm.t_x_t, tc.jm[index], wm.r_x_t)
     end
-    # set wm.t_x_t to tc.jm[index] * wm.r_x_t
-    mul!(wm.t_x_t, tc.jm[index], wm.r_x_t)
+    # Note that for this method, the result is not just an upper triangle, but always a
+    # dense matrix.
     return wm.t_x_t, true
 end
 
