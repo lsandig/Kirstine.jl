@@ -62,15 +62,10 @@ function optimize_design(
     sargs...,
 )
     check_compatible(candidate, ds)
-    pardim = parameter_dimension(pk)
     tc = precalculate_trafo_constants(trafo, pk)
-    tpardim = codomain_dimension(tc)
-    nim = zeros(pardim, pardim)
-    work = zeros(pardim, tpardim)
-    tnim = zeros(tpardim, tpardim)
-    jm = zeros(unit_length(m), pardim)
+    wm = WorkMatrices(unit_length(m), parameter_dimension(pk), codomain_dimension(tc))
     c = allocate_initialize_covariates(candidate, m, cp)
-    f = d -> objective!(tnim, work, nim, jm, c, dc, d, m, cp, pk, tc, na)
+    f = d -> objective!(wm, c, dc, d, m, cp, pk, tc, na)
     K = length(c)
     # set up constraints
     if any(fixedweights .< 1) || any(fixedweights .> K)
@@ -145,9 +140,7 @@ function refine_design(
 )
     check_compatible(candidate, ds)
     tc = precalculate_trafo_constants(trafo, pk)
-    pardim = parameter_dimension(pk)
-    nim = zeros(pardim, pardim)
-    jm = zeros(unit_length(m), pardim)
+    wm = WorkMatrices(unit_length(m), parameter_dimension(pk), codomain_dimension(tc))
     c = allocate_initialize_covariates(one_point_design(candidate.designpoint[1]), m, cp)
     ors_d = OptimizationResult[]
     ors_w = OptimizationResult[]
@@ -159,7 +152,7 @@ function refine_design(
         dir_cand = map(one_point_design, designpoints(simplify_drop(res, 0)))
         gconst = precalculate_gateaux_constants(dc, res, m, cp, pk, tc, na)
         # find direction of steepest ascent
-        gd(d) = gateauxderivative!(nim, jm, c, gconst, d, m, cp, pk, na)
+        gd(d) = gateauxderivative!(wm, c, gconst, d, m, cp, pk, na)
         or_gd = optimize(od, gd, dir_cand, constraints; trace_state = trace_state)
         push!(ors_d, or_gd)
         d = or_gd.maximizer
@@ -252,34 +245,32 @@ function informationmatrix!(
     return nim
 end
 
-# We just copy nim to tnim and don't care whether it is inverted or not.
-function apply_transformation!(tnim, _, nim, is_inv::Bool, tc::TCIdentity, index)
-    tnim .= nim
-    return tnim, is_inv
+function apply_transformation!(wm::WorkMatrices, is_inv::Bool, tc::TCIdentity, index)
+    # The normalized information matrix is in wm.r_x_r, the transformed one should be
+    # written to wm.t_x_t. For the Identity transformation we just pass it through.
+    wm.t_x_t .= wm.r_x_r
+    return wm.t_x_t, is_inv
 end
 
-# Notes:
-#  * The first _three_ arguments are modified by this function.
-#  * When trafo maps from ℝ^r to ℝ^t, the preallocated matrices need to have dimensions
-#    - tnim: (t, t)
-#    - work: (r, t)
-#    - nim: (r, r)
-#  * We always return a dense _inverse_ of the transformed information matrix.
-function apply_transformation!(tnim, work, nim, is_inv::Bool, tc::TCDeltaMethod, index)
+function apply_transformation!(wm::WorkMatrices, is_inv::Bool, tc::TCDeltaMethod, index)
+    # The normalized information matrix is in wm.r_x_r, the transformed one should be
+    # written to wm.t_x_t. We branch on whether the input is already inverted.
+    # Note that for the DeltaMethod, wm.t_x_t will always be inverted and dense.
     if is_inv
-        # update work = 1 * Symmetric(nim) * tc.jm[index]' + 0 * work, i.e.
-        #  * nim on the 'L'eft of the multiplication
+        # update wm.r_x_t = 1 * Symmetric(wm.r_x_r) * tc.jm[index]' + 0 * wm.r_x_t, i.e.
+        #  * wm.r_x_r on the 'L'eft of the multiplication
         #  * and only use its 'U'pper triangle.
-        symm!('L', 'U', 1.0, nim, permutedims(tc.jm[index]), 0.0, work)
+        symm!('L', 'U', 1.0, wm.r_x_r, permutedims(tc.jm[index]), 0.0, wm.r_x_t)
     else
-        work .= tc.jm[index]'
-        # calculate inv(Symmetric(nim)) * tc.jm[index]' by solving
-        # Symmetric(nim) * X = tc.jm[index]' for X
-        posv!('U', nim, work) # overwrites nim with potrf!(nim) and work with the solution
+        wm.r_x_t .= tc.jm[index]'
+        # calculate inv(Symmetric(wm.r_x_r)) * tc.jm[index]' by solving
+        # Symmetric(wm.r_x_r) * X = tc.jm[index]' for X.
+        # This overwrites wm.r_x_r with potrf!(wm.r_x_r) and wm.r_x_t with the solution:
+        posv!('U', wm.r_x_r, wm.r_x_t)
     end
-    # set tnim to tc.jm[index] * work
-    mul!(tnim, tc.jm[index], work)
-    return tnim, true
+    # set wm.t_x_t to tc.jm[index] * wm.r_x_t
+    mul!(wm.t_x_t, tc.jm[index], wm.r_x_t)
+    return wm.t_x_t, true
 end
 
 function allocate_initialize_covariates(d, m, cp)
@@ -333,10 +324,7 @@ function log_det!(A::AbstractMatrix)
 end
 
 function objective!(
-    tnim::AbstractMatrix,
-    work::AbstractMatrix,
-    nim::AbstractMatrix,
-    jm::AbstractMatrix,
+    wm::WorkMatrices,
     c::AbstractVector{<:Covariate},
     dc::DesignCriterion,
     d::DesignMeasure,
@@ -356,9 +344,9 @@ function objective!(
     try
         acc = 0
         for i in 1:length(pk.p)
-            informationmatrix!(nim, jm, d.weight, m, invcov(m), c, pk.p[i], na)
-            _, is_inv = apply_transformation!(tnim, work, nim, false, tc, i)
-            acc += pk.weight[i] * criterion_integrand!(tnim, is_inv, dc)
+            informationmatrix!(wm.r_x_r, wm.m_x_r, d.weight, m, invcov(m), c, pk.p[i], na)
+            _, is_inv = apply_transformation!(wm, false, tc, i)
+            acc += pk.weight[i] * criterion_integrand!(wm.t_x_t, is_inv, dc)
         end
         return acc
     catch e
@@ -391,15 +379,10 @@ function objective(
     trafo::Transformation,
     na::NormalApproximation,
 )
-    pardim = parameter_dimension(pk)
     tc = precalculate_trafo_constants(trafo, pk)
-    tpardim = codomain_dimension(tc)
-    nim = zeros(pardim, pardim)
-    work = zeros(pardim, tpardim)
-    tnim = zeros(tpardim, tpardim)
-    jm = zeros(unit_length(m), pardim)
+    wm = WorkMatrices(unit_length(m), parameter_dimension(pk), codomain_dimension(tc))
     c = allocate_initialize_covariates(d, m, cp)
-    return objective!(tnim, work, nim, jm, c, dc, d, m, cp, pk, tc, na)
+    return objective!(wm, c, dc, d, m, cp, pk, tc, na)
 end
 
 function inverse_information_matrices(
@@ -409,26 +392,26 @@ function inverse_information_matrices(
     pk::DiscretePrior,
     na::NormalApproximation,
 )
-    # Calculate inverse of normalized information matrix for each parameter Note: the
-    # jacobian matrix is re-usable, while the FisherMatrix needs to be allocated anew each
-    # time. It is modified in-place by potri!. Only the upper triangle of the (symmetric)
-    # information matrix is relevant.
+    # Calculate inverse of normalized information matrix for each parameter value.
+    # Only the upper triangle of the (symmetric) information matrix is relevant.
     c = allocate_initialize_covariates(d, m, cp)
-    q = parameter_dimension(pk)
-    jm = zeros(unit_length(m), q)
+    # the transformed parameter dimension is a dummy argument here
+    wm = WorkMatrices(unit_length(m), parameter_dimension(pk), 1)
     ic = invcov(m)
-    nims = [informationmatrix!(zeros(q, q), jm, d.weight, m, ic, c, p, na) for p in pk.p]
     # The documentation of `potri!` is not very clear that it expects a Cholesky factor as
     # input, and does _not_ call `potrf!` itself.
     # See also https://netlib.org/lapack/explore-html/d1/d7a/group__double_p_ocomputational_ga9dfc04beae56a3b1c1f75eebc838c14c.html
-    map(M -> potrf!('U', M), nims)
-    inv_nims = [potri!('U', M) for M in nims]
+    inv_nims = map(pk.p) do p
+        informationmatrix!(wm.r_x_r, wm.m_x_r, d.weight, m, ic, c, p, na)
+        potrf!('U', wm.r_x_r)
+        potri!('U', wm.r_x_r)
+        return deepcopy(wm.r_x_r)
+    end
     return inv_nims
 end
 
 function gateauxderivative!(
-    nim::AbstractMatrix,
-    jm::AbstractMatrix,
+    wm::WorkMatrices,
     c::AbstractVector{<:Covariate}, # only one element, but passed to `informationmatrix!`
     gconst::GateauxConstants,
     direction::DesignMeasure,
@@ -439,10 +422,10 @@ function gateauxderivative!(
 )
     update_model_covariate!(c[1], direction.designpoint[1], m, cp)
     acc = 0
-    n = length(pk.p)
-    for i in 1:n
-        informationmatrix!(nim, jm, direction.weight, m, invcov(m), c, pk.p[i], na)
-        acc += pk.weight[i] * gateaux_integrand(gconst, nim, i)
+    ic = invcov(m)
+    for i in 1:length(pk.p)
+        informationmatrix!(wm.r_x_r, wm.m_x_r, direction.weight, m, ic, c, pk.p[i], na)
+        acc += pk.weight[i] * gateaux_integrand(gconst, wm.r_x_r, i)
     end
     return acc
 end
@@ -474,10 +457,8 @@ function gateauxderivative(
     if any(d -> length(d.weight) != 1, directions)
         error("Gateaux derivatives are only implemented for singleton design directions")
     end
-    pardim = parameter_dimension(pk)
-    nim = zeros(pardim, pardim)
-    jm = zeros(unit_length(m), pardim)
     tc = precalculate_trafo_constants(trafo, pk)
+    wm = WorkMatrices(unit_length(m), parameter_dimension(pk), codomain_dimension(tc))
     gconst = try
         precalculate_gateaux_constants(dc, at, m, cp, pk, tc, na)
     catch e
@@ -490,7 +471,7 @@ function gateauxderivative(
     end
     cs = allocate_initialize_covariates(directions[1], m, cp)
     gd = map(directions) do d
-        gateauxderivative!(nim, jm, cs, gconst, d, m, cp, pk, na)
+        gateauxderivative!(wm, cs, gconst, d, m, cp, pk, na)
     end
     return gd
 end

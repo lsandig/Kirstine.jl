@@ -345,3 +345,15 @@ struct DesignSpace{N}
         )
     end
 end
+
+# preallocated matrices with dimensions that are often used together.
+struct WorkMatrices
+    r_x_r::Matrix{Float64}
+    r_x_t::Matrix{Float64}
+    t_x_r::Matrix{Float64}
+    t_x_t::Matrix{Float64}
+    m_x_r::Matrix{Float64}
+    function WorkMatrices(m::Integer, r::Integer, t::Integer)
+        new(zeros(r, r), zeros(r, t), zeros(t, r), zeros(t, t), zeros(m, r))
+    end
+end

@@ -47,18 +47,23 @@
         A = reshape(rand(9), 3, 3),
         nim = collect(UpperTriangular(A' * A)),
         inv_nim = collect(UpperTriangular(inv(A' * A))),
-        nim1 = deepcopy(nim),
-        nim2 = deepcopy(inv_nim),
-        nim3 = deepcopy(nim),
-        nim4 = deepcopy(inv_nim),
-        work = zeros(3, 3),
-        (tnim1, _) =
-            Kirstine.apply_transformation!(zeros(3, 3), work, nim1, false, ctid, 1),
-        (tnim2, _) = Kirstine.apply_transformation!(zeros(3, 3), work, nim2, true, ctid, 1),
+        m = 1,
+        r = 3,
+        t = 3,
+        wm1 = Kirstine.WorkMatrices(m, r, t),
+        wm2 = Kirstine.WorkMatrices(m, r, t),
+        wm3 = Kirstine.WorkMatrices(m, r, t),
+        wm4 = Kirstine.WorkMatrices(m, r, t),
+        # workaround for `.=` not being valid let statement syntax
+        _ = broadcast!(identity, wm1.r_x_r, nim),
+        _ = broadcast!(identity, wm2.r_x_r, inv_nim),
+        _ = broadcast!(identity, wm3.r_x_r, nim),
+        _ = broadcast!(identity, wm4.r_x_r, inv_nim),
+        (tnim1, _) = Kirstine.apply_transformation!(wm1, false, ctid, 1),
+        (tnim2, _) = Kirstine.apply_transformation!(wm2, true, ctid, 1),
         # scaling parameters should be able to be pulled out
-        (tnim3, _) =
-            Kirstine.apply_transformation!(zeros(3, 3), work, nim3, false, ctsc, 1),
-        (tnim4, _) = Kirstine.apply_transformation!(zeros(3, 3), work, nim4, true, ctsc, 1)
+        (tnim3, _) = Kirstine.apply_transformation!(wm3, false, ctsc, 1),
+        (tnim4, _) = Kirstine.apply_transformation!(wm4, true, ctsc, 1)
 
         @test Symmetric(tnim1) ≈ Symmetric(inv_nim)
         @test Symmetric(tnim2) ≈ Symmetric(inv_nim)

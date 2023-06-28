@@ -31,13 +31,11 @@ end
 function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::DiscretePrior, tc::TCDeltaMethod, na)
 #! format: on
     invM = inverse_information_matrices(d, m, cp, pk, na)
-    r = parameter_dimension(pk)
     t = codomain_dimension(tc)
-    invM_copy = deepcopy(invM[1])
-    work = zeros(r, t)
+    wm = WorkMatrices(unit_length(m), parameter_dimension(pk), t)
     invM_B_invM = map(1:length(pk.p)) do i
-        invM_copy .= invM[i] # Note: will be modified
-        inv_tnim, _ = apply_transformation!(zeros(t, t), work, invM_copy, true, tc, i)
+        wm.r_x_r .= invM[i]
+        inv_tnim, _ = apply_transformation!(wm, true, tc, i)
         J = tc.jm[i]
         B = J' * (Symmetric(inv_tnim) \ J)
         sym_invM = Symmetric(invM[i])
@@ -101,45 +99,23 @@ function efficiency(
     na2::NormalApproximation,
 )
     tc = precalculate_trafo_constants(trafo, pk)
-    pardim = parameter_dimension(pk)
-    tpardim = codomain_dimension(tc)
-    work = zeros(pardim, tpardim)
-    tnim1 = zeros(tpardim, tpardim)
-    nim1 = zeros(pardim, pardim)
-    jm1 = zeros(unit_length(m1), pardim)
+    r = parameter_dimension(pk)
+    t = codomain_dimension(tc)
+    wm1 = WorkMatrices(unit_length(m1), r, t)
+    wm2 = WorkMatrices(unit_length(m2), r, t)
     c1 = allocate_initialize_covariates(d1, m1, cp1)
-    tnim2 = zeros(tpardim, tpardim)
-    nim2 = zeros(pardim, pardim)
-    jm2 = zeros(unit_length(m2), pardim)
     c2 = allocate_initialize_covariates(d2, m2, cp2)
-
-    #! format: off
-    ei = eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, d1.weight, d2.weight,
-                       m1, m2, c1, c2, pk, tc, na1, na2)
-    #! format: on
-    return exp(ei / tpardim)
-end
-
-#! format: off
-function eff_integral!(tnim1, tnim2, work, nim1, nim2, jm1, jm2, w1, w2,
-                       m1, m2, c1, c2, pk::DiscretePrior, tc, na1, na2)
-#! format: on
-    n = length(pk.p)
-    acc = 0.0
-    for i in 1:n
-        informationmatrix!(nim1, jm1, w1, m1, invcov(m1), c1, pk.p[i], na1)
-        informationmatrix!(nim2, jm2, w2, m2, invcov(m2), c2, pk.p[i], na2)
-        _, is_inv1 = apply_transformation!(tnim1, work, nim1, false, tc, i)
-        _, is_inv2 = apply_transformation!(tnim2, work, nim2, false, tc, i)
-        acc += pk.weight[i] * eff_integrand!(tnim1, tnim2, is_inv1, is_inv2)
+    ic1 = invcov(m1)
+    ic2 = invcov(m2)
+    ei = 0.0 # efficiency integral
+    for i in 1:length(pk.p)
+        informationmatrix!(wm1.r_x_r, wm1.m_x_r, d1.weight, m1, ic1, c1, pk.p[i], na1)
+        informationmatrix!(wm2.r_x_r, wm2.m_x_r, d2.weight, m2, ic2, c2, pk.p[i], na2)
+        _, is_inv1 = apply_transformation!(wm1, false, tc, i)
+        _, is_inv2 = apply_transformation!(wm2, false, tc, i)
+        log_num = (is_inv1 ? -1 : 1) * log_det!(wm1.t_x_t)
+        log_den = (is_inv2 ? -1 : 1) * log_det!(wm2.t_x_t)
+        ei += pk.weight[i] * (log_num - log_den)
     end
-    return acc
-end
-
-function eff_integrand!(tnim1, tnim2, is_inv1, is_inv2)
-    sgn1 = is_inv1 ? -1 : 1
-    sgn2 = is_inv2 ? -1 : 1
-    log_num = sgn1 * log_det!(tnim1)
-    log_den = sgn2 * log_det!(tnim2)
-    return log_num - log_den
+    return exp(ei / t)
 end
