@@ -335,7 +335,7 @@ end
         # search with lower and upper bound already known and fixed, uniform weights
         _ = seed!(4711),
         cand = equidistant_design(ds, 3),
-        (d2, o2) = optim(; candidate = cand, fixedweights = 1:3, fixedpoints = [1, 3])
+        (d2, o2) = optim(; prototype = cand, fixedweights = 1:3, fixedpoints = [1, 3])
 
         @test d1.weight ≈ sol.weight rtol = 1e-3
         for k in 1:3
@@ -362,8 +362,8 @@ end
         @test_throws "between 1 and 3" optim(fixedweights = [4])
         @test_throws "between 1 and 3" optim(fixedpoints = [-1])
         @test_throws "between 1 and 3" optim(fixedpoints = [5])
-        @test_throws "outside design space" optim(candidate = uniform_design([[0], [20]]))
-        @test_throws "must match" optim(candidate = uniform_design([[0, 1], [1, 0]]))
+        @test_throws "outside design space" optim(prototype = uniform_design([[0], [20]]))
+        @test_throws "must match" optim(prototype = uniform_design([[0, 1], [1, 0]]))
         # `minposdist` doesn't exist, the correct argument name is `mindist`. Because we
         # have not implemented `simplify_unique()` for EmaxModel, the generic method should
         # complain about gobbling up `minposdist` in its varargs. (We can't test this in
@@ -386,11 +386,11 @@ end
         ds = DesignSpace(:dose => (0, 10)),
         pso = Pso(; iterations = 2, swarmsize = 5),
         # this is not the optimal solution
-        candidate = DesignMeasure([0.1, 0.5, 0.0, 0.0, 0.4], [[0], [5], [7], [8], [10]]),
+        prototype = DesignMeasure([0.1, 0.5, 0.0, 0.0, 0.4], [[0], [5], [7], [8], [10]]),
         #! format: off
         opt(; fw = Int64[], fp = Int64[]) = optimize_design(
             pso, dc, ds, m, cp, pk, trafo, na;
-            candidate = candidate, fixedweights = fw, fixedpoints = fp, trace_state = true,
+            prototype = prototype, fixedweights = fw, fixedpoints = fp, trace_state = true,
         ),
         #! format: on
         is_const_w(o, ref, k) =
@@ -406,15 +406,15 @@ end
         (_, o4) = opt(; fw = [5], fp = [5]),
         (_, o5) = opt(; fw = [1, 5], fp = [5])
 
-        @test is_const_w(o1, candidate, 2)
-        @test is_const_d(o1, candidate, 2)
-        @test is_const_w(o2, candidate, 2)
-        @test is_const_d(o3, candidate, 2)
-        @test is_const_w(o4, candidate, 5)
-        @test is_const_d(o4, candidate, 5)
-        @test is_const_w(o5, candidate, 1)
-        @test is_const_w(o5, candidate, 5)
-        @test is_const_d(o5, candidate, 5)
+        @test is_const_w(o1, prototype, 2)
+        @test is_const_d(o1, prototype, 2)
+        @test is_const_w(o2, prototype, 2)
+        @test is_const_d(o3, prototype, 2)
+        @test is_const_w(o4, prototype, 5)
+        @test is_const_d(o4, prototype, 5)
+        @test is_const_w(o5, prototype, 1)
+        @test is_const_w(o5, prototype, 5)
+        @test is_const_d(o5, prototype, 5)
 
         @test_logs(
             (:warn, "fixed weights already sum to one"),

@@ -251,7 +251,7 @@ We can pass this information to [`optimize_design`](@ref):
 ```@example main
 Random.seed!(4711)
 s2, r2 = optimize_design(pso, dc, ds, mod, cpar, guess, trafo, na;
-                         candidate = equidistant_design(ds, 4),
+                         prototype = equidistant_design(ds, 4),
                          fixedweights = 1:4, fixedpoints = [1, 4])
 nothing # hide
 ```
@@ -312,7 +312,7 @@ and also increase the number of iterations and the swarm size.
 ```@example main
 pso = Pso(iterations = 100, swarmsize = 50)
 Random.seed!(31415)
-s3, r3 = optimize_design(pso, dc, ds, mod, cpar, dpr, trafo, na; candidate = equidistant_design(ds, 10))
+s3, r3 = optimize_design(pso, dc, ds, mod, cpar, dpr, trafo, na; prototype = equidistant_design(ds, 10))
 plot_gateauxderivative(dc, s3, ds, mod, cpar, dpr, trafo, na)
 savefig(ans, "getting-started-pg3.png"); nothing # hide
 ```
@@ -348,7 +348,7 @@ By setting `minweight=1e-4` and `mindist=1e-3`, we can simplify the result more 
 ```@example main
 Random.seed!(31415)
 s4, r4 = optimize_design(pso, dc, ds, mod, cpar, dpr, trafo, na;
-                         candidate = equidistant_design(ds, 10), minweight = 1e-4, mindist = 1e-3);
+                         prototype = equidistant_design(ds, 10), minweight = 1e-4, mindist = 1e-3);
 plot_gateauxderivative(dc, s4, ds, mod, cpar, dpr, trafo, na)
 savefig(ans, "getting-started-pg4.png"); nothing # hide
 ```
@@ -397,7 +397,7 @@ yet `s5` is still far from the solution.
 Random.seed!(31415)
 pso = Pso(iterations = 25, swarmsize = 50)
 s5, r5 = optimize_design(pso, dc, ds, mod, cpar, mcpr, trafo, na;
-                         candidate = equidistant_design(ds, 6), fixedpoints = [1, 6],
+                         prototype = equidistant_design(ds, 6), fixedpoints = [1, 6],
                          minweight = 1e-4, mindist = 1e-3)
 plot(plot(r5),
      plot_gateauxderivative(dc, s5, ds, mod, cpar, mcpr, trafo, na))
@@ -438,7 +438,7 @@ so that they can be merged more easily.
 ```@example main
 pso = Pso(iterations = 150, swarmsize = 50)
 Random.seed!(31415)
-s7, r7 = optimize_design(pso, dc, ds, mod, cpar, mcpr, trafo, na; candidate = s6,
+s7, r7 = optimize_design(pso, dc, ds, mod, cpar, mcpr, trafo, na; prototype = s6,
                          minweight = 1e-4, mindist = 5e-3,)
 plot(plot(r7),
      plot_gateauxderivative(dc, s7, ds, mod, cpar, mcpr, trafo, na))

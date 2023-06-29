@@ -24,19 +24,22 @@ function invcov end
                     pk::PriorKnowledge,
                     trafo::Transformation,
                     na::NormalApproximation;
-                    candidate::DesignMeasure = random_design(ds, parameter_dimension(pk)),
+                    prototype::DesignMeasure = random_design(ds, parameter_dimension(pk)),
                     fixedweights = Int64[],
                     fixedpoints = Int64[],
                     trace_state = false,
                     sargs...)
 
-Find an optimal experimental design for the nonlinear regression model `m`.
+Find an optimal experimental design by direct maximization of the objective function.
 
-One particle of the [`Optimizer`](@ref) is initialized at `candidate`, the
-remaining ones are randomized. Any weight or design point corresponding to an
-index given in `fixedweights` or `fixedpoints` is not randomized and is kept
-fixed during optimization. This can speed up computation if some weights or
-points are known analytically.
+For every index in `fixedweights`,
+the corresponding weight of `prototype` is held constant during optimization.
+The indices in `fixedpoints` do the same for the design points of the `prototype`.
+These additional constraints can be used to speed up computation
+in cases where some weights or design points are know analytically.
+
+For more details on how the `prototype` is used,
+see the specific [`Optimizer`](@ref)s.
 
 Returns a Tuple:
 
@@ -55,16 +58,16 @@ function optimize_design(
     pk::PriorKnowledge,
     trafo::Transformation,
     na::NormalApproximation;
-    candidate::DesignMeasure = random_design(ds, parameter_dimension(pk)),
+    prototype::DesignMeasure = random_design(ds, parameter_dimension(pk)),
     fixedweights = Int64[],
     fixedpoints = Int64[],
     trace_state = false,
     sargs...,
 )
-    check_compatible(candidate, ds)
+    check_compatible(prototype, ds)
     tc = precalculate_trafo_constants(trafo, pk)
     wm = WorkMatrices(unit_length(m), parameter_dimension(pk), codomain_dimension(tc))
-    c = allocate_initialize_covariates(candidate, m, cp)
+    c = allocate_initialize_covariates(prototype, m, cp)
     f = d -> objective!(wm, c, dc, d, m, cp, pk, tc, na)
     K = length(c)
     # set up constraints
@@ -82,7 +85,7 @@ function optimize_design(
         fixw .= true
     end
     constraints = (ds, fixw, fixp)
-    or = optimize(optimizer, f, [candidate], constraints; trace_state = trace_state)
+    or = optimize(optimizer, f, [prototype], constraints; trace_state = trace_state)
     dopt = sort_designpoints(simplify(or.maximizer, ds, m, cp; sargs...))
     return dopt, or
 end
@@ -107,10 +110,15 @@ Improve a `candidate` design by ascending its Gateaux derivative.
 This repeats the following `steps` times, starting with `r = candidate`:
 
  1. [`simplify`](@ref) the design `r`, passing along `sargs`.
- 2. Find the direction (Dirac measure) `d` of steepest
-    [`gateauxderivative`](@ref) at `r` using the [`Optimizer`](@ref) `od`.
- 3. Re-calculcate optimal weights of a [`mixture`](@ref) of `r` and `d` for the
-    [`DesignCriterion`](@ref) objective using the optimizer `ow`.
+ 2. Use the optimizer `od` to find the direction (one-point design / Dirac measure) `d`
+    of steepest [`gateauxderivative`](@ref) at `r`.
+    The vector of `prototypes` that is used for initializing `od`
+    is constructed from one-point designs at the design points of `r`.
+    See the [`Optimizer`](@ref)s for algorithm-specific details.
+ 3. Use the optimizer `ow` to re-calculcate optimal weights of a [`mixture`](@ref) of `r` and `d`
+    for the [`DesignCriterion`](@ref).
+    This is implemented as a call to [`optimize_design`](@ref)
+    with all of the designpoints of `r` kept fixed.
  4. Set `r` to the result of step 3.
 
 Returns a 3-Tuple:
@@ -149,11 +157,11 @@ function refine_design(
     res = candidate
     for i in 1:steps
         res = simplify(res, ds, m, cp; sargs...)
-        dir_cand = map(one_point_design, designpoints(simplify_drop(res, 0)))
+        dir_prot = map(one_point_design, designpoints(simplify_drop(res, 0)))
         gconst = precalculate_gateaux_constants(dc, res, m, cp, pk, tc, na)
         # find direction of steepest ascent
         gd(d) = gateauxderivative!(wm, c, gconst, d, m, cp, pk, na)
-        or_gd = optimize(od, gd, dir_cand, constraints; trace_state = trace_state)
+        or_gd = optimize(od, gd, dir_prot, constraints; trace_state = trace_state)
         push!(ors_d, or_gd)
         d = or_gd.maximizer
         # append the new atom
@@ -176,7 +184,7 @@ function refine_design(
             pk,
             trafo,
             na;
-            candidate = res,
+            prototype = res,
             fixedpoints = 1:K,
             trace_state = trace_state,
             sargs...,

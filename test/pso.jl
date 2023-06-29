@@ -36,14 +36,14 @@
         xstar = ones(n),
         f(p) = -sum((p.x .- xstar) .^ 2),
         pso = Pso(; iterations = 100, swarmsize = 20),
-        candidate = Pnt(zeros(n)),
+        prototype = Pnt(zeros(n)),
         constr1 = (Pnt(fill(-1, n)), Pnt(fill(2, n))),
         constr2 = (Pnt(fill(-1, n)), Pnt(collect(1:n) ./ 2)),
         _ = seed!(4711),
         # This solution will be at xstar, inside the constraints...
-        r1 = Kirstine.optimize(pso, f, [candidate], constr1),
+        r1 = Kirstine.optimize(pso, f, [prototype], constr1),
         # ... and this one will be on the boundary at [0.5, 1, 1, ..., 1]
-        r2 = Kirstine.optimize(pso, f, [candidate], constr2; trace_state = true),
+        r2 = Kirstine.optimize(pso, f, [prototype], constr2; trace_state = true),
         mean_speed = map(st -> mean(norm, st.v), r2.trace_state)
 
         @test r1.maximizer.x ≈ xstar rtol = 1e-4

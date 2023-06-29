@@ -3,12 +3,12 @@
 function optimize(
     optimizer::Optimizer,
     f, # x<:AbstractPoint -> Float64
-    candidates::AbstractVector{<:AbstractPoint},
+    prototypes::AbstractVector{<:AbstractPoint},
     constraints;
     trace_state = false,
 )
     time_start = time()
-    state = optimizer_state(f, optimizer, candidates, constraints)
+    state = optimizer_state(f, optimizer, prototypes, constraints)
     t_x = [deepcopy(maximizer(state))]
     t_fx = [maximum(state)]
     t_state = [deepcopy(state)]

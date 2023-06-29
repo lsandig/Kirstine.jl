@@ -10,13 +10,25 @@ function move! end
 """
     Pso(; iterations, swarmsize, c1 = 2.05, c2 = 2.05)
 
-Constricted particle swarm optimizer.
+Parameters for a constricted particle swarm optimizer.
 
 `c1` controls movement towards a particle's personal best, while `c2` controls
 movement towards the global best. In this implementation, a particle's
 neighborhood is the whole swarm.
 
 There are a huge number of PSO variants published, this one was taken from two [^CK02] publications [^ES00].
+
+## Initialization
+
+The swarm is initialized from a vector of prototypical `AbstractPoint`s,
+which are supplied by the caller via a non-exported interface.
+Construction from the vector of `prototypes` proceeds as follows:
+
+ 1. The first `length(prototypes)` particles are a deep copy of the `prototypes` vector.
+
+ 2. Each of the remaining particles is a deep copy of `prototypes[1]`
+    which is subsequently randomized.
+    Randomization is subject to constraints, if any are given.
 
 [^CK02]: M. Clerc and J. Kennedy, "The particle swarm - explosion, stability, and convergence in a multidimensional complex space", IEEE Transactions on Evolutionary Computation, 6(1), 2002, 58–73. [doi:10.1109/4235.985692](http://dx.doi.org/10.1109/4235.985692)
 [^ES00]: R.C. Eberhardt and Y. Shi, "Comparing inertia weights and constriction factors in particle swarm optimization", Proceedings of the 2000 Congress on Evolutionary Computation, 2000. [doi: 10.1109/CEC.2000.870279](https://doi.org/10.1109/CEC.2000.870279)
@@ -65,18 +77,19 @@ maximizer(state::PsoState) = state.g
 maximum(state::PsoState) = state.fg
 n_eval(state::PsoState) = state.n_eval
 
+# Note: user-visible documentation for this method is attached to `Pso`.
 function optimizer_state(
     f,
     o::Pso,
-    candidates::AbstractVector{<:AbstractPoint},
+    prototypes::AbstractVector{<:AbstractPoint},
     constraints,
 )
-    if o.swarmsize < length(candidates)
-        error("swarmsize must be a least as large as number of candidate solutions")
+    if o.swarmsize < length(prototypes)
+        error("swarmsize must be a least as large as number of prototype particles")
     end
-    x_given = deepcopy(candidates)
-    n_random = o.swarmsize - length(candidates)
-    x_random = [deepcopy(candidates[1]) for _ in 1:n_random]
+    x_given = deepcopy(prototypes)
+    n_random = o.swarmsize - length(prototypes)
+    x_random = [deepcopy(prototypes[1]) for _ in 1:n_random]
     for i in 1:length(x_random)
         randomize!(x_random[i], constraints)
     end
