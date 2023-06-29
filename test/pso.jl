@@ -1,4 +1,4 @@
-@testset "Pso" begin
+@testset "pso.jl" begin
     struct Pnt <: Kirstine.AbstractPoint
         x::Vector{Float64}
     end
@@ -26,12 +26,15 @@
         return p
     end
 
+@testset "Pso" begin
     @test_throws "must be positive" Pso(iterations = -1, swarmsize = 5, c1 = 3, c2 = 4)
     @test_throws "at least 2" Pso(iterations = 10, swarmsize = 1, c1 = 3, c2 = 4)
     @test_throws "c1 + c2 > 4" Pso(iterations = 10, swarmsize = 5, c1 = 1, c2 = 1)
     @test_throws "non-negative" Pso(iterations = 10, swarmsize = 5, c1 = -1, c2 = 6)
     @test_throws "non-negative" Pso(iterations = 10, swarmsize = 5, c1 = 6, c2 = -1)
+end
 
+@testset "optimize" begin
     let n = 4,
         xstar = ones(n),
         f(p) = -sum((p.x .- xstar) .^ 2),
@@ -55,4 +58,5 @@
         # geometric mean of relative speed reductions (after telescope product)
         @test (mean_speed[end] / mean_speed[2])^(1 / (pso.iterations - 1)) < 1
     end
+end
 end

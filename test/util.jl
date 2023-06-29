@@ -1,4 +1,5 @@
-@testset "util" begin
+@testset "util.jl" begin
+@testset "define_scalar_unit_model" begin
     let ex = @macroexpand(@define_scalar_unit_model(Kirstine, Foo, bar, baz)),
         _ = Base.remove_linenums!(ex),
         (a, b, c, d, e) = ex.args,
@@ -25,4 +26,5 @@
         @test d == Base.remove_linenums!(dref)
         @test e == Base.remove_linenums!(eref)
     end
+end
 end

@@ -1,78 +1,4 @@
-@testset "design-common" begin
-    # error handling in constructors
-    @test_throws "must be equal" DiscretePrior([0], [[1], [2]])
-    @test_throws "non-negative" DiscretePrior([-0.5, 1.5], [[1], [2]])
-
-    # helpers
-    let A = reshape(collect(1:9), 3, 3),
-        B = reshape(collect(11:19), 3, 3),
-        C = reshape(collect(1:12), 3, 4)
-
-        @test tr(Symmetric(A) * Symmetric(B)) == Kirstine.tr_prod(A, B, :U)
-        @test tr(Symmetric(A, :L) * Symmetric(B, :L)) == Kirstine.tr_prod(A, B, :L)
-        @test_throws "identical size" Kirstine.tr_prod(A, C, :U)
-        @test_throws "either :U or :L" Kirstine.tr_prod(A, B, :F)
-    end
-
-    let pk = DiscretePrior([(a = 1, b = 2), (a = -1, b = -2)]),
-        dt1 = p -> [p.a; p.b], # too few columns
-        D1 = DeltaMethod(dt1),
-        dt2 = p -> p.a > 0 ? [p.a p.b] : [p.a p.b; p.a p.b], # different number of rows
-        D2 = DeltaMethod(dt2)
-
-        @test_throws "2 columns" Kirstine.precalculate_trafo_constants(D1, pk)
-        @test_throws "identical" Kirstine.precalculate_trafo_constants(D2, pk)
-    end
-
-    let A = rand(Float64, 3, 3), B = A * A'
-
-        # note: log_det! overwrites B, so it can't be called first
-        @test log(det(B)) ≈ Kirstine.log_det!(B)
-    end
-
-    # Applying a DeltaMethod transformation should give the same results whether the
-    # incoming normalized information matrix is already inverted or not. For a DeltaMethod
-    # that is actually an identity transformation in disguise, the result should simply be
-    # the inverse of the argument.
-    #
-    # Note: we have to recreate the circumstances in which apply_transformation! is called:
-    # nim is allowed to be only upper triangular, and is allowed to be overwritten. Hence we
-    # must use deepcopys, and Symmetric wrappers where necessary.
-    let pk = DiscretePrior((a = 1, b = 2, c = 3)),
-        tid = DeltaMethod(p -> diagm(ones(3))),
-        ctid = Kirstine.precalculate_trafo_constants(tid, pk),
-        tsc = DeltaMethod(p -> diagm([0.5, 2.0, 4.0])),
-        ctsc = Kirstine.precalculate_trafo_constants(tsc, pk),
-        _ = seed!(4321),
-        A = reshape(rand(9), 3, 3),
-        nim = collect(UpperTriangular(A' * A)),
-        inv_nim = collect(UpperTriangular(inv(A' * A))),
-        m = 1,
-        r = 3,
-        t = 3,
-        wm1 = Kirstine.WorkMatrices(m, r, t),
-        wm2 = Kirstine.WorkMatrices(m, r, t),
-        wm3 = Kirstine.WorkMatrices(m, r, t),
-        wm4 = Kirstine.WorkMatrices(m, r, t),
-        # workaround for `.=` not being valid let statement syntax
-        _ = broadcast!(identity, wm1.r_x_r, nim),
-        _ = broadcast!(identity, wm2.r_x_r, inv_nim),
-        _ = broadcast!(identity, wm3.r_x_r, nim),
-        _ = broadcast!(identity, wm4.r_x_r, inv_nim),
-        (tnim1, _) = Kirstine.apply_transformation!(wm1, false, ctid, 1),
-        (tnim2, _) = Kirstine.apply_transformation!(wm2, true, ctid, 1),
-        # scaling parameters should be able to be pulled out
-        (tnim3, _) = Kirstine.apply_transformation!(wm3, false, ctsc, 1),
-        (tnim4, _) = Kirstine.apply_transformation!(wm4, true, ctsc, 1)
-
-        @test Symmetric(tnim1) ≈ Symmetric(inv_nim)
-        @test Symmetric(tnim2) ≈ Symmetric(inv_nim)
-        @test Symmetric(tnim3) ≈ Symmetric(tnim4)
-        @test det(Symmetric(tnim3)) ≈ 4^2 * det(Symmetric(inv_nim))
-    end
-end
-
-@testset "doptimal" begin
+@testset "design-doptimal.jl" begin
     struct EmaxModel <: NonlinearRegression
         inv_sigma_sq::Float64
     end
@@ -181,6 +107,7 @@ end
         return DiscretePrior(map((a, e, s) -> (a = a, e = e, s = s), as, es, ss))
     end
 
+@testset "objective" begin
     # correct handling of singular designs
     let dc = DOptimality(),
         na = FisherMatrix(),
@@ -196,12 +123,153 @@ end
         @test objective(dc, d, m, cp, pk, t1, na) == -Inf
         # with explicit inversion
         @test objective(dc, d, m, cp, pk, t2, na) == -Inf
+    end
+
+    let dc = DOptimality(),
+        na_ml = FisherMatrix(),
+        trafo = Identity(),
+        m = EmaxModel(1),
+        cp = CopyDose(),
+        p1 = (e0 = 1, emax = 10, ec50 = 5),
+        pk1 = DiscretePrior(p1),
+        ds = DesignSpace(:dose => (0, 10)),
+        # sol is optimal for pk1
+        sol = emax_solution(p1, ds),
+        a = ds.lowerbound[1],
+        b = ds.upperbound[1],
+        x_star = sol.designpoint[2][1],
+        # not_sol is not optimal for pk1
+        not_sol = DesignMeasure(
+            [0.2, 0.3, 0.5],
+            [[a + 0.1 * (b - a)], [x_star * 1.1], [a + (0.9 * (b - a))]],
+        ),
+        sng2 = uniform_design([[a], [b]]),
+        ob(d, pk, na) = objective(dc, d, m, cp, pk, trafo, na)
+
+        @test ob(not_sol, pk1, na_ml) < ob(sol, pk1, na_ml)
+        # a design with less than 3 support points is singular
+        @test isinf(ob(sng2, pk1, na_ml))
+    end
+
+    # DeltaMethod for Atkinson et al. examples
+    let ds = DesignSpace(:time => [0, 48]),
+        g0 = DiscretePrior((a = 4.298, e = 0.05884, s = 21.80)),
+        _ = seed!(4711),
+        g1 = draw_from_prior(1000, 2),
+        m = TPCMod(1),
+        cp = CopyTime(),
+        dc = DOptimality(),
+        na_ml = FisherMatrix(),
+        # Some designs from Tables 1 and 2, and corresponding transformations
+        #! format: off
+        a1  = DesignMeasure([0.2288] => 1/3,    [1.3886] => 1/3,    [18.417] => 1/3),
+        a6  = DesignMeasure([0.2288] => 1/3,    [1.4170] => 1/3,    [18.4513] => 1/3),
+        a7  = DesignMeasure([0.2449] => 0.0129, [1.4950] => 0.0387, [18.4903] => 0.9484),
+        a8  = DesignMeasure([0.1829] => 0.6023, [2.4639] => 0.2979, [8.8542]  => 0.0998),
+        a9  = DesignMeasure([0.3608] => 0.0730, [1.1446] => 0.9094, [20.9218] => 0.0176),
+        #! format: on
+        t1 = Identity(),
+        t1_delta = DeltaMethod(p -> diagm(ones(3))),
+        t2 = DeltaMethod(Dauc),
+        t3 = DeltaMethod(Dttm),
+        t4 = DeltaMethod(Dcmax),
+        ob(a, t, na) = objective(dc, a, m, cp, g0, t, na),
+        ob1(a, t, na) = objective(dc, a, m, cp, g1, t, na)
+
+        # Locally optimal solution for estimating the whole of θ
+        @test ob(a1, t1, na_ml) ≈ 7.3887 rtol = 1e-4
+        # the Gateaux derivative should be about zero at the design points of the solution
+        # compare DeltaMethod identity with actual Identity
+        @test ob(a1, t1, na_ml) ≈ ob(a1, t1_delta, na_ml)
+        # Now the Bayesian design problems with the strong prior
+        # Due to MC error the published solutions are not very precise, checking gateaux
+        # derivatives makes not mutch sense here.
+        @test ob1(a6, t1, na_ml) ≈ 7.3760 rtol = 1e-1
+        @test exp(-ob1(a7, t2, na_ml)) ≈ 2463.3 rtol = 1e-1
+        @test exp(-ob1(a8, t3, na_ml)) ≈ 0.030303 rtol = 1e-1
+        @test exp(-ob1(a9, t4, na_ml)) ≈ 1.1133 rtol = 1e-1
+    end
+end
+
+@testset "gateauxderivative" begin
+    # correct handling of singular designs
+    let dc = DOptimality(),
+        na = FisherMatrix(),
+        t1 = Identity(),
+        t2 = DeltaMethod(p -> diagm([1, 1, 1])),
+        m = EmaxModel(1),
+        cp = CopyDose(),
+        pk = DiscretePrior((e0 = 1, emax = 10, ec50 = 5)),
+        ds = DesignSpace(:dose => (0, 10)),
+        d = one_point_design([5])
+
         # explicit inversions in both cases
         @test isnan(gateauxderivative(dc, d, [d], m, cp, pk, t1, na)[1])
         @test isnan(gateauxderivative(dc, d, [d], m, cp, pk, t2, na)[1])
     end
 
-    # Gateaux derivatives and efficiency
+    let dc = DOptimality(),
+        na_ml = FisherMatrix(),
+        trafo = Identity(),
+        m = EmaxModel(1),
+        cp = CopyDose(),
+        p1 = (e0 = 1, emax = 10, ec50 = 5),
+        p2 = (e0 = 5, emax = -3, ec50 = 2),
+        pk1 = DiscretePrior(p1),
+        pk2 = DiscretePrior([0.75, 0.25], [p1, p2]),
+        pk3 = DiscretePrior([p1, p2]),
+        ds = DesignSpace(:dose => (0, 10)),
+        # sol is optimal for pk1
+        sol = emax_solution(p1, ds),
+        a = ds.lowerbound[1],
+        b = ds.upperbound[1],
+        x_star = sol.designpoint[2][1],
+        # not_sol is not optimal for any of pk1, pk2, pk3
+        not_sol = DesignMeasure(
+            [0.2, 0.3, 0.5],
+            [[a + 0.1 * (b - a)], [x_star * 1.1], [a + (0.9 * (b - a))]],
+        ),
+        # a design with fewer than three points is singular
+        to_dirac(d) = map(one_point_design, designpoints(simplify_drop(d, 0))),
+        gd(s, d, pk, na) = gateauxderivative(dc, s, to_dirac(d), m, cp, pk, trafo, na)
+
+        @test all(abs.(gd(sol, sol, pk1, na_ml)) .<= sqrt(eps()))
+        @test all(abs.(gd(sol, not_sol, pk1, na_ml)) .> 0.01)
+        @test all(abs.(gd(not_sol, not_sol, pk2, na_ml)) .> 0.1)
+        @test all(abs.(gd(not_sol, not_sol, pk3, na_ml)) .> 0.1)
+    end
+
+    # DeltaMethod for Atkinson et al. examples
+    let ds = DesignSpace(:time => [0, 48]),
+        g0 = DiscretePrior((a = 4.298, e = 0.05884, s = 21.80)),
+        _ = seed!(4711),
+        m = TPCMod(1),
+        cp = CopyTime(),
+        dc = DOptimality(),
+        na_ml = FisherMatrix(),
+        # Some designs from Tables 1 and 2, and corresponding transformations
+        a1  = DesignMeasure([0.2288] => 1/3,    [1.3886] => 1/3,    [18.417] => 1/3),
+        t1 = Identity(),
+        t1_delta = DeltaMethod(p -> diagm(ones(3))),
+        dir = [one_point_design([t]) for t in range(0, 48; length = 21)],
+        gd(a, t, na) = gateauxderivative(dc, a, dir, m, cp, g0, t, na),
+        dp2dir(d) = [one_point_design(dp) for dp in designpoints(d)],
+        abs_gd_at_sol_dp(a, t) =
+            abs.(gateauxderivative(dc, a, dp2dir(a), m, cp, g0, t, na_ml))
+
+        # Locally optimal solution for estimating the whole of θ
+        @test maximum(gd(a1, t1, na_ml)) <= 0
+        # the Gateaux derivative should be about zero at the design points of the solution
+        @test all(abs_gd_at_sol_dp(a1, t1) .< 1e-4)
+        # compare DeltaMethod identity with actual Identity
+        @test gd(a1, t1, na_ml) ≈ gd(a1, t1_delta, na_ml)
+        # Now the Bayesian design problems with the strong prior
+        # Due to MC error the published solutions are not very precise, checking gateaux
+        # derivatives makes not mutch sense here.
+    end
+end
+
+@testset "efficiency" begin
     let dc = DOptimality(),
         na_ml = FisherMatrix(),
         trafo = Identity(),
@@ -225,18 +293,8 @@ end
         ),
         # a design with fewer than three points is singular
         sng1 = uniform_design([[a]]),
-        sng2 = uniform_design([[a], [b]]),
-        to_dirac(d) = map(one_point_design, designpoints(simplify_drop(d, 0))),
-        gd(s, d, pk, na) = gateauxderivative(dc, s, to_dirac(d), m, cp, pk, trafo, na),
-        ob(d, pk, na) = objective(dc, d, m, cp, pk, trafo, na)
+        sng2 = uniform_design([[a], [b]])
 
-        @test all(abs.(gd(sol, sol, pk1, na_ml)) .<= sqrt(eps()))
-        @test all(abs.(gd(sol, not_sol, pk1, na_ml)) .> 0.01)
-        @test all(abs.(gd(not_sol, not_sol, pk2, na_ml)) .> 0.1)
-        @test all(abs.(gd(not_sol, not_sol, pk3, na_ml)) .> 0.1)
-        @test ob(not_sol, pk1, na_ml) < ob(sol, pk1, na_ml)
-        # a design with less than 3 support points is singular
-        @test isinf(ob(sng2, pk1, na_ml))
         # sol is better than not_sol for pk1 (by construction)
         @test efficiency(sol, not_sol, m, cp, pk1, trafo, na_ml) > 1
         # it also happens to be better for pk2 and pk3
@@ -253,7 +311,6 @@ end
 
     # DeltaMethod for Atkinson et al. examples
     let ds = DesignSpace(:time => [0, 48]),
-        g0 = DiscretePrior((a = 4.298, e = 0.05884, s = 21.80)),
         _ = seed!(4711),
         g1 = draw_from_prior(1000, 2),
         m = TPCMod(1),
@@ -262,7 +319,6 @@ end
         na_ml = FisherMatrix(),
         # Some designs from Tables 1 and 2, and corresponding transformations
         #! format: off
-        a1  = DesignMeasure([0.2288] => 1/3,    [1.3886] => 1/3,    [18.417] => 1/3),
         a6  = DesignMeasure([0.2288] => 1/3,    [1.4170] => 1/3,    [18.4513] => 1/3),
         a7  = DesignMeasure([0.2449] => 0.0129, [1.4950] => 0.0387, [18.4903] => 0.9484),
         a8  = DesignMeasure([0.1829] => 0.6023, [2.4639] => 0.2979, [8.8542]  => 0.0998),
@@ -272,42 +328,19 @@ end
         a0 = uniform_design([[t] for t in a0_time]),
         #! format: on
         t1 = Identity(),
-        t1_delta = DeltaMethod(p -> diagm(ones(3))),
         t2 = DeltaMethod(Dauc),
         t3 = DeltaMethod(Dttm),
         t4 = DeltaMethod(Dcmax),
-        dir = [one_point_design([t]) for t in range(0, 48; length = 21)],
         #! format: off
         ebay = [100    37    67.2  39.3;
-                 23.4 100     3.2   4.5;
-                 57.4   5.1 100    19.6;
-                 28.2   1.9  12.4 100  ;
-                 97.5  42.1  53.9  45.2;
-                 68.4  26    30.2  41  ],
+                23.4 100     3.2   4.5;
+                57.4   5.1 100    19.6;
+                28.2   1.9  12.4 100  ;
+                97.5  42.1  53.9  45.2;
+                68.4  26    30.2  41  ],
         #! format: on
-        ob(a, t, na) = objective(dc, a, m, cp, g0, t, na),
-        ob1(a, t, na) = objective(dc, a, m, cp, g1, t, na),
-        gd(a, t, na) = gateauxderivative(dc, a, dir, m, cp, g0, t, na),
-        ef1(a, zs, ts) = map((z, t) -> 100 * efficiency(a, z, m, cp, g1, t, na_ml), zs, ts),
-        dp2dir(d) = [one_point_design(dp) for dp in designpoints(d)],
-        abs_gd_at_sol_dp(a, t) =
-            abs.(gateauxderivative(dc, a, dp2dir(a), m, cp, g0, t, na_ml))
+        ef1(a, zs, ts) = map((z, t) -> 100 * efficiency(a, z, m, cp, g1, t, na_ml), zs, ts)
 
-        # Locally optimal solution for estimating the whole of θ
-        @test ob(a1, t1, na_ml) ≈ 7.3887 rtol = 1e-4
-        @test maximum(gd(a1, t1, na_ml)) <= 0
-        # the Gateaux derivative should be about zero at the design points of the solution
-        @test all(abs_gd_at_sol_dp(a1, t1) .< 1e-4)
-        # compare DeltaMethod identity with actual Identity
-        @test ob(a1, t1, na_ml) ≈ ob(a1, t1_delta, na_ml)
-        @test gd(a1, t1, na_ml) ≈ gd(a1, t1_delta, na_ml)
-        # Now the Bayesian design problems with the strong prior
-        # Due to MC error the published solutions are not very precise, checking gateaux
-        # derivatives makes not mutch sense here.
-        @test ob1(a6, t1, na_ml) ≈ 7.3760 rtol = 1e-1
-        @test exp(-ob1(a7, t2, na_ml)) ≈ 2463.3 rtol = 1e-1
-        @test exp(-ob1(a8, t3, na_ml)) ≈ 0.030303 rtol = 1e-1
-        @test exp(-ob1(a9, t4, na_ml)) ≈ 1.1133 rtol = 1e-1
         # Table 5 from the article, precise to 1 percentage point
         @test ebay[1, :] ≈ ef1(a6, [a6, a7, a8, a9], [t1, t2, t3, t4]) atol = 1
         @test ebay[2, :] ≈ ef1(a7, [a6, a7, a8, a9], [t1, t2, t3, t4]) atol = 1
@@ -316,7 +349,9 @@ end
         @test ebay[5, :] ≈ ef1(a10, [a6, a7, a8, a9], [t1, t2, t3, t4]) atol = 1
         @test ebay[6, :] ≈ ef1(a0, [a6, a7, a8, a9], [t1, t2, t3, t4]) atol = 1
     end
+end
 
+@testset "optimize_design" begin
     # Can we find the locally D-optimal design?
     let dc = DOptimality(),
         na = FisherMatrix(),
@@ -422,7 +457,9 @@ end
             opt(fw = [1, 2, 5])
         )
     end
+end
 
+@testset "refine_design" begin
     # Does refinement work?
     let dc = DOptimality(),
         na = FisherMatrix(),
@@ -444,4 +481,5 @@ end
         @test issorted([r.maximum for r in rw])
         @test all([r.maximum > 0 for r in rd])
     end
+end
 end
