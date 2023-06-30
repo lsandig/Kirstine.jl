@@ -101,8 +101,16 @@ using Kirstine
             s = simplify_drop(d, 1e-4),
             ref = uniform_design([[2], [3]])
 
+            @test s !== ref
             @test all(s.weight .== ref.weight)
             @test all(s.designpoint .== ref.designpoint)
+        end
+
+        # One-point-designs should be returned as an unchanged copy.
+        let o = one_point_design([42]), o_simp = simplify_drop(o, 1e-4)
+            @test o !== o_simp
+            @test all(o.weight .== o_simp.weight)
+            @test all(o.designpoint .== o_simp.designpoint)
         end
     end
 
@@ -112,8 +120,19 @@ using Kirstine
             s = simplify_merge(d, ds, 0.05),
             ref = DesignMeasure([0.4, 0.6], [[2, 1], [3, 10]])
 
+            @test s !== ref
             @test all(s.weight .== ref.weight)
             @test all(s.designpoint .== ref.designpoint)
+        end
+
+        # One-point-designs should be returned as an unchanged copy.
+        let o = one_point_design([42]),
+            ds = DesignSpace(:a => (0, 100), :b => (1, 100)),
+            o_simp = simplify_merge(o, ds, 0.05)
+
+            @test o !== o_simp
+            @test all(o.weight .== o_simp.weight)
+            @test all(o.designpoint .== o_simp.designpoint)
         end
     end
 
