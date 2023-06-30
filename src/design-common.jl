@@ -82,6 +82,7 @@ function optimize_design(
     # Fixing all weights but one is equivalent to fixing them all. For
     # numerical stability it is better to explicitly fix them all.
     if count(fixw) == K - 1
+        @info "explicitly fixing implicitly fixed weight"
         fixw .= true
     end
     constraints = (ds, fixw, fixp)

@@ -316,6 +316,13 @@ include("example-compartment.jl")
                 ),
                 optim(minposdist = 1e-2)
             )
+            # If only one weight index is not given as fixed, it is still imlicitly fixed
+            # because of the simplex constraint. In this case we want to have it fixed
+            # explicitly.
+            @test_logs(
+                (:info, "explicitly fixing implicitly fixed weight"),
+                optim(; prototype = cand, fixedweights = [1, 3])
+            )
         end
 
         # fixed weights and / or points should never change
