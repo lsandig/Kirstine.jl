@@ -397,6 +397,17 @@ include("example-compartment.jl")
                   abs(designpoints(cand)[1][1] - designpoints(sol)[2][1])
             @test issorted([r.maximum for r in rw])
             @test all([r.maximum > 0 for r in rd])
+
+            # When the direction of steepest ascent is in the support of the candidate, the
+            # support of the intermediate design measure should not grow. When merged, the
+            # new point should move to the front of the vector of design points. We check
+            # this here by starting with a candidate that has the correct design points, but
+            # unequal weights. Then we do one step of refinement and examine the (unsorted!)
+            # results.
+            near_sol = DesignMeasure([0.6, 0.3, 0.1], designpoints(sol))
+            (s, sd, sw) = refine_design(od, ow, 1, near_sol, dc, ds, m, cp, pk, trafo, na)
+            @test length(weights(sw[1].maximizer)) == 3
+            @test designpoints(sw[1].maximizer)[1] == designpoints(near_sol)[3]
         end
     end
 end
