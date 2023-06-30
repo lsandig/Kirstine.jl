@@ -1,3 +1,7 @@
+module TypesTest
+using Test
+using Kirstine
+
 @testset "types.jl" begin
     @testset "DiscretePrior" begin
         # error handling in constructors
@@ -36,4 +40,5 @@
             @test all(ref.upperbound .== ds.upperbound)
         end
     end
+end
 end

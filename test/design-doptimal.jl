@@ -1,112 +1,13 @@
+module DesignDOptimalTests
+using Test
+using Kirstine
+using Random: seed!
+using LinearAlgebra: diagm
+
+include("example-emax.jl")
+include("example-compartment.jl")
+
 @testset "design-doptimal.jl" begin
-    struct EmaxModel <: NonlinearRegression
-        inv_sigma_sq::Float64
-    end
-    mutable struct Dose <: Covariate
-        dose::Float64
-    end
-    struct CopyDose <: CovariateParameterization end
-    Kirstine.unit_length(m::EmaxModel) = 1
-    Kirstine.invcov(m::EmaxModel) = m.inv_sigma_sq
-    Kirstine.allocate_covariate(m::EmaxModel) = Dose(0)
-    function Kirstine.update_model_covariate!(
-        c::Dose,
-        dp::AbstractVector{<:Real},
-        m::EmaxModel,
-        cp::CopyDose,
-    )
-        c.dose = dp[1]
-        return c
-    end
-    # p must be a NamedTuple with elements `e0`, `emax` `ec50`
-    function Kirstine.jacobianmatrix!(jm, m::EmaxModel, c::Dose, p)
-        x = c.dose
-        jm[1, 1] = 1.0
-        jm[1, 2] = x / (x + p.ec50)
-        jm[1, 3] = -p.emax * x / (x + p.ec50)^2
-        return jm
-    end
-
-    function emax_solution(p, ds)
-        # Locally D-optimal design for the Emax model has an analytic solution,
-        # see Theorem 2 in
-        #
-        #   Dette, H., Kiss, C., Bevanda, M., & Bretz, F. (2010).
-        #   Optimal designs for the emax, log-linear and exponential models.
-        #   Biometrika, 97(2), 513–518. http://dx.doi.org/10.1093/biomet/asq020
-        #
-        a = ds.lowerbound[1]
-        b = ds.upperbound[1]
-        x_star = (a * (b + p.ec50) + b * (a + p.ec50)) / (a + b + 2 * p.ec50)
-        return uniform_design([[a], [x_star], [b]])
-    end
-
-    # Three-parameter compartmental model from
-    # Atkinson, A. C., Chaloner, K., Herzberg, A. M., & Juritz, J. (1993).
-    # Optimum experimental designs for properties of a compartmental model.
-    # Biometrics, 49(2), 325–337. http://dx.doi.org/10.2307/2532547
-    @define_scalar_unit_model Kirstine TPCMod time
-    struct CopyTime <: CovariateParameterization end
-    function Kirstine.jacobianmatrix!(jm, m::TPCMod, c::TPCModCovariate, p)
-        # names(p) == a, e, s
-        A = exp(-p.a * c.time)
-        E = exp(-p.e * c.time)
-        jm[1, 1] = A * p.s * c.time
-        jm[1, 2] = -E * p.s * c.time
-        jm[1, 3] = E - A
-        return m
-    end
-    function Kirstine.update_model_covariate!(
-        c::TPCModCovariate,
-        dp::AbstractVector{<:Real},
-        m::TPCMod,
-        cp::CopyTime,
-    )
-        c.time = dp[1]
-        return c
-    end
-    # response, area under the curve, time-to-maximum, maximum concentration
-    mu(c, p) = p.s * (exp(-p.e * c.time) - exp(-p.a * c.time))
-    auc(p) = p.s * (1 / p.e - 1 / p.a)
-    ttm(p) = log(p.a / p.e) / (p.a - p.e)
-    cmax(p) = mu(TPCModCovariate(ttm(p)), p)
-    # jacobian matrices (transposed gradients) from Appendix 1
-    function Dauc(p)
-        da = p.s / p.a^2
-        de = -p.s / p.e^2
-        ds = 1 / p.e - 1 / p.a
-        return [da de ds]
-    end
-    function Dttm(p)
-        A = p.a - p.e
-        A2 = A^2
-        B = log(p.a / p.e)
-        da = (A / p.a - B) / A2
-        de = (B - A / p.e) / A2
-        ds = 0
-        return [da de ds]
-    end
-    function Dcmax(p)
-        tmax = ttm(p)
-        A = exp(-p.a * tmax)
-        E = exp(-p.e * tmax)
-        F = p.a * A - p.e * E
-        da_ttm, de_ttm, ds_ttm = Dttm(p)
-        da = p.s * (tmax * A - F * da_ttm)
-        de = p.s * (-tmax * E + F * de_ttm)
-        ds = E - A
-        return [da de ds]
-    end
-    function draw_from_prior(n, se_factor)
-        # a, e, s
-        mn = [4.298, 0.05884, 21.8]
-        se = [0.5, 0.005, 0]
-        as = mn[1] .+ se_factor .* se[1] .* (2 .* rand(n) .- 1)
-        es = mn[2] .+ se_factor .* se[2] .* (2 .* rand(n) .- 1)
-        ss = mn[3] .+ se_factor .* se[3] .* (2 .* rand(n) .- 1)
-        return DiscretePrior(map((a, e, s) -> (a = a, e = e, s = s), as, es, ss))
-    end
-
     @testset "objective" begin
         # correct handling of singular designs
         let dc = DOptimality(),
@@ -491,4 +392,5 @@
             @test all([r.maximum > 0 for r in rd])
         end
     end
+end
 end

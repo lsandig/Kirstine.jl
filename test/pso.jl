@@ -1,31 +1,43 @@
-@testset "pso.jl" begin
-    struct Pnt <: Kirstine.AbstractPoint
-        x::Vector{Float64}
-    end
-    function Kirstine.randomize!(p::Pnt, constraints)
-        lb, ub = constraints
-        rand!(p.x)
-        p.x .*= ub.x .- lb.x
-        p.x .+= lb.x
-        return p
-    end
-    function Kirstine.difference!(v::AbstractVector{<:Real}, p::Pnt, q::Pnt)
-        v .= p.x .- q.x
-        return v
-    end
-    Kirstine.flat_length(p::Pnt) = length(p.x)
-    function Kirstine.copy!(to::Pnt, from::Pnt)
-        to.x .= from.x
-        return to
-    end
-    function Kirstine.move!(p::Pnt, v::AbstractVector{<:Real}, constraints)
-        lb, ub = constraints
-        p.x .+= v
-        p.x .= max.(lb.x, p.x)
-        p.x .= min.(ub.x, p.x)
-        return p
-    end
+module PsoTests
+using Test
+using Kirstine
+using Random: seed!, rand!
+using LinearAlgebra: norm
+using Statistics: mean
 
+struct Pnt <: Kirstine.AbstractPoint
+    x::Vector{Float64}
+end
+
+function Kirstine.randomize!(p::Pnt, constraints)
+    lb, ub = constraints
+    rand!(p.x)
+    p.x .*= ub.x .- lb.x
+    p.x .+= lb.x
+    return p
+end
+
+function Kirstine.difference!(v::AbstractVector{<:Real}, p::Pnt, q::Pnt)
+    v .= p.x .- q.x
+    return v
+end
+
+Kirstine.flat_length(p::Pnt) = length(p.x)
+
+function Kirstine.copy!(to::Pnt, from::Pnt)
+    to.x .= from.x
+    return to
+end
+
+function Kirstine.move!(p::Pnt, v::AbstractVector{<:Real}, constraints)
+    lb, ub = constraints
+    p.x .+= v
+    p.x .= max.(lb.x, p.x)
+    p.x .= min.(ub.x, p.x)
+    return p
+end
+
+@testset "pso.jl" begin
     @testset "Pso" begin
         @test_throws "must be positive" Pso(iterations = -1, swarmsize = 5, c1 = 3, c2 = 4)
         @test_throws "at least 2" Pso(iterations = 10, swarmsize = 1, c1 = 3, c2 = 4)
@@ -59,4 +71,5 @@
             @test (mean_speed[end] / mean_speed[2])^(1 / (pso.iterations - 1)) < 1
         end
     end
+end
 end

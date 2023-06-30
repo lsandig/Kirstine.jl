@@ -1,3 +1,7 @@
+module UtilTests
+using Test
+using Kirstine
+
 @testset "util.jl" begin
     @testset "define_scalar_unit_model" begin
         let ex = @macroexpand(@define_scalar_unit_model(Kirstine, Foo, bar, baz)),
@@ -27,4 +31,5 @@
             @test e == Base.remove_linenums!(eref)
         end
     end
+end
 end

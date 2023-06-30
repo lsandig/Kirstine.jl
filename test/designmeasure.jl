@@ -1,3 +1,7 @@
+module DesignmeasureTests
+using Test
+using Kirstine
+
 @testset "designmeasure.jl" begin
     @testset "one_point_design" begin
         let d = one_point_design([42]), ref = DesignMeasure([1], [[42]])
@@ -162,4 +166,5 @@
             @test all(r3.designpoint[1:2] .!= d.designpoint[1:2])
         end
     end
+end
 end

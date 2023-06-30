@@ -1,3 +1,9 @@
+module DesignCommonTests
+using Test
+using Kirstine
+using Random: seed!
+using LinearAlgebra: Symmetric, UpperTriangular, tr, det, diagm
+
 @testset "design-common.jl" begin
     # helpers
     @testset "tr_prod" begin
@@ -74,4 +80,5 @@
             @test det(Symmetric(tnim3)) ≈ 4^2 * det(Symmetric(inv_nim))
         end
     end
+end
 end
