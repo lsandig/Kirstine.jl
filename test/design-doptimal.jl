@@ -134,6 +134,11 @@ include("example-compartment.jl")
             to_dirac(d) = map(one_point_design, designpoints(simplify_drop(d, 0))),
             gd(s, d, pk, na) = gateauxderivative(dc, s, to_dirac(d), m, cp, pk, trafo, na)
 
+            #! format: off
+            @test_throws "one-point design" gateauxderivative(
+                dc, sol, [equidistant_design(ds, 2)], m, cp, pk1, trafo, na_ml,
+            )
+            #! format: on
             @test all(abs.(gd(sol, sol, pk1, na_ml)) .<= sqrt(eps()))
             @test all(abs.(gd(sol, not_sol, pk1, na_ml)) .> 0.01)
             @test all(abs.(gd(not_sol, not_sol, pk2, na_ml)) .> 0.1)

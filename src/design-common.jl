@@ -494,7 +494,7 @@ function gateauxderivative(
     na::NormalApproximation,
 )
     if any(d -> length(d.weight) != 1, directions)
-        error("Gateaux derivatives are only implemented for singleton design directions")
+        error("Gateaux derivatives are only implemented for one-point design directions")
     end
     tc = precalculate_trafo_constants(trafo, pk)
     wm = WorkMatrices(unit_length(m), parameter_dimension(pk), codomain_dimension(tc))
