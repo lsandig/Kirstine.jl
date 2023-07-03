@@ -3,6 +3,19 @@ using Test
 using Kirstine
 
 @testset "designmeasure.jl" begin
+    @testset "DesignMeasure" begin
+        # Note: the inner constructor is tested in types.jl
+
+        @test_throws "at least two rows" DesignMeasure([1 2 3])
+
+        let d = DesignMeasure([1] => 0.2, [42] => 0.3, [9] => 0.5),
+            ref = DesignMeasure([0.2, 0.3, 0.5], [[1], [42], [9]])
+
+            @test all(d.weight .== ref.weight)
+            @test all(d.designpoint .== ref.designpoint)
+        end
+    end
+
     @testset "one_point_design" begin
         let d = one_point_design([42]), ref = DesignMeasure([1], [[42]])
             @test all(d.weight .== ref.weight)
@@ -48,6 +61,17 @@ using Kirstine
             @test dirac_as_matrix == as_matrix(dirac)
             @test dirac.designpoint == DesignMeasure(dirac_as_matrix).designpoint
             @test dirac.designpoint == DesignMeasure(dirac_as_matrix).designpoint
+        end
+    end
+
+    @testset "DesignSpace" begin
+        # Note: the inner constructor is tested in types.jl
+        let ds = DesignSpace(:a => (0, 1), :b => (0, 2)),
+            ref = DesignSpace((:a, :b), (0, 0), (1, 2))
+
+            @test all(ref.name .== ds.name)
+            @test all(ref.lowerbound .== ds.lowerbound)
+            @test all(ref.upperbound .== ds.upperbound)
         end
     end
 
