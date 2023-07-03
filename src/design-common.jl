@@ -254,6 +254,24 @@ function informationmatrix!(
     return nim
 end
 
+# For debugging purposes, one will typically want to look at an information matrix
+# corresponding to a single parameter value, not to all thousands of them in a prior sample.
+function informationmatrix(
+    d::DesignMeasure,
+    m::NonlinearRegression,
+    cp::CovariateParameterization,
+    p,
+    na::NormalApproximation,
+)
+    c = Kirstine.allocate_initialize_covariates(d, m, cp)
+    r = length(p)
+    mm = unit_length(m)
+    jm = zeros(mm, r)
+    nim = zeros(r, r)
+    informationmatrix!(nim, jm, d.weight, m, invcov(m), c, p, na)
+    return Symmetric(nim)
+end
+
 # Calling conventions for `apply_transformation!`
 #
 # * `wm.r_x_r` holds the information matrix or its inverse, depending on the `is_inv` flag.
