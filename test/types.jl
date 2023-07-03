@@ -40,5 +40,17 @@ using Kirstine
             @test all(ref.upperbound .== ds.upperbound)
         end
     end
+
+    @testset "DeltaMethod" begin
+        let pk = DiscretePrior([(a = 1, b = 2), (a = -1, b = -2)]),
+            dt1 = p -> [p.a; p.b], # too few columns
+            D1 = DeltaMethod(dt1),
+            dt2 = p -> p.a > 0 ? [p.a p.b] : [p.a p.b; p.a p.b], # different number of rows
+            D2 = DeltaMethod(dt2)
+
+            @test_throws "2 columns" Kirstine.precalculate_trafo_constants(D1, pk)
+            @test_throws "identical" Kirstine.precalculate_trafo_constants(D2, pk)
+        end
+    end
 end
 end
