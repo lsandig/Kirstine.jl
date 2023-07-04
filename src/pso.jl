@@ -16,7 +16,7 @@ Parameters for a constricted particle swarm optimizer.
 movement towards the global best. In this implementation, a particle's
 neighborhood is the whole swarm.
 
-There are a huge number of PSO variants published, this one was taken from two [^CK02] publications [^ES00].
+There is a large number of published PSO variants, this one was taken from two [^CK02] publications [^ES00].
 
 ## Initialization
 
