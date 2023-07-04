@@ -9,6 +9,30 @@ include("example-compartment.jl")
 
 @testset "design-common.jl" begin
     # helpers
+    @testset "DesignConstraints" begin
+        let dc = DOptimality(),
+            ds = DesignSpace(:dose => (0, 10)),
+            d = equidistant_design(ds, 3),
+            dcon = Kirstine.DesignConstraints,
+            c = dcon(d, ds, [2], [3])
+
+            # Trigger erros for out-of-range weight / designpoint indices.
+            @test_throws "between 1 and 3" dcon(d, ds, [0], Int64[])
+            @test_throws "between 1 and 3" dcon(d, ds, [4], Int64[])
+            @test_throws "between 1 and 3" dcon(d, ds, Int64[], [-1])
+            @test_throws "between 1 and 3" dcon(d, ds, Int64[], [5])
+            # If only one weight index is not given as fixed, it is still implicitly fixed
+            # because of the simplex constraint. In this case we want to have it fixed
+            # explicitly.
+            @test_logs(
+                (:info, "explicitly fixing implicitly fixed weight"),
+                dcon(d, ds, [1, 3], Int64[])
+            )
+            @test c.fixw == [false, true, false]
+            @test c.fixp == [false, false, true]
+        end
+    end
+
     @testset "tr_prod" begin
         let A = reshape(collect(1:9), 3, 3),
             B = reshape(collect(11:19), 3, 3),
@@ -294,10 +318,6 @@ include("example-compartment.jl")
                 rev = true,
             )
 
-            @test_throws "between 1 and 3" optim(fixedweights = [0])
-            @test_throws "between 1 and 3" optim(fixedweights = [4])
-            @test_throws "between 1 and 3" optim(fixedpoints = [-1])
-            @test_throws "between 1 and 3" optim(fixedpoints = [5])
             @test_throws "outside design space" optim(
                 prototype = uniform_design([[0], [20]]),
             )
@@ -313,13 +333,6 @@ include("example-compartment.jl")
                     "unused keyword arguments given to generic `simplify_unique` method",
                 ),
                 optim(minposdist = 1e-2)
-            )
-            # If only one weight index is not given as fixed, it is still imlicitly fixed
-            # because of the simplex constraint. In this case we want to have it fixed
-            # explicitly.
-            @test_logs(
-                (:info, "explicitly fixing implicitly fixed weight"),
-                optim(; prototype = cand, fixedweights = [1, 3])
             )
         end
 
