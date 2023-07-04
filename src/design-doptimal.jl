@@ -111,10 +111,28 @@ function efficiency(
     for i in 1:length(pk.p)
         informationmatrix!(wm1.r_x_r, wm1.m_x_r, d1.weight, m1, ic1, c1, pk.p[i], na1)
         informationmatrix!(wm2.r_x_r, wm2.m_x_r, d2.weight, m2, ic2, c2, pk.p[i], na2)
-        _, is_inv1 = apply_transformation!(wm1, false, tc, i)
-        _, is_inv2 = apply_transformation!(wm2, false, tc, i)
-        log_num = (is_inv1 ? -1 : 1) * log_det!(wm1.t_x_t)
-        log_den = (is_inv2 ? -1 : 1) * log_det!(wm2.t_x_t)
+        log_num = try
+            _, is_inv1 = apply_transformation!(wm1, false, tc, i)
+            (is_inv1 ? -1 : 1) * log_det!(wm1.t_x_t)
+        catch e
+            # A PosDefException means we found out the hard way that wm1.t_x_t is not
+            # invertible. So we can assume is_inv1 would have been set to true.
+            if isa(e, PosDefException)
+                -Inf
+            else
+                rethrow(e)
+            end
+        end
+        log_den = try
+            _, is_inv2 = apply_transformation!(wm2, false, tc, i)
+            (is_inv2 ? -1 : 1) * log_det!(wm2.t_x_t)
+        catch e
+            if isa(e, PosDefException)
+                -Inf
+            else
+                rethrow(e)
+            end
+        end
         ei += pk.weight[i] * (log_num - log_den)
     end
     return exp(ei / t)
