@@ -13,11 +13,15 @@ struct PntDiff <: Kirstine.AbstractPointDifference
     v::Vector{Float64}
 end
 
-function Kirstine.ap_random_point!(p::Pnt, constraints)
-    lb, ub = constraints
+struct BoxConstraints <: Kirstine.AbstractConstraints
+    lb::Pnt
+    ub::Pnt
+end
+
+function Kirstine.ap_random_point!(p::Pnt, c::BoxConstraints)
     rand!(p.x)
-    p.x .*= ub.x .- lb.x
-    p.x .+= lb.x
+    p.x .*= c.ub.x .- c.lb.x
+    p.x .+= c.lb.x
     return p
 end
 
@@ -31,11 +35,10 @@ function Kirstine.ap_copy!(to::Pnt, from::Pnt)
     return to
 end
 
-function Kirstine.ap_move!(p::Pnt, d::PntDiff, constraints)
-    lb, ub = constraints
+function Kirstine.ap_move!(p::Pnt, d::PntDiff, c::BoxConstraints)
     p.x .+= d.v
-    p.x .= max.(lb.x, p.x)
-    p.x .= min.(ub.x, p.x)
+    p.x .= max.(c.lb.x, p.x)
+    p.x .= min.(c.ub.x, p.x)
     return p
 end
 
@@ -78,8 +81,8 @@ end
             f(p) = -sum((p.x .- xstar) .^ 2),
             pso = Pso(; iterations = 100, swarmsize = 20),
             prototype = Pnt(zeros(n)),
-            constr1 = (Pnt(fill(-1, n)), Pnt(fill(2, n))),
-            constr2 = (Pnt(fill(-1, n)), Pnt(collect(1:n) ./ 2)),
+            constr1 = BoxConstraints(Pnt(fill(-1, n)), Pnt(fill(2, n))),
+            constr2 = BoxConstraints(Pnt(fill(-1, n)), Pnt(collect(1:n) ./ 2)),
             _ = seed!(4711),
             # This solution will be at xstar, inside the constraints...
             r1 = Kirstine.optimize(pso, f, [prototype], constr1),

@@ -86,7 +86,7 @@ function optimizer_state(
     f,
     o::Pso,
     prototypes::AbstractVector{<:AbstractPoint},
-    constraints,
+    constraints::AbstractConstraints,
 )
     if o.swarmsize < length(prototypes)
         error("swarmsize must be a least as large as number of prototype particles")
@@ -120,7 +120,7 @@ function optimizer_state(
     return state
 end
 
-function tick!(f, state::PsoState, optimizer::Pso, constraints)
+function tick!(f, state::PsoState, optimizer::Pso, constraints::AbstractConstraints)
     phi = optimizer.c1 + optimizer.c2
     chi = 2 / abs(2 - phi - sqrt(phi^2 - 4 * phi))
     pso_update_velocity!(state, optimizer.c1, optimizer.c2, chi)
@@ -153,7 +153,7 @@ function pso_update_velocity!(state::PsoState, c1, c2, chi)
     return state
 end
 
-function pso_update_position!(state::PsoState, constraints)
+function pso_update_position!(state::PsoState, constraints::AbstractConstraints)
     for i in 1:length(state.x)
         ap_move!(state.x[i], state.v[i], constraints)
     end

@@ -227,6 +227,8 @@ See also [`Pso`](@ref).
 abstract type Optimizer end
 abstract type OptimizerState{T<:AbstractPoint,U<:AbstractPointDifference} end
 
+abstract type AbstractConstraints end
+
 """
     OptimizationResult
 
@@ -366,6 +368,12 @@ struct DesignSpace{N}
             tuple(convert.(Float64, upperbound)...),
         )
     end
+end
+
+struct DesignConstraints <: AbstractConstraints
+    ds::DesignSpace
+    fixw::Vector{Bool}
+    fixp::Vector{Bool}
 end
 
 # preallocated matrices with dimensions that are often used together.

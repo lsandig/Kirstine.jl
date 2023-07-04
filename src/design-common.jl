@@ -85,7 +85,7 @@ function optimize_design(
         @info "explicitly fixing implicitly fixed weight"
         fixw .= true
     end
-    constraints = (ds, fixw, fixp)
+    constraints = DesignConstraints(ds, fixw, fixp)
     or = optimize(optimizer, f, [prototype], constraints; trace_state = trace_state)
     dopt = sort_designpoints(simplify(or.maximizer, ds, m, cp; sargs...))
     return dopt, or
@@ -153,7 +153,7 @@ function refine_design(
     c = allocate_initialize_covariates(one_point_design(candidate.designpoint[1]), m, cp)
     ors_d = OptimizationResult[]
     ors_w = OptimizationResult[]
-    constraints = (ds, [false], [false])
+    constraints = DesignConstraints(ds, [false], [false])
 
     res = candidate
     for i in 1:steps

@@ -471,30 +471,27 @@ end
 
 # == abstract point methods == #
 
-function ap_random_point!(
-    d::DesignMeasure,
-    (ds, fixw, fixp)::Tuple{DesignSpace{N},Vector{Bool},Vector{Bool}},
-) where N
+function ap_random_point!(d::DesignMeasure, c::DesignConstraints)
     K = length(d.weight)
-    scl = ds.upperbound .- ds.lowerbound
+    scl = c.ds.upperbound .- c.ds.lowerbound
     for k in 1:K
-        if !fixp[k]
+        if !c.fixp[k]
             rand!(d.designpoint[k])
             d.designpoint[k] .*= scl
-            d.designpoint[k] .+= ds.lowerbound
+            d.designpoint[k] .+= c.ds.lowerbound
         end
     end
-    if !all(fixw)
+    if !all(c.fixw)
         # Due to rounding errors, a sum > 1.0 can happen.
         # We need to prevent negative normalizing constants later on.
-        cum_sum_fix = min(1.0, sum(d.weight[fixw]))
+        cum_sum_fix = min(1.0, sum(d.weight[c.fixw]))
         if cum_sum_fix == 1.0
             @warn "fixed weights already sum to one"
         end
         cum_sum_rand = 0.0
         while cum_sum_rand < eps() # we don't want to divide by too small numbers
             for k in 1:K
-                if !fixw[k]
+                if !c.fixw[k]
                     d.weight[k] = rand()
                     cum_sum_rand += d.weight[k]
                 end
@@ -502,7 +499,7 @@ function ap_random_point!(
         end
         norm_const = (1 - cum_sum_fix) / cum_sum_rand
         for k in 1:K
-            if !fixw[k]
+            if !c.fixw[k]
                 d.weight[k] *= norm_const
             end
         end
@@ -563,21 +560,17 @@ function ap_add!(v1::SignedMeasure, v2::SignedMeasure)
     return v1
 end
 
-function ap_move!(
-    p::DesignMeasure,
-    v::SignedMeasure,
-    (ds, fixw, fixp)::Tuple{DesignSpace{N},Vector{Bool},Vector{Bool}},
-) where N
+function ap_move!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
     K = length(p.designpoint) # number of design points
     # ignore velocity components in directions that correspond to fixed weights or points
-    move_handle_fixed!(v, fixw, fixp)
+    move_handle_fixed!(v, c.fixw, c.fixp)
     # handle intersections: find maximal 0<=t<=1 such that p+tv remains in the search volume
-    t = move_how_far(p, v, ds)
+    t = move_how_far(p, v, c.ds)
     if t < 0
         @warn "t=$t means point was already outside search volume" p
     end
     # Then, set p to p + tv
-    move_add_v!(p, t, v, ds, fixw)
+    move_add_v!(p, t, v, c.ds, c.fixw)
     # Stop the particle if the boundary was hit.
     if t != 1.0
         ap_mul_scalar!(v, 0)
