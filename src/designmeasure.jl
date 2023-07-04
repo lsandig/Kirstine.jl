@@ -471,7 +471,7 @@ end
 
 # == abstract point methods == #
 
-function randomize!(
+function ap_random_point!(
     d::DesignMeasure,
     (ds, fixw, fixp)::Tuple{DesignSpace{N},Vector{Bool},Vector{Bool}},
 ) where N
@@ -510,28 +510,16 @@ function randomize!(
     return d
 end
 
-function difference!(v::AbstractVector{<:Real}, p::DesignMeasure, q::DesignMeasure)
-    # v layout: concatenate the designpoints, then the first K-1 weights
+function ap_difference!(v::SignedMeasure, p::DesignMeasure, q::DesignMeasure)
     K = length(p.weight)
-    weight_shift = K * length(p.designpoint[1])
-    i = 1
-    flat_dp_p = Iterators.flatten(p.designpoint)
-    flat_dp_q = Iterators.flatten(q.designpoint)
-    for (x, y) in Iterators.zip(flat_dp_p, flat_dp_q)
-        v[i] = x - y
-        i += 1
-    end
-    for k in 1:(K - 1)
-        v[k + weight_shift] = p.weight[k] - q.weight[k]
+    v.weight .= p.weight .- q.weight
+    for k in 1:K
+        v.atom[k] .= p.designpoint[k] .- q.designpoint[k]
     end
     return v
 end
 
-function flat_length(p::DesignMeasure)
-    return length(p.weight) * (length(p.designpoint[1]) + 1) - 1
-end
-
-function copy!(to::DesignMeasure, from::DesignMeasure)
+function ap_copy!(to::DesignMeasure, from::DesignMeasure)
     to.weight .= from.weight
     for k in 1:length(from.designpoint)
         to.designpoint[k] .= from.designpoint[k]
@@ -539,86 +527,122 @@ function copy!(to::DesignMeasure, from::DesignMeasure)
     return to
 end
 
-function move!(
+function ap_as_difference(p::DesignMeasure)
+    return SignedMeasure(deepcopy(p.weight), deepcopy(p.designpoint))
+end
+
+function ap_random_difference!(v::SignedMeasure)
+    rand!(v.weight)
+    for k in 1:length(v.weight)
+        rand!(v.atom[k])
+    end
+    return v
+end
+
+function ap_mul_hadamard!(v1::SignedMeasure, v2::SignedMeasure)
+    v1.weight .*= v2.weight
+    for k in 1:length(v1.weight)
+        v1.atom[k] .*= v2.atom[k]
+    end
+    return v1
+end
+
+function ap_mul_scalar!(v::SignedMeasure, a::Real)
+    v.weight .*= a
+    for k in 1:length(v.weight)
+        v.atom[k] .*= a
+    end
+    return v
+end
+
+function ap_add!(v1::SignedMeasure, v2::SignedMeasure)
+    v1.weight .+= v2.weight
+    for k in 1:length(v1.weight)
+        v1.atom[k] .+= v2.atom[k]
+    end
+    return v1
+end
+
+function ap_move!(
     p::DesignMeasure,
-    v::AbstractVector{<:Real},
+    v::SignedMeasure,
     (ds, fixw, fixp)::Tuple{DesignSpace{N},Vector{Bool},Vector{Bool}},
 ) where N
     K = length(p.designpoint) # number of design points
-    D = length(p.designpoint[1]) # dimension of the design space
-    weight_shift = K * D # weight offset into displacement vector
     # ignore velocity components in directions that correspond to fixed weights or points
-    move_handle_fixed!(v, fixw, fixp, K, weight_shift, D)
+    move_handle_fixed!(v, fixw, fixp)
     # handle intersections: find maximal 0<=t<=1 such that p+tv remains in the search volume
-    t = move_how_far(p, v, ds, K, weight_shift, D)
+    t = move_how_far(p, v, ds)
     if t < 0
         @warn "t=$t means point was already outside search volume" p
     end
     # Then, set p to p + tv
-    move_add_v!(p, t, v, ds, fixw, K, weight_shift, D)
+    move_add_v!(p, t, v, ds, fixw)
     # Stop the particle if the boundary was hit.
     if t != 1.0
-        v .= 0.0
+        ap_mul_scalar!(v, 0)
     end
     return p
 end
 
-function move_handle_fixed!(v, fixw, fixp, K, weight_shift, D)
-    # v layout: concatenate the designpoints, then the first K-1 weights
+function move_handle_fixed!(v, fixw, fixp)
+    K = length(v.weight)
     sum_vw_free = 0.0
     for k in 1:(K - 1)
         if fixw[k]
-            v[weight_shift + k] = 0.0
+            v.weight[k] = 0.0
         else
-            sum_vw_free += v[weight_shift + k]
+            sum_vw_free += v.weight[k]
         end
     end
-    # When the implicit last weight is fixed we must make sure only to move
-    # parallel to the simplex diagonal face, i.e. that
+    # We treat the final weight as implicitly determined by the first (K-1) ones. When it is
+    # not fixed this is unproblematic, as we can simply ignore the coresponding velocity
+    # compound in the move operation, and as a final step set it to 1 - sum(weight[1:K-1]).
     #
-    #   sum(v[.! fixw]) == 0.
+    # When all weights are fixed, we also don't have to do anything.
+    #
+    # Only when the final weight is fixed, but some others are not, we have to be more
+    # careful. We must make sure to only move parallel to the simplex diagonal face, i.e.
+    # that
+    #
+    #   sum(v.weight[.! fixw]) == 0.
     #
     # In oder not to prefer one direction over the others, we subtract the mean
-    # from every non-fixed element of v.
+    # from every non-fixed element of v.weight.
     n_fixw = count(fixw)
     if n_fixw != K && fixw[K]
         mean_free = sum_vw_free / (K - n_fixw)
         for k in 1:(K - 1)
             if !fixw[k]
-                v[weight_shift + k] -= mean_free
+                v.weight[k] -= mean_free
             end
         end
     end
     for k in 1:K
         if fixp[k]
-            for j in 1:D
-                flatindex = (k - 1) * D + j
-                v[flatindex] = 0.0
-            end
+            v.atom[k] .= 0.0
         end
     end
     return v
 end
 
-function move_how_far(p, v, ds, K, weight_shift, D)
-    # v layout: concatenate the designpoints, then the first K-1 weights.
+function move_how_far(p, v, ds)
     t = 1.0
+    K = length(p.designpoint)
+    D = length(p.designpoint[1])
     # box constraints
     for k in 1:K
         for j in 1:D
-            # design point k element j is flattend to index (k-1)*D+j,
-            # where D is the length of a single designpoint
-            flatindex = (k - 1) * D + j
-            t = how_far_left(p.designpoint[k][j], t, v[flatindex], ds.lowerbound[j])
-            t = how_far_right(p.designpoint[k][j], t, v[flatindex], ds.upperbound[j])
+            t = how_far_left(p.designpoint[k][j], t, v.atom[k][j], ds.lowerbound[j])
+            t = how_far_right(p.designpoint[k][j], t, v.atom[k][j], ds.upperbound[j])
         end
     end
     # simplex constraints
-    for k in 1:(K - 1)
-        t = how_far_left(p.weight[k], t, v[weight_shift + k], 0.0)
+    for k in 1:(K - 1) # ingore implicit last weight
+        t = how_far_left(p.weight[k], t, v.weight[k], 0.0)
     end
     sum_x = 1.0 - p.weight[K]
-    sum_v = @views sum(v[(weight_shift + 1):end])
+    sum_v = @views sum(v.weight[1:(K - 1)])
     t = how_far_simplexdiag(sum_x, t, sum_v)
     return t
 end
@@ -643,27 +667,27 @@ function how_far_simplexdiag(sum_x, t, sum_v)
     return sum_x + t * sum_v > one(sum_x) ? (one(sum_x) - sum_x) / sum_v : t
 end
 
-function move_add_v!(p, t, v, ds, fixw, K, weight_shift, D)
+function move_add_v!(p, t, v, ds, fixw)
+    K = length(p.designpoint)
+    D = length(p.designpoint[1])
     # first for the design points ...
-    i = 1 # index to flattened structure
-    for dp in p.designpoint
+    for k in 1:K
+        p.designpoint[k] .+= t .* v.atom[k]
         for j in 1:D
-            dp[j] += t * v[i]
             # Due to rounding errors, design points can be just slightly outside the design
             # space. We fix this here.
-            if dp[j] > ds.upperbound[j]
-                dp[j] = ds.upperbound[j]
+            if p.designpoint[k][j] > ds.upperbound[j]
+                p.designpoint[k][j] = ds.upperbound[j]
             end
-            if dp[j] < ds.lowerbound[j]
-                dp[j] = ds.lowerbound[j]
+            if p.designpoint[k][j] < ds.lowerbound[j]
+                p.designpoint[k][j] = ds.lowerbound[j]
             end
-            i += 1
         end
     end
     # ... then for the weights.
+    p.weight .+= t .* v.weight
     weight_K = 1.0
     for k in 1:(K - 1)
-        p.weight[k] += t * v[weight_shift + k]
         # Again due to rounding erros, a weight can become slightly negative. We need to fix
         # this to prevent it snowballing later on.
         if p.weight[k] < 0.0

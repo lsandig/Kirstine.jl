@@ -35,6 +35,16 @@ using Kirstine
         end
     end
 
+    @testset "SignedMeasure" begin
+        @test_throws "must be equal" Kirstine.SignedMeasure([0], [[1], [2]])
+        @test_throws "identical lengths" Kirstine.SignedMeasure([1, -2], [[1], [2, 3]])
+
+        let s = Kirstine.SignedMeasure([1, -2, 0.5], [[1, 4], [2, 3], [5, 6]])
+            @test s.weight == [1, -2, 0.5]
+            @test s.atom == [[1, 4], [2, 3], [5, 6]]
+        end
+    end
+
     @testset "DesignSpace" begin
         @test_throws "must be identical" DesignSpace([:a], [1, 2], [3, 4])
         @test_throws "must be identical" DesignSpace([:a, :b], [2], [3, 4])

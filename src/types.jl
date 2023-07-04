@@ -215,6 +215,7 @@ For details see p. 69 in Fedorov/Leonov [^FL13].
 struct DOptimality <: DesignCriterion end
 
 abstract type AbstractPoint end
+abstract type AbstractPointDifference end
 
 """
     Optimizer
@@ -224,7 +225,7 @@ Abstract supertype for particle-based optimization algorithms.
 See also [`Pso`](@ref).
 """
 abstract type Optimizer end
-abstract type OptimizerState{T<:AbstractPoint} end
+abstract type OptimizerState{T<:AbstractPoint,U<:AbstractPointDifference} end
 
 """
     OptimizationResult
@@ -248,7 +249,11 @@ states was not requested explicitly.
 
 See also [`optimize_design`](@ref).
 """
-struct OptimizationResult{T<:AbstractPoint,S<:OptimizerState{T}}
+struct OptimizationResult{
+    T<:AbstractPoint,
+    U<:AbstractPointDifference,
+    S<:OptimizerState{T,U},
+}
     maximizer::T
     maximum::Float64
     trace_x::Vector{T}
@@ -304,6 +309,23 @@ struct DesignMeasure <: AbstractPoint
             error("weights must be non-negative and sum to one")
         end
         new(weight, designpoint)
+    end
+end
+
+# Only used internally to represent difference vectors between DesignMeasures in
+# particle-based optimizers. Structurally the same as a DesignMeasure, but weights can be
+# arbitrary real numbers.
+struct SignedMeasure <: AbstractPointDifference
+    weight::Vector{Float64}
+    atom::Vector{Vector{Float64}}
+    function SignedMeasure(weights, atoms)
+        if length(weights) != length(atoms)
+            error("number of weights and atoms must be equal")
+        end
+        if !allequal(map(length, atoms))
+            error("atoms must have identical lengths")
+        end
+        new(weights, atoms)
     end
 end
 

@@ -9,7 +9,11 @@ struct Pnt <: Kirstine.AbstractPoint
     x::Vector{Float64}
 end
 
-function Kirstine.randomize!(p::Pnt, constraints)
+struct PntDiff <: Kirstine.AbstractPointDifference
+    v::Vector{Float64}
+end
+
+function Kirstine.ap_random_point!(p::Pnt, constraints)
     lb, ub = constraints
     rand!(p.x)
     p.x .*= ub.x .- lb.x
@@ -17,24 +21,46 @@ function Kirstine.randomize!(p::Pnt, constraints)
     return p
 end
 
-function Kirstine.difference!(v::AbstractVector{<:Real}, p::Pnt, q::Pnt)
-    v .= p.x .- q.x
-    return v
+function Kirstine.ap_difference!(d::PntDiff, p::Pnt, q::Pnt)
+    d.v .= p.x .- q.x
+    return d.v
 end
 
-Kirstine.flat_length(p::Pnt) = length(p.x)
-
-function Kirstine.copy!(to::Pnt, from::Pnt)
+function Kirstine.ap_copy!(to::Pnt, from::Pnt)
     to.x .= from.x
     return to
 end
 
-function Kirstine.move!(p::Pnt, v::AbstractVector{<:Real}, constraints)
+function Kirstine.ap_move!(p::Pnt, d::PntDiff, constraints)
     lb, ub = constraints
-    p.x .+= v
+    p.x .+= d.v
     p.x .= max.(lb.x, p.x)
     p.x .= min.(ub.x, p.x)
     return p
+end
+
+function Kirstine.ap_as_difference(p::Pnt)
+    return PntDiff(deepcopy(p.x))
+end
+
+function Kirstine.ap_random_difference!(d::PntDiff)
+    rand!(d.v)
+    return d
+end
+
+function Kirstine.ap_mul_hadamard!(d1::PntDiff, d2::PntDiff)
+    d1.v .*= d2.v
+    return d1
+end
+
+function Kirstine.ap_mul_scalar!(d::PntDiff, a::Real)
+    d.v .*= a
+    return d
+end
+
+function Kirstine.ap_add!(d1::PntDiff, d2::PntDiff)
+    d1.v .+= d2.v
+    return d1
 end
 
 @testset "pso.jl" begin
@@ -59,7 +85,7 @@ end
             r1 = Kirstine.optimize(pso, f, [prototype], constr1),
             # ... and this one will be on the boundary at [0.5, 1, 1, ..., 1]
             r2 = Kirstine.optimize(pso, f, [prototype], constr2; trace_state = true),
-            mean_speed = map(st -> mean(norm, st.v), r2.trace_state)
+            mean_speed = map(st -> mean(vi -> norm(vi.v), st.v), r2.trace_state)
 
             @test r1.maximizer.x ≈ xstar rtol = 1e-4
             @test r1.maximum ≈ 0.0 atol = 1e-4

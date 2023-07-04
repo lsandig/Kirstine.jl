@@ -186,18 +186,18 @@ using Kirstine
     end
 
     # abstract point methods: randomization with fixed weights and/or points
-    @testset "randomize!" begin
+    @testset "ap_random_point!" begin
         let ds = DesignSpace(:a => (0, 1)),
             d = DesignMeasure([0.1, 0.42, 0.48], [[1], [4.2], [3]]),
             fw1 = [false, true, false],
             fp1 = fill(false, 3),
-            r1 = Kirstine.randomize!(deepcopy(d), (ds, fw1, fp1)),
+            r1 = Kirstine.ap_random_point!(deepcopy(d), (ds, fw1, fp1)),
             fw2 = fill(false, 3),
             fp2 = [false, true, false],
-            r2 = Kirstine.randomize!(deepcopy(d), (ds, fw2, fp2)),
+            r2 = Kirstine.ap_random_point!(deepcopy(d), (ds, fw2, fp2)),
             fw3 = [false, false, true],
             fp3 = [false, false, true],
-            r3 = Kirstine.randomize!(deepcopy(d), (ds, fw3, fp3))
+            r3 = Kirstine.ap_random_point!(deepcopy(d), (ds, fw3, fp3))
 
             @test r1.weight[2] == d.weight[2]
             @test all(r1.weight[[1, 3]] .!= d.weight[[1, 3]])
