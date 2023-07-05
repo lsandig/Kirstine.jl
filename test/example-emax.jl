@@ -6,6 +6,14 @@ mutable struct Dose <: Covariate
     dose::Float64
 end
 
+@kwdef struct EmaxPar <: Parameter
+    e0::Float64
+    emax::Float64
+    ec50::Float64
+end
+
+Kirstine.dimension(p::EmaxPar) = 3
+
 struct CopyDose <: CovariateParameterization end
 
 Kirstine.unit_length(m::EmaxModel) = 1
@@ -24,8 +32,7 @@ function Kirstine.update_model_covariate!(
     return c
 end
 
-# p must be a NamedTuple with elements `e0`, `emax` `ec50`
-function Kirstine.jacobianmatrix!(jm, m::EmaxModel, c::Dose, p)
+function Kirstine.jacobianmatrix!(jm, m::EmaxModel, c::Dose, p::EmaxPar)
     x = c.dose
     jm[1, 1] = 1.0
     jm[1, 2] = x / (x + p.ec50)

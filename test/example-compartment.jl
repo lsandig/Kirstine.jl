@@ -4,10 +4,17 @@
 # Biometrics, 49(2), 325–337. http://dx.doi.org/10.2307/2532547
 @define_scalar_unit_model Kirstine TPCMod time
 
+@kwdef struct TPCPar <: Parameter
+    a::Float64
+    e::Float64
+    s::Float64
+end
+
+Kirstine.dimension(p::TPCPar) = 3
+
 struct CopyTime <: CovariateParameterization end
 
-function Kirstine.jacobianmatrix!(jm, m::TPCMod, c::TPCModCovariate, p)
-    # names(p) == a, e, s
+function Kirstine.jacobianmatrix!(jm, m::TPCMod, c::TPCModCovariate, p::TPCPar)
     A = exp(-p.a * c.time)
     E = exp(-p.e * c.time)
     jm[1, 1] = A * p.s * c.time
@@ -69,5 +76,5 @@ function draw_from_prior(n, se_factor)
     as = mn[1] .+ se_factor .* se[1] .* (2 .* rand(n) .- 1)
     es = mn[2] .+ se_factor .* se[2] .* (2 .* rand(n) .- 1)
     ss = mn[3] .+ se_factor .* se[3] .* (2 .* rand(n) .- 1)
-    return DiscretePrior(map((a, e, s) -> (a = a, e = e, s = s), as, es, ss))
+    return DiscretePrior(map((a, e, s) -> TPCPar(; a = a, e = e, s = s), as, es, ss))
 end
