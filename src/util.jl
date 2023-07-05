@@ -74,3 +74,49 @@ macro define_scalar_unit_model(module_name, model_name, covariate_field_names...
         end
     end)
 end
+
+"""
+    @define_vector_parameter module_name parameter_name field_names...
+
+Generate code for defining a subtype of [`Parameter`](@ref) with the given name and fields,
+and define its dimension as `length(field_names)`.
+
+A type defined this way has a keyword constructor.
+
+The call
+
+```julia
+julia> @define_vector_parameter Kirstine BarPar a b
+
+```
+
+is equivalent to
+
+```julia
+@kwdef struct BarPar <: Kirstine.Parameter
+    a::Float64
+    b::Float64
+end
+
+Kirstine.dimension(p::BarPar) = 2
+```
+
+For the `module_name` argument see the note at [`@define_scalar_unit_model`](@ref).
+"""
+macro define_vector_parameter(module_name, parameter_name, field_names...)
+    if isempty(field_names)
+        error("no field names supplied")
+    end
+    dim = length(field_names)
+    par_fields = [Expr(:(::), fn, :Float64) for fn in field_names]
+    par_struct_expression = Expr(
+        :struct,
+        false, # immutable
+        Expr(:<:, parameter_name, :($module_name.Parameter)),
+        Expr(:block, par_fields...),
+    )
+    return esc(quote
+        @kwdef $par_struct_expression
+        $module_name.dimension(p::$parameter_name) = $dim
+    end)
+end

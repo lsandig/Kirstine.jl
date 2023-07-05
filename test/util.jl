@@ -31,5 +31,23 @@ using Kirstine
             @test e == Base.remove_linenums!(eref)
         end
     end
+
+    @testset "define_vector_parameter" begin
+        @test_throws "no field names" @macroexpand(@define_vector_parameter(Kirstine, Foo))
+
+        let ex = @macroexpand(@define_vector_parameter(Kirstine, EmaxPar, e0, emax, ec50)),
+            _ = Base.remove_linenums!(ex),
+            (a, b) = ex.args,
+            aref = @macroexpand(@kwdef struct EmaxPar <: Kirstine.Parameter
+                e0::Float64
+                emax::Float64
+                ec50::Float64
+            end),
+            bref = :(Kirstine.dimension(p::EmaxPar) = 3)
+
+            @test a == Base.remove_linenums!(aref)
+            @test b == Base.remove_linenums!(bref)
+        end
+    end
 end
 end

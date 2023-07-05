@@ -4,13 +4,7 @@
 # Biometrics, 49(2), 325–337. http://dx.doi.org/10.2307/2532547
 @define_scalar_unit_model Kirstine TPCMod time
 
-@kwdef struct TPCPar <: Parameter
-    a::Float64
-    e::Float64
-    s::Float64
-end
-
-Kirstine.dimension(p::TPCPar) = 3
+@define_vector_parameter Kirstine TPCPar a e s
 
 struct CopyTime <: CovariateParameterization end
 
