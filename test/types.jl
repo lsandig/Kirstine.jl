@@ -45,15 +45,15 @@ using Kirstine
         end
     end
 
-    @testset "DesignSpace" begin
-        @test_throws "must be identical" DesignSpace([:a], [1, 2], [3, 4])
-        @test_throws "must be identical" DesignSpace([:a, :b], [2], [3, 4])
-        @test_throws "must be identical" DesignSpace([:a, :b], [1, 2], [4])
-        @test_throws "strictly larger" DesignSpace([:a, :b], [1, 2], [0, 4])
-        @test_throws "strictly larger" DesignSpace([:a, :b], [1, 2], [1, 4])
+    @testset "DesignInterval" begin
+        @test_throws "must be identical" DesignInterval([:a], [1, 2], [3, 4])
+        @test_throws "must be identical" DesignInterval([:a, :b], [2], [3, 4])
+        @test_throws "must be identical" DesignInterval([:a, :b], [1, 2], [4])
+        @test_throws "strictly larger" DesignInterval([:a, :b], [1, 2], [0, 4])
+        @test_throws "strictly larger" DesignInterval([:a, :b], [1, 2], [1, 4])
 
         # inner constructor: check conversion to Float64 and tuples
-        let ds = DesignSpace([:a, :b], [0, 0], [1, 2])
+        let ds = DesignInterval([:a, :b], [0, 0], [1, 2])
             @test ds.name === (:a, :b)
             @test ds.lowerbound === (0.0, 0.0)
             @test ds.upperbound === (1.0, 2.0)

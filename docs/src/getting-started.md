@@ -151,7 +151,7 @@ the design space ``[0, 10]``,
 and our prior guess from above.
 ```@example main
 dc = DOptimality()
-ds = DesignSpace(:dose => (0, 10))
+ds = DesignInterval(:dose => (0, 10))
 mod = SigEmax(1)
 cpar = CopyDose()
 guess = DiscretePrior((e0 = 1, emax = 2, ed50 = 4, h = 5))
@@ -163,7 +163,7 @@ There are a couple of things to note here:
 - In this case, the observation variance ``\sigma^2`` merely scales the objective function,
   hence it has no influence on the solution.
   So for simplicity, we set it to `1`.
-- The name of the design space's single dimension is given by the symbol `:dose`,
+- The name of the design interval's single dimension is given by the symbol `:dose`,
   and it can be chosen independently from however we have named the field of our `SigEmaxCovariate`.
   They _do not_ have to be the same.
 - The argument to [`DiscretePrior`](@ref) is a [`NamedTuple`](https://docs.julialang.org/en/v1/base/base/#Core.NamedTuple),
@@ -208,7 +208,7 @@ as_matrix(s1)
 
 In order to see whether `s1` actually is the solution,
 we can visually verify the equivalence theorem:
-the Gateaux derivatives at `s1` into each direction from (a grid on) the design space
+the Gateaux derivatives at `s1` into each direction from (a grid on) the design interval
 should be non-positive.
 
 ```@example main
@@ -239,7 +239,7 @@ s1
 ```
 
 We see that the weights are nearly uniform,
-and that the lowest and highest doses are near the boundaries of the design space.
+and that the lowest and highest doses are near the boundaries of the design interval.
 This is not by accident:
 one can show analytically that locally D-optimal designs for the sigmoid Emax model
 always have four design points with uniform weights,

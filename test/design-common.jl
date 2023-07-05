@@ -11,7 +11,7 @@ include("example-compartment.jl")
     # helpers
     @testset "DesignConstraints" begin
         let dc = DOptimality(),
-            ds = DesignSpace(:dose => (0, 10)),
+            ds = DesignInterval(:dose => (0, 10)),
             d = equidistant_design(ds, 3),
             dcon = Kirstine.DesignConstraints,
             c = dcon(d, ds, [2], [3])
@@ -117,7 +117,7 @@ include("example-compartment.jl")
             m = EmaxModel(1),
             cp = CopyDose(),
             pk = DiscretePrior((e0 = 1, emax = 10, ec50 = 5)),
-            ds = DesignSpace(:dose => (0, 10)),
+            ds = DesignInterval(:dose => (0, 10)),
             d = one_point_design([5])
 
             # no explicit inversion
@@ -133,7 +133,7 @@ include("example-compartment.jl")
             cp = CopyDose(),
             p1 = (e0 = 1, emax = 10, ec50 = 5),
             pk1 = DiscretePrior(p1),
-            ds = DesignSpace(:dose => (0, 10)),
+            ds = DesignInterval(:dose => (0, 10)),
             # sol is optimal for pk1
             sol = emax_solution(p1, ds),
             a = ds.lowerbound[1],
@@ -153,7 +153,7 @@ include("example-compartment.jl")
         end
 
         # DeltaMethod for Atkinson et al. examples
-        let ds = DesignSpace(:time => [0, 48]),
+        let ds = DesignInterval(:time => [0, 48]),
             g0 = DiscretePrior((a = 4.298, e = 0.05884, s = 21.80)),
             _ = seed!(4711),
             g1 = draw_from_prior(1000, 2),
@@ -201,7 +201,7 @@ include("example-compartment.jl")
             m = EmaxModel(1),
             cp = CopyDose(),
             pk = DiscretePrior((e0 = 1, emax = 10, ec50 = 5)),
-            ds = DesignSpace(:dose => (0, 10)),
+            ds = DesignInterval(:dose => (0, 10)),
             d = one_point_design([5])
 
             # explicit inversions in both cases
@@ -219,7 +219,7 @@ include("example-compartment.jl")
             pk1 = DiscretePrior(p1),
             pk2 = DiscretePrior([0.75, 0.25], [p1, p2]),
             pk3 = DiscretePrior([p1, p2]),
-            ds = DesignSpace(:dose => (0, 10)),
+            ds = DesignInterval(:dose => (0, 10)),
             # sol is optimal for pk1
             sol = emax_solution(p1, ds),
             a = ds.lowerbound[1],
@@ -246,7 +246,7 @@ include("example-compartment.jl")
         end
 
         # DeltaMethod for Atkinson et al. examples
-        let ds = DesignSpace(:time => [0, 48]),
+        let ds = DesignInterval(:time => [0, 48]),
             g0 = DiscretePrior((a = 4.298, e = 0.05884, s = 21.80)),
             _ = seed!(4711),
             m = TPCMod(1),
@@ -284,7 +284,7 @@ include("example-compartment.jl")
             cp = CopyDose(),
             p = (e0 = 1, emax = 10, ec50 = 5),
             pk = DiscretePrior(p),
-            ds = DesignSpace(:dose => (0, 10)),
+            ds = DesignInterval(:dose => (0, 10)),
             sol = emax_solution(p, ds),
             pso = Pso(; iterations = 50, swarmsize = 20),
             optim(; kwargs...) =
@@ -344,7 +344,7 @@ include("example-compartment.jl")
             cp = CopyDose(),
             p = (e0 = 1, emax = 10, ec50 = 5),
             pk = DiscretePrior(p),
-            ds = DesignSpace(:dose => (0, 10)),
+            ds = DesignInterval(:dose => (0, 10)),
             pso = Pso(; iterations = 2, swarmsize = 5),
             # this is not the optimal solution
             prototype =
@@ -396,7 +396,7 @@ include("example-compartment.jl")
             cp = CopyDose(),
             p = (e0 = 1, emax = 10, ec50 = 5),
             pk = DiscretePrior(p),
-            ds = DesignSpace(:dose => (0, 10)),
+            ds = DesignInterval(:dose => (0, 10)),
             sol = emax_solution(p, ds),
             od = Pso(; iterations = 50, swarmsize = 100),
             ow = Pso(; iterations = 50, swarmsize = 50),

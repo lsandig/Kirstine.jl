@@ -334,27 +334,37 @@ end
 """
     DesignSpace{N}
 
-A (hyper)rectangular subset of ``\\mathbb{R}^N`` representing the set in which
-which the design points of a `DesignMeasure` live.
-The dimensions of a `DesignSpace` are named.
+Supertype for design spaces. A design space is a compact subset of ``\\mathbb{R}^N``.
+
+See also [`DesignInterval`](@ref), [`dimnames`](@ref).
 """
-struct DesignSpace{N}
+abstract type DesignSpace{N} end
+
+"""
+    DesignInterval{N} <: DesignSpace{N}
+
+A (hyper)rectangular subset of ``\\mathbb{R}^N`` representing the set in which
+which the design points of a [`DesignMeasure`](@ref) live.
+
+See also [`lowerbound`](@ref), [`upperbound`](@ref), [`dimnames`](@ref).
+"""
+struct DesignInterval{N} <: DesignSpace{N}
     name::NTuple{N,Symbol}
     lowerbound::NTuple{N,Float64}
     upperbound::NTuple{N,Float64}
     @doc """
-        DesignSpace(name, lowerbound, upperbound)
+        DesignInterval(name, lowerbound, upperbound)
 
-    Construct a design space with the given dimension names (supplied as
+    Construct a design interval with the given dimension names (supplied as
     symbols) and lower / upper bounds.
 
     # Examples
     ```jldoctest
-    julia> DesignSpace([:dose, :time], [0, 0], [300, 20])
-    DesignSpace{2}((:dose, :time), (0.0, 0.0), (300.0, 20.0))
+    julia> DesignInterval([:dose, :time], [0, 0], [300, 20])
+    DesignInterval{2}((:dose, :time), (0.0, 0.0), (300.0, 20.0))
     ```
     """
-    function DesignSpace(name, lowerbound, upperbound)
+    function DesignInterval(name, lowerbound, upperbound)
         n = length(name)
         if !(n == length(lowerbound) == length(upperbound))
             error("lengths of name, upper and lower bounds must be identical")
@@ -370,8 +380,8 @@ struct DesignSpace{N}
     end
 end
 
-struct DesignConstraints <: AbstractConstraints
-    ds::DesignSpace
+struct DesignConstraints{N,T<:DesignSpace{N}} <: AbstractConstraints
+    ds::T
     fixw::Vector{Bool}
     fixp::Vector{Bool}
 end
