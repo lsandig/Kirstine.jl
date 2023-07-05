@@ -1,11 +1,15 @@
 # generic particle swarm optimizer
 
-# declare functions to be overwritten in unit tests
-function randomize! end
-function difference! end
-function flat_length end
-function copy! end
-function move! end
+# declare functions to be overwritten for concrete subtypes of AbstractPoint and AbstractPointDifference
+function ap_random_point! end
+function ap_difference! end
+function ap_copy! end
+function ap_move! end
+function ap_as_difference end
+function ap_random_difference! end
+function ap_mul_hadamard! end
+function ap_mul_scalar! end
+function ap_add! end
 
 """
     Pso(; iterations, swarmsize, c1 = 2.05, c2 = 2.05)
@@ -58,18 +62,18 @@ end
 
 iterations(optimizer::Pso) = optimizer.iterations
 
-mutable struct PsoState{T} <: OptimizerState{T}
+mutable struct PsoState{T,U} <: OptimizerState{T,U}
     x::Vector{T} # current position
     p::Vector{T} # personal best
     g::T # global best
-    v::Vector{Vector{Float64}} # velocity vectors
+    v::Vector{U} # velocities
     fx::Vector{Float64} # objective function values at x
     fp::Vector{Float64} # objective function values at p
     fg::Float64 # objective function value at g
-    r1::Vector{Float64} # uniformly random velocity vector
-    r2::Vector{Float64} # uniformly random velocity vector
-    diffg::Vector{Float64} # temporary variable for g - x
-    diffp::Vector{Float64} # temporary variable for p - x
+    r1::U # uniformly random velocity components
+    r2::U # uniformly random velocity components
+    diffg::U # temporary variable for g - x
+    diffp::U # temporary variable for p - x
     n_eval::Int64 # cumulative number of objective evaluations
 end
 
@@ -82,7 +86,7 @@ function optimizer_state(
     f,
     o::Pso,
     prototypes::AbstractVector{<:AbstractPoint},
-    constraints,
+    constraints::AbstractConstraints,
 )
     if o.swarmsize < length(prototypes)
         error("swarmsize must be a least as large as number of prototype particles")
@@ -91,20 +95,22 @@ function optimizer_state(
     n_random = o.swarmsize - length(prototypes)
     x_random = [deepcopy(prototypes[1]) for _ in 1:n_random]
     for i in 1:length(x_random)
-        randomize!(x_random[i], constraints)
+        ap_random_point!(x_random[i], constraints)
     end
     x = [x_given; x_random]
-    velocity_length = flat_length(x[1])
-    v = [zeros(velocity_length) for _ in 1:(o.swarmsize)]
+    # here we get the matching difference type for the concrete type of x[1]
+    zero_diff = ap_as_difference(x[1])
+    ap_difference!(zero_diff, x[1], x[1]) # initialize at 0
+    v = [deepcopy(zero_diff) for _ in 1:(o.swarmsize)]
     p = deepcopy(x)
     g = deepcopy(x[1])
     fx = zeros(o.swarmsize)
     fp = zeros(o.swarmsize)
     fg = 0.0
-    r1 = zeros(velocity_length)
-    r2 = zeros(velocity_length)
-    diffg = zeros(velocity_length)
-    diffp = zeros(velocity_length)
+    r1 = deepcopy(zero_diff)
+    r2 = deepcopy(zero_diff)
+    diffg = deepcopy(zero_diff)
+    diffp = deepcopy(zero_diff)
     n_eval = 0
     state = PsoState(x, p, g, v, fx, fp, fg, r1, r2, diffg, diffp, n_eval)
     pso_evaluate_objective!(f, state)
@@ -114,7 +120,7 @@ function optimizer_state(
     return state
 end
 
-function tick!(f, state::PsoState, optimizer::Pso, constraints)
+function tick!(f, state::PsoState, optimizer::Pso, constraints::AbstractConstraints)
     phi = optimizer.c1 + optimizer.c2
     chi = 2 / abs(2 - phi - sqrt(phi^2 - 4 * phi))
     pso_update_velocity!(state, optimizer.c1, optimizer.c2, chi)
@@ -126,20 +132,30 @@ end
 
 function pso_update_velocity!(state::PsoState, c1, c2, chi)
     for i in 1:length(state.x)
-        difference!(state.diffp, state.p[i], state.x[i])
-        difference!(state.diffg, state.g, state.x[i])
-        rand!(state.r1)
-        rand!(state.r2)
-        state.v[i] .+= c1 .* state.r1 .* state.diffp
-        state.v[i] .+= c2 .* state.r2 .* state.diffg
-        state.v[i] .*= chi
+        # In vector notation:
+        #
+        #   v[i] += c1 .* r1 .* (g - x[i]) .+ c2 .* r2 .* (p[i] - x[i])
+        #   v[i] *= chi
+        #
+        # with elements of r1, r2 uniformly random from [0,1].
+        ap_difference!(state.diffp, state.p[i], state.x[i])
+        ap_difference!(state.diffg, state.g, state.x[i])
+        ap_random_difference!(state.r1)
+        ap_random_difference!(state.r2)
+        ap_mul_hadamard!(state.diffp, state.r1)
+        ap_mul_hadamard!(state.diffg, state.r2)
+        ap_mul_scalar!(state.diffp, c1)
+        ap_mul_scalar!(state.diffg, c2)
+        ap_add!(state.v[i], state.diffp)
+        ap_add!(state.v[i], state.diffg)
+        ap_mul_scalar!(state.v[i], chi)
     end
     return state
 end
 
-function pso_update_position!(state::PsoState, constraints)
+function pso_update_position!(state::PsoState, constraints::AbstractConstraints)
     for i in 1:length(state.x)
-        move!(state.x[i], state.v[i], constraints)
+        ap_move!(state.x[i], state.v[i], constraints)
     end
     return state
 end
@@ -155,10 +171,10 @@ end
 function pso_update_best!(state::PsoState)
     for i in 1:length(state.x)
         if state.fx[i] > state.fp[i]
-            copy!(state.p[i], state.x[i])
+            ap_copy!(state.p[i], state.x[i])
             state.fp[i] = state.fx[i]
             if state.fx[i] > state.fg
-                copy!(state.g, state.x[i])
+                ap_copy!(state.g, state.x[i])
                 state.fg = state.fx[i]
             end
         end

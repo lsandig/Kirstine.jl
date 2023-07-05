@@ -33,7 +33,7 @@ using Kirstine
     end
 
     @testset "equidistant_design" begin
-        let d = equidistant_design(DesignSpace(:a => (1, 4)), 4),
+        let d = equidistant_design(DesignInterval(:a => (1, 4)), 4),
             ref = DesignMeasure(fill(0.25, 4), [[i] for i in 1:4])
 
             @test all(d.weight .== ref.weight)
@@ -64,10 +64,10 @@ using Kirstine
         end
     end
 
-    @testset "DesignSpace" begin
+    @testset "DesignInterval" begin
         # Note: the inner constructor is tested in types.jl
-        let ds = DesignSpace(:a => (0, 1), :b => (0, 2)),
-            ref = DesignSpace((:a, :b), (0, 0), (1, 2))
+        let ds = DesignInterval(:a => (0, 1), :b => (0, 2)),
+            ref = DesignInterval((:a, :b), (0, 0), (1, 2))
 
             @test all(ref.name .== ds.name)
             @test all(ref.lowerbound .== ds.lowerbound)
@@ -95,7 +95,7 @@ using Kirstine
 
     @testset "mixture" begin
         # mixtures
-        let d = equidistant_design(DesignSpace(:a => (1, 4)), 4),
+        let d = equidistant_design(DesignInterval(:a => (1, 4)), 4),
             dirac = one_point_design([5]),
             dirac2d = one_point_design([5, 6]),
             mix = mixture(0.2, dirac, d)
@@ -140,7 +140,7 @@ using Kirstine
 
     @testset "simplify_merge" begin
         let d = DesignMeasure([0.3, 0.1, 0.6], [[1, 1], [5, 1], [3, 10]]),
-            ds = DesignSpace(:a => (0, 100), :b => (1, 100)),
+            ds = DesignInterval(:a => (0, 100), :b => (1, 100)),
             s = simplify_merge(d, ds, 0.05),
             ref = DesignMeasure([0.4, 0.6], [[2, 1], [3, 10]])
 
@@ -151,7 +151,7 @@ using Kirstine
 
         # One-point-designs should be returned as an unchanged copy.
         let o = one_point_design([42]),
-            ds = DesignSpace(:a => (0, 100), :b => (1, 100)),
+            ds = DesignInterval(:a => (0, 100), :b => (1, 100)),
             o_simp = simplify_merge(o, ds, 0.05)
 
             @test o !== o_simp
@@ -186,18 +186,21 @@ using Kirstine
     end
 
     # abstract point methods: randomization with fixed weights and/or points
-    @testset "randomize!" begin
-        let ds = DesignSpace(:a => (0, 1)),
+    @testset "ap_random_point!" begin
+        let ds = DesignInterval(:a => (0, 1)),
             d = DesignMeasure([0.1, 0.42, 0.48], [[1], [4.2], [3]]),
             fw1 = [false, true, false],
             fp1 = fill(false, 3),
-            r1 = Kirstine.randomize!(deepcopy(d), (ds, fw1, fp1)),
+            c1 = Kirstine.DesignConstraints(ds, fw1, fp1),
+            r1 = Kirstine.ap_random_point!(deepcopy(d), c1),
             fw2 = fill(false, 3),
             fp2 = [false, true, false],
-            r2 = Kirstine.randomize!(deepcopy(d), (ds, fw2, fp2)),
+            c2 = Kirstine.DesignConstraints(ds, fw2, fp2),
+            r2 = Kirstine.ap_random_point!(deepcopy(d), c2),
             fw3 = [false, false, true],
             fp3 = [false, false, true],
-            r3 = Kirstine.randomize!(deepcopy(d), (ds, fw3, fp3))
+            c3 = Kirstine.DesignConstraints(ds, fw3, fp3),
+            r3 = Kirstine.ap_random_point!(deepcopy(d), c3)
 
             @test r1.weight[2] == d.weight[2]
             @test all(r1.weight[[1, 3]] .!= d.weight[[1, 3]])

@@ -61,11 +61,11 @@ function Kirstine.update_model_covariate!(c::TPCModCovariate, dp, m::TPCMod, cp:
 end
 ```
 
-Our design space extends from `0` to `48` hours after administration of the drug.
+Our design interval extends from `0` to `48` hours after administration of the drug.
 After we instantiate a model, we have to specify our prior knowledge.
 
 ```@example main
-ds = DesignSpace(:time => [0, 48])
+ds = DesignInterval(:time => [0, 48])
 m = TPCMod(1)
 cp = Copy()
 dc = DOptimality()

@@ -9,6 +9,30 @@ include("example-compartment.jl")
 
 @testset "design-common.jl" begin
     # helpers
+    @testset "DesignConstraints" begin
+        let dc = DOptimality(),
+            ds = DesignInterval(:dose => (0, 10)),
+            d = equidistant_design(ds, 3),
+            dcon = Kirstine.DesignConstraints,
+            c = dcon(d, ds, [2], [3])
+
+            # Trigger erros for out-of-range weight / designpoint indices.
+            @test_throws "between 1 and 3" dcon(d, ds, [0], Int64[])
+            @test_throws "between 1 and 3" dcon(d, ds, [4], Int64[])
+            @test_throws "between 1 and 3" dcon(d, ds, Int64[], [-1])
+            @test_throws "between 1 and 3" dcon(d, ds, Int64[], [5])
+            # If only one weight index is not given as fixed, it is still implicitly fixed
+            # because of the simplex constraint. In this case we want to have it fixed
+            # explicitly.
+            @test_logs(
+                (:info, "explicitly fixing implicitly fixed weight"),
+                dcon(d, ds, [1, 3], Int64[])
+            )
+            @test c.fixw == [false, true, false]
+            @test c.fixp == [false, false, true]
+        end
+    end
+
     @testset "tr_prod" begin
         let A = reshape(collect(1:9), 3, 3),
             B = reshape(collect(11:19), 3, 3),
@@ -93,7 +117,7 @@ include("example-compartment.jl")
             m = EmaxModel(1),
             cp = CopyDose(),
             pk = DiscretePrior((e0 = 1, emax = 10, ec50 = 5)),
-            ds = DesignSpace(:dose => (0, 10)),
+            ds = DesignInterval(:dose => (0, 10)),
             d = one_point_design([5])
 
             # no explicit inversion
@@ -109,7 +133,7 @@ include("example-compartment.jl")
             cp = CopyDose(),
             p1 = (e0 = 1, emax = 10, ec50 = 5),
             pk1 = DiscretePrior(p1),
-            ds = DesignSpace(:dose => (0, 10)),
+            ds = DesignInterval(:dose => (0, 10)),
             # sol is optimal for pk1
             sol = emax_solution(p1, ds),
             a = ds.lowerbound[1],
@@ -129,7 +153,7 @@ include("example-compartment.jl")
         end
 
         # DeltaMethod for Atkinson et al. examples
-        let ds = DesignSpace(:time => [0, 48]),
+        let ds = DesignInterval(:time => [0, 48]),
             g0 = DiscretePrior((a = 4.298, e = 0.05884, s = 21.80)),
             _ = seed!(4711),
             g1 = draw_from_prior(1000, 2),
@@ -177,7 +201,7 @@ include("example-compartment.jl")
             m = EmaxModel(1),
             cp = CopyDose(),
             pk = DiscretePrior((e0 = 1, emax = 10, ec50 = 5)),
-            ds = DesignSpace(:dose => (0, 10)),
+            ds = DesignInterval(:dose => (0, 10)),
             d = one_point_design([5])
 
             # explicit inversions in both cases
@@ -195,7 +219,7 @@ include("example-compartment.jl")
             pk1 = DiscretePrior(p1),
             pk2 = DiscretePrior([0.75, 0.25], [p1, p2]),
             pk3 = DiscretePrior([p1, p2]),
-            ds = DesignSpace(:dose => (0, 10)),
+            ds = DesignInterval(:dose => (0, 10)),
             # sol is optimal for pk1
             sol = emax_solution(p1, ds),
             a = ds.lowerbound[1],
@@ -222,7 +246,7 @@ include("example-compartment.jl")
         end
 
         # DeltaMethod for Atkinson et al. examples
-        let ds = DesignSpace(:time => [0, 48]),
+        let ds = DesignInterval(:time => [0, 48]),
             g0 = DiscretePrior((a = 4.298, e = 0.05884, s = 21.80)),
             _ = seed!(4711),
             m = TPCMod(1),
@@ -260,7 +284,7 @@ include("example-compartment.jl")
             cp = CopyDose(),
             p = (e0 = 1, emax = 10, ec50 = 5),
             pk = DiscretePrior(p),
-            ds = DesignSpace(:dose => (0, 10)),
+            ds = DesignInterval(:dose => (0, 10)),
             sol = emax_solution(p, ds),
             pso = Pso(; iterations = 50, swarmsize = 20),
             optim(; kwargs...) =
@@ -294,10 +318,6 @@ include("example-compartment.jl")
                 rev = true,
             )
 
-            @test_throws "between 1 and 3" optim(fixedweights = [0])
-            @test_throws "between 1 and 3" optim(fixedweights = [4])
-            @test_throws "between 1 and 3" optim(fixedpoints = [-1])
-            @test_throws "between 1 and 3" optim(fixedpoints = [5])
             @test_throws "outside design space" optim(
                 prototype = uniform_design([[0], [20]]),
             )
@@ -314,13 +334,6 @@ include("example-compartment.jl")
                 ),
                 optim(minposdist = 1e-2)
             )
-            # If only one weight index is not given as fixed, it is still imlicitly fixed
-            # because of the simplex constraint. In this case we want to have it fixed
-            # explicitly.
-            @test_logs(
-                (:info, "explicitly fixing implicitly fixed weight"),
-                optim(; prototype = cand, fixedweights = [1, 3])
-            )
         end
 
         # fixed weights and / or points should never change
@@ -331,7 +344,7 @@ include("example-compartment.jl")
             cp = CopyDose(),
             p = (e0 = 1, emax = 10, ec50 = 5),
             pk = DiscretePrior(p),
-            ds = DesignSpace(:dose => (0, 10)),
+            ds = DesignInterval(:dose => (0, 10)),
             pso = Pso(; iterations = 2, swarmsize = 5),
             # this is not the optimal solution
             prototype =
@@ -383,7 +396,7 @@ include("example-compartment.jl")
             cp = CopyDose(),
             p = (e0 = 1, emax = 10, ec50 = 5),
             pk = DiscretePrior(p),
-            ds = DesignSpace(:dose => (0, 10)),
+            ds = DesignInterval(:dose => (0, 10)),
             sol = emax_solution(p, ds),
             od = Pso(; iterations = 50, swarmsize = 100),
             ow = Pso(; iterations = 50, swarmsize = 50),

@@ -4,7 +4,7 @@ function optimize(
     optimizer::Optimizer,
     f, # x<:AbstractPoint -> Float64
     prototypes::AbstractVector{<:AbstractPoint},
-    constraints;
+    constraints::AbstractConstraints;
     trace_state = false,
 )
     time_start = time()

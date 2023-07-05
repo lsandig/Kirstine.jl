@@ -64,28 +64,11 @@ function optimize_design(
     trace_state = false,
     sargs...,
 )
-    check_compatible(prototype, ds)
+    constraints = DesignConstraints(prototype, ds, fixedweights, fixedpoints)
     tc = precalculate_trafo_constants(trafo, pk)
     wm = WorkMatrices(unit_length(m), parameter_dimension(pk), codomain_dimension(tc))
     c = allocate_initialize_covariates(prototype, m, cp)
     f = d -> objective!(wm, c, dc, d, m, cp, pk, tc, na)
-    K = length(c)
-    # set up constraints
-    if any(fixedweights .< 1) || any(fixedweights .> K)
-        error("indices for fixed weights must be between 1 and $K")
-    end
-    if any(fixedpoints .< 1) || any(fixedpoints .> K)
-        error("indices for fixed points must be between 1 and $K")
-    end
-    fixw = [k in fixedweights for k in 1:K]
-    fixp = [k in fixedpoints for k in 1:K]
-    # Fixing all weights but one is equivalent to fixing them all. For
-    # numerical stability it is better to explicitly fix them all.
-    if count(fixw) == K - 1
-        @info "explicitly fixing implicitly fixed weight"
-        fixw .= true
-    end
-    constraints = (ds, fixw, fixp)
     or = optimize(optimizer, f, [prototype], constraints; trace_state = trace_state)
     dopt = sort_designpoints(simplify(or.maximizer, ds, m, cp; sargs...))
     return dopt, or
@@ -153,7 +136,7 @@ function refine_design(
     c = allocate_initialize_covariates(one_point_design(candidate.designpoint[1]), m, cp)
     ors_d = OptimizationResult[]
     ors_w = OptimizationResult[]
-    constraints = (ds, [false], [false])
+    constraints = DesignConstraints(ds, [false], [false])
 
     res = candidate
     for i in 1:steps
@@ -198,6 +181,30 @@ function refine_design(
 end
 
 # == various helper functions == #
+function DesignConstraints(
+    d::DesignMeasure,
+    ds::DesignSpace,
+    fixedweights::AbstractVector{<:Integer},
+    fixedpoints::AbstractVector{<:Integer},
+)
+    check_compatible(d, ds)
+    K = length(weights(d))
+    if any(fixedweights .< 1) || any(fixedweights .> K)
+        error("indices for fixed weights must be between 1 and $K")
+    end
+    if any(fixedpoints .< 1) || any(fixedpoints .> K)
+        error("indices for fixed points must be between 1 and $K")
+    end
+    fixw = [k in fixedweights for k in 1:K]
+    fixp = [k in fixedpoints for k in 1:K]
+    # Fixing all weights but one is equivalent to fixing them all. For
+    # numerical stability it is better to explicitly fix them all.
+    if count(fixw) == K - 1
+        @info "explicitly fixing implicitly fixed weight"
+        fixw .= true
+    end
+    return DesignConstraints(ds, fixw, fixp)
+end
 
 function precalculate_trafo_constants(trafo::Identity, pk::DiscretePrior)
     return TCIdentity(parameter_dimension(pk))

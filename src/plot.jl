@@ -40,7 +40,7 @@ end
     end
 end
 
-@recipe function f(d::DesignMeasure, ds::DesignSpace{2})
+@recipe function f(d::DesignMeasure, ds::DesignInterval{2})
     lb = lowerbound(ds)
     ub = upperbound(ds)
     xguide --> dimnames(ds)[1]
@@ -51,7 +51,7 @@ end
     d
 end
 
-@recipe function f(d::DesignMeasure, ds::DesignSpace{1})
+@recipe function f(d::DesignMeasure, ds::DesignInterval{1})
     lb = lowerbound(ds)
     ub = upperbound(ds)
     xguide --> dimnames(ds)[1]
@@ -63,7 +63,7 @@ end
 struct DerivativePlot{N}
     dc::DesignCriterion
     d::DesignMeasure
-    ds::DesignSpace{N}
+    ds::DesignInterval{N}
     m::NonlinearRegression
     cp::CovariateParameterization
     pk::PriorKnowledge
@@ -120,7 +120,7 @@ end
                            na::NormalApproximation)
 
 Plot the [`gateauxderivative`](@ref) at candidate solution `d` in directions taken from a
-grid over the given [`DesignSpace`](@ref), together with the design points of `d`.
+grid over the given [`DesignInterval`](@ref), together with the design points of `d`.
 
 Currently only implemented for 1- and 2-dimensional design spaces.
 
