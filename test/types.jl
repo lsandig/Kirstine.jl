@@ -2,23 +2,21 @@ module TypesTest
 using Test
 using Kirstine
 
+include("example-testpar.jl")
+
 @testset "types.jl" begin
     @testset "DiscretePrior" begin
         # error handling in constructors
-        @test_throws "must be equal" DiscretePrior([0], [(a = 1, b = 2), (a = 3, b = 4)])
-        @test_throws "non-negative" DiscretePrior([-0.5, 1.5], [(a = 1,), (a = 3,)])
-        @test_throws "sum to one" DiscretePrior([0.5, 1.5], [(a = 1,), (a = 3,)])
-
-        # constructor with default uniform weights
-        let p = DiscretePrior([(a = 1, b = 2), (a = 3, b = 4)])
-            @test p.weight == [0.5, 0.5]
-            @test p.p == [(a = 1, b = 2), (a = 3, b = 4)]
+        let pars = [TestPar2(1, 2), TestPar2(3, 4)]
+            @test_throws "must be equal" DiscretePrior(pars, [0])
+            @test_throws "non-negative" DiscretePrior(pars, [-0.5, 1.5])
+            @test_throws "sum to one" DiscretePrior(pars, [0.5, 1.5])
         end
 
-        # constructor for dirac measure
-        let p = DiscretePrior((a = 1, b = 2))
-            @test p.weight == [1.0]
-            @test p.p == [(a = 1, b = 2)]
+        # constructor with default uniform weights
+        let p = DiscretePrior([TestPar2(1, 2), TestPar2(3, 4)])
+            @test p.weight == [0.5, 0.5]
+            @test p.p == [TestPar2(1, 2), TestPar2(3, 4)]
         end
     end
 

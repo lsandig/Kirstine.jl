@@ -31,29 +31,39 @@ abstract type CovariateParameterization end
 # == package types == #
 
 """
-    PriorKnowledge
+    Parameter
 
-Abstract supertype for structs representing prior knowlege of the model parameters.
+Supertype for [`Model`](@ref) parameters.
+
+A user-defined subtype `P<:Parameter` should have a `dimension(p::P)` method
+which returns the dimension of the associated parameter space.
+"""
+abstract type Parameter end
+
+"""
+    PriorKnowledge{T<:Parameter}
+
+Abstract supertype for structs representing prior knowledge of the model [`Parameter`](@ref).
 
 See also [`DiscretePrior`](@ref).
 """
-abstract type PriorKnowledge end
+abstract type PriorKnowledge{T<:Parameter} end
 
 """
-    DiscretePrior([weights,] p::AbstractVector{T}) where T
+    DiscretePrior(p::AbstractVector{<:Parameter} [, weights])
 
 Represents a sample from a prior distribution, or a discrete prior distribution with finite
 support.
 
 If no `weights` are given, a uniform distribution on the elements of `p` is assumed.
-
-`T` can be any type for which `length(p::T)` can be interpreted as the dimension of the
-parameter space in which `p` lives.
 """
-struct DiscretePrior{T} <: PriorKnowledge
+struct DiscretePrior{T} <: PriorKnowledge{T}
     weight::Vector{Float64}
     p::Vector{T}
-    function DiscretePrior(weights, parameters::AbstractVector{T}) where T
+    function DiscretePrior(
+        parameters::AbstractVector{T},
+        weights = fill(1 / length(parameters), length(parameters)),
+    ) where T<:Parameter
         if length(weights) != length(parameters)
             error("number of weights and parameter values must be equal")
         end
@@ -62,20 +72,6 @@ struct DiscretePrior{T} <: PriorKnowledge
         end
         return new{T}(weights, parameters)
     end
-end
-
-function DiscretePrior(p::AbstractVector{T}) where T
-    n = length(p)
-    return DiscretePrior(fill(1 / n, n), p)
-end
-
-"""
-    DiscretePrior(p::T) where T
-
-Construct a one-point (Dirac) prior distribution at `p`.
-"""
-function DiscretePrior(p::T) where T
-    return DiscretePrior([1.0], [p])
 end
 
 """

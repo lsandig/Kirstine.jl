@@ -16,6 +16,7 @@ using Random: rand, rand!
 using RecipesBase
 
 export @define_scalar_unit_model,
+    @define_vector_parameter,
     Covariate,
     CovariateParameterization,
     DOptimality,
@@ -27,6 +28,7 @@ export @define_scalar_unit_model,
     Identity,
     NonlinearRegression,
     OptimizationResult,
+    Parameter,
     Pso,
     apportion,
     as_matrix,

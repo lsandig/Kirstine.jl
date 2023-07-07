@@ -44,9 +44,10 @@ and the mapping from design variables to model covariates.
 using Kirstine, Plots, Random, Statistics
 
 @define_scalar_unit_model Kirstine TPCMod time
+@define_vector_parameter Kirstine TPCPar a e s
 struct Copy <: CovariateParameterization end
 
-function Kirstine.jacobianmatrix!(jm, m::TPCMod, c::TPCModCovariate, p)
+function Kirstine.jacobianmatrix!(jm, m::TPCMod, c::TPCModCovariate, p::TPCPar)
     A = exp(-p.a * c.time)
     E = exp(-p.e * c.time)
     jm[1, 1] =  A * p.s * c.time
@@ -95,7 +96,7 @@ function draw_from_prior(n, se_factor)
     as = mn[1] .+ se_factor .* se[1] .* (2 .* rand(n) .- 1)
     es = mn[2] .+ se_factor .* se[2] .* (2 .* rand(n) .- 1)
     ss = mn[3] .+ se_factor .* se[3] .* (2 .* rand(n) .- 1)
-    return DiscretePrior(map((a, e, s) -> (a = a, e = e, s = s), as, es, ss))
+    return DiscretePrior(map((a, e, s) -> TPCPar(a = a, e = e, s = s), as, es, ss))
 end
 Random.seed!(4711)
 pk = draw_from_prior(1000, 2)

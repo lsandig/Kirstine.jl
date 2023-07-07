@@ -67,6 +67,20 @@ example_covariate = SigEmaxCovariate(2.5)
 print(example_covariate.dose)
 ```
 
+Similarly, we define a new subtype of [`Parameter`](@ref) with [`@define_vector_parameter`](@ref).
+The parameter struct to go with our model will be called `SigEmaxPar`
+and it will have the four fields `e0`, `emax`, `ed50`, and `h`.
+
+```@example main
+@define_vector_parameter Kirstine SigEmaxPar e0 emax ed50 h
+```
+
+Our newly defined type even has a keyword constructor:
+
+```@example main
+SigEmaxPar(e0 = 1, emax = 1, ed50 = 0.1, h = 3)
+```
+
 Next, we need to define the
 [Jacobian matrix](https://en.wikipedia.org/wiki/Jacobian_matrix_and_determinant)
 of the expected response function ``\mu(x, \theta)``
@@ -93,13 +107,12 @@ for ``x \neq 0``, and the limit
 
 This is translated into Julia code
 by defining a method for the package internal `jacobianmatrix!` function
-that specializes its arguments for our `SigEmax` and `SigEmaxCovariate` types.
+that specializes its arguments for our `SigEmax`, `SigEmaxCovariate`, and `SigEmaxPar` types.
 Its first argument is a pre-allocated `Matrix` of the correct dimension (`(1, 4)` in our case),
 the elements of which we have to overwrite with the partial derivatives.
 
 ```@example main
-# p must be a NamedTuple with elements `e0`, `emax` `ed50`, `h`
-function Kirstine.jacobianmatrix!(jm, m::SigEmax, c::SigEmaxCovariate, p)
+function Kirstine.jacobianmatrix!(jm, m::SigEmax, c::SigEmaxCovariate, p::SigEmaxPar)
     dose_pow_h = c.dose^p.h
     ed50_pow_h = p.ed50^p.h
     A = dose_pow_h / (dose_pow_h + ed50_pow_h)
@@ -154,7 +167,7 @@ dc = DOptimality()
 ds = DesignInterval(:dose => (0, 10))
 mod = SigEmax(1)
 cpar = CopyDose()
-guess = DiscretePrior((e0 = 1, emax = 2, ed50 = 4, h = 5))
+guess = DiscretePrior([SigEmaxPar(e0 = 1, emax = 2, ed50 = 4, h = 5)])
 trafo = Identity()
 na = FisherMatrix()
 nothing # hide
@@ -166,8 +179,6 @@ There are a couple of things to note here:
 - The name of the design interval's single dimension is given by the symbol `:dose`,
   and it can be chosen independently from however we have named the field of our `SigEmaxCovariate`.
   They _do not_ have to be the same.
-- The argument to [`DiscretePrior`](@ref) is a [`NamedTuple`](https://docs.julialang.org/en/v1/base/base/#Core.NamedTuple),
-  and its names correspond to those that we have used in `jacobianmatrix!`.
 - `trafo = Identity()` simply means that we are interested in all elements of the parameter as they are.
 - With choosing an [`FisherMatrix`](@ref) we say
   that we only want to use the likelihood for the approximation of the posterior information matrix,
@@ -300,8 +311,8 @@ The remaining elements of ``\theta`` are as in the previous section.
 [^W97]: James N. Weiss (1997). The hill equation revisited: uses and misuses. The FASEB Journal, 11(11), 835–841. [doi:10.1096/fasebj.11.11.9285481](http://dx.doi.org/10.1096/fasebj.11.11.9285481)
 
 ```@example main
-dpr = DiscretePrior([0.1, 0.3, 0.4, 0.2],
-                    [(e0 = 1, emax = 2, ed50 = 4, h = h) for h in 1:4])
+dpr = DiscretePrior([SigEmaxPar(e0 = 1, emax = 2, ed50 = 4, h = h) for h in 1:4],
+					[0.1, 0.3, 0.4, 0.2])
 nothing # hide
 ```
 
@@ -384,7 +395,7 @@ We enforce some lower bounds on to prevent singular information matrices.
 ```@example main
 Random.seed!(31415)
 sample_mat = max.([0 0.1 1 1], [1 2 4 5] .+ [0.5 0.5 0.5 0.5] .* randn(1000, 4))
-sample = [(e0 = a, emax = b, ed50 = c, h = d) for (a, b, c, d) in eachrow(sample_mat)];
+sample = [SigEmaxPar(e0 = a, emax = b, ed50 = c, h = d) for (a, b, c, d) in eachrow(sample_mat)];
 mcpr = DiscretePrior(sample)
 nothing # hide
 ```

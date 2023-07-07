@@ -12,6 +12,8 @@ function jacobianmatrix! end
 function update_model_covariate! end
 # m -> Real or m -> AbstractMatrix
 function invcov end
+# p::Parameter -> Integer
+function dimension end
 
 # == main interface == #
 
@@ -230,7 +232,7 @@ function precalculate_trafo_constants(trafo::DeltaMethod, pk::DiscretePrior)
 end
 
 function parameter_dimension(pk::DiscretePrior)
-    return length(pk.p[1])
+    return dimension(pk.p[1])
 end
 
 function codomain_dimension(tc::TrafoConstants)
@@ -244,7 +246,7 @@ function informationmatrix!(
     m::NonlinearRegression,
     invcov::Real,
     c::AbstractVector{<:Covariate},
-    p,
+    p::Parameter,
     na::FisherMatrix,
 )
     fill!(nim, 0.0)
@@ -267,11 +269,11 @@ function informationmatrix(
     d::DesignMeasure,
     m::NonlinearRegression,
     cp::CovariateParameterization,
-    p,
+    p::Parameter,
     na::NormalApproximation,
 )
     c = Kirstine.allocate_initialize_covariates(d, m, cp)
-    r = length(p)
+    r = dimension(p)
     mm = unit_length(m)
     jm = zeros(mm, r)
     nim = zeros(r, r)
