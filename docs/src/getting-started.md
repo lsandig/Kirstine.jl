@@ -264,8 +264,7 @@ s2, r2 = optimize_design(pso, dp1;
 nothing # hide
 ```
 
-Here we first specify a `candiate`,
-i.e. our initial guess at a potential solution:
+Here we first specify a `prototype`,
 4 equally spaced doses on the design space `ds`, with uniform weights.
 
 ```@example main
