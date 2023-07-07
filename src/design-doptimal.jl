@@ -47,6 +47,20 @@ end
 # == relative D-efficiency == #
 
 """
+    efficiency(d1::DesignMeasure, d2::DesignMeasure, dp::DesignProblem)
+
+Relative D-efficiency of `d1` to `d2`.
+When `d2` is D-optimal for `dp`, the efficiency is bounded by `1` from above.
+
+!!! note
+
+    This always computes D-efficiency, regardless of the criterion used in `dp`.
+"""
+function efficiency(d1::DesignMeasure, d2::DesignMeasure, dp::DesignProblem)
+    return efficiency(d1, d2, dp.m, dp.cp, dp.pk, dp.trafo, dp.na)
+end
+
+"""
     efficiency(d1::DesignMeasure,
                d2::DesignMeasure,
                m::NonlinearRegression,

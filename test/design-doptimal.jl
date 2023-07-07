@@ -21,6 +21,15 @@ include("example-compartment.jl")
             na = FisherMatrix(),
             t_id = Identity(),
             t_auc = DeltaMethod(Dauc),
+            dp = DesignProblem(;
+                design_criterion = dc,
+                design_space = ds,
+                model = m,
+                covariate_parameterization = cp,
+                prior_knowledge = g0,
+                transformation = t_auc,
+                normal_approximation = na,
+            ),
             # singular locally optimal designs from Table 4
             a3 = DesignMeasure([0.1793] => 0.6062, [3.5671] => 0.3938),
             a4 = DesignMeasure([1.0122] => 1.0),
@@ -45,6 +54,9 @@ include("example-compartment.jl")
             # equal to 1 in the following case, we still want it to be NaN:
             @test isnan(efficiency(a4, a4, m, cp, g0, t_id, na))
             @test isnan(efficiency(a4, a4, m, cp, g0, t_auc, na))
+
+            # DesignProblem wrapper
+            @test efficiency(a6, a7, dp) == efficiency(a6, a7, m, cp, g0, t_auc, na)
         end
     end
 

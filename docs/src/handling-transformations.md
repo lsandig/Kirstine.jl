@@ -185,14 +185,14 @@ the weight of `s_auc` is almost completely placed at its third design point.
 We can also see that `s_auc` is nearly three times as efficient as `s_id` for estimating the AUC:
 
 ```@example main
-efficiency(s_id, s_auc, dp_auc.m, dp_auc.cp, dp_auc.pk, dp_auc.trafo, dp_auc.na)
+efficiency(s_id, s_auc, dp_auc)
 ```
 
 Note that this relation is not necessarily symmetric:
 `s_id` is five times as efficient as `s_auc` for estimating ``\theta``.
 
 ```@example main
-efficiency(s_auc, s_id, dp_id.m, dp_id.cp, dp_id.pk, dp_id.trafo, dp_id.na)
+efficiency(s_auc, s_id, dp_id)
 ```
 
 ### Time to maximum concentration
@@ -308,7 +308,7 @@ Finally we compare all pairwise efficiencies (solutions in rows, transformations
 ```@example main
 solutions = [s_id, s_auc, s_ttm, s_cmax, s_both]
 problems = [dp_id, dp_auc, dp_ttm, dp_cmax, dp_both]
-map(Iterators.product(solutions, zip(solutions, problems))) do (s1, (s2, pr))
-	efficiency(s1, s2, pr.m, pr.cp, pr.pk, pr.trafo, pr.na)
+map(Iterators.product(solutions, zip(solutions, problems))) do (s1, (s2, dp))
+	efficiency(s1, s2, dp)
 end
 ```

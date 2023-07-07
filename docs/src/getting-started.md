@@ -284,7 +284,7 @@ However, the solutions differ more in terms of aesthetics than in terms of perfo
 as their relative [`efficiency`](@ref) clearly shows:
 
 ```@example main
-efficiency(s1, s2, dp1.m, dp1.cp, dp1.pk, dp1.trafo, dp1.na)
+efficiency(s1, s2, dp1)
 ```
 
 ## Bayesian Optimal Design
@@ -468,9 +468,9 @@ This time, the efficiency gains are greater,
 especially when going from `s5` to `s6`.
 
 ```@example main
-efficiency(s6, s5, dp3.m, dp3.cp, dp3.pk, dp3.trafo, dp3.na)
+efficiency(s6, s5, dp3)
 ```
 
 ```@example main
-efficiency(s7, s6, dp3.m, dp3.cp, dp3.pk, dp3.trafo, dp3.na)
+efficiency(s7, s6, dp3)
 ```
