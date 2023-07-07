@@ -167,7 +167,7 @@ dc = DOptimality()
 ds = DesignInterval(:dose => (0, 10))
 mod = SigEmax(1)
 cpar = CopyDose()
-guess = DiscretePrior(SigEmaxPar(e0 = 1, emax = 2, ed50 = 4, h = 5))
+guess = DiscretePrior([SigEmaxPar(e0 = 1, emax = 2, ed50 = 4, h = 5)])
 trafo = Identity()
 na = FisherMatrix()
 nothing # hide

@@ -75,7 +75,7 @@ include("example-compartment.jl")
         # Note: we have to recreate the circumstances in which apply_transformation! is called:
         # nim is allowed to be only upper triangular, and is allowed to be overwritten. Hence we
         # must use deepcopys, and Symmetric wrappers where necessary.
-        let pk = DiscretePrior(TestPar3(1, 2, 3)),
+        let pk = DiscretePrior([TestPar3(1, 2, 3)]),
             tid = DeltaMethod(p -> diagm(ones(3))),
             ctid = Kirstine.precalculate_trafo_constants(tid, pk),
             tsc = DeltaMethod(p -> diagm([0.5, 2.0, 4.0])),
@@ -117,7 +117,7 @@ include("example-compartment.jl")
             t2 = DeltaMethod(p -> diagm([1, 1, 1])),
             m = EmaxModel(1),
             cp = CopyDose(),
-            pk = DiscretePrior(EmaxPar(; e0 = 1, emax = 10, ec50 = 5)),
+            pk = DiscretePrior([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
             ds = DesignInterval(:dose => (0, 10)),
             d = one_point_design([5])
 
@@ -133,7 +133,7 @@ include("example-compartment.jl")
             m = EmaxModel(1),
             cp = CopyDose(),
             p1 = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            pk1 = DiscretePrior(p1),
+            pk1 = DiscretePrior([p1]),
             ds = DesignInterval(:dose => (0, 10)),
             # sol is optimal for pk1
             sol = emax_solution(p1, ds),
@@ -155,7 +155,7 @@ include("example-compartment.jl")
 
         # DeltaMethod for Atkinson et al. examples
         let ds = DesignInterval(:time => [0, 48]),
-            g0 = DiscretePrior(TPCPar(; a = 4.298, e = 0.05884, s = 21.80)),
+            g0 = DiscretePrior([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
             _ = seed!(4711),
             g1 = draw_from_prior(1000, 2),
             m = TPCMod(1),
@@ -201,7 +201,7 @@ include("example-compartment.jl")
             t2 = DeltaMethod(p -> diagm([1, 1, 1])),
             m = EmaxModel(1),
             cp = CopyDose(),
-            pk = DiscretePrior(EmaxPar(; e0 = 1, emax = 10, ec50 = 5)),
+            pk = DiscretePrior([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
             ds = DesignInterval(:dose => (0, 10)),
             d = one_point_design([5])
 
@@ -217,7 +217,7 @@ include("example-compartment.jl")
             cp = CopyDose(),
             p1 = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
             p2 = EmaxPar(; e0 = 5, emax = -3, ec50 = 2),
-            pk1 = DiscretePrior(p1),
+            pk1 = DiscretePrior([p1]),
             pk2 = DiscretePrior([0.75, 0.25], [p1, p2]),
             pk3 = DiscretePrior([p1, p2]),
             ds = DesignInterval(:dose => (0, 10)),
@@ -248,7 +248,7 @@ include("example-compartment.jl")
 
         # DeltaMethod for Atkinson et al. examples
         let ds = DesignInterval(:time => [0, 48]),
-            g0 = DiscretePrior(TPCPar(; a = 4.298, e = 0.05884, s = 21.80)),
+            g0 = DiscretePrior([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
             _ = seed!(4711),
             m = TPCMod(1),
             cp = CopyTime(),
@@ -284,7 +284,7 @@ include("example-compartment.jl")
             m = EmaxModel(1),
             cp = CopyDose(),
             p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            pk = DiscretePrior(p),
+            pk = DiscretePrior([p]),
             ds = DesignInterval(:dose => (0, 10)),
             sol = emax_solution(p, ds),
             pso = Pso(; iterations = 50, swarmsize = 20),
@@ -344,7 +344,7 @@ include("example-compartment.jl")
             m = EmaxModel(1),
             cp = CopyDose(),
             p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            pk = DiscretePrior(p),
+            pk = DiscretePrior([p]),
             ds = DesignInterval(:dose => (0, 10)),
             pso = Pso(; iterations = 2, swarmsize = 5),
             # this is not the optimal solution
@@ -396,7 +396,7 @@ include("example-compartment.jl")
             m = EmaxModel(1),
             cp = CopyDose(),
             p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            pk = DiscretePrior(p),
+            pk = DiscretePrior([p]),
             ds = DesignInterval(:dose => (0, 10)),
             sol = emax_solution(p, ds),
             od = Pso(; iterations = 50, swarmsize = 100),

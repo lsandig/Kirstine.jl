@@ -18,12 +18,6 @@ include("example-testpar.jl")
             @test p.weight == [0.5, 0.5]
             @test p.p == [TestPar2(1, 2), TestPar2(3, 4)]
         end
-
-        # constructor for dirac measure
-        let p = DiscretePrior(TestPar2(1, 2))
-            @test p.weight == [1.0]
-            @test p.p == [TestPar2(1, 2)]
-        end
     end
 
     @testset "DesignMeasure" begin

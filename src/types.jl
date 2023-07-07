@@ -77,15 +77,6 @@ function DiscretePrior(p::AbstractVector{<:Parameter})
 end
 
 """
-    DiscretePrior(p::Parameter)
-
-Construct a one-point (Dirac) prior distribution at `p`.
-"""
-function DiscretePrior(p::Parameter)
-    return DiscretePrior([1.0], [p])
-end
-
-"""
     NormalApproximation
 
 Abstract supertype for different possible normal approximations to the posterior

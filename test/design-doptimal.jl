@@ -12,7 +12,7 @@ include("example-compartment.jl")
         let ds = DesignInterval(:time => [0, 48]),
             _ = seed!(4711),
             # prior guess for locally optimal design
-            g0 = DiscretePrior(TPCPar(; a = 4.298, e = 0.05884, s = 21.80)),
+            g0 = DiscretePrior([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
             # a draw from the strongly informative prior
             g1 = draw_from_prior(1000, 2),
             m = TPCMod(1),
