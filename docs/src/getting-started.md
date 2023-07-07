@@ -158,18 +158,17 @@ end
 In this section we look at locally D-optimal designs,
 where we specify a single "best guess" at the unknown parameter ``\theta``.
 
-This is how we specify a design problem with
+This is how we specify a [`DesignProblem`](@ref) with
 the design space ``[0, 10]``,
 ``\sigma^2=1``,
 and our prior guess from above.
 ```@example main
-dc = DOptimality()
 ds = DesignInterval(:dose => (0, 10))
-mod = SigEmax(1)
-cpar = CopyDose()
-guess = DiscretePrior([SigEmaxPar(e0 = 1, emax = 2, ed50 = 4, h = 5)])
-trafo = Identity()
-na = FisherMatrix()
+dp1 = DesignProblem(design_criterion = DOptimality(),
+                    design_space = ds,
+                    model = SigEmax(1),
+                    covariate_parameterization = CopyDose(),
+                    prior_knowledge = DiscretePrior([SigEmaxPar(e0 = 1, emax = 2, ed50 = 4, h = 5)]))
 nothing # hide
 ```
 There are a couple of things to note here:
@@ -179,10 +178,8 @@ There are a couple of things to note here:
 - The name of the design interval's single dimension is given by the symbol `:dose`,
   and it can be chosen independently from however we have named the field of our `SigEmaxCovariate`.
   They _do not_ have to be the same.
-- `trafo = Identity()` simply means that we are interested in all elements of the parameter as they are.
-- With choosing an [`FisherMatrix`](@ref) we say
-  that we only want to use the likelihood for the approximation of the posterior information matrix,
-  without including any additional regularization.
+- There are two additional arguments to `DesignProblem`, namely `trafo` and `normal_approximation`.
+  Their default values are just what we want in this introductory.
 
 We will use [particle swarm optimization](https://en.wikipedia.org/wiki/Particle_swarm_optimization) to do the actual work:
 
@@ -195,7 +192,7 @@ Now we can call [`optimize_design`](@ref):
 ```@example main
 import Random
 Random.seed!(4711)
-s1, r1 = optimize_design(pso, dc, ds, mod, cpar, guess, trafo, na)
+s1, r1 = optimize_design(pso, dp1)
 nothing # hide
 ```
 It returns two objects:
@@ -224,7 +221,7 @@ should be non-positive.
 
 ```@example main
 using Plots
-plot_gateauxderivative(dc, s1, ds, mod, cpar, guess, trafo, na; legend = :outerright)
+plot_gateauxderivative(s1, dp1; legend = :outerright)
 savefig(ans, "getting-started-pg1.png"); nothing # hide
 ```
 
@@ -261,7 +258,7 @@ We can pass this information to [`optimize_design`](@ref):
 
 ```@example main
 Random.seed!(4711)
-s2, r2 = optimize_design(pso, dc, ds, mod, cpar, guess, trafo, na;
+s2, r2 = optimize_design(pso, dp1;
                          prototype = equidistant_design(ds, 4),
                          fixedweights = 1:4, fixedpoints = [1, 4])
 nothing # hide
@@ -287,7 +284,7 @@ However, the solutions differ more in terms of aesthetics than in terms of perfo
 as their relative [`efficiency`](@ref) clearly shows:
 
 ```@example main
-efficiency(s1, s2, mod, cpar, guess, trafo, na)
+efficiency(s1, s2, dp1)
 ```
 
 ## Bayesian Optimal Design
@@ -310,9 +307,15 @@ The remaining elements of ``\theta`` are as in the previous section.
 
 [^W97]: James N. Weiss (1997). The hill equation revisited: uses and misuses. The FASEB Journal, 11(11), 835–841. [doi:10.1096/fasebj.11.11.9285481](http://dx.doi.org/10.1096/fasebj.11.11.9285481)
 
+Compared to the locally optimal design problem, only the prior knowledge changes:
 ```@example main
 dpr = DiscretePrior([SigEmaxPar(e0 = 1, emax = 2, ed50 = 4, h = h) for h in 1:4],
-					[0.1, 0.3, 0.4, 0.2])
+                    [0.1, 0.3, 0.4, 0.2])
+dp2 = DesignProblem(design_criterion = dp1.dc,
+                    design_space = dp1.ds,
+                    model = dp1.m,
+                    covariate_parameterization = dp1.cp,
+                    prior_knowledge = dpr)
 nothing # hide
 ```
 
@@ -323,8 +326,8 @@ and also increase the number of iterations and the swarm size.
 ```@example main
 pso = Pso(iterations = 100, swarmsize = 50)
 Random.seed!(31415)
-s3, r3 = optimize_design(pso, dc, ds, mod, cpar, dpr, trafo, na; prototype = equidistant_design(ds, 10))
-plot_gateauxderivative(dc, s3, ds, mod, cpar, dpr, trafo, na)
+s3, r3 = optimize_design(pso, dp2; prototype = equidistant_design(ds, 10))
+plot_gateauxderivative(s3, dp2)
 savefig(ans, "getting-started-pg3.png"); nothing # hide
 ```
 
@@ -358,9 +361,9 @@ By setting `minweight=1e-4` and `mindist=1e-3`, we can simplify the result more 
 
 ```@example main
 Random.seed!(31415)
-s4, r4 = optimize_design(pso, dc, ds, mod, cpar, dpr, trafo, na;
+s4, r4 = optimize_design(pso, dp2;
                          prototype = equidistant_design(ds, 10), minweight = 1e-4, mindist = 1e-3);
-plot_gateauxderivative(dc, s4, ds, mod, cpar, dpr, trafo, na)
+plot_gateauxderivative(s4, dp2)
 savefig(ans, "getting-started-pg4.png"); nothing # hide
 ```
 
@@ -397,6 +400,12 @@ Random.seed!(31415)
 sample_mat = max.([0 0.1 1 1], [1 2 4 5] .+ [0.5 0.5 0.5 0.5] .* randn(1000, 4))
 sample = [SigEmaxPar(e0 = a, emax = b, ed50 = c, h = d) for (a, b, c, d) in eachrow(sample_mat)];
 mcpr = DiscretePrior(sample)
+
+dp3 = DesignProblem(design_criterion = dp1.dc,
+                    design_space = dp1.ds,
+                    model = dp1.m,
+                    covariate_parameterization = dp1.cp,
+                    prior_knowledge = mcpr)
 nothing # hide
 ```
 
@@ -407,11 +416,10 @@ yet `s5` is still far from the solution.
 ```@example main
 Random.seed!(31415)
 pso = Pso(iterations = 25, swarmsize = 50)
-s5, r5 = optimize_design(pso, dc, ds, mod, cpar, mcpr, trafo, na;
+s5, r5 = optimize_design(pso, dp3;
                          prototype = equidistant_design(ds, 6), fixedpoints = [1, 6],
                          minweight = 1e-4, mindist = 1e-3)
-plot(plot(r5),
-     plot_gateauxderivative(dc, s5, ds, mod, cpar, mcpr, trafo, na))
+plot(plot(r5), plot_gateauxderivative(s5, dp3))
 savefig(ans, "getting-started-pg5-pd5.png") ; nothing # hide
 ```
 
@@ -433,9 +441,8 @@ Now we use 5 refinement iterations:
 psod = Pso(iterations = 10, swarmsize = 50)
 psow = Pso(iterations = 15, swarmsize = 25)
 Random.seed!(31415)
-s6, r6d, r6w = refine_design(psod, psow, 5, s5, dc, ds, mod, cpar, mcpr, trafo, na)
-plot(plot(r6w),
-     plot_gateauxderivative(dc, s6, ds, mod, cpar, mcpr, trafo, na))
+s6, r6d, r6w = refine_design(psod, psow, 5, s5, dp2)
+plot(plot(r6w), plot_gateauxderivative(s6, dp3))
 savefig(ans, "getting-started-pg6-pd6.png") ; nothing # hide
 ```
 
@@ -449,10 +456,9 @@ so that they can be merged more easily.
 ```@example main
 pso = Pso(iterations = 150, swarmsize = 50)
 Random.seed!(31415)
-s7, r7 = optimize_design(pso, dc, ds, mod, cpar, mcpr, trafo, na; prototype = s6,
-                         minweight = 1e-4, mindist = 5e-3,)
-plot(plot(r7),
-     plot_gateauxderivative(dc, s7, ds, mod, cpar, mcpr, trafo, na))
+s7, r7 = optimize_design(pso, dp3;
+                         prototype = s6, minweight = 1e-4, mindist = 5e-3)
+plot(plot(r7), plot_gateauxderivative(s7, dp3))
 savefig(ans, "getting-started-pg7-pd7.png") ; nothing # hide
 ```
 
@@ -462,9 +468,9 @@ This time, the efficiency gains are greater,
 especially when going from `s5` to `s6`.
 
 ```@example main
-efficiency(s6, s5, mod, cpar, mcpr, trafo, na)
+efficiency(s6, s5, dp3)
 ```
 
 ```@example main
-efficiency(s7, s6, mod, cpar, mcpr, trafo, na)
+efficiency(s7, s6, dp3)
 ```

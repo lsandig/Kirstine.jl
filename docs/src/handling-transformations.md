@@ -62,18 +62,6 @@ function Kirstine.update_model_covariate!(c::TPCModCovariate, dp, m::TPCMod, cp:
 end
 ```
 
-Our design interval extends from `0` to `48` hours after administration of the drug.
-After we instantiate a model, we have to specify our prior knowledge.
-
-```@example main
-ds = DesignInterval(:time => [0, 48])
-m = TPCMod(1)
-cp = Copy()
-dc = DOptimality()
-na = FisherMatrix()
-pso = Pso(swarmsize = 50, iterations = 100)
-```
-
 In this vignette we will only look at Bayesian optimal designs
 because locally optimal designs for scalar ``T(\theta)`` usually don't exist
 due to their information matrices becoming singular.
@@ -98,8 +86,29 @@ function draw_from_prior(n, se_factor)
     ss = mn[3] .+ se_factor .* se[3] .* (2 .* rand(n) .- 1)
     return DiscretePrior(map((a, e, s) -> TPCPar(a = a, e = e, s = s), as, es, ss))
 end
-Random.seed!(4711)
-pk = draw_from_prior(1000, 2)
+nothing # hide
+```
+
+In this vignette we will focus on the effect of different transformations.
+The following helper function lets us specify the parts of the design problem that do not change just once.
+We fix the seed so that different transformations do not accidentally use different prior samples.
+Our design interval extends from `0` to `48` hours after administration of the drug.
+```@example main
+function dp_for_trafo(trafo)
+    Random.seed!(4711)
+    DesignProblem(design_space = DesignInterval(:time => [0, 48]),
+                  design_criterion = DOptimality(),
+                  covariate_parameterization = Copy(),
+                  model = TPCMod(1),
+                  prior_knowledge = draw_from_prior(1000, 2),
+                  transformation = trafo)
+end
+nothing # hide
+```
+
+In all subsequent examples we will use identical settings for the particle swarm optimizer.
+```@example main
+pso = Pso(swarmsize = 50, iterations = 100)
 nothing # hide
 ```
 
@@ -109,9 +118,9 @@ In order to have a design to compare other solutions against,
 we first determine the Bayesian D-optimal design for the whole parameter ``\theta``.
 
 ```@example main
-t_id = Identity()
+dp_id = dp_for_trafo(Identity())
 Random.seed!(1357)
-s_id, r_id = optimize_design(pso, dc, ds, m, cp, pk, t_id, na)
+s_id, r_id = optimize_design(pso, dp_id)
 nothing # hide
 ```
 
@@ -120,7 +129,7 @@ s_id
 ```
 
 ```@example main
-plot_gateauxderivative(dc, s_id, ds, m, cp, pk, t_id, na)
+plot_gateauxderivative(s_id, dp_id)
 savefig(ans, "handling-transformations-gd-id.png"); nothing # hide
 ```
 
@@ -157,14 +166,14 @@ The only difference to the previous call of [`optimize_design`](@ref)
 is that we now use a [`DeltaMethod`](@ref) object wrapped around the Jacobian matrix function
 instead of the identity transformation.
 ```@example main
-t_auc = DeltaMethod(Dauc)
+dp_auc = dp_for_trafo(DeltaMethod(Dauc))
 Random.seed!(1357)
-s_auc, r_auc = optimize_design(pso, dc, ds, m, cp, pk, t_auc, na)
+s_auc, r_auc = optimize_design(pso, dp_auc)
 s_auc
 ```
 
 ```@example main
-plot_gateauxderivative(dc, s_auc, ds, m, cp, pk, t_auc, na)
+plot_gateauxderivative(s_auc, dp_auc)
 savefig(ans, "handling-transformations-gd-auc.png"); nothing # hide
 ```
 
@@ -176,14 +185,14 @@ the weight of `s_auc` is almost completely placed at its third design point.
 We can also see that `s_auc` is nearly three times as efficient as `s_id` for estimating the AUC:
 
 ```@example main
-efficiency(s_id, s_auc, m, cp, pk, t_auc, na)
+efficiency(s_id, s_auc, dp_auc)
 ```
 
 Note that this relation is not necessarily symmetric:
 `s_id` is five times as efficient as `s_auc` for estimating ``\theta``.
 
 ```@example main
-efficiency(s_auc, s_id, m, cp, pk, t_id, na)
+efficiency(s_auc, s_id, dp_id)
 ```
 
 ### Time to maximum concentration
@@ -211,14 +220,14 @@ nothing # hide
 ```
 
 ```@example main
-t_ttm = DeltaMethod(Dttm)
+dp_ttm = dp_for_trafo(DeltaMethod(Dttm))
 Random.seed!(1357)
-s_ttm, r_ttm = optimize_design(pso, dc, ds, m, cp, pk, t_ttm, na)
+s_ttm, r_ttm = optimize_design(pso, dp_ttm)
 s_ttm
 ```
 
 ```@example main
-plot_gateauxderivative(dc, s_ttm, ds, m, cp, pk, t_ttm, na)
+plot_gateauxderivative(s_ttm, dp_ttm)
 savefig(ans, "handling-transformations-gd-ttm.png"); nothing # hide
 ```
 
@@ -249,14 +258,14 @@ nothing # hide
 ```
 
 ```@example main
-t_cmax = DeltaMethod(Dcmax)
+dp_cmax = dp_for_trafo(DeltaMethod(Dcmax))
 Random.seed!(1357)
-s_cmax, r_cmax = optimize_design(pso, dc, ds, m, cp, pk, t_cmax, na)
+s_cmax, r_cmax = optimize_design(pso, dp_cmax)
 s_cmax
 ```
 
 ```@example main
-plot_gateauxderivative(dc, s_cmax, ds, m, cp, pk, t_cmax, na)
+plot_gateauxderivative(s_cmax, dp_cmax)
 savefig(ans, "handling-transformations-gd-cmax.png"); nothing # hide
 ```
 
@@ -267,7 +276,7 @@ The location of this point makes intuitive sense,
 considering the prior expected time to maximum concentration:
 
 ```@example main
-mean(ttm, pk.p)
+mean(ttm, dp_cmax.pk.p)
 ```
 
 ## Multivariate functions of the parameter
@@ -279,14 +288,14 @@ we now only need to concatenate them vertically.
 
 ```@example main
 Dboth(p) = [Dttm(p); Dcmax(p)]
-t_both = DeltaMethod(Dboth)
+dp_both = dp_for_trafo(DeltaMethod(Dboth))
 Random.seed!(1357)
-s_both, r_both = optimize_design(pso, dc, ds, m, cp, pk, t_both, na)
+s_both, r_both = optimize_design(pso, dp_both)
 s_both
 ```
 
 ```@example main
-plot_gateauxderivative(dc, s_both, ds, m, cp, pk, t_both, na)
+plot_gateauxderivative(s_both, dp_both)
 savefig(ans, "handling-transformations-gd-both.png"); nothing # hide
 ```
 
@@ -298,8 +307,8 @@ Finally we compare all pairwise efficiencies (solutions in rows, transformations
 
 ```@example main
 solutions = [s_id, s_auc, s_ttm, s_cmax, s_both]
-trafos = [t_id, t_auc, t_ttm, t_cmax, t_both]
-map(Iterators.product(solutions, zip(solutions, trafos))) do (s1, (s2, t))
-	efficiency(s1, s2, m, cp, pk, t, na)
+problems = [dp_id, dp_auc, dp_ttm, dp_cmax, dp_both]
+map(Iterators.product(solutions, zip(solutions, problems))) do (s1, (s2, dp))
+	efficiency(s1, s2, dp)
 end
 ```
