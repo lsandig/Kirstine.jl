@@ -394,20 +394,21 @@ include("example-compartment.jl")
 
     @testset "refine_design" begin
         # Does refinement work?
-        let dc = DOptimality(),
-            na = FisherMatrix(),
-            trafo = Identity(),
-            m = EmaxModel(1),
-            cp = CopyDose(),
-            p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            pk = DiscretePrior([p]),
+        let p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
             ds = DesignInterval(:dose => (0, 10)),
             sol = emax_solution(p, ds),
             od = Pso(; iterations = 50, swarmsize = 100),
             ow = Pso(; iterations = 50, swarmsize = 50),
             _ = seed!(1234),
             cand = uniform_design([[[5]]; designpoints(sol)[[1, 3]]]),
-            (r, rd, rw) = refine_design(od, ow, 3, cand, dc, ds, m, cp, pk, trafo, na)
+            dp = DesignProblem(design_criterion = DOptimality(),
+                               normal_approximation = FisherMatrix(),
+                               transformation = Identity(),
+                               model = EmaxModel(1),
+                               covariate_parameterization = CopyDose(),
+                               prior_knowledge = DiscretePrior([p]),
+                               design_space = ds),
+            (r, rd, rw) = refine_design(od, ow, 3, cand, dp)
 
             @test abs(designpoints(r)[2][1] - designpoints(sol)[2][1]) <
                   abs(designpoints(cand)[1][1] - designpoints(sol)[2][1])
@@ -421,7 +422,7 @@ include("example-compartment.jl")
             # unequal weights. Then we do one step of refinement and examine the (unsorted!)
             # results.
             near_sol = DesignMeasure([0.6, 0.3, 0.1], designpoints(sol))
-            (s, sd, sw) = refine_design(od, ow, 1, near_sol, dc, ds, m, cp, pk, trafo, na)
+            (s, sd, sw) = refine_design(od, ow, 1, near_sol, dp)
             @test length(weights(sw[1].maximizer)) == 3
             @test designpoints(sw[1].maximizer)[1] == designpoints(near_sol)[3]
         end

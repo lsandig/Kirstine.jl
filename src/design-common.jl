@@ -69,13 +69,7 @@ end
                   ow::Optimizer,
                   steps::Int64,
                   candidate::DesignMeasure,
-                  dc::DesignCriterion,
-                  ds::DesignSpace,
-                  m::NonlinearRegression,
-                  cp::CovariateParameterization,
-                  pk::PriorKnowledge,
-                  trafo::Transformation,
-                  na::NormalApproximation;
+                  dp::DesignProblem;
                   trace_state = false,
                   sargs...)
 
@@ -110,31 +104,25 @@ function refine_design(
     ow::Optimizer,
     steps::Int64,
     candidate::DesignMeasure,
-    dc::DesignCriterion,
-    ds::DesignSpace,
-    m::NonlinearRegression,
-    cp::CovariateParameterization,
-    pk::PriorKnowledge,
-    trafo::Transformation,
-    na::NormalApproximation;
+    dp::DesignProblem;
     trace_state = false,
     sargs...,
 )
-    check_compatible(candidate, ds)
-    tc = precalculate_trafo_constants(trafo, pk)
-    wm = WorkMatrices(unit_length(m), parameter_dimension(pk), codomain_dimension(tc))
-    c = allocate_initialize_covariates(one_point_design(candidate.designpoint[1]), m, cp)
+    check_compatible(candidate, dp.ds)
+    tc = precalculate_trafo_constants(dp.trafo, dp.pk)
+    wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
+    c = allocate_initialize_covariates(one_point_design(candidate.designpoint[1]), dp.m, dp.cp)
     ors_d = OptimizationResult[]
     ors_w = OptimizationResult[]
-    constraints = DesignConstraints(ds, [false], [false])
+    constraints = DesignConstraints(dp.ds, [false], [false])
 
     res = candidate
     for i in 1:steps
-        res = simplify(res, ds, m, cp; sargs...)
+        res = simplify(res, dp.ds, dp.m, dp.cp; sargs...)
         dir_prot = map(one_point_design, designpoints(simplify_drop(res, 0)))
-        gconst = precalculate_gateaux_constants(dc, res, m, cp, pk, tc, na)
+        gconst = precalculate_gateaux_constants(dp.dc, res, dp.m, dp.cp, dp.pk, tc, dp.na)
         # find direction of steepest ascent
-        gd(d) = gateauxderivative!(wm, c, gconst, d, m, cp, pk, na)
+        gd(d) = gateauxderivative!(wm, c, gconst, d, dp.m, dp.cp, dp.pk, dp.na)
         or_gd = optimize(od, gd, dir_prot, constraints; trace_state = trace_state)
         push!(ors_d, or_gd)
         d = or_gd.maximizer
@@ -143,19 +131,19 @@ function refine_design(
         if d.designpoint[1] in designpoints(simplify_drop(res, 0))
             # effectivly run the reweighting from the last round for some more iterations
             res = mixture(0, d, res) # make sure new point is at index 1
-            res = simplify_merge(res, ds, 0)
+            res = simplify_merge(res, dp.ds, 0)
         else
             K += 1
             res = mixture(1 / K, d, res)
         end
         weight_dp = DesignProblem(;
-            design_criterion = dc,
-            design_space = ds,
-            model = m,
-            covariate_parameterization = cp,
-            prior_knowledge = pk,
-            transformation = trafo,
-            normal_approximation = na,
+            design_criterion = dp.dc,
+            design_space = dp.ds,
+            model = dp.m,
+            covariate_parameterization = dp.cp,
+            prior_knowledge = dp.pk,
+            transformation = dp.trafo,
+            normal_approximation = dp.na,
         )
         # optimize weights
         _, or_w = optimize_design(
@@ -169,7 +157,7 @@ function refine_design(
         push!(ors_w, or_w)
         res = or_w.maximizer
     end
-    dopt = sort_designpoints(simplify(res, ds, m, cp; sargs...))
+    dopt = sort_designpoints(simplify(res, dp.ds, dp.m, dp.cp; sargs...))
     return dopt, ors_d, ors_w
 end
 

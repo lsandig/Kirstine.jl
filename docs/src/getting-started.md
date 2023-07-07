@@ -442,7 +442,7 @@ Now we use 5 refinement iterations:
 psod = Pso(iterations = 10, swarmsize = 50)
 psow = Pso(iterations = 15, swarmsize = 25)
 Random.seed!(31415)
-s6, r6d, r6w = refine_design(psod, psow, 5, s5, dp2.dc, dp2.ds, dp2.m, dp2.cp, dp2.pk, dp2.trafo, dp2.na)
+s6, r6d, r6w = refine_design(psod, psow, 5, s5, dp2)
 plot(plot(r6w),
      plot_gateauxderivative(dp3.dc, s6, dp3.ds, dp3.m, dp3.cp, dp3.pk, dp3.trafo, dp3.na))
 savefig(ans, "getting-started-pg6-pd6.png") ; nothing # hide
