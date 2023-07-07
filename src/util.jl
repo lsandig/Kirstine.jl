@@ -6,6 +6,8 @@
 Generate code for defining a [`NonlinearRegression`](@ref) model, a corresponding
 [`Covariate`](@ref), and helper functions for a 1-dimensional unit of observation.
 
+## Example
+
 The call
 
 ```julia
@@ -83,6 +85,10 @@ and define its dimension as `length(field_names)`.
 
 A type defined this way has a keyword constructor.
 
+For the `module_name` argument see the note at [`@define_scalar_unit_model`](@ref).
+
+## Example
+
 The call
 
 ```julia
@@ -101,7 +107,11 @@ end
 Kirstine.dimension(p::BarPar) = 2
 ```
 
-For the `module_name` argument see the note at [`@define_scalar_unit_model`](@ref).
+A `BarPar` object with `a=1` and `b=2` can then be constructed by
+
+```julia
+BarPar(; a = 1, b = 2)
+```
 """
 macro define_vector_parameter(module_name, parameter_name, field_names...)
     if isempty(field_names)

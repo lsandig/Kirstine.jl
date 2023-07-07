@@ -35,7 +35,7 @@ abstract type CovariateParameterization end
 
 Supertype for [`Model`](@ref) parameters.
 
-A user-defined subtype `P` should have a `dimension(p::P)` method
+A user-defined subtype `P<:Parameter` should have a `dimension(p::P)` method
 which returns the dimension of the associated parameter space.
 """
 abstract type Parameter end
