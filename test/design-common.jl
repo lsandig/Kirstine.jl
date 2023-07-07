@@ -111,30 +111,38 @@ include("example-compartment.jl")
 
     @testset "objective" begin
         # correct handling of singular designs
-        let dc = DOptimality(),
-            na = FisherMatrix(),
+        let dp_for_trafo(trafo) = DesignProblem(;
+                design_criterion = DOptimality(),
+                normal_approximation = FisherMatrix(),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = DiscretePrior([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+                design_space = DesignInterval(:dose => (0, 10)),
+                transformation = trafo,
+            ),
             t1 = Identity(),
             t2 = DeltaMethod(p -> diagm([1, 1, 1])),
-            m = EmaxModel(1),
-            cp = CopyDose(),
-            pk = DiscretePrior([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
-            ds = DesignInterval(:dose => (0, 10)),
             d = one_point_design([5])
 
             # no explicit inversion
-            @test objective(dc, d, m, cp, pk, t1, na) == -Inf
+            @test objective(d, dp_for_trafo(t1)) == -Inf
             # with explicit inversion
-            @test objective(dc, d, m, cp, pk, t2, na) == -Inf
+            @test objective(d, dp_for_trafo(t2)) == -Inf
         end
 
-        let dc = DOptimality(),
-            na_ml = FisherMatrix(),
-            trafo = Identity(),
-            m = EmaxModel(1),
-            cp = CopyDose(),
-            p1 = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
+        let p1 = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
             pk1 = DiscretePrior([p1]),
             ds = DesignInterval(:dose => (0, 10)),
+            dp_for(pk) = DesignProblem(;
+                design_criterion = DOptimality(),
+                normal_approximation = FisherMatrix(),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = pk,
+                design_space = ds,
+                transformation = Identity(),
+            ),
+
             # sol is optimal for pk1
             sol = emax_solution(p1, ds),
             a = ds.lowerbound[1],
@@ -145,23 +153,26 @@ include("example-compartment.jl")
                 [0.2, 0.3, 0.5],
                 [[a + 0.1 * (b - a)], [x_star * 1.1], [a + (0.9 * (b - a))]],
             ),
-            sng2 = uniform_design([[a], [b]]),
-            ob(d, pk, na) = objective(dc, d, m, cp, pk, trafo, na)
+            sng2 = uniform_design([[a], [b]])
 
-            @test ob(not_sol, pk1, na_ml) < ob(sol, pk1, na_ml)
+            @test objective(not_sol, dp_for(pk1)) < objective(sol, dp_for(pk1))
             # a design with less than 3 support points is singular
-            @test isinf(ob(sng2, pk1, na_ml))
+            @test isinf(objective(sng2, dp_for(pk1)))
         end
 
         # DeltaMethod for Atkinson et al. examples
-        let ds = DesignInterval(:time => [0, 48]),
-            g0 = DiscretePrior([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
+        let g0 = DiscretePrior([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
             _ = seed!(4711),
             g1 = draw_from_prior(1000, 2),
-            m = TPCMod(1),
-            cp = CopyTime(),
-            dc = DOptimality(),
-            na_ml = FisherMatrix(),
+            dp_for(pk, t) = DesignProblem(;
+                design_space = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = DOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = pk,
+                transformation = t,
+            ),
             # Some designs from Tables 1 and 2, and corresponding transformations
             #! format: off
             a1  = DesignMeasure([0.2288] => 1/3,    [1.3886] => 1/3,    [18.417] => 1/3),
@@ -174,22 +185,20 @@ include("example-compartment.jl")
             t1_delta = DeltaMethod(p -> diagm(ones(3))),
             t2 = DeltaMethod(Dauc),
             t3 = DeltaMethod(Dttm),
-            t4 = DeltaMethod(Dcmax),
-            ob(a, t, na) = objective(dc, a, m, cp, g0, t, na),
-            ob1(a, t, na) = objective(dc, a, m, cp, g1, t, na)
+            t4 = DeltaMethod(Dcmax)
 
             # Locally optimal solution for estimating the whole of θ
-            @test ob(a1, t1, na_ml) ≈ 7.3887 rtol = 1e-4
+            @test objective(a1, dp_for(g0, t1)) ≈ 7.3887 rtol = 1e-4
             # the Gateaux derivative should be about zero at the design points of the solution
             # compare DeltaMethod identity with actual Identity
-            @test ob(a1, t1, na_ml) ≈ ob(a1, t1_delta, na_ml)
+            @test objective(a1, dp_for(g0, t1)) ≈ objective(a1, dp_for(g0, t1_delta))
             # Now the Bayesian design problems with the strong prior
             # Due to MC error the published solutions are not very precise, checking gateaux
             # derivatives makes not mutch sense here.
-            @test ob1(a6, t1, na_ml) ≈ 7.3760 rtol = 1e-1
-            @test exp(-ob1(a7, t2, na_ml)) ≈ 2463.3 rtol = 1e-1
-            @test exp(-ob1(a8, t3, na_ml)) ≈ 0.030303 rtol = 1e-1
-            @test exp(-ob1(a9, t4, na_ml)) ≈ 1.1133 rtol = 1e-1
+            @test objective(a6, dp_for(g1, t1)) ≈ 7.3760 rtol = 1e-1
+            @test exp(-objective(a7, dp_for(g1, t2))) ≈ 2463.3 rtol = 1e-1
+            @test exp(-objective(a8, dp_for(g1, t3))) ≈ 0.030303 rtol = 1e-1
+            @test exp(-objective(a9, dp_for(g1, t4))) ≈ 1.1133 rtol = 1e-1
         end
     end
 

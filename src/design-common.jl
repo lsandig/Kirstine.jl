@@ -399,30 +399,15 @@ function objective!(
 end
 
 """
-    objective(dc::DesignCriterion,
-              d::DesignMeasure,
-              m::NonlinearRegression,
-              cp::CovariateParameterization,
-              pk::PriorKnowledge,
-              trafo::Transformation,
-              na::NormalApproximation,
-              )
+    objective(d::DesignMeasure, dp::DesignProblem)
 
-Objective function corresponding to the [`DesignCriterion`](@ref) evaluated at `d`.
+Objective function corresponding to the [`DesignProblem`](@ref) evaluated at `d`.
 """
-function objective(
-    dc::DesignCriterion,
-    d::DesignMeasure,
-    m::NonlinearRegression,
-    cp::CovariateParameterization,
-    pk::PriorKnowledge,
-    trafo::Transformation,
-    na::NormalApproximation,
-)
-    tc = precalculate_trafo_constants(trafo, pk)
-    wm = WorkMatrices(unit_length(m), parameter_dimension(pk), codomain_dimension(tc))
-    c = allocate_initialize_covariates(d, m, cp)
-    return objective!(wm, c, dc, d, m, cp, pk, tc, na)
+function objective(d::DesignMeasure, dp::DesignProblem)
+    tc = precalculate_trafo_constants(dp.trafo, dp.pk)
+    wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
+    c = allocate_initialize_covariates(d, dp.m, dp.cp)
+    return objective!(wm, c, dp.dc, d, dp.m, dp.cp, dp.pk, tc, dp.na)
 end
 
 function inverse_information_matrices(
