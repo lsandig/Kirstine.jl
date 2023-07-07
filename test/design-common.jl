@@ -278,18 +278,20 @@ include("example-compartment.jl")
 
     @testset "optimize_design" begin
         # Can we find the locally D-optimal design?
-        let dc = DOptimality(),
-            na = FisherMatrix(),
-            trafo = Identity(),
-            m = EmaxModel(1),
-            cp = CopyDose(),
+        let ds = DesignInterval(:dose => (0, 10)),
             p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            pk = DiscretePrior([p]),
-            ds = DesignInterval(:dose => (0, 10)),
             sol = emax_solution(p, ds),
+            dp = DesignProblem(;
+                design_criterion = DOptimality(),
+                design_space = ds,
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = DiscretePrior([p]),
+                transformation = Identity(),
+                normal_approximation = FisherMatrix(),
+            ),
             pso = Pso(; iterations = 50, swarmsize = 20),
-            optim(; kwargs...) =
-                optimize_design(pso, dc, ds, m, cp, pk, trafo, na; kwargs...),
+            optim(; kwargs...) = optimize_design(pso, dp; kwargs...),
             # search from a random starting design
             _ = seed!(4711),
             (d1, o1) = optim(),
@@ -338,21 +340,23 @@ include("example-compartment.jl")
         end
 
         # fixed weights and / or points should never change
-        let dc = DOptimality(),
-            na = FisherMatrix(),
-            trafo = Identity(),
-            m = EmaxModel(1),
-            cp = CopyDose(),
-            p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            pk = DiscretePrior([p]),
-            ds = DesignInterval(:dose => (0, 10)),
+        let p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
+            dp = DesignProblem(;
+                design_criterion = DOptimality(),
+                design_space = ds = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = DiscretePrior([p]),
+                transformation = Identity(),
+                normal_approximation = FisherMatrix(),
+            ),
             pso = Pso(; iterations = 2, swarmsize = 5),
             # this is not the optimal solution
             prototype =
                 DesignMeasure([0.1, 0.5, 0.0, 0.0, 0.4], [[0], [5], [7], [8], [10]]),
             #! format: off
             opt(; fw = Int64[], fp = Int64[]) = optimize_design(
-                pso, dc, ds, m, cp, pk, trafo, na;
+                pso, dp;
                 prototype = prototype, fixedweights = fw, fixedpoints = fp, trace_state = true,
             ),
             #! format: on

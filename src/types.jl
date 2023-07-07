@@ -393,3 +393,71 @@ struct WorkMatrices
         new(zeros(r, r), zeros(r, t), zeros(t, r), zeros(t, t), zeros(m, r))
     end
 end
+
+"""
+    DesignProblem
+
+Completely specifies a problem of optimal experimental design.
+
+A `DesignProblem` has 7 components:
+
+  - a [`DesignCriterion`](@ref),
+  - a [`DesignSpace`](@ref),
+  - a [`Model`](@ref),
+  - a [`CovariateParameterization`](@ref),
+  - some [`PriorKnowledge`](@ref),
+  - a [`Transformation`](@ref),
+  - and a [`NormalApproximation`](@ref).
+
+See also [`optimize_design`](@ref).
+"""
+struct DesignProblem{
+    Tdc<:DesignCriterion,
+    Tds<:DesignSpace,
+    Tm<:Model,
+    Tcp<:CovariateParameterization,
+    Tpk<:PriorKnowledge,
+    Tt<:Transformation,
+    Tna<:NormalApproximation,
+}
+    dc::Tdc
+    ds::Tds
+    m::Tm
+    cp::Tcp
+    pk::Tpk
+    trafo::Tt
+    na::Tna
+    @doc """
+        DesignProblem(; design_criterion, design_space, model, covariate_parameterization, prior_knowledge,
+                        transformation = Identity(), normal_approximation = FisherMatrix())
+
+    Keyword-based constructor for design problems with some sensible defaults.
+    """
+    function DesignProblem(;
+        design_criterion::Tdc,
+        design_space::Tds,
+        model::Tm,
+        covariate_parameterization::Tcp,
+        prior_knowledge::Tpk,
+        transformation::Tt = Identity(),
+        normal_approximation::Tna = FisherMatrix(),
+    ) where {
+        Tdc<:DesignCriterion,
+        Tds<:DesignSpace,
+        Tm<:Model,
+        Tcp<:CovariateParameterization,
+        Tpk<:PriorKnowledge,
+        Tt<:Transformation,
+        Tna<:NormalApproximation,
+    }
+        new{Tdc,Tds,Tm,Tcp,Tpk,Tt,Tna}(
+            design_criterion,
+            design_space,
+            model,
+            covariate_parameterization,
+            prior_knowledge,
+            transformation,
+            normal_approximation,
+        )
+    end
+end

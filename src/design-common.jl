@@ -19,13 +19,7 @@ function dimension end
 
 """
     optimize_design(optimizer::Optimizer,
-                    dc::DesignCriterion,
-                    ds::DesignSpace,
-                    m::NonlinearRegression,
-                    cp::CovariateParameterization,
-                    pk::PriorKnowledge,
-                    trafo::Transformation,
-                    na::NormalApproximation;
+                    dp::DesignProblem;
                     prototype::DesignMeasure = random_design(ds, parameter_dimension(pk)),
                     fixedweights = Int64[],
                     fixedpoints = Int64[],
@@ -53,26 +47,20 @@ Returns a Tuple:
 """
 function optimize_design(
     optimizer::Optimizer,
-    dc::DesignCriterion,
-    ds::DesignSpace,
-    m::NonlinearRegression,
-    cp::CovariateParameterization,
-    pk::PriorKnowledge,
-    trafo::Transformation,
-    na::NormalApproximation;
-    prototype::DesignMeasure = random_design(ds, parameter_dimension(pk)),
+    dp::DesignProblem;
+    prototype::DesignMeasure = random_design(dp.ds, parameter_dimension(dp.pk)),
     fixedweights = Int64[],
     fixedpoints = Int64[],
     trace_state = false,
     sargs...,
 )
-    constraints = DesignConstraints(prototype, ds, fixedweights, fixedpoints)
-    tc = precalculate_trafo_constants(trafo, pk)
-    wm = WorkMatrices(unit_length(m), parameter_dimension(pk), codomain_dimension(tc))
-    c = allocate_initialize_covariates(prototype, m, cp)
-    f = d -> objective!(wm, c, dc, d, m, cp, pk, tc, na)
+    constraints = DesignConstraints(prototype, dp.ds, fixedweights, fixedpoints)
+    tc = precalculate_trafo_constants(dp.trafo, dp.pk)
+    wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
+    c = allocate_initialize_covariates(prototype, dp.m, dp.cp)
+    f = d -> objective!(wm, c, dp.dc, d, dp.m, dp.cp, dp.pk, tc, dp.na)
     or = optimize(optimizer, f, [prototype], constraints; trace_state = trace_state)
-    dopt = sort_designpoints(simplify(or.maximizer, ds, m, cp; sargs...))
+    dopt = sort_designpoints(simplify(or.maximizer, dp.ds, dp.m, dp.cp; sargs...))
     return dopt, or
 end
 
@@ -160,16 +148,19 @@ function refine_design(
             K += 1
             res = mixture(1 / K, d, res)
         end
+        weight_dp = DesignProblem(;
+            design_criterion = dc,
+            design_space = ds,
+            model = m,
+            covariate_parameterization = cp,
+            prior_knowledge = pk,
+            transformation = trafo,
+            normal_approximation = na,
+        )
         # optimize weights
         _, or_w = optimize_design(
             ow,
-            dc,
-            ds,
-            m,
-            cp,
-            pk,
-            trafo,
-            na;
+            weight_dp;
             prototype = res,
             fixedpoints = 1:K,
             trace_state = trace_state,
