@@ -401,13 +401,15 @@ include("example-compartment.jl")
             ow = Pso(; iterations = 50, swarmsize = 50),
             _ = seed!(1234),
             cand = uniform_design([[[5]]; designpoints(sol)[[1, 3]]]),
-            dp = DesignProblem(design_criterion = DOptimality(),
-                               normal_approximation = FisherMatrix(),
-                               transformation = Identity(),
-                               model = EmaxModel(1),
-                               covariate_parameterization = CopyDose(),
-                               prior_knowledge = DiscretePrior([p]),
-                               design_space = ds),
+            dp = DesignProblem(;
+                design_criterion = DOptimality(),
+                normal_approximation = FisherMatrix(),
+                transformation = Identity(),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = DiscretePrior([p]),
+                design_space = ds,
+            ),
             (r, rd, rw) = refine_design(od, ow, 3, cand, dp)
 
             @test abs(designpoints(r)[2][1] - designpoints(sol)[2][1]) <

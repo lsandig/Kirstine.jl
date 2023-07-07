@@ -129,7 +129,7 @@ s_id
 ```
 
 ```@example main
-plot_gateauxderivative(dp_id.dc, s_id, dp_id.ds, dp_id.m, dp_id.cp, dp_id.pk, dp_id.trafo, dp_id.na)
+plot_gateauxderivative(s_id, dp_id)
 savefig(ans, "handling-transformations-gd-id.png"); nothing # hide
 ```
 
@@ -173,7 +173,7 @@ s_auc
 ```
 
 ```@example main
-plot_gateauxderivative(dp_auc.dc, s_auc, dp_auc.ds, dp_auc.m, dp_auc.cp, dp_auc.pk, dp_auc.trafo, dp_auc.na)
+plot_gateauxderivative(s_auc, dp_auc)
 savefig(ans, "handling-transformations-gd-auc.png"); nothing # hide
 ```
 
@@ -227,7 +227,7 @@ s_ttm
 ```
 
 ```@example main
-plot_gateauxderivative(dp_ttm.dc, s_ttm, dp_ttm.ds, dp_ttm.m, dp_ttm.cp, dp_ttm.pk, dp_ttm.trafo, dp_ttm.na)
+plot_gateauxderivative(s_ttm, dp_ttm)
 savefig(ans, "handling-transformations-gd-ttm.png"); nothing # hide
 ```
 
@@ -265,7 +265,7 @@ s_cmax
 ```
 
 ```@example main
-plot_gateauxderivative(dp_cmax.dc, s_cmax, dp_cmax.ds, dp_cmax.m, dp_cmax.cp, dp_cmax.pk, dp_cmax.trafo, dp_cmax.na)
+plot_gateauxderivative(s_cmax, dp_cmax)
 savefig(ans, "handling-transformations-gd-cmax.png"); nothing # hide
 ```
 
@@ -295,7 +295,7 @@ s_both
 ```
 
 ```@example main
-plot_gateauxderivative(dp_both.dc, s_both, dp_both.ds, dp_both.m, dp_both.cp, dp_both.pk, dp_both.trafo, dp_both.na)
+plot_gateauxderivative(s_both, dp_both)
 savefig(ans, "handling-transformations-gd-both.png"); nothing # hide
 ```
 

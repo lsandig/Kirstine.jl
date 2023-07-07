@@ -110,17 +110,10 @@ end
 end
 
 """
-    plot_gateauxderivative(dc::DesignCriterion,
-                           d::DesignMeasure,
-                           ds::DesignSpace{N},
-                           m::NonlinearRegression,
-                           cp::CovariateParameterization,
-                           pk::PriorKnowledge,
-                           trafo::Transformation,
-                           na::NormalApproximation)
+    plot_gateauxderivative(d::DesignMeasure, dp::DesignProblem)
 
 Plot the [`gateauxderivative`](@ref) at candidate solution `d` in directions taken from a
-grid over the given [`DesignInterval`](@ref), together with the design points of `d`.
+grid over design space of the given [`DesignProblem`](@ref), together with the design points of `d`.
 
 Currently only implemented for 1- and 2-dimensional design spaces.
 
@@ -135,7 +128,8 @@ default, `markersize` indicates the design weights.
   - `subdivisions::Union{Integer, Tuple{Integer, Integer}}`: number of points in the grid.
     Must match the dimension of the design space.
 """
-function plot_gateauxderivative(args...; kw...)
-    plt_gd = RecipesBase.plot(DerivativePlot(args...); kw...)
-    return RecipesBase.plot!(plt_gd, args[2]; kw...)
+function plot_gateauxderivative(d::DesignMeasure, dp::DesignProblem; kw...)
+    derivplot = DerivativePlot(dp.dc, d, dp.ds, dp.m, dp.cp, dp.pk, dp.trafo, dp.na)
+    plt_gd = RecipesBase.plot(derivplot; kw...)
+    return RecipesBase.plot!(plt_gd, d; kw...)
 end

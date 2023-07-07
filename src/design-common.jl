@@ -111,7 +111,11 @@ function refine_design(
     check_compatible(candidate, dp.ds)
     tc = precalculate_trafo_constants(dp.trafo, dp.pk)
     wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
-    c = allocate_initialize_covariates(one_point_design(candidate.designpoint[1]), dp.m, dp.cp)
+    c = allocate_initialize_covariates(
+        one_point_design(candidate.designpoint[1]),
+        dp.m,
+        dp.cp,
+    )
     ors_d = OptimizationResult[]
     ors_w = OptimizationResult[]
     constraints = DesignConstraints(dp.ds, [false], [false])
@@ -136,19 +140,10 @@ function refine_design(
             K += 1
             res = mixture(1 / K, d, res)
         end
-        weight_dp = DesignProblem(;
-            design_criterion = dp.dc,
-            design_space = dp.ds,
-            model = dp.m,
-            covariate_parameterization = dp.cp,
-            prior_knowledge = dp.pk,
-            transformation = dp.trafo,
-            normal_approximation = dp.na,
-        )
         # optimize weights
         _, or_w = optimize_design(
             ow,
-            weight_dp;
+            dp;
             prototype = res,
             fixedpoints = 1:K,
             trace_state = trace_state,

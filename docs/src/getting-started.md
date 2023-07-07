@@ -221,7 +221,7 @@ should be non-positive.
 
 ```@example main
 using Plots
-plot_gateauxderivative(dp1.dc, s1, dp1.ds, dp1.m, dp1.cp, dp1.pk, dp1.trafo, dp1.na; legend = :outerright)
+plot_gateauxderivative(s1, dp1; legend = :outerright)
 savefig(ans, "getting-started-pg1.png"); nothing # hide
 ```
 
@@ -327,7 +327,7 @@ and also increase the number of iterations and the swarm size.
 pso = Pso(iterations = 100, swarmsize = 50)
 Random.seed!(31415)
 s3, r3 = optimize_design(pso, dp2; prototype = equidistant_design(ds, 10))
-plot_gateauxderivative(dp2.dc, s3, dp2.ds, dp2.m, dp2.cp, dp2.pk, dp2.trafo, dp2.na)
+plot_gateauxderivative(s3, dp2)
 savefig(ans, "getting-started-pg3.png"); nothing # hide
 ```
 
@@ -363,7 +363,7 @@ By setting `minweight=1e-4` and `mindist=1e-3`, we can simplify the result more 
 Random.seed!(31415)
 s4, r4 = optimize_design(pso, dp2;
                          prototype = equidistant_design(ds, 10), minweight = 1e-4, mindist = 1e-3);
-plot_gateauxderivative(dp2.dc, s4, dp2.ds, dp2.m, dp2.cp, dp2.pk, dp2.trafo, dp2.na)
+plot_gateauxderivative(s4, dp2)
 savefig(ans, "getting-started-pg4.png"); nothing # hide
 ```
 
@@ -419,8 +419,7 @@ pso = Pso(iterations = 25, swarmsize = 50)
 s5, r5 = optimize_design(pso, dp3;
                          prototype = equidistant_design(ds, 6), fixedpoints = [1, 6],
                          minweight = 1e-4, mindist = 1e-3)
-plot(plot(r5),
-     plot_gateauxderivative(dp3.dc, s5, dp3.ds, dp3.m, dp3.cp, dp3.pk, dp3.trafo, dp3.na))
+plot(plot(r5), plot_gateauxderivative(s5, dp3))
 savefig(ans, "getting-started-pg5-pd5.png") ; nothing # hide
 ```
 
@@ -443,8 +442,7 @@ psod = Pso(iterations = 10, swarmsize = 50)
 psow = Pso(iterations = 15, swarmsize = 25)
 Random.seed!(31415)
 s6, r6d, r6w = refine_design(psod, psow, 5, s5, dp2)
-plot(plot(r6w),
-     plot_gateauxderivative(dp3.dc, s6, dp3.ds, dp3.m, dp3.cp, dp3.pk, dp3.trafo, dp3.na))
+plot(plot(r6w), plot_gateauxderivative(s6, dp3))
 savefig(ans, "getting-started-pg6-pd6.png") ; nothing # hide
 ```
 
@@ -460,8 +458,7 @@ pso = Pso(iterations = 150, swarmsize = 50)
 Random.seed!(31415)
 s7, r7 = optimize_design(pso, dp3;
                          prototype = s6, minweight = 1e-4, mindist = 5e-3)
-plot(plot(r7),
-     plot_gateauxderivative(dp3.dc, s7, dp3.ds, dp3.m, dp3.cp, dp3.pk, dp3.trafo, dp3.na))
+plot(plot(r7), plot_gateauxderivative(s7, dp3))
 savefig(ans, "getting-started-pg7-pd7.png") ; nothing # hide
 ```
 
