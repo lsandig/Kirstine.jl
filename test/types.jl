@@ -8,9 +8,9 @@ include("example-testpar.jl")
     @testset "DiscretePrior" begin
         # error handling in constructors
         let pars = [TestPar2(1, 2), TestPar2(3, 4)]
-            @test_throws "must be equal" DiscretePrior([0], pars)
-            @test_throws "non-negative" DiscretePrior([-0.5, 1.5], pars)
-            @test_throws "sum to one" DiscretePrior([0.5, 1.5], pars)
+            @test_throws "must be equal" DiscretePrior(pars, [0])
+            @test_throws "non-negative" DiscretePrior(pars, [-0.5, 1.5])
+            @test_throws "sum to one" DiscretePrior(pars, [0.5, 1.5])
         end
 
         # constructor with default uniform weights

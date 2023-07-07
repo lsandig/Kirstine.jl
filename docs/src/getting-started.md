@@ -311,8 +311,8 @@ The remaining elements of ``\theta`` are as in the previous section.
 [^W97]: James N. Weiss (1997). The hill equation revisited: uses and misuses. The FASEB Journal, 11(11), 835–841. [doi:10.1096/fasebj.11.11.9285481](http://dx.doi.org/10.1096/fasebj.11.11.9285481)
 
 ```@example main
-dpr = DiscretePrior([0.1, 0.3, 0.4, 0.2],
-                    [SigEmaxPar(e0 = 1, emax = 2, ed50 = 4, h = h) for h in 1:4])
+dpr = DiscretePrior([SigEmaxPar(e0 = 1, emax = 2, ed50 = 4, h = h) for h in 1:4],
+					[0.1, 0.3, 0.4, 0.2])
 nothing # hide
 ```
 

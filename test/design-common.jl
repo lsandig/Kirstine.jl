@@ -218,7 +218,7 @@ include("example-compartment.jl")
             p1 = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
             p2 = EmaxPar(; e0 = 5, emax = -3, ec50 = 2),
             pk1 = DiscretePrior([p1]),
-            pk2 = DiscretePrior([0.75, 0.25], [p1, p2]),
+            pk2 = DiscretePrior([p1, p2], [0.75, 0.25]),
             pk3 = DiscretePrior([p1, p2]),
             ds = DesignInterval(:dose => (0, 10)),
             # sol is optimal for pk1

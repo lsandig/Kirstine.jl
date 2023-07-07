@@ -50,7 +50,7 @@ See also [`DiscretePrior`](@ref).
 abstract type PriorKnowledge{T<:Parameter} end
 
 """
-    DiscretePrior([weights,] p::AbstractVector{<:Parameter})
+    DiscretePrior(p::AbstractVector{<:Parameter} [, weights])
 
 Represents a sample from a prior distribution, or a discrete prior distribution with finite
 support.
@@ -60,7 +60,10 @@ If no `weights` are given, a uniform distribution on the elements of `p` is assu
 struct DiscretePrior{T} <: PriorKnowledge{T}
     weight::Vector{Float64}
     p::Vector{T}
-    function DiscretePrior(weights, parameters::AbstractVector{T}) where T<:Parameter
+    function DiscretePrior(
+        parameters::AbstractVector{T},
+        weights = fill(1 / length(parameters), length(parameters)),
+    ) where T<:Parameter
         if length(weights) != length(parameters)
             error("number of weights and parameter values must be equal")
         end
@@ -69,11 +72,6 @@ struct DiscretePrior{T} <: PriorKnowledge{T}
         end
         return new{T}(weights, parameters)
     end
-end
-
-function DiscretePrior(p::AbstractVector{<:Parameter})
-    n = length(p)
-    return DiscretePrior(fill(1 / n, n), p)
 end
 
 """
