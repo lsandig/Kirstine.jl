@@ -195,32 +195,39 @@ include("example-compartment.jl")
 
     @testset "gateauxderivative" begin
         # correct handling of singular designs
-        let dc = DOptimality(),
-            na = FisherMatrix(),
-            t1 = Identity(),
+        let t1 = Identity(),
             t2 = DeltaMethod(p -> diagm([1, 1, 1])),
-            m = EmaxModel(1),
-            cp = CopyDose(),
-            pk = DiscretePrior([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
-            ds = DesignInterval(:dose => (0, 10)),
+            dp_for_trafo(trafo) = DesignProblem(;
+                design_criterion = DOptimality(),
+                normal_approximation = FisherMatrix(),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = DiscretePrior([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+                design_space = DesignInterval(:dose => (0, 10)),
+                transformation = trafo,
+            ),
             d = one_point_design([5])
 
             # explicit inversions in both cases
-            @test isnan(gateauxderivative(dc, d, [d], m, cp, pk, t1, na)[1])
-            @test isnan(gateauxderivative(dc, d, [d], m, cp, pk, t2, na)[1])
+            @test isnan(gateauxderivative(d, [d], dp_for_trafo(t1))[1])
+            @test isnan(gateauxderivative(d, [d], dp_for_trafo(t2))[1])
         end
 
-        let dc = DOptimality(),
-            na_ml = FisherMatrix(),
-            trafo = Identity(),
-            m = EmaxModel(1),
-            cp = CopyDose(),
-            p1 = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
+        let p1 = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
             p2 = EmaxPar(; e0 = 5, emax = -3, ec50 = 2),
             pk1 = DiscretePrior([p1]),
             pk2 = DiscretePrior([p1, p2], [0.75, 0.25]),
             pk3 = DiscretePrior([p1, p2]),
             ds = DesignInterval(:dose => (0, 10)),
+            dp_for_pk(pk) = DesignProblem(;
+                design_criterion = DOptimality(),
+                normal_approximation = FisherMatrix(),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = pk,
+                design_space = ds,
+                transformation = Identity(),
+            ),
             # sol is optimal for pk1
             sol = emax_solution(p1, ds),
             a = ds.lowerbound[1],
@@ -233,43 +240,42 @@ include("example-compartment.jl")
             ),
             # a design with fewer than three points is singular
             to_dirac(d) = map(one_point_design, designpoints(simplify_drop(d, 0))),
-            gd(s, d, pk, na) = gateauxderivative(dc, s, to_dirac(d), m, cp, pk, trafo, na)
+            gd(s, d, pk) = gateauxderivative(s, to_dirac(d), dp_for_pk(pk))
 
-            #! format: off
-            @test_throws "one-point design" gateauxderivative(
-                dc, sol, [equidistant_design(ds, 2)], m, cp, pk1, trafo, na_ml,
-            )
-            #! format: on
-            @test all(abs.(gd(sol, sol, pk1, na_ml)) .<= sqrt(eps()))
-            @test all(abs.(gd(sol, not_sol, pk1, na_ml)) .> 0.01)
-            @test all(abs.(gd(not_sol, not_sol, pk2, na_ml)) .> 0.1)
-            @test all(abs.(gd(not_sol, not_sol, pk3, na_ml)) .> 0.1)
+            @test_throws "one-point design" gateauxderivative(sol, [sol], dp_for_pk(pk1))
+            @test all(abs.(gd(sol, sol, pk1) .<= sqrt(eps())))
+            @test all(abs.(gd(sol, not_sol, pk1)) .> 0.01)
+            @test all(abs.(gd(not_sol, not_sol, pk2)) .> 0.1)
+            @test all(abs.(gd(not_sol, not_sol, pk3)) .> 0.1)
         end
 
         # DeltaMethod for Atkinson et al. examples
-        let ds = DesignInterval(:time => [0, 48]),
-            g0 = DiscretePrior([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
-            _ = seed!(4711),
-            m = TPCMod(1),
-            cp = CopyTime(),
-            dc = DOptimality(),
-            na_ml = FisherMatrix(),
+        let dp_for_trafo(trafo) = DesignProblem(;
+                design_criterion = DOptimality(),
+                normal_approximation = FisherMatrix(),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                prior_knowledge = DiscretePrior([
+                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                ]),
+                design_space = DesignInterval(:time => [0, 48]),
+                transformation = trafo,
+            ),
             # Some designs from Tables 1 and 2, and corresponding transformations
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             t1 = Identity(),
             t1_delta = DeltaMethod(p -> diagm(ones(3))),
             dir = [one_point_design([t]) for t in range(0, 48; length = 21)],
-            gd(a, t, na) = gateauxderivative(dc, a, dir, m, cp, g0, t, na),
+            gd(a, t) = gateauxderivative(a, dir, dp_for_trafo(t)),
             dp2dir(d) = [one_point_design(dp) for dp in designpoints(d)],
-            abs_gd_at_sol_dp(a, t) =
-                abs.(gateauxderivative(dc, a, dp2dir(a), m, cp, g0, t, na_ml))
+            abs_gd_at_sol_dp(a, t) = abs.(gateauxderivative(a, dp2dir(a), dp_for_trafo(t)))
 
             # Locally optimal solution for estimating the whole of θ
-            @test maximum(gd(a1, t1, na_ml)) <= 0
+            @test maximum(gd(a1, t1)) <= 0
             # the Gateaux derivative should be about zero at the design points of the solution
             @test all(abs_gd_at_sol_dp(a1, t1) .< 1e-4)
             # compare DeltaMethod identity with actual Identity
-            @test gd(a1, t1, na_ml) ≈ gd(a1, t1_delta, na_ml)
+            @test gd(a1, t1) ≈ gd(a1, t1_delta)
             # Now the Bayesian design problems with the strong prior
             # Due to MC error the published solutions are not very precise, checking gateaux
             # derivatives makes not mutch sense here.

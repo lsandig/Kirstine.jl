@@ -471,36 +471,26 @@ function gateauxderivative!(
 end
 
 """
-    gateauxderivative(dc::DesignCriterion,
-                      at::DesignMeasure,
+    gateauxderivative(at::DesignMeasure,
                       directions::AbstractArray{DesignMeasure},
-                      m::NonlinearRegression,
-                      cp::CovariateParameterization,
-                      pk::PriorKnowledge,
-                      trafo::Transformation,
-                      na::NormalApproximation,
-                      )
+                      dp::DesignProblem)
 
-Gateaux derivative of the [`objective`](@ref) function `at` the the given design measure
-into each of the `directions`, which must be singleton designs.
+Gateaux derivative of the [`objective`](@ref) function corresponding to `dp`,
+`at` the the given design measure into each of the `directions`,
+which must be one-point designs.
 """
 function gateauxderivative(
-    dc::DesignCriterion,
     at::DesignMeasure,
     directions::AbstractArray{DesignMeasure},
-    m::NonlinearRegression,
-    cp::CovariateParameterization,
-    pk::PriorKnowledge,
-    trafo::Transformation,
-    na::NormalApproximation,
+    dp::DesignProblem,
 )
     if any(d -> length(d.weight) != 1, directions)
         error("Gateaux derivatives are only implemented for one-point design directions")
     end
-    tc = precalculate_trafo_constants(trafo, pk)
-    wm = WorkMatrices(unit_length(m), parameter_dimension(pk), codomain_dimension(tc))
+    tc = precalculate_trafo_constants(dp.trafo, dp.pk)
+    wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
     gconst = try
-        precalculate_gateaux_constants(dc, at, m, cp, pk, tc, na)
+        precalculate_gateaux_constants(dp.dc, at, dp.m, dp.cp, dp.pk, tc, dp.na)
     catch e
         if isa(e, SingularException)
             # undefined objective implies no well-defined derivative
@@ -509,9 +499,9 @@ function gateauxderivative(
             rethrow(e)
         end
     end
-    cs = allocate_initialize_covariates(directions[1], m, cp)
+    cs = allocate_initialize_covariates(directions[1], dp.m, dp.cp)
     gd = map(directions) do d
-        gateauxderivative!(wm, cs, gconst, d, m, cp, pk, na)
+        gateauxderivative!(wm, cs, gconst, d, dp.m, dp.cp, dp.pk, dp.na)
     end
     return gd
 end
