@@ -11,15 +11,13 @@ using Kirstine
         let d = DesignMeasure([1] => 0.2, [42] => 0.3, [9] => 0.5),
             ref = DesignMeasure([0.2, 0.3, 0.5], [[1], [42], [9]])
 
-            @test all(d.weight .== ref.weight)
-            @test all(d.designpoint .== ref.designpoint)
+            @test d == ref
         end
     end
 
     @testset "one_point_design" begin
         let d = one_point_design([42]), ref = DesignMeasure([1], [[42]])
-            @test all(d.weight .== ref.weight)
-            @test all(d.designpoint .== ref.designpoint)
+            @test d == ref
         end
     end
 
@@ -27,8 +25,7 @@ using Kirstine
         let d = uniform_design([[1], [2], [3], [4]]),
             ref = DesignMeasure(fill(0.25, 4), [[i] for i in 1:4])
 
-            @test all(d.weight .== ref.weight)
-            @test all(d.designpoint .== ref.designpoint)
+            @test d == ref
         end
     end
 
@@ -36,8 +33,7 @@ using Kirstine
         let d = equidistant_design(DesignInterval(:a => (1, 4)), 4),
             ref = DesignMeasure(fill(0.25, 4), [[i] for i in 1:4])
 
-            @test all(d.weight .== ref.weight)
-            @test all(d.designpoint .== ref.designpoint)
+            @test d == ref
         end
     end
 
@@ -50,17 +46,14 @@ using Kirstine
             dirac_as_matrix = reshape([1, 2, 3], :, 1)
 
             # conversion in both directions
-            @test d.weight == DesignMeasure(d_as_matrix).weight
-            @test d.designpoint == DesignMeasure(d_as_matrix).designpoint
+            @test d == DesignMeasure(d_as_matrix)
             @test m == as_matrix(m_as_designmeasure)
             # roundtrips
-            @test d.weight == DesignMeasure(as_matrix(d)).weight
-            @test d.designpoint == DesignMeasure(as_matrix(d)).designpoint
+            @test d == DesignMeasure(as_matrix(d))
             @test m == as_matrix(DesignMeasure(m))
             # one-point designs work as expected
             @test dirac_as_matrix == as_matrix(dirac)
-            @test dirac.designpoint == DesignMeasure(dirac_as_matrix).designpoint
-            @test dirac.designpoint == DesignMeasure(dirac_as_matrix).designpoint
+            @test dirac == DesignMeasure(dirac_as_matrix)
         end
     end
 
@@ -86,10 +79,8 @@ using Kirstine
             d_compact = eval(Meta.parse(str_compact)),
             d_pretty = eval(Meta.parse(str_pretty))
 
-            @test d.weight == d_compact.weight
-            @test d.designpoint == d_compact.designpoint
-            @test d.weight == d_pretty.weight
-            @test d.designpoint == d_pretty.designpoint
+            @test d == d_compact
+            @test d == d_pretty
         end
     end
 
@@ -126,15 +117,13 @@ using Kirstine
             ref = uniform_design([[2], [3]])
 
             @test s !== ref
-            @test all(s.weight .== ref.weight)
-            @test all(s.designpoint .== ref.designpoint)
+            @test s == ref
         end
 
         # One-point-designs should be returned as an unchanged copy.
         let o = one_point_design([42]), o_simp = simplify_drop(o, 1e-4)
             @test o !== o_simp
-            @test all(o.weight .== o_simp.weight)
-            @test all(o.designpoint .== o_simp.designpoint)
+            @test o == o_simp
         end
     end
 
@@ -145,8 +134,7 @@ using Kirstine
             ref = DesignMeasure([0.4, 0.6], [[2, 1], [3, 10]])
 
             @test s !== ref
-            @test all(s.weight .== ref.weight)
-            @test all(s.designpoint .== ref.designpoint)
+            @test s == ref
         end
 
         # One-point-designs should be returned as an unchanged copy.
@@ -155,8 +143,7 @@ using Kirstine
             o_simp = simplify_merge(o, ds, 0.05)
 
             @test o !== o_simp
-            @test all(o.weight .== o_simp.weight)
-            @test all(o.designpoint .== o_simp.designpoint)
+            @test o == o_simp
         end
     end
 
@@ -165,9 +152,8 @@ using Kirstine
         let d = DesignMeasure([0.4, 0.2, 0.3, 0.1], [[3, 4], [2, 1], [1, 1], [2, 3]]),
             refp = DesignMeasure([0.3, 0.2, 0.1, 0.4], [[1, 1], [2, 1], [2, 3], [3, 4]])
 
-            @test !(sort_designpoints(d) === d)
-            @test sort_designpoints(d).weight == refp.weight
-            @test sort_designpoints(d).designpoint == refp.designpoint
+            @test sort_designpoints(d) !== d
+            @test sort_designpoints(d) == refp
             @test sort_designpoints(d; rev = true).weight == reverse(refp.weight)
             @test sort_designpoints(d; rev = true).designpoint == reverse(refp.designpoint)
         end
@@ -177,9 +163,8 @@ using Kirstine
         let d = DesignMeasure([0.4, 0.2, 0.3, 0.1], [[3, 4], [2, 1], [1, 1], [2, 3]]),
             refw = DesignMeasure([0.1, 0.2, 0.3, 0.4], [[2, 3], [2, 1], [1, 1], [3, 4]])
 
-            @test !(sort_weights(d) === d)
-            @test sort_weights(d).weight == refw.weight
-            @test sort_weights(d).designpoint == refw.designpoint
+            @test sort_weights(d) !== d
+            @test sort_weights(d) == refw
             @test sort_weights(d; rev = true).weight == reverse(refw.weight)
             @test sort_weights(d; rev = true).designpoint == reverse(refw.designpoint)
         end

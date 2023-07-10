@@ -182,6 +182,24 @@ end
 
 # === utility functions === #
 
+"""
+    ==(d1::DesignMeasure, d2::DesignMeasure)
+
+Test design measures for equality.
+
+Two design measures are considered equal when
+
+  - they have the same number of design points,
+  - and their design points and weights are equal,
+  - and their design points are in the same order.
+
+Note that this is stricter than when comparing measures as mathematical functions,
+where the order of the design points in the representation does not matter.
+"""
+function Base.:(==)(d1::DesignMeasure, d2::DesignMeasure)
+    return weights(d1) == weights(d2) && designpoints(d1) == designpoints(d2)
+end
+
 function Base.show(io::IO, ::MIME"text/plain", d::DesignMeasure)
     pairs = map(weights(d), designpoints(d)) do w, dp
         return string(dp) * " => " * string(w)
