@@ -380,6 +380,12 @@ struct DesignConstraints{N,T<:DesignSpace{N}} <: AbstractConstraints
     ds::T
     fixw::Vector{Bool}
     fixp::Vector{Bool}
+    function DesignConstraints(ds::T, fixw, fixp) where {N,T<:DesignSpace{N}}
+        if length(fixw) != length(fixp)
+            throw(DimensionMismatch("fix vectors must have identical lengths"))
+        end
+        return new{N,T}(ds, fixw, fixp)
+    end
 end
 
 # preallocated matrices with dimensions that are often used together.

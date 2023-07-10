@@ -58,6 +58,12 @@ include("example-testpar.jl")
         end
     end
 
+    @testset "DesignConstraints" begin
+        let ds = DesignInterval(:a => (0, 1)), dcon = Kirstine.DesignConstraints
+            @test_throws DimensionMismatch dcon(ds, [true], [true, false])
+        end
+    end
+
     @testset "WorkMatrices" begin
         let m = 2, r = 4, t = 3, wm = Kirstine.WorkMatrices(m, r, t)
             @test size(wm.r_x_r) == (r, r)
