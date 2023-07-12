@@ -106,9 +106,11 @@ end
 nothing # hide
 ```
 
-In all subsequent examples we will use identical settings for the particle swarm optimizer.
+In all subsequent examples we will use identical settings for the particle swarm optimizer,
+and start with an equidistant design.
 ```@example main
 pso = Pso(swarmsize = 50, iterations = 100)
+dms = DirectMaximization(optimizer = pso, prototype = uniform_design([[0], [24], [48]]))
 nothing # hide
 ```
 
@@ -120,7 +122,7 @@ we first determine the Bayesian D-optimal design for the whole parameter ``\thet
 ```@example main
 dp_id = dp_for_trafo(Identity())
 Random.seed!(1357)
-s_id, r_id = optimize_design(pso, dp_id)
+s_id, r_id = solve(dp_id, dms)
 nothing # hide
 ```
 
@@ -162,13 +164,13 @@ nothing # hide
 Note that we return a _row_ vector,
 and that the order of the partial derivatives is the same as in the Jacobian matrix of the mean function.
 
-The only difference to the previous call of [`optimize_design`](@ref)
+The only difference to the previous call of `dp_for_trafo`
 is that we now use a [`DeltaMethod`](@ref) object wrapped around the Jacobian matrix function
 instead of the identity transformation.
 ```@example main
 dp_auc = dp_for_trafo(DeltaMethod(Dauc))
 Random.seed!(1357)
-s_auc, r_auc = optimize_design(pso, dp_auc)
+s_auc, r_auc = solve(dp_auc, dms)
 s_auc
 ```
 
@@ -222,7 +224,7 @@ nothing # hide
 ```@example main
 dp_ttm = dp_for_trafo(DeltaMethod(Dttm))
 Random.seed!(1357)
-s_ttm, r_ttm = optimize_design(pso, dp_ttm)
+s_ttm, r_ttm = solve(dp_ttm, dms)
 s_ttm
 ```
 
@@ -260,7 +262,7 @@ nothing # hide
 ```@example main
 dp_cmax = dp_for_trafo(DeltaMethod(Dcmax))
 Random.seed!(1357)
-s_cmax, r_cmax = optimize_design(pso, dp_cmax)
+s_cmax, r_cmax = solve(dp_cmax, dms)
 s_cmax
 ```
 
@@ -290,7 +292,7 @@ we now only need to concatenate them vertically.
 Dboth(p) = [Dttm(p); Dcmax(p)]
 dp_both = dp_for_trafo(DeltaMethod(Dboth))
 Random.seed!(1357)
-s_both, r_both = optimize_design(pso, dp_both)
+s_both, r_both = solve(dp_both, dms)
 s_both
 ```
 

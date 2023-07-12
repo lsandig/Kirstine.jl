@@ -245,7 +245,7 @@ Wraps results of particle-based optimization.
 Note that `trace_state` may only contain the initial state, if saving all
 states was not requested explicitly.
 
-See also [`optimize_design`](@ref).
+See also [`solve`](@ref).
 """
 struct OptimizationResult{
     T<:AbstractPoint,
@@ -415,7 +415,7 @@ A `DesignProblem` has 7 components:
   - a [`Transformation`](@ref),
   - and a [`NormalApproximation`](@ref).
 
-See also [`optimize_design`](@ref).
+See also [`solve`](@ref).
 """
 struct DesignProblem{
     Tdc<:DesignCriterion,
@@ -465,5 +465,62 @@ struct DesignProblem{
             transformation,
             normal_approximation,
         )
+    end
+end
+"""
+    ProblemSolvingStrategy
+
+Supertype for algorithms for solving a [`DesignProblem`](@ref).
+"""
+abstract type ProblemSolvingStrategy end
+
+"""
+    DirectMaximization <: ProblemSolvingStrategy
+
+Represents the strategy of finding an optimal design by directly maximizing a criterion's objective function.
+"""
+struct DirectMaximization{To<:Optimizer} <: ProblemSolvingStrategy
+    optimizer::To
+    prototype::DesignMeasure
+    fixedweights::Vector{Int64}
+    fixedpoints::Vector{Int64}
+    trace_state::Bool
+    simplify_args::Dict
+    # Note: We don't use @kwdef because fixed{weights,points} should be able to accept an
+    # AbstractVector, and esp. also a unit range
+    @doc """
+    DirectMaximization(; optimizer<:Optimizer, prototype::DesignMeasure,
+                       fixedweights = [], fixedpoints = [],
+                       trace_state = false, simplify_args)
+
+Initialize the `optimizer` with the `prototype`
+and attempt to directly maximize the objective function.
+
+For every index in `fixedweights`,
+the corresponding weight of `prototype` is held constant during optimization.
+The indices in `fixedpoints` do the same for the design points of the `prototype`.
+These additional constraints can be used to speed up computation
+in cases where some weights or design points are know analytically.
+
+For more details on how the `prototype` is used,
+see the specific [`Optimizer`](@ref)s.
+
+Returns a Tuple:
+
+  - The best [`DesignMeasure`](@ref) found. As postprocessing, [`simplify`](@ref) is called
+    with `sargs` and the design points are sorted with [`sort_designpoints`](@ref).
+
+  - The full [`OptimizationResult`](@ref). If `trace_state=true`, the full state of the
+    optimizer is saved for every iteration, which can be useful for debugging.
+"""
+    function DirectMaximization(;
+        optimizer::To,
+        prototype::DesignMeasure,
+        fixedweights::AbstractVector{<:Integer} = Int64[],
+        fixedpoints::AbstractVector{<:Integer} = Int64[],
+        trace_state::Bool = false,
+        simplify_args = Dict{Symbol,Any}(),
+    ) where To<:Optimizer
+        new{To}(optimizer, prototype, fixedweights, fixedpoints, trace_state, simplify_args)
     end
 end

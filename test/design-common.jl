@@ -291,7 +291,7 @@ include("example-compartment.jl")
         end
     end
 
-    @testset "optimize_design" begin
+    @testset "solve" begin
         # Can we find the locally D-optimal design?
         let ds = DesignInterval(:dose => (0, 10)),
             p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
@@ -306,14 +306,21 @@ include("example-compartment.jl")
                 normal_approximation = FisherMatrix(),
             ),
             pso = Pso(; iterations = 50, swarmsize = 20),
-            optim(; kwargs...) = optimize_design(pso, dp; kwargs...),
             # search from a random starting design
             _ = seed!(4711),
-            (d1, o1) = optim(),
+            (d1, o1) = solve(dp),
             # search with lower and upper bound already known and fixed, uniform weights
             _ = seed!(4711),
             cand = equidistant_design(ds, 3),
-            (d2, o2) = optim(; prototype = cand, fixedweights = 1:3, fixedpoints = [1, 3])
+            (d2, o2) = solve(
+                dp,
+                DirectMaximization(;
+                    optimizer = pso,
+                    prototype = cand,
+                    fixedweights = 1:3,
+                    fixedpoints = [1, 3],
+                ),
+            )
 
             @test d1.weight ≈ sol.weight rtol = 1e-3
             for k in 1:3
@@ -336,10 +343,20 @@ include("example-compartment.jl")
                 rev = true,
             )
 
-            @test_throws "outside design space" optim(
-                prototype = uniform_design([[0], [20]]),
+            @test_throws "outside design space" solve(
+                dp,
+                DirectMaximization(;
+                    optimizer = pso,
+                    prototype = uniform_design([[0], [20]]),
+                ),
             )
-            @test_throws "must match" optim(prototype = uniform_design([[0, 1], [1, 0]]))
+            @test_throws "must match" solve(
+                dp,
+                DirectMaximization(;
+                    optimizer = pso,
+                    prototype = uniform_design([[0, 1], [1, 0]]),
+                ),
+            )
             # `minposdist` doesn't exist, the correct argument name is `mindist`. Because we
             # have not implemented `simplify_unique()` for EmaxModel, the generic method should
             # complain about gobbling up `minposdist` in its varargs. (We can't test this in
@@ -350,7 +367,14 @@ include("example-compartment.jl")
                     :warn,
                     "unused keyword arguments given to generic `simplify_unique` method",
                 ),
-                optim(minposdist = 1e-2)
+                solve(
+                    dp,
+                    DirectMaximization(;
+                        optimizer = pso,
+                        prototype = equidistant_design(ds, 3),
+                        simplify_args = Dict(:minposdist => 1e-2),
+                    ),
+                )
             )
         end
 
@@ -365,16 +389,19 @@ include("example-compartment.jl")
                 transformation = Identity(),
                 normal_approximation = FisherMatrix(),
             ),
-            pso = Pso(; iterations = 2, swarmsize = 5),
             # this is not the optimal solution
             prototype =
                 DesignMeasure([0.1, 0.5, 0.0, 0.0, 0.4], [[0], [5], [7], [8], [10]]),
-            #! format: off
-            opt(; fw = Int64[], fp = Int64[]) = optimize_design(
-                pso, dp;
-                prototype = prototype, fixedweights = fw, fixedpoints = fp, trace_state = true,
+            opt(; fw = Int64[], fp = Int64[]) = solve(
+                dp,
+                DirectMaximization(;
+                    optimizer = Pso(; iterations = 2, swarmsize = 5),
+                    prototype = prototype,
+                    fixedweights = fw,
+                    fixedpoints = fp,
+                    trace_state = true,
+                ),
             ),
-            #! format: on
             is_const_w(o, ref, k) = all([
                 all(map(d -> d.weight[k] == ref.weight[k], s.x)) for s in o.trace_state
             ]),

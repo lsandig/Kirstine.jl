@@ -15,52 +15,54 @@ function invcov end
 # p::Parameter -> Integer
 function dimension end
 
-# == main interface == #
+## main interface ##
+
 
 """
-    optimize_design(optimizer::Optimizer,
-                    dp::DesignProblem;
-                    prototype::DesignMeasure = random_design(ds, parameter_dimension(pk)),
-                    fixedweights = Int64[],
-                    fixedpoints = Int64[],
-                    trace_state = false,
-                    sargs...)
+    solve(dp::DesignProblem [, strategy::ProblemSolvingStrategy])
 
-Find an optimal experimental design by direct maximization of the objective function.
+Attempt to solve the design problem.
 
-For every index in `fixedweights`,
-the corresponding weight of `prototype` is held constant during optimization.
-The indices in `fixedpoints` do the same for the design points of the `prototype`.
-These additional constraints can be used to speed up computation
-in cases where some weights or design points are know analytically.
+The default strategy is
 
-For more details on how the `prototype` is used,
-see the specific [`Optimizer`](@ref)s.
-
-Returns a Tuple:
-
-  - The best [`DesignMeasure`](@ref) found. As postprocessing, [`simplify`](@ref) is called
-    with `sargs` and the design points are sorted with [`sort_designpoints`](@ref).
-
-  - The full [`OptimizationResult`](@ref). If `trace_state=true`, the full state of the
-    algorithm is saved for every iteration, which can be useful for debugging.
-"""
-function optimize_design(
-    optimizer::Optimizer,
-    dp::DesignProblem;
-    prototype::DesignMeasure = random_design(dp.ds, parameter_dimension(dp.pk)),
-    fixedweights = Int64[],
-    fixedpoints = Int64[],
-    trace_state = false,
-    sargs...,
+```julia
+DirectMaximization(;
+    optimizer = Pso(; iterations = 50, swarmsize = 20),
+    prototype = random_design(dp.ds, parameter_dimension(dp.pk)),
 )
-    constraints = DesignConstraints(prototype, dp.ds, fixedweights, fixedpoints)
+```
+
+Returns a simplified and sorted [`DesignMeasure`](@ref) and a full [`OptimizationResult`](@ref).
+
+See also [`DirectMaximization`](@ref).
+"""
+function solve(
+    dp::DesignProblem,
+    strategy::ProblemSolvingStrategy = DirectMaximization(;
+        optimizer = Pso(; iterations = 50, swarmsize = 20),
+        prototype = random_design(dp.ds, parameter_dimension(dp.pk)),
+    ),
+)
+    constraints = DesignConstraints(
+        strategy.prototype,
+        dp.ds,
+        strategy.fixedweights,
+        strategy.fixedpoints,
+    )
     tc = precalculate_trafo_constants(dp.trafo, dp.pk)
     wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
-    c = allocate_initialize_covariates(prototype, dp.m, dp.cp)
+    c = allocate_initialize_covariates(strategy.prototype, dp.m, dp.cp)
     f = d -> objective!(wm, c, dp.dc, d, dp.m, dp.cp, dp.pk, tc, dp.na)
-    or = optimize(optimizer, f, [prototype], constraints; trace_state = trace_state)
-    dopt = sort_designpoints(simplify(or.maximizer, dp.ds, dp.m, dp.cp; sargs...))
+    or = optimize(
+        strategy.optimizer,
+        f,
+        [strategy.prototype],
+        constraints;
+        trace_state = strategy.trace_state,
+    )
+    dopt = sort_designpoints(
+        simplify(or.maximizer, dp.ds, dp.m, dp.cp; strategy.simplify_args...),
+    )
     return dopt, or
 end
 
@@ -85,8 +87,8 @@ This repeats the following `steps` times, starting with `r = candidate`:
     See the [`Optimizer`](@ref)s for algorithm-specific details.
  3. Use the optimizer `ow` to re-calculcate optimal weights of a [`mixture`](@ref) of `r` and `d`
     for the [`DesignCriterion`](@ref).
-    This is implemented as a call to [`optimize_design`](@ref)
-    with all of the designpoints of `r` kept fixed.
+    This is implemented as a call to [`solve`](@ref) with the [`DirectMaximization`](@ref) strategy
+    and with all of the designpoints of `r` kept fixed.
  4. Set `r` to the result of step 3.
 
 Returns a 3-Tuple:
@@ -141,14 +143,14 @@ function refine_design(
             res = mixture(1 / K, d, res)
         end
         # optimize weights
-        _, or_w = optimize_design(
-            ow,
-            dp;
+        wopt_strategy = DirectMaximization(;
+            optimizer = ow,
             prototype = res,
             fixedpoints = 1:K,
             trace_state = trace_state,
-            sargs...,
+            simplify_args = Dict(sargs...),
         )
+        _, or_w = solve(dp, wopt_strategy)
         push!(ors_w, or_w)
         res = or_w.maximizer
     end
