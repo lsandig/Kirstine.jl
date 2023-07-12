@@ -19,7 +19,7 @@ function dimension end
 
 
 """
-    solve(dp::DesignProblem [, strategy::ProblemSolvingStrategy])
+    solve(dp::DesignProblem [, strategy::ProblemSolvingStrategy]; trace_state = false, sargs...)
 
 Attempt to solve the design problem.
 
@@ -32,7 +32,13 @@ DirectMaximization(;
 )
 ```
 
-Returns a simplified and sorted [`DesignMeasure`](@ref) and a full [`OptimizationResult`](@ref).
+Returns a Tuple:
+
+  - The best [`DesignMeasure`](@ref) found. As postprocessing, [`simplify`](@ref) is called
+    with `sargs` and the design points are sorted with [`sort_designpoints`](@ref).
+
+  - The full [`OptimizationResult`](@ref). If `trace_state=true`, the full state of the
+    optimizer is saved for every iteration, which can be useful for debugging.
 
 See also [`DirectMaximization`](@ref).
 """
@@ -41,8 +47,17 @@ function solve(
     strategy::ProblemSolvingStrategy = DirectMaximization(;
         optimizer = Pso(; iterations = 50, swarmsize = 20),
         prototype = random_design(dp.ds, parameter_dimension(dp.pk)),
-    ),
+    );
+    trace_state = false,
+    sargs...,
 )
+    or = solve_with(dp, strategy, trace_state)
+    dopt = sort_designpoints(simplify(or.maximizer, dp.ds, dp.m, dp.cp; sargs...))
+    return dopt, or
+end
+
+function solve_with(dp::DesignProblem, strategy::DirectMaximization, trace_state::Bool)
+    # FIXME: the DesignConstraints are now specific to direct maximization! Rename them? Or not?
     constraints = DesignConstraints(
         strategy.prototype,
         dp.ds,
@@ -58,12 +73,9 @@ function solve(
         f,
         [strategy.prototype],
         constraints;
-        trace_state = strategy.trace_state,
+        trace_state = trace_state,
     )
-    dopt = sort_designpoints(
-        simplify(or.maximizer, dp.ds, dp.m, dp.cp; strategy.simplify_args...),
-    )
-    return dopt, or
+    return or
 end
 
 """
@@ -143,14 +155,8 @@ function refine_design(
             res = mixture(1 / K, d, res)
         end
         # optimize weights
-        wopt_strategy = DirectMaximization(;
-            optimizer = ow,
-            prototype = res,
-            fixedpoints = 1:K,
-            trace_state = trace_state,
-            simplify_args = Dict(sargs...),
-        )
-        _, or_w = solve(dp, wopt_strategy)
+        wstr = DirectMaximization(; optimizer = ow, prototype = res, fixedpoints = 1:K)
+        _, or_w = solve(dp, wstr; trace_state = trace_state, sargs...)
         push!(ors_w, or_w)
         res = or_w.maximizer
     end

@@ -372,8 +372,8 @@ include("example-compartment.jl")
                     DirectMaximization(;
                         optimizer = pso,
                         prototype = equidistant_design(ds, 3),
-                        simplify_args = Dict(:minposdist => 1e-2),
                     ),
+                    minposdist = 1e-2,
                 )
             )
         end
@@ -399,8 +399,8 @@ include("example-compartment.jl")
                     prototype = prototype,
                     fixedweights = fw,
                     fixedpoints = fp,
-                    trace_state = true,
-                ),
+                );
+                trace_state = true,
             ),
             is_const_w(o, ref, k) = all([
                 all(map(d -> d.weight[k] == ref.weight[k], s.x)) for s in o.trace_state

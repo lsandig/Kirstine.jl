@@ -467,6 +467,7 @@ struct DesignProblem{
         )
     end
 end
+
 """
     ProblemSolvingStrategy
 
@@ -484,14 +485,11 @@ struct DirectMaximization{To<:Optimizer} <: ProblemSolvingStrategy
     prototype::DesignMeasure
     fixedweights::Vector{Int64}
     fixedpoints::Vector{Int64}
-    trace_state::Bool
-    simplify_args::Dict
     # Note: We don't use @kwdef because fixed{weights,points} should be able to accept an
     # AbstractVector, and esp. also a unit range
     @doc """
     DirectMaximization(; optimizer<:Optimizer, prototype::DesignMeasure,
-                       fixedweights = [], fixedpoints = [],
-                       trace_state = false, simplify_args)
+                       fixedweights = [], fixedpoints = [])
 
 Initialize the `optimizer` with the `prototype`
 and attempt to directly maximize the objective function.
@@ -504,23 +502,13 @@ in cases where some weights or design points are know analytically.
 
 For more details on how the `prototype` is used,
 see the specific [`Optimizer`](@ref)s.
-
-Returns a Tuple:
-
-  - The best [`DesignMeasure`](@ref) found. As postprocessing, [`simplify`](@ref) is called
-    with `sargs` and the design points are sorted with [`sort_designpoints`](@ref).
-
-  - The full [`OptimizationResult`](@ref). If `trace_state=true`, the full state of the
-    optimizer is saved for every iteration, which can be useful for debugging.
 """
     function DirectMaximization(;
         optimizer::To,
         prototype::DesignMeasure,
         fixedweights::AbstractVector{<:Integer} = Int64[],
         fixedpoints::AbstractVector{<:Integer} = Int64[],
-        trace_state::Bool = false,
-        simplify_args = Dict{Symbol,Any}(),
     ) where To<:Optimizer
-        new{To}(optimizer, prototype, fixedweights, fixedpoints, trace_state, simplify_args)
+        new{To}(optimizer, prototype, fixedweights, fixedpoints)
     end
 end

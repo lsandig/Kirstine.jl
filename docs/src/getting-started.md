@@ -360,9 +360,8 @@ By setting `minweight=1e-4` and `mindist=1e-3`, we can simplify the result more 
 
 ```@example main
 Random.seed!(31415)
-s4, r4 = solve(dp2, DirectMaximization(optimizer = pso,
-                                       prototype = equidistant_design(ds, 10),
-                                       simplify_args = Dict(:minweight => 1e-4, :mindist => 1e-3)))
+s4, r4 = solve(dp2, DirectMaximization(optimizer = pso, prototype = equidistant_design(ds, 10)),
+               minweight = 1e-4, mindist = 1e-3)
 plot_gateauxderivative(s4, dp2)
 savefig(ans, "getting-started-pg4.png"); nothing # hide
 ```
@@ -417,8 +416,8 @@ yet `s5` is still far from the solution.
 Random.seed!(31415)
 pso = Pso(iterations = 25, swarmsize = 50)
 s5, r5 = solve(dp3, DirectMaximization(optimizer = pso,
-                                       prototype = equidistant_design(ds, 6), fixedpoints = [1, 6],
-                                       simplify_args = Dict(:minweight => 1e-4, :mindist => 1e-3)))
+                                       prototype = equidistant_design(ds, 6), fixedpoints = [1, 6]),
+               minweight = 1e-4, mindist = 1e-3)
 plot(plot(r5), plot_gateauxderivative(s5, dp3))
 savefig(ans, "getting-started-pg5-pd5.png") ; nothing # hide
 ```
@@ -456,9 +455,8 @@ so that they can be merged more easily.
 ```@example main
 pso = Pso(iterations = 150, swarmsize = 50)
 Random.seed!(31415)
-s7, r7 = solve(dp3, DirectMaximization(optimizer = pso,
-                                       prototype = s6,
-                                       simplify_args = Dict(:minweight => 1e-4, :mindist => 5e-3)))
+s7, r7 = solve(dp3, DirectMaximization(optimizer = pso, prototype = s6),
+               minweight = 1e-4, mindist = 5e-3)
 plot(plot(r7), plot_gateauxderivative(s7, dp3))
 savefig(ans, "getting-started-pg7-pd7.png") ; nothing # hide
 ```
