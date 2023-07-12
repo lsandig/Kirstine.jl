@@ -250,6 +250,7 @@ function check_compatible(d::DesignMeasure, ds::DesignInterval)
             error("designpoint is outside design space\n $sstr")
         end
     end
+    return true
 end
 
 """
@@ -589,19 +590,18 @@ function ap_move!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
     move_handle_fixed!(v, c.fixw, c.fixp)
     # handle intersections: find maximal 0<=t<=1 such that p+tv remains in the search volume
     t = move_how_far(p, v, c.ds)
-    if t < 0
-        @warn "t=$t means point was already outside search volume" p
-    end
     # Then, set p to p + tv
     move_add_v!(p, t, v, c.ds, c.fixw)
     # Stop the particle if the boundary was hit.
     if t != 1.0
         ap_mul_scalar!(v, 0)
     end
+    # check that we have not accidentally moved outside
+    check_compatible(p, c.ds)
     return p
 end
 
-function move_handle_fixed!(v, fixw, fixp)
+function move_handle_fixed!(v::SignedMeasure, fixw, fixp)
     K = length(v.weight)
     sum_vw_free = 0.0
     for k in 1:(K - 1)
@@ -642,7 +642,7 @@ function move_handle_fixed!(v, fixw, fixp)
     return v
 end
 
-function move_how_far(p, v, ds::DesignInterval{N}) where N
+function move_how_far(p::DesignMeasure, v::SignedMeasure, ds::DesignInterval{N}) where N
     t = 1.0
     K = length(p.designpoint)
     # box constraints
@@ -668,7 +668,7 @@ function how_far_right(x, t, v, ub)
     return x + t * v > ub ? (ub - x) / v : t
 end
 
-# How far can we go from x in the direction of x + tv, without landig left of lb?
+# How far can we go from x in the direction of x + tv, without landing left of lb?
 # if x + tv >= lb, return `t`; else return `s` such that x + sv == lb
 function how_far_left(x, t, v, lb)
     return x + t * v < lb ? (lb - x) / v : t
@@ -682,7 +682,13 @@ function how_far_simplexdiag(sum_x, t, sum_v)
     return sum_x + t * sum_v > one(sum_x) ? (one(sum_x) - sum_x) / sum_v : t
 end
 
-function move_add_v!(p, t, v, ds::DesignInterval{N}, fixw) where N
+function move_add_v!(
+    p::DesignMeasure,
+    t,
+    v::SignedMeasure,
+    ds::DesignInterval{N},
+    fixw,
+) where N
     K = length(p.designpoint)
     # first for the design points ...
     for k in 1:K
@@ -708,7 +714,6 @@ function move_add_v!(p, t, v, ds::DesignInterval{N}, fixw) where N
             p.weight[k] = 0.0
         end
         if p.weight[k] > 1.0
-            @warn "weight would move past 1.0 by $(p.weight[k] - 1.0)"
             p.weight[k] = 1.0
         end
         weight_K -= p.weight[k]
