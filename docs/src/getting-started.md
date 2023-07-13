@@ -429,7 +429,7 @@ We enforce some lower bounds on to prevent singular information matrices.
 Random.seed!(31415)
 sample_mat = max.([0 0.1 1 1], [1 2 4 5] .+ [0.5 0.5 0.5 0.5] .* randn(1000, 4))
 sample =
-    [SigEmaxPar(e0 = a, emax = b, ed50 = c, h = d) for (a, b, c, d) in eachrow(sample_mat)];
+    [SigEmaxPar(e0 = a, emax = b, ed50 = c, h = d) for (a, b, c, d) in eachrow(sample_mat)]
 mcpr = DiscretePrior(sample)
 
 dp3 = DesignProblem(
