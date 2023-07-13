@@ -17,20 +17,10 @@ function dimension end
 
 ## main interface ##
 
-
 """
-    solve(dp::DesignProblem [, strategy::ProblemSolvingStrategy]; trace_state = false, sargs...)
+    solve(dp::DesignProblem, strategy::ProblemSolvingStrategy; trace_state = false, sargs...)
 
 Attempt to solve the design problem.
-
-The default strategy is
-
-```julia
-DirectMaximization(;
-    optimizer = Pso(; iterations = 50, swarmsize = 20),
-    prototype = random_design(dp.ds, parameter_dimension(dp.pk)),
-)
-```
 
 Returns a tuple `(d, r)`:
 
@@ -45,10 +35,7 @@ See also [`DirectMaximization`](@ref), [`Exchange`](@ref).
 """
 function solve(
     dp::DesignProblem,
-    strategy::ProblemSolvingStrategy = DirectMaximization(;
-        optimizer = Pso(; iterations = 50, swarmsize = 20),
-        prototype = random_design(dp.ds, parameter_dimension(dp.pk)),
-    );
+    strategy::ProblemSolvingStrategy;
     trace_state = false,
     sargs...,
 )

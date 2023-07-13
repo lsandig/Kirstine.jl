@@ -308,7 +308,12 @@ include("example-compartment.jl")
             pso = Pso(; iterations = 50, swarmsize = 20),
             # search from a random starting design
             _ = seed!(4711),
-            (d1, r1) = solve(dp),
+            (d1, r1) = solve(
+                dp,
+                DirectMaximization(;
+                                   optimizer = pso,
+                                   prototype = random_design(ds, 3))
+            ),
             o1 = r1.or, # unwrap the OptimizationResult
             # search with lower and upper bound already known and fixed, uniform weights
             _ = seed!(4711),

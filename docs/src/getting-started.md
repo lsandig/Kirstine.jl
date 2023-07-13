@@ -181,21 +181,19 @@ There are a couple of things to note here:
 - There are two additional arguments to `DesignProblem`, namely `trafo` and `normal_approximation`.
   Their default values are just what we want in this introductory.
 
-We will use [particle swarm optimization](https://en.wikipedia.org/wiki/Particle_swarm_optimization) to do the actual work:
+We will use a [particle swarm](https://en.wikipedia.org/wiki/Particle_swarm_optimization)
+to directly maximize the objective function.
+We will search among designs with 4 design points, initialized completely at random.
 
-```@example main
-pso = Pso(iterations = 50, swarmsize = 25)
-nothing # hide
-```
-
-Now we can call [`solve`](@ref):
 ```@example main
 import Random
+pso = Pso(iterations = 50, swarmsize = 25)
 Random.seed!(4711)
-s1, r1 = solve(dp1)
+strategy = DirectMaximization(optimizer = pso, prototype = random_design(ds, 4))
+s1, r1 = solve(dp1, strategy)
 nothing # hide
 ```
-It returns two objects:
+[`solve`](@ref) returns two objects:
 - `s1` is the best [`DesignMeasure`](@ref) that was found,
 - `r1` here is a [`DirectMaximizationResult`](@ref) with additional diagnostic information.
 
