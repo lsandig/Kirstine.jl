@@ -21,12 +21,19 @@ with a four-element parameter vector
 ``\theta = (E_0, E_{\max}, \mathrm{ED}_{50}, h)``.
 
 This is a plot of the expected response function for some arbitrary ``\theta``:
+
 ```@example
 using Plots
 θ = (e0 = 1, emax = 2, ed50 = 4, h = 5)
-plot(x -> θ.e0 + θ.emax * x^θ.h / (θ.ed50^θ.h + x^θ.h);
-     xlims = (0, 10), xguide = "dose", yguide = "response", label = "μ(dose, θ)")
-savefig("getting-started-sigemax.png"); nothing # hide
+plot(
+    x -> θ.e0 + θ.emax * x^θ.h / (θ.ed50^θ.h + x^θ.h);
+    xlims = (0, 10),
+    xguide = "dose",
+    yguide = "response",
+    label = "μ(dose, θ)",
+)
+savefig("getting-started-sigemax.png");
+nothing; # hide
 ```
 
 ![](getting-started-sigemax.png)
@@ -119,11 +126,12 @@ function Kirstine.jacobianmatrix!(jm, m::SigEmax, c::SigEmaxCovariate, p::SigEma
     B = ed50_pow_h * p.emax / (dose_pow_h + ed50_pow_h)
     jm[1, 1] = 1.0
     jm[1, 2] = A
-    jm[1, 3] = - A * B * p.h / p.ed50
+    jm[1, 3] = -A * B * p.h / p.ed50
     jm[1, 4] = c.dose == 0 ? 0.0 : A * B * log(c.dose / p.ed50)
     return jm
 end
 ```
+
 Here we have tried to calculate expensive expressions only once
 and we have reused intermediate values.
 Also note that we follow [the conventions](https://docs.julialang.org/en/v1/manual/style-guide/#bang-convention)
@@ -162,24 +170,29 @@ This is how we specify a [`DesignProblem`](@ref) with
 the design space ``[0, 10]``,
 ``\sigma^2=1``,
 and our prior guess from above.
+
 ```@example main
 ds = DesignInterval(:dose => (0, 10))
-dp1 = DesignProblem(design_criterion = DOptimality(),
-                    design_space = ds,
-                    model = SigEmax(1),
-                    covariate_parameterization = CopyDose(),
-                    prior_knowledge = DiscretePrior([SigEmaxPar(e0 = 1, emax = 2, ed50 = 4, h = 5)]))
+dp1 = DesignProblem(
+    design_criterion = DOptimality(),
+    design_space = ds,
+    model = SigEmax(1),
+    covariate_parameterization = CopyDose(),
+    prior_knowledge = DiscretePrior([SigEmaxPar(e0 = 1, emax = 2, ed50 = 4, h = 5)]),
+)
 nothing # hide
 ```
+
 There are a couple of things to note here:
-- In this case, the observation variance ``\sigma^2`` merely scales the objective function,
-  hence it has no influence on the solution.
-  So for simplicity, we set it to `1`.
-- The name of the design interval's single dimension is given by the symbol `:dose`,
-  and it can be chosen independently from however we have named the field of our `SigEmaxCovariate`.
-  They _do not_ have to be the same.
-- There are two additional arguments to `DesignProblem`, namely `trafo` and `normal_approximation`.
-  Their default values are just what we want in this introductory.
+
+  - In this case, the observation variance ``\sigma^2`` merely scales the objective function,
+    hence it has no influence on the solution.
+    So for simplicity, we set it to `1`.
+  - The name of the design interval's single dimension is given by the symbol `:dose`,
+    and it can be chosen independently from however we have named the field of our `SigEmaxCovariate`.
+    They _do not_ have to be the same.
+  - There are two additional arguments to `DesignProblem`, namely `trafo` and `normal_approximation`.
+    Their default values are just what we want in this introductory.
 
 We will use a [particle swarm](https://en.wikipedia.org/wiki/Particle_swarm_optimization)
 to directly maximize the objective function.
@@ -193,9 +206,11 @@ strategy = DirectMaximization(optimizer = pso, prototype = random_design(ds, 4))
 s1, r1 = solve(dp1, strategy)
 nothing # hide
 ```
+
 [`solve`](@ref) returns two objects:
-- `s1` is the best [`DesignMeasure`](@ref) that was found,
-- `r1` here is a [`DirectMaximizationResult`](@ref) with additional diagnostic information.
+
+  - `s1` is the best [`DesignMeasure`](@ref) that was found,
+  - `r1` here is a [`DirectMaximizationResult`](@ref) with additional diagnostic information.
 
 Let's first examine the solution:
 
@@ -220,7 +235,8 @@ should be non-positive.
 ```@example main
 using Plots
 plot_gateauxderivative(s1, dp1; legend = :outerright)
-savefig(ans, "getting-started-pg1.png"); nothing # hide
+savefig(ans, "getting-started-pg1.png");
+nothing; # hide
 ```
 
 ![](getting-started-pg1.png)
@@ -232,7 +248,8 @@ By plotting `r1`, we can see how the solution has improved over successive itera
 
 ```@example main
 plot(r1)
-savefig(ans, "getting-started-pd1.png"); nothing # hide
+savefig(ans, "getting-started-pd1.png");
+nothing; # hide
 ```
 
 ![](getting-started-pd1.png)
@@ -240,6 +257,7 @@ savefig(ans, "getting-started-pd1.png"); nothing # hide
 We see that the particle swarm has effectively converged after 20 iterations.
 
 But let's return to the solution for a minute.
+
 ```@example main
 s1
 ```
@@ -253,12 +271,17 @@ and that two of them are at the minimal and maximal dose.[^LM07]
 We can pass this information to the [`DirectMaximization`](@ref) strategy:
 
 [^LM07]: Gang Li and Dibyen Majumdar (2008). D-optimal designs for logistic models with three and four parameters. Journal of Statistical Planning and Inference, 138(7), 1950–1959. [doi:10.1016/j.jspi.2007.07.010](http://dx.doi.org/10.1016/j.jspi.2007.07.010)
-
 ```@example main
 Random.seed!(4711)
-s2, r2 = solve(dp1, DirectMaximization(optimizer = pso,
-                                       prototype = equidistant_design(ds, 4),
-                                       fixedweights = 1:4, fixedpoints = [1, 4]))
+s2, r2 = solve(
+    dp1,
+    DirectMaximization(
+        optimizer = pso,
+        prototype = equidistant_design(ds, 4),
+        fixedweights = 1:4,
+        fixedpoints = [1, 4],
+    ),
+)
 nothing # hide
 ```
 
@@ -303,16 +326,19 @@ with prior probabilities ``\{0.1, 0.3, 0.4, 0.2\}``.
 The remaining elements of ``\theta`` are as in the previous section.
 
 [^W97]: James N. Weiss (1997). The hill equation revisited: uses and misuses. The FASEB Journal, 11(11), 835–841. [doi:10.1096/fasebj.11.11.9285481](http://dx.doi.org/10.1096/fasebj.11.11.9285481)
-
-Compared to the locally optimal design problem, only the prior knowledge changes:
+    Compared to the locally optimal design problem, only the prior knowledge changes:
 ```@example main
-dpr = DiscretePrior([SigEmaxPar(e0 = 1, emax = 2, ed50 = 4, h = h) for h in 1:4],
-                    [0.1, 0.3, 0.4, 0.2])
-dp2 = DesignProblem(design_criterion = dp1.dc,
-                    design_space = dp1.ds,
-                    model = dp1.m,
-                    covariate_parameterization = dp1.cp,
-                    prior_knowledge = dpr)
+dpr = DiscretePrior(
+    [SigEmaxPar(e0 = 1, emax = 2, ed50 = 4, h = h) for h in 1:4],
+    [0.1, 0.3, 0.4, 0.2],
+)
+dp2 = DesignProblem(
+    design_criterion = dp1.dc,
+    design_space = dp1.ds,
+    model = dp1.m,
+    covariate_parameterization = dp1.cp,
+    prior_knowledge = dpr,
+)
 nothing # hide
 ```
 
@@ -323,9 +349,11 @@ and also increase the number of iterations and the swarm size.
 ```@example main
 pso = Pso(iterations = 100, swarmsize = 50)
 Random.seed!(31415)
-s3, r3 = solve(dp2, DirectMaximization(optimizer = pso, prototype = equidistant_design(ds, 10)))
+s3, r3 =
+    solve(dp2, DirectMaximization(optimizer = pso, prototype = equidistant_design(ds, 10)))
 plot_gateauxderivative(s3, dp2)
-savefig(ans, "getting-started-pg3.png"); nothing # hide
+savefig(ans, "getting-started-pg3.png");
+nothing; # hide
 ```
 
 ![](getting-started-pg3.png)
@@ -358,10 +386,15 @@ By setting `minweight=1e-4` and `mindist=1e-3`, we can simplify the result more 
 
 ```@example main
 Random.seed!(31415)
-s4, r4 = solve(dp2, DirectMaximization(optimizer = pso, prototype = equidistant_design(ds, 10)),
-               minweight = 1e-4, mindist = 1e-3)
+s4, r4 = solve(
+    dp2,
+    DirectMaximization(optimizer = pso, prototype = equidistant_design(ds, 10)),
+    minweight = 1e-4,
+    mindist = 1e-3,
+)
 plot_gateauxderivative(s4, dp2)
-savefig(ans, "getting-started-pg4.png"); nothing # hide
+savefig(ans, "getting-started-pg4.png");
+nothing; # hide
 ```
 
 ![](getting-started-pg4.png)
@@ -395,14 +428,17 @@ We enforce some lower bounds on to prevent singular information matrices.
 ```@example main
 Random.seed!(31415)
 sample_mat = max.([0 0.1 1 1], [1 2 4 5] .+ [0.5 0.5 0.5 0.5] .* randn(1000, 4))
-sample = [SigEmaxPar(e0 = a, emax = b, ed50 = c, h = d) for (a, b, c, d) in eachrow(sample_mat)];
+sample =
+    [SigEmaxPar(e0 = a, emax = b, ed50 = c, h = d) for (a, b, c, d) in eachrow(sample_mat)];
 mcpr = DiscretePrior(sample)
 
-dp3 = DesignProblem(design_criterion = dp1.dc,
-                    design_space = dp1.ds,
-                    model = dp1.m,
-                    covariate_parameterization = dp1.cp,
-                    prior_knowledge = mcpr)
+dp3 = DesignProblem(
+    design_criterion = dp1.dc,
+    design_space = dp1.ds,
+    model = dp1.m,
+    covariate_parameterization = dp1.cp,
+    prior_knowledge = mcpr,
+)
 nothing # hide
 ```
 
@@ -413,21 +449,30 @@ yet `s5` is still far from the solution.
 ```@example main
 Random.seed!(31415)
 pso = Pso(iterations = 25, swarmsize = 50)
-s5, r5 = solve(dp3, DirectMaximization(optimizer = pso,
-                                       prototype = equidistant_design(ds, 6), fixedpoints = [1, 6]),
-               minweight = 1e-4, mindist = 1e-3)
+s5, r5 = solve(
+    dp3,
+    DirectMaximization(
+        optimizer = pso,
+        prototype = equidistant_design(ds, 6),
+        fixedpoints = [1, 6],
+    ),
+    minweight = 1e-4,
+    mindist = 1e-3,
+)
 plot(plot(r5), plot_gateauxderivative(s5, dp3))
-savefig(ans, "getting-started-pg5-pd5.png") ; nothing # hide
+savefig(ans, "getting-started-pg5-pd5.png");
+nothing; # hide
 ```
 
 ![](getting-started-pg5-pd5.png)
 
 We can use the [`Exchange`](@ref) strategy to try and improve the design `s5`.
 It repeats the following four actions for a given number of steps:
-1. Simplify the design
-2. Search for the direction with the largest Gateaux derivative.
-3. Add the corresponding design point to the design.
-4. Re-optimize the weights.
+
+ 1. Simplify the design
+ 2. Search for the direction with the largest Gateaux derivative.
+ 3. Add the corresponding design point to the design.
+ 4. Re-optimize the weights.
 
 Separate PSO parameters can be given for (2) and (4).
 These optimization problems have lower dimensions,
@@ -440,7 +485,8 @@ psow = Pso(iterations = 15, swarmsize = 25)
 Random.seed!(31415)
 s6, r6 = solve(dp3, Exchange(od = psod, ow = psow, steps = 5, candidate = s5))
 plot(plot(r6), plot_gateauxderivative(s6, dp3))
-savefig(ans, "getting-started-pg6-pd6.png") ; nothing # hide
+savefig(ans, "getting-started-pg6-pd6.png");
+nothing; # hide
 ```
 
 ![](getting-started-pg6-pd6.png)
@@ -453,10 +499,15 @@ so that they can be merged more easily.
 ```@example main
 pso = Pso(iterations = 150, swarmsize = 50)
 Random.seed!(31415)
-s7, r7 = solve(dp3, DirectMaximization(optimizer = pso, prototype = s6),
-               minweight = 1e-4, mindist = 5e-3)
+s7, r7 = solve(
+    dp3,
+    DirectMaximization(optimizer = pso, prototype = s6),
+    minweight = 1e-4,
+    mindist = 5e-3,
+)
 plot(plot(r7), plot_gateauxderivative(s7, dp3))
-savefig(ans, "getting-started-pg7-pd7.png") ; nothing # hide
+savefig(ans, "getting-started-pg7-pd7.png");
+nothing; # hide
 ```
 
 ![](getting-started-pg7-pd7.png)

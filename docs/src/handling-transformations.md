@@ -5,35 +5,43 @@ but about the transformed parameter ``T(\theta)``,
 where ``T(\theta)`` can be a number or a vector.
 
 !!! note
-
-	`Kirstine.jl` allows transformations to be freely combined with different design criteria.
-	In this sense, c-optimality is just the special case of D-optimality
-	combined with a transformation ``T: \mathbb{R}^r \to \mathbb{R}``.
+    
+    `Kirstine.jl` allows transformations to be freely combined with different design criteria.
+    In this sense, c-optimality is just the special case of D-optimality
+    combined with a transformation ``T: \mathbb{R}^r \to \mathbb{R}``.
 
 Our example in this vignette is the three-parameter compartment model from Atkinson et al[^ACHJ93].
 Used in pharmacokinetics,
 it describes how the concentration of a drug in an experimental subject changes over time.
 The mean function for the regression is given by
+
 ```math
 \mu(x, \theta) = s (\exp(-ex) - \exp(-ax))
 ```
+
 where the elements of ``\theta`` are
 the absorption rate ``a``,
 the elimination rate ``e``,
 and a scaling factor ``s``.
 The covariate ``x`` denotes the time in hours.
+
 ```@example
 using Plots # hide
 θ = (a = 4.298, e = 0.05884, s = 21.80)
-plot(x -> θ.s * (exp(-θ.e * x) - exp(-θ.a * x));
-     xlims = (0, 10), xguide = "time [h]", yguide = "response", label = "μ(time , θ)")
-savefig("handling-transformations-tpc.png"); nothing # hide
+plot(
+    x -> θ.s * (exp(-θ.e * x) - exp(-θ.a * x));
+    xlims = (0, 10),
+    xguide = "time [h]",
+    yguide = "response",
+    label = "μ(time , θ)",
+)
+savefig("handling-transformations-tpc.png");
+nothing; # hide
 ```
 
 ![](handling-transformations-tpc.png)
 
 [^ACHJ93]: Anthony C. Atkinson, Kathryn Chaloner, Agnes M. Herzberg, and June Juritz, "Optimum experimental designs for properties of a compartmental model", Biometrics, 49(2), 325–337, 1993. [doi:10.2307/2532547](http://dx.doi.org/10.2307/2532547)
-
 ## Setup
 
 As in the [introductory example](getting-started.md),
@@ -50,7 +58,7 @@ struct Copy <: CovariateParameterization end
 function Kirstine.jacobianmatrix!(jm, m::TPCMod, c::TPCModCovariate, p::TPCPar)
     A = exp(-p.a * c.time)
     E = exp(-p.e * c.time)
-    jm[1, 1] =  A * p.s * c.time
+    jm[1, 1] = A * p.s * c.time
     jm[1, 2] = -E * p.s * c.time
     jm[1, 3] = E - A
     return m
@@ -67,9 +75,9 @@ because locally optimal designs for scalar ``T(\theta)`` usually don't exist
 due to their information matrices becoming singular.
 
 !!! note
-
-	Workarounds like generalized inverses or matrix regularization
-	are currently not supported by `Kirstine.jl`.
+    
+    Workarounds like generalized inverses or matrix regularization
+    are currently not supported by `Kirstine.jl`.
 
 For the prior we will use “distribution I” from[^ACHJ93],
 which is constructed from two independent uniform distributions around estimates for ``a`` and ``e``,
@@ -93,21 +101,25 @@ In this vignette we will focus on the effect of different transformations.
 The following helper function lets us specify the parts of the design problem that do not change just once.
 We fix the seed so that different transformations do not accidentally use different prior samples.
 Our design interval extends from `0` to `48` hours after administration of the drug.
+
 ```@example main
 function dp_for_trafo(trafo)
     Random.seed!(4711)
-    DesignProblem(design_space = DesignInterval(:time => [0, 48]),
-                  design_criterion = DOptimality(),
-                  covariate_parameterization = Copy(),
-                  model = TPCMod(1),
-                  prior_knowledge = draw_from_prior(1000, 2),
-                  transformation = trafo)
+    DesignProblem(
+        design_space = DesignInterval(:time => [0, 48]),
+        design_criterion = DOptimality(),
+        covariate_parameterization = Copy(),
+        model = TPCMod(1),
+        prior_knowledge = draw_from_prior(1000, 2),
+        transformation = trafo,
+    )
 end
 nothing # hide
 ```
 
 In all subsequent examples we will use identical settings for the particle swarm optimizer,
 and start with an equidistant design.
+
 ```@example main
 pso = Pso(swarmsize = 50, iterations = 100)
 dms = DirectMaximization(optimizer = pso, prototype = uniform_design([[0], [24], [48]]))
@@ -132,17 +144,20 @@ s_id
 
 ```@example main
 plot_gateauxderivative(s_id, dp_id)
-savefig(ans, "handling-transformations-gd-id.png"); nothing # hide
+savefig(ans, "handling-transformations-gd-id.png");
+nothing; # hide
 ```
 
 ![](handling-transformations-gd-id.png)
 
 ## Univariate functions of the parameter
+
 ### Area under the curve
 
 In pharmacokinetics,
 one quantity of particular interest is the area under the response curve.
 It can be calculated as
+
 ```math
 \mathrm{AUC}(\theta) = s \bigg( \frac{1}{e} - \frac{1}{a} \bigg).
 ```
@@ -153,7 +168,7 @@ for which we need to know the Jacobian matrix of ``\mathrm{AUC}``:
 
 ```@example main
 function Dauc(p)
-    del_a =  p.s / p.a^2
+    del_a = p.s / p.a^2
     del_e = -p.s / p.e^2
     del_s = 1 / p.e - 1 / p.a
     return [del_a del_e del_s]
@@ -167,6 +182,7 @@ and that the order of the partial derivatives is the same as in the Jacobian mat
 The only difference to the previous call of `dp_for_trafo`
 is that we now use a [`DeltaMethod`](@ref) object wrapped around the Jacobian matrix function
 instead of the identity transformation.
+
 ```@example main
 dp_auc = dp_for_trafo(DeltaMethod(Dauc))
 Random.seed!(1357)
@@ -176,7 +192,8 @@ s_auc
 
 ```@example main
 plot_gateauxderivative(s_auc, dp_auc)
-savefig(ans, "handling-transformations-gd-auc.png"); nothing # hide
+savefig(ans, "handling-transformations-gd-auc.png");
+nothing; # hide
 ```
 
 ![](handling-transformations-gd-auc.png)
@@ -202,6 +219,7 @@ efficiency(s_auc, s_id, dp_id)
 Now let's find a design that is optimal for estimating the point in time where the concentration is highest.
 Differentiating ``\mu`` with respect to ``x``,
 equating with ``0`` and solving for ``x`` gives
+
 ```math
 t_{\max}(\theta) = \frac{\log(a / e)}{a - e}.
 ```
@@ -230,7 +248,8 @@ s_ttm
 
 ```@example main
 plot_gateauxderivative(s_ttm, dp_ttm)
-savefig(ans, "handling-transformations-gd-ttm.png"); nothing # hide
+savefig(ans, "handling-transformations-gd-ttm.png");
+nothing; # hide
 ```
 
 ![](handling-transformations-gd-ttm.png)
@@ -251,7 +270,7 @@ function Dcmax(p)
     E = exp(-p.e * tmax)
     F = p.a * A - p.e * E
     da_ttm, de_ttm, ds_ttm = Dttm(p)
-    da = p.s * ( tmax * A - F * da_ttm)
+    da = p.s * (tmax * A - F * da_ttm)
     de = p.s * (-tmax * E + F * de_ttm)
     ds = E - A
     return [da de ds]
@@ -268,7 +287,8 @@ s_cmax
 
 ```@example main
 plot_gateauxderivative(s_cmax, dp_cmax)
-savefig(ans, "handling-transformations-gd-cmax.png"); nothing # hide
+savefig(ans, "handling-transformations-gd-cmax.png");
+nothing; # hide
 ```
 
 ![](handling-transformations-gd-cmax.png)
@@ -298,7 +318,8 @@ s_both
 
 ```@example main
 plot_gateauxderivative(s_both, dp_both)
-savefig(ans, "handling-transformations-gd-both.png"); nothing # hide
+savefig(ans, "handling-transformations-gd-both.png");
+nothing; # hide
 ```
 
 ![](handling-transformations-gd-both.png)
@@ -311,6 +332,6 @@ Finally we compare all pairwise efficiencies (solutions in rows, transformations
 solutions = [s_id, s_auc, s_ttm, s_cmax, s_both]
 problems = [dp_id, dp_auc, dp_ttm, dp_cmax, dp_both]
 map(Iterators.product(solutions, zip(solutions, problems))) do (s1, (s2, dp))
-	efficiency(s1, s2, dp)
+    efficiency(s1, s2, dp)
 end
 ```

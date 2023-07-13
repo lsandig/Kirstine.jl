@@ -9,6 +9,7 @@ ver = Pkg.project().version
 ```
 
 ## Autodocs: Types
+
 ```@autodocs
 Modules = [Kirstine]
 Order = [:type]
