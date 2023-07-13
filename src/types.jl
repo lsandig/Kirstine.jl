@@ -502,6 +502,8 @@ in cases where some weights or design points are know analytically.
 
 For more details on how the `prototype` is used,
 see the specific [`Optimizer`](@ref)s.
+
+The return value of [`solve`](@ref) for this strategy is a [`DirectMaximizationResult`](@ref)
 """
     function DirectMaximization(;
         optimizer::To,
@@ -511,4 +513,21 @@ see the specific [`Optimizer`](@ref)s.
     ) where To<:Optimizer
         new{To}(optimizer, prototype, fixedweights, fixedpoints)
     end
+end
+
+"""
+    ProblemSolvingResult
+
+Supertype for results of a [`ProblemSolvingStrategy`](@ref).
+"""
+abstract type ProblemSolvingResult end
+
+"""
+    DirectMaximizationResult <: ProblemSolvingResult
+
+Wraps an [`OptimizationResult`](@ref) in the `or` field.
+"""
+struct DirectMaximizationResult{S<:OptimizerState{DesignMeasure,SignedMeasure}} <:
+       ProblemSolvingResult
+    or::OptimizationResult{DesignMeasure,SignedMeasure,S}
 end

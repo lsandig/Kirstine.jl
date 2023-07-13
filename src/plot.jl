@@ -8,6 +8,11 @@
     iter, r.trace_fx
 end
 
+@recipe function f(r::DirectMaximizationResult)
+    # just unwrap the OptimizationResult
+    r.or
+end
+
 @recipe function f(rs::AbstractVector{OptimizationResult})
     nsteps = length(rs)
     steps = collect(1:nsteps)

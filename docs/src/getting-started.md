@@ -197,7 +197,7 @@ nothing # hide
 ```
 It returns two objects:
 - `s1` is the best [`DesignMeasure`](@ref) that was found,
-- `r1` is an [`OptimizationResult`](@ref) with additional diagnostic information.
+- `r1` here is a [`DirectMaximizationResult`](@ref) with additional diagnostic information.
 
 Let's first examine the solution:
 
@@ -372,10 +372,10 @@ savefig(ans, "getting-started-pg4.png"); nothing # hide
 s4
 ```
 
-Note that we can still access the raw (unsorted and unsimplified) result at `r4.maximizer`:
+Note that we can still access the raw (unsorted and unsimplified) result at `maximizer(r4)`:
 
 ```@example main
-r4.maximizer
+maximizer(r4)
 ```
 
 Now suppose we want to perform the experiment,

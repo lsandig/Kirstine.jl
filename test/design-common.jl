@@ -308,11 +308,12 @@ include("example-compartment.jl")
             pso = Pso(; iterations = 50, swarmsize = 20),
             # search from a random starting design
             _ = seed!(4711),
-            (d1, o1) = solve(dp),
+            (d1, r1) = solve(dp),
+            o1 = r1.or, # unwrap the OptimizationResult
             # search with lower and upper bound already known and fixed, uniform weights
             _ = seed!(4711),
             cand = equidistant_design(ds, 3),
-            (d2, o2) = solve(
+            (d2, r2) = solve(
                 dp,
                 DirectMaximization(;
                     optimizer = pso,
@@ -320,7 +321,8 @@ include("example-compartment.jl")
                     fixedweights = 1:3,
                     fixedpoints = [1, 3],
                 ),
-            )
+            ),
+            o2 = r2.or
 
             @test d1.weight ≈ sol.weight rtol = 1e-3
             for k in 1:3
@@ -403,11 +405,11 @@ include("example-compartment.jl")
                 trace_state = true,
             ),
             is_const_w(o, ref, k) = all([
-                all(map(d -> d.weight[k] == ref.weight[k], s.x)) for s in o.trace_state
+                all(map(d -> d.weight[k] == ref.weight[k], s.x)) for s in o.or.trace_state
             ]),
             is_const_d(o, ref, k) = all([
                 all(map(d -> d.designpoint[k] == ref.designpoint[k], s.x)) for
-                s in o.trace_state
+                s in o.or.trace_state
             ]),
             _ = seed!(4711),
             (_, o1) = opt(; fw = [2], fp = [2]),

@@ -32,13 +32,14 @@ DirectMaximization(;
 )
 ```
 
-Returns a Tuple:
+Returns a tuple `(d, r)`:
 
-  - The best [`DesignMeasure`](@ref) found. As postprocessing, [`simplify`](@ref) is called
+  - `d`: The best [`DesignMeasure`](@ref) found. As postprocessing, [`simplify`](@ref) is called
     with `sargs` and the design points are sorted with [`sort_designpoints`](@ref).
 
-  - The full [`OptimizationResult`](@ref). If `trace_state=true`, the full state of the
-    optimizer is saved for every iteration, which can be useful for debugging.
+  - `r`: A subtype of [`ProblemSolvingResult`](@ref) that is specific to the strategy used.
+    If `trace_state=true`, this object contains additional debugging information.
+    The unsimplified version of `d` can be accessed as `maximizer(r)`.
 
 See also [`DirectMaximization`](@ref).
 """
@@ -52,12 +53,11 @@ function solve(
     sargs...,
 )
     or = solve_with(dp, strategy, trace_state)
-    dopt = sort_designpoints(simplify(or.maximizer, dp.ds, dp.m, dp.cp; sargs...))
+    dopt = sort_designpoints(simplify(maximizer(or), dp.ds, dp.m, dp.cp; sargs...))
     return dopt, or
 end
 
 function solve_with(dp::DesignProblem, strategy::DirectMaximization, trace_state::Bool)
-    # FIXME: the DesignConstraints are now specific to direct maximization! Rename them? Or not?
     constraints = DesignConstraints(
         strategy.prototype,
         dp.ds,
@@ -75,7 +75,7 @@ function solve_with(dp::DesignProblem, strategy::DirectMaximization, trace_state
         constraints;
         trace_state = trace_state,
     )
-    return or
+    return DirectMaximizationResult(or)
 end
 
 """
@@ -156,7 +156,8 @@ function refine_design(
         end
         # optimize weights
         wstr = DirectMaximization(; optimizer = ow, prototype = res, fixedpoints = 1:K)
-        _, or_w = solve(dp, wstr; trace_state = trace_state, sargs...)
+        _, rw = solve(dp, wstr; trace_state = trace_state, sargs...)
+        or_w = rw.or
         push!(ors_w, or_w)
         res = or_w.maximizer
     end
@@ -165,6 +166,10 @@ function refine_design(
 end
 
 # == various helper functions == #
+function maximizer(dmr::DirectMaximizationResult)
+    return dmr.or.maximizer
+end
+
 function DesignConstraints(
     d::DesignMeasure,
     ds::DesignSpace,
