@@ -13,7 +13,7 @@ end
     r.or
 end
 
-@recipe function f(rs::AbstractVector{OptimizationResult})
+@recipe function f(rs::AbstractVector{<:OptimizationResult})
     nsteps = length(rs)
     steps = collect(1:nsteps)
     fx = [r.maximum for r in rs]
@@ -22,6 +22,19 @@ end
     xlims --> (1, nsteps)
     label --> ""
     steps, fx
+end
+
+@recipe function f(r::ExchangeResult)
+    layout --> @layout [derivative; objective]
+    @series begin
+        subplot := 1
+        yguide --> "max derivative"
+        r.ord
+    end
+    @series begin
+        subplot := 2
+        r.orw
+    end
 end
 
 @recipe function f(d::DesignMeasure)

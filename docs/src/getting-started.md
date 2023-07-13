@@ -424,7 +424,7 @@ savefig(ans, "getting-started-pg5-pd5.png") ; nothing # hide
 
 ![](getting-started-pg5-pd5.png)
 
-We can use [`refine_design`](@ref) to try to improve the design.
+We can use the [`Exchange`](@ref) strategy to try and improve the design `s5`.
 It repeats the following four actions for a given number of steps:
 1. Simplify the design
 2. Search for the direction with the largest Gateaux derivative.
@@ -440,8 +440,8 @@ Now we use 5 refinement iterations:
 psod = Pso(iterations = 10, swarmsize = 50)
 psow = Pso(iterations = 15, swarmsize = 25)
 Random.seed!(31415)
-s6, r6d, r6w = refine_design(psod, psow, 5, s5, dp2)
-plot(plot(r6w), plot_gateauxderivative(s6, dp3))
+s6, r6 = solve(dp3, Exchange(od = psod, ow = psow, steps = 5, candidate = s5))
+plot(plot(r6), plot_gateauxderivative(s6, dp3))
 savefig(ans, "getting-started-pg6-pd6.png") ; nothing # hide
 ```
 

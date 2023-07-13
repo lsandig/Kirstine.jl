@@ -41,7 +41,7 @@ Returns a tuple `(d, r)`:
     If `trace_state=true`, this object contains additional debugging information.
     The unsimplified version of `d` can be accessed as `maximizer(r)`.
 
-See also [`DirectMaximization`](@ref).
+See also [`DirectMaximization`](@ref), [`Exchange`](@ref).
 """
 function solve(
     dp::DesignProblem,
@@ -78,50 +78,8 @@ function solve_with(dp::DesignProblem, strategy::DirectMaximization, trace_state
     return DirectMaximizationResult(or)
 end
 
-"""
-    refine_design(od::Optimizer,
-                  ow::Optimizer,
-                  steps::Int64,
-                  candidate::DesignMeasure,
-                  dp::DesignProblem;
-                  trace_state = false,
-                  sargs...)
-
-Improve a `candidate` design by ascending its Gateaux derivative.
-
-This repeats the following `steps` times, starting with `r = candidate`:
-
- 1. [`simplify`](@ref) the design `r`, passing along `sargs`.
- 2. Use the optimizer `od` to find the direction (one-point design / Dirac measure) `d`
-    of steepest [`gateauxderivative`](@ref) at `r`.
-    The vector of `prototypes` that is used for initializing `od`
-    is constructed from one-point designs at the design points of `r`.
-    See the [`Optimizer`](@ref)s for algorithm-specific details.
- 3. Use the optimizer `ow` to re-calculcate optimal weights of a [`mixture`](@ref) of `r` and `d`
-    for the [`DesignCriterion`](@ref).
-    This is implemented as a call to [`solve`](@ref) with the [`DirectMaximization`](@ref) strategy
-    and with all of the designpoints of `r` kept fixed.
- 4. Set `r` to the result of step 3.
-
-Returns a 3-Tuple:
-
-  - The best [`DesignMeasure`](@ref) found after the last refinement step. As
-    postprocessing, [`simplify`](@ref) is called with `sargs` and the design points are
-    sorted with [`sort_designpoints`](@ref).
-  - A vector of [`OptimizationResult`](@ref)s from the derivative-maximizing steps. If
-    `trace_state=true`, the full state of the algorithm is saved for every iteration.
-  - A vector of [`OptimizationResult`](@ref)s from the re-weighting steps. If
-    `trace_state=true`, the full state of the algorithm is saved for every iteration
-"""
-function refine_design(
-    od::Optimizer,
-    ow::Optimizer,
-    steps::Int64,
-    candidate::DesignMeasure,
-    dp::DesignProblem;
-    trace_state = false,
-    sargs...,
-)
+function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
+    (; candidate, ow, od, steps, simplify_args) = strategy
     check_compatible(candidate, dp.ds)
     tc = precalculate_trafo_constants(dp.trafo, dp.pk)
     wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
@@ -130,19 +88,15 @@ function refine_design(
         dp.m,
         dp.cp,
     )
-    ors_d = OptimizationResult[]
-    ors_w = OptimizationResult[]
     constraints = DesignConstraints(dp.ds, [false], [false])
-
     res = candidate
-    for i in 1:steps
-        res = simplify(res, dp.ds, dp.m, dp.cp; sargs...)
+    or_pairs = map(1:(steps)) do i
+        res = simplify(res, dp.ds, dp.m, dp.cp; simplify_args...)
         dir_prot = map(one_point_design, designpoints(simplify_drop(res, 0)))
-        gconst = precalculate_gateaux_constants(dp.dc, res, dp.m, dp.cp, dp.pk, tc, dp.na)
+        gc = precalculate_gateaux_constants(dp.dc, res, dp.m, dp.cp, dp.pk, tc, dp.na)
         # find direction of steepest ascent
-        gd(d) = gateauxderivative!(wm, c, gconst, d, dp.m, dp.cp, dp.pk, dp.na)
+        gd(d) = gateauxderivative!(wm, c, gc, d, dp.m, dp.cp, dp.pk, dp.na)
         or_gd = optimize(od, gd, dir_prot, constraints; trace_state = trace_state)
-        push!(ors_d, or_gd)
         d = or_gd.maximizer
         # append the new atom
         K = length(res.weight)
@@ -156,18 +110,22 @@ function refine_design(
         end
         # optimize weights
         wstr = DirectMaximization(; optimizer = ow, prototype = res, fixedpoints = 1:K)
-        _, rw = solve(dp, wstr; trace_state = trace_state, sargs...)
-        or_w = rw.or
-        push!(ors_w, or_w)
-        res = or_w.maximizer
+        _, rw = solve(dp, wstr; trace_state = trace_state, simplify_args...)
+        res = maximizer(rw)
+        return or_gd, rw.or
     end
-    dopt = sort_designpoints(simplify(res, dp.ds, dp.m, dp.cp; sargs...))
-    return dopt, ors_d, ors_w
+    ors_d = map(o -> o[1], or_pairs)
+    ors_w = map(o -> o[2], or_pairs)
+    return ExchangeResult(ors_d, ors_w)
 end
 
 # == various helper functions == #
 function maximizer(dmr::DirectMaximizationResult)
     return dmr.or.maximizer
+end
+
+function maximizer(er::ExchangeResult)
+    return er.orw[end].maximizer
 end
 
 function DesignConstraints(

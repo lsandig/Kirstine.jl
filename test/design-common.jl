@@ -291,7 +291,7 @@ include("example-compartment.jl")
         end
     end
 
-    @testset "solve" begin
+    @testset "solve with DirectMaximization" begin
         # Can we find the locally D-optimal design?
         let ds = DesignInterval(:dose => (0, 10)),
             p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
@@ -436,7 +436,7 @@ include("example-compartment.jl")
         end
     end
 
-    @testset "refine_design" begin
+    @testset "solve with Exchange" begin
         # Does refinement work?
         let p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
             ds = DesignInterval(:dose => (0, 10)),
@@ -454,12 +454,12 @@ include("example-compartment.jl")
                 prior_knowledge = DiscretePrior([p]),
                 design_space = ds,
             ),
-            (r, rd, rw) = refine_design(od, ow, 3, cand, dp)
+            (d, r) = solve(dp, Exchange(; ow = ow, od = od, candidate = cand, steps = 3))
 
-            @test abs(designpoints(r)[2][1] - designpoints(sol)[2][1]) <
+            @test abs(designpoints(d)[2][1] - designpoints(sol)[2][1]) <
                   abs(designpoints(cand)[1][1] - designpoints(sol)[2][1])
-            @test issorted([r.maximum for r in rw])
-            @test all([r.maximum > 0 for r in rd])
+            @test issorted([r.maximum for r in r.orw])
+            @test all([r.maximum > 0 for r in r.ord])
 
             # When the direction of steepest ascent is in the support of the candidate, the
             # support of the intermediate design measure should not grow. When merged, the
@@ -468,9 +468,10 @@ include("example-compartment.jl")
             # unequal weights. Then we do one step of refinement and examine the (unsorted!)
             # results.
             near_sol = DesignMeasure([0.6, 0.3, 0.1], designpoints(sol))
-            (s, sd, sw) = refine_design(od, ow, 1, near_sol, dp)
-            @test length(weights(sw[1].maximizer)) == 3
-            @test designpoints(sw[1].maximizer)[1] == designpoints(near_sol)[3]
+            (s, r) =
+                solve(dp, Exchange(; ow = ow, od = od, candidate = near_sol, steps = 1))
+            @test length(weights(r.orw[1].maximizer)) == 3
+            @test designpoints(r.orw[1].maximizer)[1] == designpoints(near_sol)[3]
         end
     end
 end
