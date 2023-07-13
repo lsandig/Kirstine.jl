@@ -245,7 +245,7 @@ Wraps results of particle-based optimization.
 Note that `trace_state` may only contain the initial state, if saving all
 states was not requested explicitly.
 
-See also [`optimize_design`](@ref).
+See also [`solve`](@ref).
 """
 struct OptimizationResult{
     T<:AbstractPoint,
@@ -415,7 +415,7 @@ A `DesignProblem` has 7 components:
   - a [`Transformation`](@ref),
   - and a [`NormalApproximation`](@ref).
 
-See also [`optimize_design`](@ref).
+See also [`solve`](@ref).
 """
 struct DesignProblem{
     Tdc<:DesignCriterion,
@@ -466,4 +466,130 @@ struct DesignProblem{
             normal_approximation,
         )
     end
+end
+
+"""
+    ProblemSolvingStrategy
+
+Supertype for algorithms for solving a [`DesignProblem`](@ref).
+"""
+abstract type ProblemSolvingStrategy end
+
+"""
+    DirectMaximization <: ProblemSolvingStrategy
+
+Represents the strategy of finding an optimal design by directly maximizing a criterion's objective function.
+"""
+struct DirectMaximization{To<:Optimizer} <: ProblemSolvingStrategy
+    optimizer::To
+    prototype::DesignMeasure
+    fixedweights::Vector{Int64}
+    fixedpoints::Vector{Int64}
+    # Note: We don't use @kwdef because fixed{weights,points} should be able to accept an
+    # AbstractVector, and esp. also a unit range
+    @doc """
+    DirectMaximization(; optimizer<:Optimizer, prototype::DesignMeasure,
+                       fixedweights = [], fixedpoints = [])
+
+Initialize the `optimizer` with the `prototype`
+and attempt to directly maximize the objective function.
+
+For every index in `fixedweights`,
+the corresponding weight of `prototype` is held constant during optimization.
+The indices in `fixedpoints` do the same for the design points of the `prototype`.
+These additional constraints can be used to speed up computation
+in cases where some weights or design points are know analytically.
+
+For more details on how the `prototype` is used,
+see the specific [`Optimizer`](@ref)s.
+
+The return value of [`solve`](@ref) for this strategy is a [`DirectMaximizationResult`](@ref)
+"""
+    function DirectMaximization(;
+        optimizer::To,
+        prototype::DesignMeasure,
+        fixedweights::AbstractVector{<:Integer} = Int64[],
+        fixedpoints::AbstractVector{<:Integer} = Int64[],
+    ) where To<:Optimizer
+        new{To}(optimizer, prototype, fixedweights, fixedpoints)
+    end
+end
+
+"""
+    Exchange <: ProblemSolvingStrategy
+
+Represents the strategy of finding an optimal design
+by ascending the gateaux derivative of the objective function.
+
+This is a variant of the basic idea in [^YBT13].
+
+[^YBT13]: Min Yang, Stefanie Biedermann, Elina Tang (2013). "On optimal designs for nonlinear models: a general and efficient algorithm." Journal of the American Statistical Association, 108(504), 1411–1420. [doi:10.1080/01621459.2013.806268](http://dx.doi.org/10.1080/01621459.2013.806268)
+"""
+struct Exchange{Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,Any}} <:
+       ProblemSolvingStrategy
+    od::Tod
+    ow::Tow
+    steps::Int64
+    candidate::DesignMeasure
+    simplify_args::Td
+    @doc """
+    Exchange(; od::Optimizer, ow::Optimizer, steps::Integer, candidate::DesignMeasure, simplify_args::Dict)
+
+Improve the `candidate` design by the following `steps` times,
+starting with `r = candidate`:
+
+ 1. [`simplify`](@ref) the design `r`, passing along `sargs`.
+ 2. Use the optimizer `od` to find the direction (one-point design / Dirac measure) `d`
+    of highest [`gateauxderivative`](@ref) at `r`.
+    The vector of `prototypes` that is used for initializing `od`
+    is constructed from one-point designs at the design points of `r`.
+    See the [`Optimizer`](@ref)s for algorithm-specific details.
+ 3. Use the optimizer `ow` to re-calculcate optimal weights of a [`mixture`](@ref) of `r` and `d`
+    for the [`DesignCriterion`](@ref).
+    This is implemented as a call to [`solve`](@ref) with the [`DirectMaximization`](@ref) strategy
+    and with all of the designpoints of `r` kept fixed.
+ 4. Set `r` to the result of step 3.
+
+The return value of [`solve`](@ref) for this strategy is an [`ExchangeResult`](@ref).
+"""
+    function Exchange(;
+        od::Tod,
+        ow::Tow,
+        steps::Integer,
+        candidate::DesignMeasure,
+        simplify_args::Td = Dict{Symbol,Any}(),
+    ) where {Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,Any}}
+        new{Tod,Tow,Td}(od, ow, steps, candidate, simplify_args)
+    end
+end
+
+"""
+    ProblemSolvingResult
+
+Supertype for results of a [`ProblemSolvingStrategy`](@ref).
+"""
+abstract type ProblemSolvingResult end
+
+"""
+    DirectMaximizationResult <: ProblemSolvingResult
+
+Wraps an [`OptimizationResult`](@ref) in the `or` field.
+"""
+struct DirectMaximizationResult{S<:OptimizerState{DesignMeasure,SignedMeasure}} <:
+       ProblemSolvingResult
+    or::OptimizationResult{DesignMeasure,SignedMeasure,S}
+end
+
+"""
+    ExchangeResult <: ProblemSolvingResult
+
+Wraps vectors `ord` and `orw` containting an [`OptimizationResult`](@ref)
+for each direction finding and reweighting step.
+"""
+struct ExchangeResult{
+    S<:OptimizerState{DesignMeasure,SignedMeasure},
+    T<:OptimizerState{DesignMeasure,SignedMeasure},
+} <: ProblemSolvingResult
+    ord::Vector{OptimizationResult{DesignMeasure,SignedMeasure,S}}
+    orw::Vector{OptimizationResult{DesignMeasure,SignedMeasure,T}}
 end

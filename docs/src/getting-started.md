@@ -181,23 +181,21 @@ There are a couple of things to note here:
 - There are two additional arguments to `DesignProblem`, namely `trafo` and `normal_approximation`.
   Their default values are just what we want in this introductory.
 
-We will use [particle swarm optimization](https://en.wikipedia.org/wiki/Particle_swarm_optimization) to do the actual work:
+We will use a [particle swarm](https://en.wikipedia.org/wiki/Particle_swarm_optimization)
+to directly maximize the objective function.
+We will search among designs with 4 design points, initialized completely at random.
 
-```@example main
-pso = Pso(iterations = 50, swarmsize = 25)
-nothing # hide
-```
-
-Now we can call [`optimize_design`](@ref):
 ```@example main
 import Random
+pso = Pso(iterations = 50, swarmsize = 25)
 Random.seed!(4711)
-s1, r1 = optimize_design(pso, dp1)
+strategy = DirectMaximization(optimizer = pso, prototype = random_design(ds, 4))
+s1, r1 = solve(dp1, strategy)
 nothing # hide
 ```
-It returns two objects:
+[`solve`](@ref) returns two objects:
 - `s1` is the best [`DesignMeasure`](@ref) that was found,
-- `r1` is an [`OptimizationResult`](@ref) with additional diagnostic information.
+- `r1` here is a [`DirectMaximizationResult`](@ref) with additional diagnostic information.
 
 Let's first examine the solution:
 
@@ -252,15 +250,15 @@ This is not by accident:
 one can show analytically that locally D-optimal designs for the sigmoid Emax model
 always have four design points with uniform weights,
 and that two of them are at the minimal and maximal dose.[^LM07]
-We can pass this information to [`optimize_design`](@ref):
+We can pass this information to the [`DirectMaximization`](@ref) strategy:
 
 [^LM07]: Gang Li and Dibyen Majumdar (2008). D-optimal designs for logistic models with three and four parameters. Journal of Statistical Planning and Inference, 138(7), 1950–1959. [doi:10.1016/j.jspi.2007.07.010](http://dx.doi.org/10.1016/j.jspi.2007.07.010)
 
 ```@example main
 Random.seed!(4711)
-s2, r2 = optimize_design(pso, dp1;
-                         prototype = equidistant_design(ds, 4),
-                         fixedweights = 1:4, fixedpoints = [1, 4])
+s2, r2 = solve(dp1, DirectMaximization(optimizer = pso,
+                                       prototype = equidistant_design(ds, 4),
+                                       fixedweights = 1:4, fixedpoints = [1, 4]))
 nothing # hide
 ```
 
@@ -271,7 +269,7 @@ Here we first specify a `prototype`,
 equidistant_design(ds, 4)
 ```
 
-Then we tell `optimize_design` to keep fixed all of the weights (`fixedweights = 1:4`),
+Then we tell `solve` to keep fixed all of the weights (`fixedweights = 1:4`),
 as well as the first and last design point (`fixedpoints = [1, 4]`).
 This time the solution looks a bit cleaner:
 
@@ -325,7 +323,7 @@ and also increase the number of iterations and the swarm size.
 ```@example main
 pso = Pso(iterations = 100, swarmsize = 50)
 Random.seed!(31415)
-s3, r3 = optimize_design(pso, dp2; prototype = equidistant_design(ds, 10))
+s3, r3 = solve(dp2, DirectMaximization(optimizer = pso, prototype = equidistant_design(ds, 10)))
 plot_gateauxderivative(s3, dp2)
 savefig(ans, "getting-started-pg3.png"); nothing # hide
 ```
@@ -339,7 +337,7 @@ All of this is because the optimization procedure does not enforce unique design
 and weights are allowed to become 0.
 
 Before returning the solution found by the PSO algorithm,
-[`optimize_design`](@ref) calls [`simplify`](@ref) and [`sort_designpoints`](@ref) on it.
+[`solve`](@ref) calls [`simplify`](@ref) and [`sort_designpoints`](@ref) on it.
 In order to be conservative,
 the default keyword arguments to [`simplify`](@ref) are
 `mindist=0` and `minweight=0`,
@@ -360,8 +358,8 @@ By setting `minweight=1e-4` and `mindist=1e-3`, we can simplify the result more 
 
 ```@example main
 Random.seed!(31415)
-s4, r4 = optimize_design(pso, dp2;
-                         prototype = equidistant_design(ds, 10), minweight = 1e-4, mindist = 1e-3);
+s4, r4 = solve(dp2, DirectMaximization(optimizer = pso, prototype = equidistant_design(ds, 10)),
+               minweight = 1e-4, mindist = 1e-3)
 plot_gateauxderivative(s4, dp2)
 savefig(ans, "getting-started-pg4.png"); nothing # hide
 ```
@@ -372,10 +370,10 @@ savefig(ans, "getting-started-pg4.png"); nothing # hide
 s4
 ```
 
-Note that we can still access the raw (unsorted and unsimplified) result at `r4.maximizer`:
+Note that we can still access the raw (unsorted and unsimplified) result at `maximizer(r4)`:
 
 ```@example main
-r4.maximizer
+maximizer(r4)
 ```
 
 Now suppose we want to perform the experiment,
@@ -415,16 +413,16 @@ yet `s5` is still far from the solution.
 ```@example main
 Random.seed!(31415)
 pso = Pso(iterations = 25, swarmsize = 50)
-s5, r5 = optimize_design(pso, dp3;
-                         prototype = equidistant_design(ds, 6), fixedpoints = [1, 6],
-                         minweight = 1e-4, mindist = 1e-3)
+s5, r5 = solve(dp3, DirectMaximization(optimizer = pso,
+                                       prototype = equidistant_design(ds, 6), fixedpoints = [1, 6]),
+               minweight = 1e-4, mindist = 1e-3)
 plot(plot(r5), plot_gateauxderivative(s5, dp3))
 savefig(ans, "getting-started-pg5-pd5.png") ; nothing # hide
 ```
 
 ![](getting-started-pg5-pd5.png)
 
-We can use [`refine_design`](@ref) to try to improve the design.
+We can use the [`Exchange`](@ref) strategy to try and improve the design `s5`.
 It repeats the following four actions for a given number of steps:
 1. Simplify the design
 2. Search for the direction with the largest Gateaux derivative.
@@ -440,8 +438,8 @@ Now we use 5 refinement iterations:
 psod = Pso(iterations = 10, swarmsize = 50)
 psow = Pso(iterations = 15, swarmsize = 25)
 Random.seed!(31415)
-s6, r6d, r6w = refine_design(psod, psow, 5, s5, dp2)
-plot(plot(r6w), plot_gateauxderivative(s6, dp3))
+s6, r6 = solve(dp3, Exchange(od = psod, ow = psow, steps = 5, candidate = s5))
+plot(plot(r6), plot_gateauxderivative(s6, dp3))
 savefig(ans, "getting-started-pg6-pd6.png") ; nothing # hide
 ```
 
@@ -455,8 +453,8 @@ so that they can be merged more easily.
 ```@example main
 pso = Pso(iterations = 150, swarmsize = 50)
 Random.seed!(31415)
-s7, r7 = optimize_design(pso, dp3;
-                         prototype = s6, minweight = 1e-4, mindist = 5e-3)
+s7, r7 = solve(dp3, DirectMaximization(optimizer = pso, prototype = s6),
+               minweight = 1e-4, mindist = 5e-3)
 plot(plot(r7), plot_gateauxderivative(s7, dp3))
 savefig(ans, "getting-started-pg7-pd7.png") ; nothing # hide
 ```
