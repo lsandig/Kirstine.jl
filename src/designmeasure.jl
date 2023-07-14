@@ -110,7 +110,7 @@ function DesignMeasure(m::AbstractMatrix{<:Real})
 end
 
 """
-    one_point_design(designpoint)
+    one_point_design(designpoint::AbstractVector{<:Real})
 
 Construct a one-point [`DesignMeasure`](@ref).
 """
@@ -119,9 +119,9 @@ function one_point_design(designpoint::AbstractVector{<:Real})
 end
 
 """
-    uniform_design(designpoints)
+    uniform_design(designpoints::AbstractVector{<:AbstractVector{<:Real}})
 
-Construct a [`DesignMeasure`](@ref) with equal weights on the given designpoints.
+Construct a [`DesignMeasure`](@ref) with equal weights on the given `designpoints`.
 """
 function uniform_design(designpoints::AbstractVector{<:AbstractVector{<:Real}})
     K = length(designpoints)
@@ -331,7 +331,7 @@ function mixture(alpha::Real, d1::DesignMeasure, d2::DesignMeasure)
 end
 
 """
-    apportion(weights, n::Integer)
+    apportion(weights::AbstractVector{<:Real}, n::Integer)
 
 For a vector of `weights`, find an integer vector `a` with `sum(a) == n`
 such that `a ./ n` best approximates `w`.
@@ -359,7 +359,7 @@ function apportion(weights::AbstractVector{<:Real}, n::Integer)
 end
 
 """
-    apportion(d::Designmeasure, n)
+    apportion(d::DesignMeasure, n)
 
 Find an apportionment for the weights of `d`.
 """
@@ -368,7 +368,7 @@ function apportion(d::DesignMeasure, n::Integer)
 end
 
 """
-    simplify(designmeasure, designspace, model, covariateparameterization;
+    simplify(d::DesignMeasure, ds::DesignSpace, m::Model, cp::CovariateParameterization;
              minweight = 0, mindist = 0, uargs...)
 
 Convenience wrapper that calls [`simplify_drop`](@ref), [`simplify_unique`](@ref), and
@@ -390,7 +390,7 @@ function simplify(
 end
 
 """
-    simplify_drop(designmeasure, minweight)
+    simplify_drop(d::DesignMeasure, minweight::Real)
 
 Construct a new `DesignMeasure` where only design points with weights strictly larger than
 `minweight` are kept.

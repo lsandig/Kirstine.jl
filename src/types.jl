@@ -113,7 +113,7 @@ Represents the [`Transformation`](@ref) that maps a parameter to itself.
 struct Identity <: Transformation end
 
 @doc raw"""
-    DeltaMethod(jacobian_matrix)
+    DeltaMethod(jacobian_matrix::Function)
 
 Represents a nonlinear [`Transformation`](@ref) of the model parameter.
 
@@ -349,7 +349,7 @@ struct DesignInterval{N} <: DesignSpace{N}
     lowerbound::NTuple{N,Float64}
     upperbound::NTuple{N,Float64}
     @doc """
-        DesignInterval(name, lowerbound, upperbound)
+        DesignInterval(names::AbsractVector{Symbol}, lb::AbstractVector{<:Real}, ub::AbstractVector{<:Real})
 
     Construct a design interval with the given dimension names (supplied as
     symbols) and lower / upper bounds.
