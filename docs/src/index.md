@@ -54,7 +54,7 @@ efficiency
 DesignSpace
 DesignInterval
 DesignInterval()
-Kirstine.dimension
+dimension
 dimnames
 upperbound
 lowerbound
