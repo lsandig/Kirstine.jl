@@ -22,7 +22,15 @@ with a four-element parameter vector
 
 This is a plot of the expected response function for some arbitrary ``\theta``:
 
-```@example
+```@setup main
+# we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
+function savefig_nothing(plot, filename)
+	savefig(plot, filename)
+	return nothing
+end
+```
+
+```@example main
 using Plots
 θ = (e0 = 1, emax = 2, ed50 = 4, h = 5)
 plot(
@@ -32,8 +40,7 @@ plot(
     yguide = "response",
     label = "μ(dose, θ)",
 )
-savefig("getting-started-sigemax.png");
-nothing; # hide
+savefig_nothing(ans, "getting-started-sigemax.png") # hide
 ```
 
 ![](getting-started-sigemax.png)
@@ -235,8 +242,7 @@ should be non-positive.
 ```@example main
 using Plots
 plot_gateauxderivative(s1, dp1; legend = :outerright)
-savefig(ans, "getting-started-pg1.png");
-nothing; # hide
+savefig_nothing(ans, "getting-started-pg1.png") # hide
 ```
 
 ![](getting-started-pg1.png)
@@ -248,8 +254,7 @@ By plotting `r1`, we can see how the solution has improved over successive itera
 
 ```@example main
 plot(r1)
-savefig(ans, "getting-started-pd1.png");
-nothing; # hide
+savefig_nothing(ans, "getting-started-pd1.png") # hide
 ```
 
 ![](getting-started-pd1.png)
@@ -352,8 +357,7 @@ Random.seed!(31415)
 s3, r3 =
     solve(dp2, DirectMaximization(optimizer = pso, prototype = equidistant_design(ds, 10)))
 plot_gateauxderivative(s3, dp2)
-savefig(ans, "getting-started-pg3.png");
-nothing; # hide
+savefig_nothing(ans, "getting-started-pg3.png") # hide
 ```
 
 ![](getting-started-pg3.png)
@@ -393,8 +397,7 @@ s4, r4 = solve(
     mindist = 1e-3,
 )
 plot_gateauxderivative(s4, dp2)
-savefig(ans, "getting-started-pg4.png");
-nothing; # hide
+savefig_nothing(ans, "getting-started-pg4.png") # hide
 ```
 
 ![](getting-started-pg4.png)
@@ -460,8 +463,7 @@ s5, r5 = solve(
     mindist = 1e-3,
 )
 plot(plot(r5), plot_gateauxderivative(s5, dp3))
-savefig(ans, "getting-started-pg5-pd5.png");
-nothing; # hide
+savefig_nothing(ans, "getting-started-pg5-pd5.png") # hide
 ```
 
 ![](getting-started-pg5-pd5.png)
@@ -485,8 +487,7 @@ psow = Pso(iterations = 15, swarmsize = 25)
 Random.seed!(31415)
 s6, r6 = solve(dp3, Exchange(od = psod, ow = psow, steps = 5, candidate = s5))
 plot(plot(r6), plot_gateauxderivative(s6, dp3))
-savefig(ans, "getting-started-pg6-pd6.png");
-nothing; # hide
+savefig_nothing(ans, "getting-started-pg6-pd6.png") # hide
 ```
 
 ![](getting-started-pg6-pd6.png)
@@ -506,8 +507,7 @@ s7, r7 = solve(
     mindist = 5e-3,
 )
 plot(plot(r7), plot_gateauxderivative(s7, dp3))
-savefig(ans, "getting-started-pg7-pd7.png");
-nothing; # hide
+savefig_nothing(ans, "getting-started-pg7-pd7.png") # hide
 ```
 
 ![](getting-started-pg7-pd7.png)

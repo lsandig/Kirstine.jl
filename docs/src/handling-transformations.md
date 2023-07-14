@@ -25,7 +25,15 @@ the elimination rate ``e``,
 and a scaling factor ``s``.
 The covariate ``x`` denotes the time in hours.
 
-```@example
+```@setup main
+# we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
+function savefig_nothing(plot, filename)
+	savefig(plot, filename)
+	return nothing
+end
+```
+
+```@example main
 using Plots # hide
 θ = (a = 4.298, e = 0.05884, s = 21.80)
 plot(
@@ -35,8 +43,7 @@ plot(
     yguide = "response",
     label = "μ(time , θ)",
 )
-savefig("handling-transformations-tpc.png");
-nothing; # hide
+savefig_nothing(ans, "handling-transformations-tpc.png") # hide
 ```
 
 ![](handling-transformations-tpc.png)
@@ -144,8 +151,7 @@ s_id
 
 ```@example main
 plot_gateauxderivative(s_id, dp_id)
-savefig(ans, "handling-transformations-gd-id.png");
-nothing; # hide
+savefig_nothing(ans, "handling-transformations-gd-id.png") # hide
 ```
 
 ![](handling-transformations-gd-id.png)
@@ -192,8 +198,7 @@ s_auc
 
 ```@example main
 plot_gateauxderivative(s_auc, dp_auc)
-savefig(ans, "handling-transformations-gd-auc.png");
-nothing; # hide
+savefig_nothing(ans, "handling-transformations-gd-auc.png") # hide
 ```
 
 ![](handling-transformations-gd-auc.png)
@@ -248,8 +253,7 @@ s_ttm
 
 ```@example main
 plot_gateauxderivative(s_ttm, dp_ttm)
-savefig(ans, "handling-transformations-gd-ttm.png");
-nothing; # hide
+savefig_nothing(ans, "handling-transformations-gd-ttm.png") # hide
 ```
 
 ![](handling-transformations-gd-ttm.png)
@@ -287,8 +291,7 @@ s_cmax
 
 ```@example main
 plot_gateauxderivative(s_cmax, dp_cmax)
-savefig(ans, "handling-transformations-gd-cmax.png");
-nothing; # hide
+savefig_nothing(ans, "handling-transformations-gd-cmax.png") # hide
 ```
 
 ![](handling-transformations-gd-cmax.png)
@@ -318,8 +321,7 @@ s_both
 
 ```@example main
 plot_gateauxderivative(s_both, dp_both)
-savefig(ans, "handling-transformations-gd-both.png");
-nothing; # hide
+savefig_nothing(ans, "handling-transformations-gd-both.png") # hide
 ```
 
 ![](handling-transformations-gd-both.png)
