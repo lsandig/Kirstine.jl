@@ -12,6 +12,8 @@ makedocs(modules = [Kirstine],
                                   ),
          pages = ["Home" => "index.md",
                   "Getting Started" => "getting-started.md",
+                  "Locally Optimal Design" => "locally-optimal.md",
+                  "Non-Uniform Prior Weights" => "non-uniform-prior.md",
                   "Handling Transformations" => "handling-transformations.md",
                   ],
          )

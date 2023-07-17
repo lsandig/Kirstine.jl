@@ -1,27 +1,5 @@
 # A Simple Dose-Response Model
 
-Suppose we want to investigate a [dose-response relationship](https://en.wikipedia.org/wiki/Dose%E2%80%93response_relationship)
-between the some drug and some clinical or toxicological outcome.
-A commonly used statistical model in this context is the _sigmoid Emax_ model,
-(sometimes also called the four-parameter log-logistic, or 4pLL model):
-
-```math
-y_i \overset{\mathrm{iid}}{\sim} \mathrm{Normal}(\mu(x_k, \theta), \sigma^2) \quad\text{for all } i \in I_k, k = 1,\dots, K
-```
-
-There are ``K`` different dose levels ``x_1,\dots,x_k``,
-and the indices of the observations ``y_1,\dots,y_n`` are grouped into sets corresponding to identical doses.
-The expected response is
-
-```math
-\mu(x, \theta) = E_0 + E_{\max} \frac{x^h}{\mathrm{ED}_{50}^h + x^h}
-```
-
-with a four-element parameter vector
-``\theta = (E_0, E_{\max}, \mathrm{ED}_{50}, h)``.
-
-This is a plot of the expected response function for some arbitrary ``\theta``:
-
 ```@setup main
 # we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
 function savefig_nothing(plot, filename)
@@ -29,6 +7,32 @@ function savefig_nothing(plot, filename)
 	return nothing
 end
 ```
+
+This vignette describes how to set up a simple non-linear regression model
+in order to find a Bayesian D-optimal design.
+
+## Model
+
+Suppose we want to investigate the [dose-response relationship](https://en.wikipedia.org/wiki/Dose%E2%80%93response_relationship)
+between a drug and some clinical outcome.
+A commonly used model for this task is the _sigmoid Emax_ model:
+an s-shaped curve with a parameter for controlling the steepness of the slope.
+Assuming independent measurement errors,
+the corresponding regression model for a total of ``n`` observations
+at ``K`` different dose levels ``x_1,\dots,x_k`` is
+
+```math
+y_i \overset{\mathrm{iid}}{\sim} \mathrm{Normal}(\mu(x_k, θ), \sigma^2) \quad\text{for all } i \in I_k, k = 1,\dots, K,
+```
+
+with expected response at dose ``x``
+
+```math
+\mu(x, θ) = E_0 + E_{\max} \frac{x^h}{\mathrm{ED}_{50}^h + x^h}
+```
+
+and a four-element parameter vector
+``θ = (E_0, E_{\max}, \mathrm{ED}_{50}, h)``.
 
 ```@example main
 using Plots
@@ -45,60 +49,10 @@ savefig_nothing(ans, "getting-started-sigemax.png") # hide
 
 ![](getting-started-sigemax.png)
 
-We can visually confirm that half the maximum effect above baseline is attained at a dose of ``x=4``.
-
-The goal of optimal experimental design is to find dose levels ``x_1,\dots,x_K``
-so that the observations ``y_1,\dots,y_n`` will be maximally informative about the unknown ``\theta``.
-In the following sections, "maximally informative" will mean D-optimal.
-
-## Setup
-
-Before we can search for an optimal design,
-we have to specify the model.
-
-First we need to create new subtypes of [`NonlinearRegression`](@ref) and [`Covariate`](@ref),
-and specify several helper functions.
-For simple cases such as this one,
-where each unit of observation ``y_i`` is a single number,
-this can be conveniently done with the [`@define_scalar_unit_model`](@ref) macro.
-
-```@example main
-using Kirstine
-@define_scalar_unit_model Kirstine SigEmax dose
-```
-
-This declares a `SigEmax` type and a `SigEmaxCovariate` type.
-To construct a `SigEmax` object,
-we have to supply the inverse of the model variance, ``1/\sigma^2``.
-To construct a `SigEmaxCovariate` object,
-we have to supply a value for its `dose` field.
-For example,
-a model with ``\sigma^2 = 4`` and a covariate wrapping a dose ``x=2.5`` would be specified like this:
-
-```@example main
-example_model = SigEmax(1 / 2^2)
-example_covariate = SigEmaxCovariate(2.5)
-print(example_covariate.dose)
-```
-
-Similarly, we define a new subtype of [`Parameter`](@ref) with [`@define_vector_parameter`](@ref).
-The parameter struct to go with our model will be called `SigEmaxPar`
-and it will have the four fields `e0`, `emax`, `ed50`, and `h`.
-
-```@example main
-@define_vector_parameter Kirstine SigEmaxPar e0 emax ed50 h
-```
-
-Our newly defined type even has a keyword constructor:
-
-```@example main
-SigEmaxPar(e0 = 1, emax = 1, ed50 = 0.1, h = 3)
-```
-
-Next, we need to define the
+In order to find an optimal design,
+we need to know the
 [Jacobian matrix](https://en.wikipedia.org/wiki/Jacobian_matrix_and_determinant)
-of the expected response function ``\mu(x, \theta)``
-with respect to the parameter vector ``\theta``.
+of ``\mu(x, θ)`` with respect to ``θ``.
 Calculating manually,
 or using a computer algebra system such as [Maxima](https://maxima.sourceforge.io/)
 or [WolframAlpha](https://www.wolframalpha.com/input?i=Jacobian+matrix++a+%2B+b+x%5Eh+%2F%28c%5Eh+%2B+x%5Eh%29+w.r.t.+a%2C+b%2C+c%2C+h),
@@ -106,24 +60,57 @@ we find
 
 ```math
 \begin{aligned}
-\partial_{E_0} \mu(x, \theta)              &= 1 \\
-\partial_{E_{\max}} \mu(x, \theta)         &= \frac{x^h}{\mathrm{ED}_{50}^h + x^h}\\
-\partial_{\mathrm{ED}_{50}} \mu(x, \theta) &= \frac{h E_{\max} x^h\mathrm{ED}_{50}^{h-1}}{(\mathrm{ED}_{50}^h + x^h)^2} \\
-\partial_{h} \mu(x, \theta)                &= \frac{E_{\max} x^h \mathrm{ED}_{50}^h (\log(x / \mathrm{ED}_{50}))}{(\mathrm{ED}_{50}^h + x^h)^2} \\
+\partial_{E_0} \mu(x, θ)              &= 1 \\
+\partial_{E_{\max}} \mu(x, θ)         &= \frac{x^h}{\mathrm{ED}_{50}^h + x^h}\\
+\partial_{\mathrm{ED}_{50}} \mu(x, θ) &= \frac{h E_{\max} x^h\mathrm{ED}_{50}^{h-1}}{(\mathrm{ED}_{50}^h + x^h)^2} \\
+\partial_{h} \mu(x, θ)                &= \frac{E_{\max} x^h \mathrm{ED}_{50}^h (\log(x / \mathrm{ED}_{50}))}{(\mathrm{ED}_{50}^h + x^h)^2} \\
 \end{aligned}
 ```
 
 for ``x \neq 0``, and the limit
 
 ```math
-\lim_{x\to0} \partial_{h} \mu(x, \theta) = 0.
+\lim_{x\to0} \partial_{h} \mu(x, θ) = 0.
 ```
 
-This is translated into Julia code
-by defining a method for the package internal `jacobianmatrix!` function
-that specializes its arguments for our `SigEmax`, `SigEmaxCovariate`, and `SigEmaxPar` types.
-Its first argument is a pre-allocated `Matrix` of the correct dimension (`(1, 4)` in our case),
-the elements of which we have to overwrite with the partial derivatives.
+## Setup
+
+### Model and Design Space
+
+In `Kirstine.jl`, the regression model is defined by subtyping
+[`NonlinearRegression`](@ref),
+[`Covariate`](@ref),
+[`Parameter`](@ref),
+and [`CovariateParameterization`](@ref),
+and implementing a handful of methods for them.
+
+In the sigmoid Emax model,
+a single unit of observations is just a real number `y_i`.
+For such a case,
+we can use the helper macro [`@define_scalar_unit_model`](@ref)
+to declare a model type named `SigEmax`,
+and a covariate type named `SigEmaxCovariate` with the single field `dose`.
+
+```@example main
+using Kirstine
+@define_scalar_unit_model Kirstine SigEmax dose
+```
+
+The model parameter ``θ`` is just a vector with no additional structure,
+which is why we can use the helper macro [`@define_vector_parameter`](@ref)
+to define a parameter type `SigEmaxPar`
+with the fields fields `e0`, `emax`, `ed50`, and `h`.
+
+```@example main
+@define_vector_parameter Kirstine SigEmaxPar e0 emax ed50 h
+```
+
+Next we implement the Jacobian matrix.
+We do this by defining a method for `Kirstine.jacobianmatrix!`
+that specializes on our newly defined model, covariate and parameter types.
+This method will later be called from the package internals with a pre-allocated matrix `jm`
+(of the correct size `(1, 4)`).
+Now our job is to fill in the correct values:
 
 ```@example main
 function Kirstine.jacobianmatrix!(jm, m::SigEmax, c::SigEmaxCovariate, p::SigEmaxPar)
@@ -139,386 +126,203 @@ function Kirstine.jacobianmatrix!(jm, m::SigEmax, c::SigEmaxCovariate, p::SigEma
 end
 ```
 
-Here we have tried to calculate expensive expressions only once
-and we have reused intermediate values.
-Also note that we follow [the conventions](https://docs.julialang.org/en/v1/manual/style-guide/#bang-convention)
-and also return the modified argument `jm`.
+(We follow [the conventions](https://docs.julialang.org/en/v1/manual/style-guide/#bang-convention)
+and also return the modified argument `jm`.)
 
-Finally we need to specify how a design point maps to a `SigEmaxCovariate`.
-In our simple case,
-the design space will be the interval of possible doses,
-hence the covariate value is identical to the corresponding design point.
+Next, we set up the design space.
+Let's say we want to allow doses between `0` and `1` (in some unit).
 
-In Julia we achieve this by first declaring a subtype of [`CovariateParameterization`](@ref),
-which in this case has no fields and is only used for dispatch.
+```@example main
+ds = DesignInterval(:dose => (0, 1))
+nothing # hide
+```
+
+Note that the name `:dose` does not necessarily have to match the field name of the `SigEmaxCovariate`.
+A design will then be a discrete probability measure with atoms (design points) from `ds`,
+and a design point is represented by a `Vector{Float64}`.
+In our simple model, this vector has length `1`.
+
+Finally, we need to specify how a design point maps to a `SigEmaxCovariate`.
+Here, the design space is simply the interval of possible doses.
+This means we can just copy the only element of the design point
+into the covariate's `dose` field.
+To do this, we subtype [`CovariateParameterization`](@ref)
+and define a method for `Kirstine.update_model_covariate!`.
 
 ```@example main
 struct CopyDose <: CovariateParameterization end
-```
 
-Then we specialize the internal method `update_model_covariate!` for our model and covariate type,
-and the parameterization that we have just declared.
-The design point `dp` here is a one-element `Vector`,
-and we just need to copy its first element to the `dose` field of the covariate.
-
-```@example main
 function Kirstine.update_model_covariate!(c::SigEmaxCovariate, dp, m::SigEmax, cp::CopyDose)
     c.dose = dp[1]
     return c
 end
 ```
 
-## Locally Optimal Design
+### Prior Knowledge
 
-In this section we look at locally D-optimal designs,
-where we specify a single "best guess" at the unknown parameter ``\theta``.
+For Bayesian optimal design of experiments we need to specify a prior distribution on ``θ``.
+`Kirstine.jl` then needs a sample from this distribution.
 
-This is how we specify a [`DesignProblem`](@ref) with
-the design space ``[0, 10]``,
-``\sigma^2=1``,
-and our prior guess from above.
+For this example we use independent normal priors on the elements of ``θ``.
+We first draw a vector of `SigEmaxPar`s
+which we then wrap into a [`DiscretePrior`](@ref).
 
 ```@example main
-ds = DesignInterval(:dose => (0, 10))
-dp1 = DesignProblem(
+using Random
+Random.seed!(31415)
+
+theta_mean = [1, 2, 0.4, 5]
+theta_sd = [0.5, 0.5, 0.05, 0.5]
+sep_draws = map(1:1000) do i
+    rnd = theta_mean .+ theta_sd .* randn(4)
+    return SigEmaxPar(e0 = rnd[1], emax = rnd[2], ed50 = rnd[3], h = rnd[4])
+end
+prior_sample = DiscretePrior(sep_draws)
+nothing # hide
+```
+
+Note that the `SigEmaxPar` constructor takes keyword arguments.
+
+### Design Problem
+
+Now we collect all the parts in a [`DesignProblem`](@ref).
+
+```@example main
+dp = DesignProblem(
     design_criterion = DOptimality(),
     design_space = ds,
     model = SigEmax(1),
     covariate_parameterization = CopyDose(),
-    prior_knowledge = DiscretePrior([SigEmaxPar(e0 = 1, emax = 2, ed50 = 4, h = 5)]),
+    prior_knowledge = prior_sample,
 )
 nothing # hide
 ```
 
-There are a couple of things to note here:
+Note that the `SigEmax` constructor takes the inverse variance ``1/σ^2`` as an argument.
+For D-optimality, this only scales the objective function and has no influence on the optimal design.
+This is why we simply set it to `1` here.
 
-  - In this case, the observation variance ``\sigma^2`` merely scales the objective function,
-    hence it has no influence on the solution.
-    So for simplicity, we set it to `1`.
-  - The name of the design interval's single dimension is given by the symbol `:dose`,
-    and it can be chosen independently from however we have named the field of our `SigEmaxCovariate`.
-    They _do not_ have to be the same.
-  - There are two additional arguments to `DesignProblem`, namely `trafo` and `normal_approximation`.
-    Their default values are just what we want in this introductory.
+## Optimal Design
 
-We will use a [particle swarm](https://en.wikipedia.org/wiki/Particle_swarm_optimization)
-to directly maximize the objective function.
-We will search among designs with 4 design points, initialized completely at random.
+`Kirstine.jl` provides several high-level [`ProblemSolvingStrategy`](@ref)s
+for solving the design problem `dp`.
+A very simple, but often quite effective one,
+is direct maximization with a [particle swarm optimizer](https://en.wikipedia.org/wiki/Particle_swarm_optimization).
+
+Apart from the [`Pso`](@ref) parameters,
+the [`DirectMaximization`](@ref) strategy needs to know
+how many design points the design measures it searches over should have.
+This is indirectly specified by the `prototype` argument:
+it takes a [`DesignMeasure`](@ref) which is then used for initializing the swarm.
+One particle is set exactly to `prototype`.
+The remaining ones have the same number of design points,
+but their weights and design points are completely randomized.
+
+For our example,
+let's use a `prototype` with `8` equally spaced design points.
 
 ```@example main
-import Random
-pso = Pso(iterations = 50, swarmsize = 25)
-Random.seed!(4711)
-strategy = DirectMaximization(optimizer = pso, prototype = random_design(ds, 4))
-s1, r1 = solve(dp1, strategy)
+strategy = DirectMaximization(
+    optimizer = Pso(iterations = 50, swarmsize = 100),
+    prototype = equidistant_design(ds, 8),
+)
+
+Random.seed!(31415)
+s1, r1 = solve(dp, strategy)
 nothing # hide
 ```
 
-[`solve`](@ref) returns two objects:
+The [`solve`](@ref) function returns two objects:
 
-  - `s1` is the best [`DesignMeasure`](@ref) that was found,
-  - `r1` here is a [`DirectMaximizationResult`](@ref) with additional diagnostic information.
+  - `s1`: a slightly post-processed [`DesignMeasure`](@ref)
+  - `r1`: a [`DirectMaximizationResult`](@ref)
+    that contains additional information about the optimization run.
 
-Let's first examine the solution:
+We can display the solution as `designpoint => weight` pairs,
+or as a matrix with the weights in the first row.
 
 ```@example main
 s1
 ```
-
-This shows the design measure as pairs of a design point and a corresponding weight.
-Note that the representation above can be pasted into a Julia REPL.
-Sometimes a matrix representation is cleaner.
-Here, the weights are in the first row.
 
 ```@example main
 as_matrix(s1)
 ```
 
-In order to see whether `s1` actually is the solution,
-we can visually verify the equivalence theorem:
-the Gateaux derivatives at `s1` into each direction from (a grid on) the design interval
-should be non-positive.
+Looking closely at `s1`,
+we notice that three design points are nearly identical:
 
-```@example main
-using Plots
-plot_gateauxderivative(s1, dp1; legend = :outerright)
-savefig_nothing(ans, "getting-started-pg1.png") # hide
+```julia
+[0.4720457753718496] => 0.0003693803605209383
+[0.4994069801758983] => 0.07074703398360908
+[0.5005657108099189] => 0.15038996534460683
 ```
 
-![](getting-started-pg1.png)
-
-Looks good.
-
-Now let's turn to the diagnostic information.
-By plotting `r1`, we can see how the solution has improved over successive iterations.
-
-```@example main
-plot(r1)
-savefig_nothing(ans, "getting-started-pd1.png") # hide
-```
-
-![](getting-started-pd1.png)
-
-We see that the particle swarm has effectively converged after 20 iterations.
-
-But let's return to the solution for a minute.
+It seems plausible that they would merge into a single one
+if we ran the optimizer for some more iterations.
+But we can also do this after the fact by calling [`simplify`](@ref) on the solution.
+This way we remove all design points with negligible weight,
+and merge all design points that are less than some minimum distance apart.
 
 ```@example main
-s1
+s2 = simplify(s1, dp.ds, dp.m, dp.cp, minweight = 1e-3, mindist = 1e-2)
+as_matrix(s2)
 ```
 
-We see that the weights are nearly uniform,
-and that the lowest and highest doses are near the boundaries of the design interval.
-This is not by accident:
-one can show analytically that locally D-optimal designs for the sigmoid Emax model
-always have four design points with uniform weights,
-and that two of them are at the minimal and maximal dose.[^LM07]
-We can pass this information to the [`DirectMaximization`](@ref) strategy:
+Because this issue occurs frequently
+we can directly pass the simplification arguments to `solve`:
 
-[^LM07]: Gang Li and Dibyen Majumdar (2008). D-optimal designs for logistic models with three and four parameters. Journal of Statistical Planning and Inference, 138(7), 1950–1959. [doi:10.1016/j.jspi.2007.07.010](http://dx.doi.org/10.1016/j.jspi.2007.07.010)
-```@example main
-Random.seed!(4711)
-s2, r2 = solve(
-    dp1,
-    DirectMaximization(
-        optimizer = pso,
-        prototype = equidistant_design(ds, 4),
-        fixedweights = 1:4,
-        fixedpoints = [1, 4],
-    ),
-)
-nothing # hide
+```julia
+s2, r2 = solve(dp, strategy; minweight = 1e-3, mindist = 1e-2)
 ```
 
-Here we first specify a `prototype`,
-4 equally spaced doses on the design space `ds`, with uniform weights.
+The original, unsimplified solution can still be accessed at `maximizer(r2)`.
+
+In order to confirm that we have actually found the solution
+we visually check that the Gateaux derivative is non-positive over the whole design space.
 
 ```@example main
-equidistant_design(ds, 4)
+gd = plot_gateauxderivative(s2, dp)
+savefig_nothing(gd, "getting-started-gd.png") # hide
 ```
 
-Then we tell `solve` to keep fixed all of the weights (`fixedweights = 1:4`),
-as well as the first and last design point (`fixedpoints = [1, 4]`).
-This time the solution looks a bit cleaner:
+![](getting-started-gd.png)
+
+Finally, we can also look at a plot of the optimization progress
+and see that the particle swarm has converged already after about `20` iterations.
 
 ```@example main
-s2
+pr1 = plot(r1)
+savefig_nothing(pr1, "getting-started-pr1.png") # hide
 ```
 
-However, the solutions differ more in terms of aesthetics than in terms of performance,
-as their relative [`efficiency`](@ref) clearly shows:
+![](getting-started-pr1.png)
+
+## Relative Efficiency and Apportionment
+
+In order to be able to estimate ``θ`` at all,
+we need a design with at least `4` points.
+Let's compare how much better the optimal solution `s2` is
+than a 4-point [`equidistant_design`](@ref).
 
 ```@example main
-efficiency(s1, s2, dp1)
+efficiency(equidistant_design(ds, 4), s2, dp)
 ```
 
-## Bayesian Optimal Design
+Their relative D-[`efficiency`](@ref) means
+that `s2` on average only needs `0.72` as many observations as the equidistant design
+in order to achieve the same estimation accuracy.
 
-For a Bayesian D-optimal design,
-we replace the single guess for ``\theta`` by a full prior distribution.
-A [`DiscretePrior`](@ref) represents a set of parameter values and corresponding weights.
-When the weights are uniform it can represent draws obtained by MCMC,
-e.g. from a model fitted to data of a pilot experiment.
-Non-uniform weights are useful if only a few parameter values are thought to be possible.
-
-### Discrete Prior
-
-Let's first look at an example with a [`DiscretePrior`](@ref).
-The slope parameter ``h`` of the sigmoid Emax model can in some situations be interpreted
-as the number of molecules that need to bind to a receptor in order to produce an effect.[^W97]
-Let's assume that we suspect only ``h\in\{1,2,3,4\}`` are possible,
-with prior probabilities ``\{0.1, 0.3, 0.4, 0.2\}``.
-The remaining elements of ``\theta`` are as in the previous section.
-
-[^W97]: James N. Weiss (1997). The hill equation revisited: uses and misuses. The FASEB Journal, 11(11), 835–841. [doi:10.1096/fasebj.11.11.9285481](http://dx.doi.org/10.1096/fasebj.11.11.9285481)
-    Compared to the locally optimal design problem, only the prior knowledge changes:
-```@example main
-dpr = DiscretePrior(
-    [SigEmaxPar(e0 = 1, emax = 2, ed50 = 4, h = h) for h in 1:4],
-    [0.1, 0.3, 0.4, 0.2],
-)
-dp2 = DesignProblem(
-    design_criterion = dp1.dc,
-    design_space = dp1.ds,
-    model = dp1.m,
-    covariate_parameterization = dp1.cp,
-    prior_knowledge = dpr,
-)
-nothing # hide
-```
-
-For Bayesian optimal designs, the number of design points is seldom known in advance.
-This is why we start with an initial 10-point grid design,
-and also increase the number of iterations and the swarm size.
+Suppose we now actually want to run the experiment on ``n=42`` units.
+For this we need to convert the weights of `s1` to integers
+that add up to ``n``.
+This is achieved with the [`apportion`](@ref) function:
 
 ```@example main
-pso = Pso(iterations = 100, swarmsize = 50)
-Random.seed!(31415)
-s3, r3 =
-    solve(dp2, DirectMaximization(optimizer = pso, prototype = equidistant_design(ds, 10)))
-plot_gateauxderivative(s3, dp2)
-savefig_nothing(ans, "getting-started-pg3.png") # hide
+apportion(s2, 42)
 ```
 
-![](getting-started-pg3.png)
-
-But what's going on here?
-Why are only 9 listed in the legend, and just 6 plotted in the figure?
-And what about the point at the point at 5.5 which is not on the graph?
-All of this is because the optimization procedure does not enforce unique design points,
-and weights are allowed to become 0.
-
-Before returning the solution found by the PSO algorithm,
-[`solve`](@ref) calls [`simplify`](@ref) and [`sort_designpoints`](@ref) on it.
-In order to be conservative,
-the default keyword arguments to [`simplify`](@ref) are
-`mindist=0` and `minweight=0`,
-meaning only identical design points are merged
-and only points with zero weight are dropped.
-This is why in our example, `s3` has only 9 design points.
-
-```@example main
-s3
-```
-
-We also see that the pairs of design points
-at about `2.56`, at about `4.95`, and at about `10.0`
-are very similar,
-and have been plotted over each other in the previous figure.
-The design point at `5.62` has negligible weight.
-By setting `minweight=1e-4` and `mindist=1e-3`, we can simplify the result more aggressively.
-
-```@example main
-Random.seed!(31415)
-s4, r4 = solve(
-    dp2,
-    DirectMaximization(optimizer = pso, prototype = equidistant_design(ds, 10)),
-    minweight = 1e-4,
-    mindist = 1e-3,
-)
-plot_gateauxderivative(s4, dp2)
-savefig_nothing(ans, "getting-started-pg4.png") # hide
-```
-
-![](getting-started-pg4.png)
-
-```@example main
-s4
-```
-
-Note that we can still access the raw (unsorted and unsimplified) result at `maximizer(r4)`:
-
-```@example main
-maximizer(r4)
-```
-
-Now suppose we want to perform the experiment,
-and our budget allows for a total of ``n=30`` measurements.
-The [`apportion`](@ref) method implements the _efficient apportionment procedure_,
-which returns a vector of integers.
-
-```@example main
-apportion(s4, 30)
-```
-
-### Prior Sample
-
-Next we look at how to use equally weighted draws.
-We generate 1000 independent draws for each element of ``\theta`` from a normal distribution.
-We enforce some lower bounds on to prevent singular information matrices.
-(Using [stan](https://mc-stan.org) to draw a real prior sample from (simulated) pilot data is out of scope for this introduction.)
-
-```@example main
-Random.seed!(31415)
-sample_mat = max.([0 0.1 1 1], [1 2 4 5] .+ [0.5 0.5 0.5 0.5] .* randn(1000, 4))
-sample =
-    [SigEmaxPar(e0 = a, emax = b, ed50 = c, h = d) for (a, b, c, d) in eachrow(sample_mat)]
-mcpr = DiscretePrior(sample)
-
-dp3 = DesignProblem(
-    design_criterion = dp1.dc,
-    design_space = dp1.ds,
-    model = dp1.m,
-    covariate_parameterization = dp1.cp,
-    prior_knowledge = mcpr,
-)
-nothing # hide
-```
-
-The optimization takes notably longer this time.
-We see not much improvement after 15 iterations,
-yet `s5` is still far from the solution.
-
-```@example main
-Random.seed!(31415)
-pso = Pso(iterations = 25, swarmsize = 50)
-s5, r5 = solve(
-    dp3,
-    DirectMaximization(
-        optimizer = pso,
-        prototype = equidistant_design(ds, 6),
-        fixedpoints = [1, 6],
-    ),
-    minweight = 1e-4,
-    mindist = 1e-3,
-)
-plot(plot(r5), plot_gateauxderivative(s5, dp3))
-savefig_nothing(ans, "getting-started-pg5-pd5.png") # hide
-```
-
-![](getting-started-pg5-pd5.png)
-
-We can use the [`Exchange`](@ref) strategy to try and improve the design `s5`.
-It repeats the following four actions for a given number of steps:
-
- 1. Simplify the design
- 2. Search for the direction with the largest Gateaux derivative.
- 3. Add the corresponding design point to the design.
- 4. Re-optimize the weights.
-
-Separate PSO parameters can be given for (2) and (4).
-These optimization problems have lower dimensions,
-so a smaller swarm and number of iterations is often sufficient.
-Now we use 5 refinement iterations:
-
-```@example main
-psod = Pso(iterations = 10, swarmsize = 50)
-psow = Pso(iterations = 15, swarmsize = 25)
-Random.seed!(31415)
-s6, r6 = solve(dp3, Exchange(od = psod, ow = psow, steps = 5, candidate = s5))
-plot(plot(r6), plot_gateauxderivative(s6, dp3))
-savefig_nothing(ans, "getting-started-pg6-pd6.png") # hide
-```
-
-![](getting-started-pg6-pd6.png)
-
-This already looks better, but we're not quite there yet.
-Note that the refinement steps have added a lot of low-weight design points between 2 and 5.
-A final round of regular PSO can help nudging these design points around,
-so that they can be merged more easily.
-
-```@example main
-pso = Pso(iterations = 150, swarmsize = 50)
-Random.seed!(31415)
-s7, r7 = solve(
-    dp3,
-    DirectMaximization(optimizer = pso, prototype = s6),
-    minweight = 1e-4,
-    mindist = 5e-3,
-)
-plot(plot(r7), plot_gateauxderivative(s7, dp3))
-savefig_nothing(ans, "getting-started-pg7-pd7.png") # hide
-```
-
-![](getting-started-pg7-pd7.png)
-
-This time, the efficiency gains are greater,
-especially when going from `s5` to `s6`.
-
-```@example main
-efficiency(s6, s5, dp3)
-```
-
-```@example main
-efficiency(s7, s6, dp3)
-```
+This tells us to take `9` measurements at the first design point,
+`10` at the second,
+`2` at the third,
+and so on.
