@@ -40,7 +40,7 @@ function solve(
     sargs...,
 )
     or = solve_with(dp, strategy, trace_state)
-    dopt = sort_designpoints(simplify(maximizer(or), dp.ds, dp.m, dp.cp; sargs...))
+    dopt = sort_designpoints(simplify(maximizer(or), dp; sargs...))
     return dopt, or
 end
 
@@ -78,7 +78,7 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
     constraints = DesignConstraints(dp.ds, [false], [false])
     res = candidate
     or_pairs = map(1:(steps)) do i
-        res = simplify(res, dp.ds, dp.m, dp.cp; simplify_args...)
+        res = simplify(res, dp; simplify_args...)
         dir_prot = map(one_point_design, designpoints(simplify_drop(res, 0)))
         gc = precalculate_gateaux_constants(dp.dc, res, dp.m, dp.cp, dp.pk, tc, dp.na)
         # find direction of steepest ascent

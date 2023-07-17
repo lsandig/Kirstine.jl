@@ -265,7 +265,7 @@ This way we remove all design points with negligible weight,
 and merge all design points that are less than some minimum distance apart.
 
 ```@example main
-s2 = simplify(s1, dp.ds, dp.m, dp.cp, minweight = 1e-3, mindist = 1e-2)
+s2 = simplify(s1, dp, minweight = 1e-3, mindist = 1e-2)
 as_matrix(s2)
 ```
 

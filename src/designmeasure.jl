@@ -368,24 +368,17 @@ function apportion(d::DesignMeasure, n::Integer)
 end
 
 """
-    simplify(d::DesignMeasure, ds::DesignSpace, m::Model, cp::CovariateParameterization;
-             minweight = 0, mindist = 0, uargs...)
+    simplify(d::DesignMeasure, dp::DesignProblem; minweight = 0, mindist = 0, uargs...)
 
-Convenience wrapper that calls [`simplify_drop`](@ref), [`simplify_unique`](@ref), and
-[`simplify_merge`](@ref).
+Convenience wrapper that calls
+[`simplify_drop`](@ref),
+[`simplify_unique`](@ref),
+and [`simplify_merge`](@ref).
 """
-function simplify(
-    d::DesignMeasure,
-    ds::DesignSpace,
-    m::Model,
-    cp::CovariateParameterization;
-    minweight = 0,
-    mindist = 0,
-    uargs...,
-)
+function simplify(d::DesignMeasure, dp::DesignProblem; minweight = 0, mindist = 0, uargs...)
     d = simplify_drop(d, minweight)
-    d = simplify_unique(d, ds, m, cp; uargs...)
-    d = simplify_merge(d, ds, mindist)
+    d = simplify_unique(d, dp.ds, dp.m, dp.cp; uargs...)
+    d = simplify_merge(d, dp.ds, mindist)
     return d
 end
 
