@@ -148,10 +148,10 @@ include("example-compartment.jl")
         end
     end
 
-    @testset "gateaux_integrand!" begin
+    @testset "gateaux_integrand" begin
         # Identity transformation
         #
-        # This should compute tr(A * B) - r, using only upper Triangles from A and B. A is
+        # This should compute tr(A * B) - r, using only upper triangles from A and B. A is
         # taken from the GateauxConstants, B is the normalized information matrix
         # corresponding to the direction. Both matrices have size (r, r). Here we test an
         # example with r = 2.
@@ -167,7 +167,7 @@ include("example-compartment.jl")
 
         # DeltaMethod transformation
         #
-        # This should compute tr(A * B) - t, using only upper Triangles from A and B. A is
+        # This should compute tr(A * B) - t, using only upper triangles from A and B. A is
         # taken from the GateauxConstants, B is the normalized information matrix
         # corresponding to the direction. Both matrices have size (r, r). t is the length of
         # the transformed parameter. Here we test an example with r = 2 and t = 1.
