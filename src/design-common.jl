@@ -12,61 +12,117 @@ function jacobianmatrix! end
 function update_model_covariate! end
 # m -> Real or m -> AbstractMatrix
 function invcov end
+# p::Parameter -> Integer
+function dimension end
 
-# == main interface == #
+## main interface ##
 
 """
-    optimize_design(optimizer::Optimizer,
-                    dc::DesignCriterion,
-                    ds::DesignSpace,
-                    m::NonlinearRegression,
-                    cp::CovariateParameterization,
-                    pk::PriorKnowledge,
-                    trafo::Transformation;
-                    candidate::DesignMeasure = random_design(ds, parameter_dimension(pk)),
-                    fixedweights = Int64[],
-                    fixedpoints = Int64[],
-                    trace_state = false,
-                    sargs...)
+    solve(dp::DesignProblem, strategy::ProblemSolvingStrategy; trace_state = false, sargs...)
 
-Find an optimal experimental design for the nonlinear regression model `m`.
+Attempt to solve the design problem.
 
-One particle of the [`Optimizer`](@ref) is initialized at `candidate`, the
-remaining ones are randomized. Any weight or design point corresponding to an
-index given in `fixedweights` or `fixedpoints` is not randomized and is kept
-fixed during optimization. This can speed up computation if some weights or
-points are known analytically.
+Returns a tuple `(d, r)`:
 
-Returns a Tuple:
-
-  - The best [`DesignMeasure`](@ref) found. As postprocessing, [`simplify`](@ref) is called
+  - `d`: The best [`DesignMeasure`](@ref) found. As postprocessing, [`simplify`](@ref) is called
     with `sargs` and the design points are sorted with [`sort_designpoints`](@ref).
 
-  - The full [`OptimizationResult`](@ref). If `trace_state=true`, the full state of the
-    algorithm is saved for every iteration, which can be useful for debugging.
+  - `r`: A subtype of [`ProblemSolvingResult`](@ref) that is specific to the strategy used.
+    If `trace_state=true`, this object contains additional debugging information.
+    The unsimplified version of `d` can be accessed as `maximizer(r)`.
+
+See also [`DirectMaximization`](@ref), [`Exchange`](@ref).
 """
-function optimize_design(
-    optimizer::Optimizer,
-    dc::DesignCriterion,
-    ds::DesignSpace,
-    m::NonlinearRegression,
-    cp::CovariateParameterization,
-    pk::PriorKnowledge,
-    trafo::Transformation;
-    candidate::DesignMeasure = random_design(ds, parameter_dimension(pk)),
-    fixedweights = Int64[],
-    fixedpoints = Int64[],
+function solve(
+    dp::DesignProblem,
+    strategy::ProblemSolvingStrategy;
     trace_state = false,
     sargs...,
 )
-    check_compatible(candidate, ds)
-    pardim = parameter_dimension(pk)
-    nim = zeros(pardim, pardim)
-    jm = zeros(unit_length(m), pardim)
-    c = allocate_initialize_covariates(candidate, m, cp)
-    f = d -> objective!(nim, jm, c, dc, d, m, cp, pk, trafo)
-    K = length(c)
-    # set up constraints
+    or = solve_with(dp, strategy, trace_state)
+    dopt = sort_designpoints(simplify(maximizer(or), dp; sargs...))
+    return dopt, or
+end
+
+function solve_with(dp::DesignProblem, strategy::DirectMaximization, trace_state::Bool)
+    constraints = DesignConstraints(
+        strategy.prototype,
+        dp.ds,
+        strategy.fixedweights,
+        strategy.fixedpoints,
+    )
+    tc = precalculate_trafo_constants(dp.trafo, dp.pk)
+    wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
+    c = allocate_initialize_covariates(strategy.prototype, dp.m, dp.cp)
+    f = d -> objective!(wm, c, dp.dc, d, dp.m, dp.cp, dp.pk, tc, dp.na)
+    or = optimize(
+        strategy.optimizer,
+        f,
+        [strategy.prototype],
+        constraints;
+        trace_state = trace_state,
+    )
+    return DirectMaximizationResult(or)
+end
+
+function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
+    (; candidate, ow, od, steps, simplify_args) = strategy
+    check_compatible(candidate, dp.ds)
+    tc = precalculate_trafo_constants(dp.trafo, dp.pk)
+    wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
+    c = allocate_initialize_covariates(
+        one_point_design(candidate.designpoint[1]),
+        dp.m,
+        dp.cp,
+    )
+    constraints = DesignConstraints(dp.ds, [false], [false])
+    res = candidate
+    or_pairs = map(1:(steps)) do i
+        res = simplify(res, dp; simplify_args...)
+        dir_prot = map(one_point_design, designpoints(simplify_drop(res, 0)))
+        gc = precalculate_gateaux_constants(dp.dc, res, dp.m, dp.cp, dp.pk, tc, dp.na)
+        # find direction of steepest ascent
+        gd(d) = gateauxderivative!(wm, c, gc, d, dp.m, dp.cp, dp.pk, dp.na)
+        or_gd = optimize(od, gd, dir_prot, constraints; trace_state = trace_state)
+        d = or_gd.maximizer
+        # append the new atom
+        K = length(res.weight)
+        if d.designpoint[1] in designpoints(simplify_drop(res, 0))
+            # effectivly run the reweighting from the last round for some more iterations
+            res = mixture(0, d, res) # make sure new point is at index 1
+            res = simplify_merge(res, dp.ds, 0)
+        else
+            K += 1
+            res = mixture(1 / K, d, res)
+        end
+        # optimize weights
+        wstr = DirectMaximization(; optimizer = ow, prototype = res, fixedpoints = 1:K)
+        _, rw = solve(dp, wstr; trace_state = trace_state, simplify_args...)
+        res = maximizer(rw)
+        return or_gd, rw.or
+    end
+    ors_d = map(o -> o[1], or_pairs)
+    ors_w = map(o -> o[2], or_pairs)
+    return ExchangeResult(ors_d, ors_w)
+end
+
+# == various helper functions == #
+function maximizer(dmr::DirectMaximizationResult)
+    return dmr.or.maximizer
+end
+
+function maximizer(er::ExchangeResult)
+    return er.orw[end].maximizer
+end
+
+function DesignConstraints(
+    d::DesignMeasure,
+    ds::DesignSpace,
+    fixedweights::AbstractVector{<:Integer},
+    fixedpoints::AbstractVector{<:Integer},
+)
+    check_compatible(d, ds)
+    K = length(weights(d))
     if any(fixedweights .< 1) || any(fixedweights .> K)
         error("indices for fixed weights must be between 1 and $K")
     end
@@ -78,125 +134,41 @@ function optimize_design(
     # Fixing all weights but one is equivalent to fixing them all. For
     # numerical stability it is better to explicitly fix them all.
     if count(fixw) == K - 1
+        @info "explicitly fixing implicitly fixed weight"
         fixw .= true
     end
-    constraints = (ds, fixw, fixp)
-    or = optimize(optimizer, f, [candidate], constraints; trace_state = trace_state)
-    dopt = sort_designpoints(simplify(or.maximizer, ds, m, cp; sargs...))
-    return dopt, or
+    return DesignConstraints(ds, fixw, fixp)
 end
 
-"""
-    refine_design(od::Optimizer,
-                  ow::Optimizer,
-                  steps::Int64,
-                  candidate::DesignMeasure,
-                  dc::DesignCriterion,
-                  ds::DesignSpace,
-                  m::NonlinearRegression,
-                  cp::CovariateParameterization,
-                  pk::PriorKnowledge,
-                  trafo::Transformation;
-                  trace_state = false,
-                  sargs...)
+function precalculate_trafo_constants(trafo::Identity, pk::DiscretePrior)
+    return TCIdentity(parameter_dimension(pk))
+end
 
-Improve a `candidate` design by ascending its Gateaux derivative.
-
-This repeats the following `steps` times, starting with `r = candidate`:
-
- 1. [`simplify`](@ref) the design `r`, passing along `sargs`.
- 2. Find the direction (Dirac measure) `d` of steepest
-    [`gateauxderivative`](@ref) at `r` using the [`Optimizer`](@ref) `od`.
- 3. Re-calculcate optimal weights of a [`mixture`](@ref) of `r` and `d` for the
-    [`DesignCriterion`](@ref) objective using the optimizer `ow`.
- 4. Set `r` to the result of step 3.
-
-Returns a 3-Tuple:
-
-  - The best [`DesignMeasure`](@ref) found after the last refinement step. As
-    postprocessing, [`simplify`](@ref) is called with `sargs` and the design points are
-    sorted with [`sort_designpoints`](@ref).
-  - A vector of [`OptimizationResult`](@ref)s from the derivative-maximizing steps. If
-    `trace_state=true`, the full state of the algorithm is saved for every iteration.
-  - A vector of [`OptimizationResult`](@ref)s from the re-weighting steps. If
-    `trace_state=true`, the full state of the algorithm is saved for every iteration
-"""
-function refine_design(
-    od::Optimizer,
-    ow::Optimizer,
-    steps::Int64,
-    candidate::DesignMeasure,
-    dc::DesignCriterion,
-    ds::DesignSpace,
-    m::NonlinearRegression,
-    cp::CovariateParameterization,
-    pk::PriorKnowledge,
-    trafo::Transformation;
-    trace_state = false,
-    sargs...,
-)
-    check_compatible(candidate, ds)
-    pardim = parameter_dimension(pk)
-    nim = zeros(pardim, pardim)
-    jm = zeros(unit_length(m), pardim)
-    c = allocate_initialize_covariates(singleton_design(candidate.designpoint[1]), m, cp)
-    ors_d = OptimizationResult[]
-    ors_w = OptimizationResult[]
-    constraints = (ds, [false], [false])
-
-    res = candidate
-    for i in 1:steps
-        res = simplify(res, ds, m, cp; sargs...)
-        dir_cand = map(singleton_design, support(res))
-        inv_nim = inverse_information_matrices(res, m, cp, pk)
-        # find direction of steepest ascent
-        gd(d) = gateauxderivative!(nim, jm, c, dc, inv_nim, d, m, cp, pk, trafo)
-        or_gd = optimize(od, gd, dir_cand, constraints; trace_state = trace_state)
-        push!(ors_d, or_gd)
-        d = or_gd.maximizer
-        # append the new atom
-        K = length(res.weight)
-        if d.designpoint[1] in support(res)
-            # effectivly run the reweighting from the last round for some more iterations
-            res = mixture(0, d, res) # make sure new point is at index 1
-            res = simplify_merge(res, ds, 0)
-        else
-            K += 1
-            res = mixture(1 / K, d, res)
-        end
-        # optimize weights
-        _, or_w = optimize_design(
-            ow,
-            dc,
-            ds,
-            m,
-            cp,
-            pk,
-            trafo;
-            candidate = res,
-            fixedpoints = 1:K,
-            trace_state = trace_state,
-            sargs...,
-        )
-        push!(ors_w, or_w)
-        res = or_w.maximizer
+function check_trafo_jm_dimensions(jm, pk)
+    r = parameter_dimension(pk)
+    if any(j -> size(j) != size(jm[1]), jm)
+        throw(DimensionMismatch("trafo jacobians must be identical in size"))
     end
-    dopt = sort_designpoints(simplify(res, ds, m, cp; sargs...))
-    return dopt, ors_d, ors_w
+    # We know all elements of jm have identical sizes, so checking the first is enough
+    ncol = size(jm[1], 2)
+    if ncol != r
+        throw(DimensionMismatch("trafo jacobian must have $(r) columns, got $(ncol)"))
+    end
+    return nothing
 end
 
-# == various helper functions == #
-
-function parameter_dimension(pk::PriorSample)
-    return length(pk.p[1])
-end
-
-function parameter_dimension(pk::PriorGuess)
-    return length(pk.p)
+function precalculate_trafo_constants(trafo::DeltaMethod, pk::DiscretePrior)
+    jm = [trafo.jacobian_matrix(p) for p in pk.p]
+    check_trafo_jm_dimensions(jm, pk)
+    return TCDeltaMethod(size(jm[1], 1), jm)
 end
 
 function parameter_dimension(pk::DiscretePrior)
-    return length(pk.p[1])
+    return dimension(pk.p[1])
+end
+
+function codomain_dimension(tc::TrafoConstants)
+    return tc.codomain_dimension
 end
 
 function informationmatrix!(
@@ -206,7 +178,8 @@ function informationmatrix!(
     m::NonlinearRegression,
     invcov::Real,
     c::AbstractVector{<:Covariate},
-    p,
+    p::Parameter,
+    na::FisherMatrix,
 )
     fill!(nim, 0.0)
     for k in 1:length(w)
@@ -216,10 +189,86 @@ function informationmatrix!(
         #   nim = w[k] * invcov * jm' * jm + 1 * nim
         #
         # The result is symmetric, and only the 'U'pper triangle of nim is actually written
-        # to. The lower triangle is not touched and is allowed to contain arbitrary garbabe.
+        # to. The lower triangle is not touched and is allowed to contain arbitrary garbage.
         syrk!('U', 'T', w[k] * invcov, jm, 1.0, nim)
     end
     return nim
+end
+
+# For debugging purposes, one will typically want to look at an information matrix
+# corresponding to a single parameter value, not to all thousands of them in a prior sample.
+function informationmatrix(
+    d::DesignMeasure,
+    m::NonlinearRegression,
+    cp::CovariateParameterization,
+    p::Parameter,
+    na::NormalApproximation,
+)
+    c = Kirstine.allocate_initialize_covariates(d, m, cp)
+    r = dimension(p)
+    mm = unit_length(m)
+    jm = zeros(mm, r)
+    nim = zeros(r, r)
+    informationmatrix!(nim, jm, d.weight, m, invcov(m), c, p, na)
+    return Symmetric(nim)
+end
+
+# Calling conventions for `apply_transformation!`
+#
+# * `wm.r_x_r` holds the information matrix or its inverse, depending on the `is_inv` flag.
+# * Only the upper triangle of `wm.r_x_r` is used.
+# * `wm.t_x_t` will be overwritten with the transformed information matrix or its inverse.
+# * The return value are `wm.t_x_t` and a flag that indicates whether it is inverted.
+# * Only the upper triangle of `wm.t_x_t` is guaranteed to make sense, but specific methods
+#   are free to return a dense matrix.
+# * Whether the returned matrix will be inverted is _not_ controlled by `is_inv`.
+
+function apply_transformation!(wm::WorkMatrices, is_inv::Bool, tc::TCIdentity, index)
+    # For the Identity transformation we just pass through the information matrix.
+    wm.t_x_t .= wm.r_x_r
+    return wm.t_x_t, is_inv
+end
+
+function apply_transformation!(wm::WorkMatrices, is_inv::Bool, tc::TCDeltaMethod, index)
+    # Denote the Jacobian matrix of T by J and the normalized information matrix by M. We
+    # want to efficiently calculate J * inv(M) * J'.
+    #
+    # A precalculated J is given in tc.jm[index].
+    #
+    # Depending on whether wm.r_x_r contains (the upper triangle of) M or inv(M) we use
+    # different BLAS routines and a different order of multiplication.
+    if is_inv
+        # Denote the given inverse of M by invM.
+        # We first calculate A := (J * invM) and store it in wm.t_x_r.
+        #
+        # The `symm!` call performes the following in-place update:
+        #
+        #   wm.t_x_r = 1 * tc.jm[index] * Symmetric(wm.r_x_r) + 0 * wm.t_x_r
+        #
+        # That is,
+        #  * the symmetric matrix wm.r_x_r is the factor on the 'R'ight, and
+        #  * the data is contained in the 'U'pper triangle.
+        symm!('R', 'U', 1.0, wm.r_x_r, tc.jm[index], 0.0, wm.t_x_r)
+        # Next we calculate the result A * J' and store it in wm.t_x_t.
+        mul!(wm.t_x_t, wm.t_x_r, tc.jm[index]')
+    else
+        # When the input is not yet inverted, we don't want to calculate inv(M) explicitly.
+        # As a first step we calculate B := inv(M) * J and store it in wm.r_x_t.
+        # We do this by solving the linear system M * B == J in place.
+        # As we do not want to overwrite J, we copy J' into a work matrix.
+        wm.r_x_t .= tc.jm[index]'
+        # The `posv!` call performs the following in-place update:
+        #
+        #  * Overwrite wm.r_x_r with its Cholesky factor `potrf!(wm.r_x_r)`, using the data
+        #    in the 'U'pper triangle.
+        #  * Overwrite wm.r_x_t by the solution of the linear system.
+        posv!('U', wm.r_x_r, wm.r_x_t)
+        # Next, we calculate the result J * B and store it in wm.t_x_t.
+        mul!(wm.t_x_t, tc.jm[index], wm.r_x_t)
+    end
+    # Note that for this method, the result is not just an upper triangle, but always a
+    # dense matrix.
+    return wm.t_x_t, true
 end
 
 function allocate_initialize_covariates(d, m, cp)
@@ -272,182 +321,130 @@ function log_det!(A::AbstractMatrix)
     return 2 * acc
 end
 
-# == objective function helpers for each type of `PriorKnowledge` == #
-function obj_integral(nim, jm, dc, w, m, c, pk::DiscretePrior, trafo)
-    acc = 0
-    for i in 1:length(pk.p)
-        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i])
-        acc += pk.weight[i] * criterion_integrand!(nim, dc, trafo)
-    end
-    return acc
-end
-
-function obj_integral(nim, jm, dc, w, m, c, pk::PriorSample, trafo)
-    acc = 0
-    n = length(pk.p)
-    for i in 1:n
-        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i])
-        acc += criterion_integrand!(nim, dc, trafo)
-    end
-    return acc / n
-end
-
-function obj_integral(nim, jm, dc, w, m, c, pk::PriorGuess, trafo)
-    informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p)
-    return criterion_integrand!(nim, dc, trafo)
-end
-
 function objective!(
-    nim::AbstractMatrix,
-    jm::AbstractMatrix,
+    wm::WorkMatrices,
     c::AbstractVector{<:Covariate},
     dc::DesignCriterion,
     d::DesignMeasure,
     m::NonlinearRegression,
     cp::CovariateParameterization,
-    pk::PriorKnowledge,
-    trafo::Transformation,
+    pk::DiscretePrior,
+    tc::TrafoConstants,
+    na::NormalApproximation,
 )
     for k in 1:length(c)
         update_model_covariate!(c[k], d.designpoint[k], m, cp)
     end
-    return obj_integral(nim, jm, dc, d.weight, m, c, pk, trafo)
+    # When the information matrix is singular, the objective function is undefined. Lower
+    # level calls may throw a PosDefException or a SingularException. This also means that
+    # `d` can not be a solution to the maximization problem, hence we return negative
+    # infinity in these cases.
+    try
+        acc = 0
+        for i in 1:length(pk.p)
+            informationmatrix!(wm.r_x_r, wm.m_x_r, d.weight, m, invcov(m), c, pk.p[i], na)
+            _, is_inv = apply_transformation!(wm, false, tc, i)
+            acc += pk.weight[i] * criterion_integrand!(wm.t_x_t, is_inv, dc)
+        end
+        return acc
+    catch e
+        if isa(e, PosDefException) || isa(e, SingularException)
+            return (-Inf)
+        else
+            rethrow(e)
+        end
+    end
 end
 
 """
-    objective(dc::DesignCriterion,
-              d::DesignMeasure,
-              m::NonlinearRegression,
-              cp::CovariateParameterization,
-              pk::PriorKnowledge,
-              trafo::Transformation,
-              )
+    objective(d::DesignMeasure, dp::DesignProblem)
 
-Objective function corresponding to the [`DesignCriterion`](@ref) evaluated at `d`.
+Objective function corresponding to the [`DesignProblem`](@ref) evaluated at `d`.
 """
-function objective(
-    dc::DesignCriterion,
-    d::DesignMeasure,
-    m::NonlinearRegression,
-    cp::CovariateParameterization,
-    pk::PriorKnowledge,
-    trafo::Transformation,
-)
-    pardim = parameter_dimension(pk)
-    nim = zeros(pardim, pardim)
-    jm = zeros(unit_length(m), pardim)
-    c = allocate_initialize_covariates(d, m, cp)
-    return objective!(nim, jm, c, dc, d, m, cp, pk, trafo)
-end
-
-# == Gateaux derivative function helpes for each type of `PriorKnowledge` == #
-function allocate_infomatrices(q, jm, w, m, invcov, c, pk::DiscretePrior)
-    return [informationmatrix!(zeros(q, q), jm, w, m, invcov, c, p) for p in pk.p]
-end
-
-function allocate_infomatrices(q, jm, w, m, invcov, c, pk::PriorSample)
-    return [informationmatrix!(zeros(q, q), jm, w, m, invcov, c, p) for p in pk.p]
-end
-
-function allocate_infomatrices(q, jm, w, m, invcov, c, pk::PriorGuess)
-    return [informationmatrix!(zeros(q, q), jm, w, m, invcov, c, pk.p)]
+function objective(d::DesignMeasure, dp::DesignProblem)
+    tc = precalculate_trafo_constants(dp.trafo, dp.pk)
+    wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
+    c = allocate_initialize_covariates(d, dp.m, dp.cp)
+    return objective!(wm, c, dp.dc, d, dp.m, dp.cp, dp.pk, tc, dp.na)
 end
 
 function inverse_information_matrices(
     d::DesignMeasure,
     m::NonlinearRegression,
     cp::CovariateParameterization,
-    pk::PriorKnowledge,
+    pk::DiscretePrior,
+    na::NormalApproximation,
 )
-    # Calculate inverse of normalized information matrix for each parameter Note: the
-    # jacobian matrix is re-usable, while the FisherMatrix needs to be allocated anew each
-    # time. It is modified in-place by potri!. Only the upper triangle of the (symmetric)
-    # information matrix is relevant.
+    # Calculate inverse of normalized information matrix for each parameter value.
+    # Only the upper triangle of the (symmetric) information matrix is relevant.
     c = allocate_initialize_covariates(d, m, cp)
-    q = parameter_dimension(pk)
-    jm = zeros(unit_length(m), q)
-    nims = allocate_infomatrices(q, jm, d.weight, m, invcov(m), c, pk)
+    # the transformed parameter dimension is a dummy argument here
+    wm = WorkMatrices(unit_length(m), parameter_dimension(pk), 1)
+    ic = invcov(m)
     # The documentation of `potri!` is not very clear that it expects a Cholesky factor as
     # input, and does _not_ call `potrf!` itself.
     # See also https://netlib.org/lapack/explore-html/d1/d7a/group__double_p_ocomputational_ga9dfc04beae56a3b1c1f75eebc838c14c.html
-    map(M -> potrf!('U', M), nims)
-    inv_nims = [potri!('U', M) for M in nims]
+    inv_nims = map(pk.p) do p
+        informationmatrix!(wm.r_x_r, wm.m_x_r, d.weight, m, ic, c, p, na)
+        potrf!('U', wm.r_x_r)
+        potri!('U', wm.r_x_r)
+        return deepcopy(wm.r_x_r)
+    end
     return inv_nims
 end
 
-function gd_integral(nim, jm, c, dc, w, inv_nim_at, m, pk::DiscretePrior, trafo)
+function gateauxderivative!(
+    wm::WorkMatrices,
+    c::AbstractVector{<:Covariate}, # only one element, but passed to `informationmatrix!`
+    gconst::GateauxConstants,
+    direction::DesignMeasure,
+    m::NonlinearRegression,
+    cp::CovariateParameterization,
+    pk::DiscretePrior,
+    na::NormalApproximation,
+)
+    update_model_covariate!(c[1], direction.designpoint[1], m, cp)
     acc = 0
-    n = length(pk.p)
-    for i in 1:n
-        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i])
-        acc += pk.weight[i] * gateaux_integrand(inv_nim_at[i], nim, dc, trafo)
+    ic = invcov(m)
+    for i in 1:length(pk.p)
+        informationmatrix!(wm.r_x_r, wm.m_x_r, direction.weight, m, ic, c, pk.p[i], na)
+        acc += pk.weight[i] * gateaux_integrand(gconst, wm.r_x_r, i)
     end
     return acc
 end
 
-function gd_integral(nim, jm, c, dc, w, inv_nim_at, m, pk::PriorSample, trafo)
-    acc = 0
-    n = length(pk.p)
-    for i in 1:n
-        informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p[i])
-        acc += gateaux_integrand(inv_nim_at[i], nim, dc, trafo)
-    end
-    return acc / n
-end
-
-function gd_integral(nim, jm, c, dc, w, inv_nim_at, m, pk::PriorGuess, trafo)
-    informationmatrix!(nim, jm, w, m, invcov(m), c, pk.p)
-    return gateaux_integrand(inv_nim_at[1], nim, dc, trafo)
-end
-
-function gateauxderivative!(
-    nim::AbstractMatrix,
-    jm::AbstractMatrix,
-    c::AbstractVector{<:Covariate}, # only one element, but passed to `informationmatrix!`
-    dc::DesignCriterion,
-    inv_nim_at::AbstractVector{<:AbstractMatrix},
-    direction::DesignMeasure,
-    m::NonlinearRegression,
-    cp::CovariateParameterization,
-    pk::PriorKnowledge,
-    trafo::Transformation,
-)
-    update_model_covariate!(c[1], direction.designpoint[1], m, cp)
-    return gd_integral(nim, jm, c, dc, direction.weight, inv_nim_at, m, pk, trafo)
-end
-
 """
-    gateauxderivative(dc::DesignCriterion,
-                      at::DesignMeasure,
+    gateauxderivative(at::DesignMeasure,
                       directions::AbstractArray{DesignMeasure},
-                      m::NonlinearRegression,
-                      cp::CovariateParameterization,
-                      pk::PriorKnowledge,
-                      trafo::Transformation,
-                      )
+                      dp::DesignProblem)
 
-Gateaux derivative of the [`objective`](@ref) function `at` the the given design measure
-into each of the `directions`, which must be singleton designs.
+Gateaux derivative of the [`objective`](@ref) function corresponding to `dp`,
+`at` the the given design measure into each of the `directions`,
+which must be one-point designs.
 """
 function gateauxderivative(
-    dc::DesignCriterion,
     at::DesignMeasure,
     directions::AbstractArray{DesignMeasure},
-    m::NonlinearRegression,
-    cp::CovariateParameterization,
-    pk::PriorKnowledge,
-    trafo::Transformation,
+    dp::DesignProblem,
 )
     if any(d -> length(d.weight) != 1, directions)
-        error("Gateaux derivatives are only implemented for singleton design directions")
+        error("Gateaux derivatives are only implemented for one-point design directions")
     end
-    pardim = parameter_dimension(pk)
-    nim = zeros(pardim, pardim)
-    jm = zeros(unit_length(m), pardim)
-    inv_nim_at = inverse_information_matrices(at, m, cp, pk)
-    cs = allocate_initialize_covariates(directions[1], m, cp)
+    tc = precalculate_trafo_constants(dp.trafo, dp.pk)
+    wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
+    gconst = try
+        precalculate_gateaux_constants(dp.dc, at, dp.m, dp.cp, dp.pk, tc, dp.na)
+    catch e
+        if isa(e, SingularException)
+            # undefined objective implies no well-defined derivative
+            return fill(NaN, size(directions))
+        else
+            rethrow(e)
+        end
+    end
+    cs = allocate_initialize_covariates(directions[1], dp.m, dp.cp)
     gd = map(directions) do d
-        gateauxderivative!(nim, jm, cs, dc, inv_nim_at, d, m, cp, pk, trafo)
+        gateauxderivative!(wm, cs, gconst, d, dp.m, dp.cp, dp.pk, dp.na)
     end
     return gd
 end

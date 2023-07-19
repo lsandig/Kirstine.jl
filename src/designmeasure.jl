@@ -3,20 +3,11 @@
 # === accessor functions === #
 
 """
-    support(d::DesignMeasure)
-
-Return a vector containing all design points with positive weight.
-
-See also [`designpoints`](@ref), [`weights`](@ref), [`simplify_drop`](@ref).
-"""
-support(d::DesignMeasure) = d.designpoint[d.weight .> 0.0]
-
-"""
     designpoints(d::DesignMeasure)
 
 Return a copy of all designpoints, including those with zero weight.
 
-See also [`support`](@ref), [`weights`](@ref), [`simplify_drop`](@ref).
+See also [`weights`](@ref), [`simplify_drop`](@ref).
 """
 designpoints(d::DesignMeasure) = deepcopy(d.designpoint)
 
@@ -25,37 +16,38 @@ designpoints(d::DesignMeasure) = deepcopy(d.designpoint)
 
 Return a copy of the design point weights.
 
-See also [`support`](@ref), [`designpoints`](@ref), [`simplify_drop`](@ref).
+See also [`designpoints`](@ref), [`simplify_drop`](@ref).
 """
 weights(d::DesignMeasure) = copy(d.weight)
 
 """
-    lowerbound(designspace)
+    lowerbound(ds::DesignInterval)
 
 Return the vector of lower bounds.
 """
-lowerbound(ds::DesignSpace) = ds.lowerbound
+lowerbound(ds::DesignInterval) = ds.lowerbound
 
 """
-    upperbound(designspace)
+    upperbound(ds::DesignInterval)
 
 Return the vector of upper bounds.
 """
-upperbound(ds::DesignSpace) = ds.upperbound
+upperbound(ds::DesignInterval) = ds.upperbound
 
 """
-    dimension(designspace)
+    dimension(ds::DesignSpace{N})
 
-Return the dimension of the designspace.
+Return the dimension `N` of the design space.
 """
 dimension(ds::DesignSpace{N}) where N = N
 
+# Note: docstring for the supertype, implementation for the subtypes
 """
-    dimnames(designspace)
+    dimnames(ds::DesignSpace)
 
-Return the names of the designspace's dimensions.
+Return the names of the design space's dimensions.
 """
-dimnames(ds::DesignSpace) = ds.name
+dimnames(ds::DesignInterval) = ds.name
 
 # === additional constructors === #
 
@@ -118,18 +110,18 @@ function DesignMeasure(m::AbstractMatrix{<:Real})
 end
 
 """
-    singleton_design(designpoint)
+    one_point_design(designpoint::AbstractVector{<:Real})
 
-Construct a one-point DesignMeasure.
+Construct a one-point [`DesignMeasure`](@ref).
 """
-function singleton_design(designpoint::AbstractVector{<:Real})
+function one_point_design(designpoint::AbstractVector{<:Real})
     return DesignMeasure([1.0], [designpoint])
 end
 
 """
-    uniform_design(designpoints)
+    uniform_design(designpoints::AbstractVector{<:AbstractVector{<:Real}})
 
-Construct a DesignMeasure with equal weights on the given designpoints.
+Construct a [`DesignMeasure`](@ref) with equal weights on the given `designpoints`.
 """
 function uniform_design(designpoints::AbstractVector{<:AbstractVector{<:Real}})
     K = length(designpoints)
@@ -138,27 +130,28 @@ function uniform_design(designpoints::AbstractVector{<:AbstractVector{<:Real}})
 end
 
 """
-    grid_design(ds::DesignSpace{1}, K::Integer)
+    equidistant_design(ds::DesignInterval{1}, K::Integer)
 
-Construct a DesignMeasure with an equally-spaced grid of `K` design points
-and uniform weights on the given 1-dimensional design space.
+Construct a [`DesignMeasure`](@ref) with an equally-spaced grid of `K` design points
+and uniform weights on the given 1-dimensional design interval.
 """
-function grid_design(ds::DesignSpace{1}, K::Integer)
+function equidistant_design(ds::DesignInterval{1}, K::Integer)
     val = range(lowerbound(ds)[1], upperbound(ds)[1]; length = K)
     designpoints = [[dp] for dp in val]
     return uniform_design(designpoints)
 end
 
+# Note: docstring for abstract type, implementation for subtypes
 """
     random_design(ds::DesignSpace, K::Integer)
 
-Construct a DesignMeasure with design points drawn independently
+Construct a [`DesignMeasure`](@ref) with design points drawn independently
 from a uniform distribution on the design space.
 
-Independent weights weights are drawn from a uniform distribution on [0, 1]
+Independent weights weights are drawn from a uniform distribution on ``[0, 1]``
 and then normalized to sum to one.
 """
-function random_design(ds::DesignSpace{N}, K::Integer) where N
+function random_design(ds::DesignInterval{N}, K::Integer) where N
     scl = upperbound(ds) .- lowerbound(ds)
     dp = [lowerbound(ds) .+ scl .* rand(N) for _ in 1:K]
     u = rand(K)
@@ -168,7 +161,7 @@ function random_design(ds::DesignSpace{N}, K::Integer) where N
 end
 
 """
-    DesignSpace(pairs::Pair...)
+    DesignInterval(pairs::Pair...)
 
 Convenience constructor that takes pairs of a `Symbol` name and a `Tuple` or 2-element
 `Vector` for bounds.
@@ -176,18 +169,36 @@ Convenience constructor that takes pairs of a `Symbol` name and a `Tuple` or 2-e
 # Examples
 
 ```jldoctest
-julia> DesignSpace(:dose => (0, 300), :time => (0, 20))
-DesignSpace{2}((:dose, :time), (0.0, 0.0), (300.0, 20.0))
+julia> DesignInterval(:dose => (0, 300), :time => (0, 20))
+DesignInterval{2}((:dose, :time), (0.0, 0.0), (300.0, 20.0))
 ```
 """
-function DesignSpace(pairs::Pair...)
+function DesignInterval(pairs::Pair...)
     name = [p[1] for p in pairs]
     lb = [p[2][1] for p in pairs]
     ub = [p[2][2] for p in pairs]
-    return DesignSpace(name, lb, ub)
+    return DesignInterval(name, lb, ub)
 end
 
 # === utility functions === #
+
+"""
+    ==(d1::DesignMeasure, d2::DesignMeasure)
+
+Test design measures for equality.
+
+Two design measures are considered equal when
+
+  - they have the same number of design points,
+  - and their design points and weights are equal,
+  - and their design points are in the same order.
+
+Note that this is stricter than when comparing measures as mathematical functions,
+where the order of the design points in the representation does not matter.
+"""
+function Base.:(==)(d1::DesignMeasure, d2::DesignMeasure)
+    return weights(d1) == weights(d2) && designpoints(d1) == designpoints(d2)
+end
 
 function Base.show(io::IO, ::MIME"text/plain", d::DesignMeasure)
     pairs = map(weights(d), designpoints(d)) do w, dp
@@ -204,7 +215,7 @@ end
 Return a matrix representation of `d`.
 
 A [`DesignMeasure`](@ref) with `K` design points from an `N`-dimensional
-[`DesignSpace`](@ref) corresponds to a `(N+1, K)` matrix.
+design space corresponds to a `(N+1, K)` matrix.
 The first row contains the weights.
 
 See also [`DesignMeasure`](@ref).
@@ -223,7 +234,7 @@ function as_matrix(d::DesignMeasure)
     return vcat(transpose(weights(d)), reduce(hcat, designpoints(d)))
 end
 
-function check_compatible(d::DesignMeasure, ds::DesignSpace)
+function check_compatible(d::DesignMeasure, ds::DesignInterval)
     lb = ds.lowerbound
     ub = ds.upperbound
     for dp in d.designpoint
@@ -239,6 +250,7 @@ function check_compatible(d::DesignMeasure, ds::DesignSpace)
             error("designpoint is outside design space\n $sstr")
         end
     end
+    return true
 end
 
 """
@@ -301,7 +313,7 @@ end
 """
     mixture(alpha, d1::DesignMeasure, d2::DesignMeasure)
 
-Return the mixture ``\alpha d_1 + (1-\alpha) d_2``,
+Return the mixture ``\\alpha d_1 + (1-\\alpha) d_2``,
 i.e. the convex combination of `d1` and `d2`.
 
 The result is not simplified, hence its design points may not be unique.
@@ -319,7 +331,7 @@ function mixture(alpha::Real, d1::DesignMeasure, d2::DesignMeasure)
 end
 
 """
-    apportion(weights, n::Integer)
+    apportion(weights::AbstractVector{<:Real}, n::Integer)
 
 For a vector of `weights`, find an integer vector `a` with `sum(a) == n`
 such that `a ./ n` best approximates `w`.
@@ -347,7 +359,7 @@ function apportion(weights::AbstractVector{<:Real}, n::Integer)
 end
 
 """
-    apportion(d::Designmeasure, n)
+    apportion(d::DesignMeasure, n)
 
 Find an apportionment for the weights of `d`.
 """
@@ -356,29 +368,22 @@ function apportion(d::DesignMeasure, n::Integer)
 end
 
 """
-    simplify(designmeasure, designspace, model, covariateparameterization;
-             minweight = 0, mindist = 0, uargs...)
+    simplify(d::DesignMeasure, dp::DesignProblem; minweight = 0, mindist = 0, uargs...)
 
-Convenience wrapper that calls [`simplify_drop`](@ref), [`simplify_unique`](@ref), and
-[`simplify_merge`](@ref).
+Convenience wrapper that calls
+[`simplify_drop`](@ref),
+[`simplify_unique`](@ref),
+and [`simplify_merge`](@ref).
 """
-function simplify(
-    d::DesignMeasure,
-    ds::DesignSpace,
-    m::Model,
-    cp::CovariateParameterization;
-    minweight = 0,
-    mindist = 0,
-    uargs...,
-)
+function simplify(d::DesignMeasure, dp::DesignProblem; minweight = 0, mindist = 0, uargs...)
     d = simplify_drop(d, minweight)
-    d = simplify_unique(d, ds, m, cp; uargs...)
-    d = simplify_merge(d, ds, mindist)
+    d = simplify_unique(d, dp.ds, dp.m, dp.cp; uargs...)
+    d = simplify_merge(d, dp.ds, mindist)
     return d
 end
 
 """
-    simplify_drop(designmeasure, minweight)
+    simplify_drop(d::DesignMeasure, minweight::Real)
 
 Construct a new `DesignMeasure` where only design points with weights strictly larger than
 `minweight` are kept.
@@ -434,26 +439,26 @@ function simplify_unique(
 end
 
 """
-    simplify_merge(designmeasure, designspace, mindist)
+    simplify_merge(d::DesignMeasure, ds::DesignInterval, mindist::Real)
 
 Merge designpoints with a normalized distance smaller or equal to `mindist`.
 
-The design points are first transformed into unit (hyper)cube.
+The design points are first transformed into the unit (hyper)cube.
 The argument `mindist` is intepreted relative to this unit cube,
-i.e. only `0 < mindist < sqrt(N)` make sense for a designspace of dimension `N`.
+i.e. only `0 < mindist < sqrt(N)` make sense for a design interval of dimension `N`.
 
 The following two steps are repeated until all points are more than `mindist` apart:
 
  1. All pairwise euclidean distances are calculated.
  2. The two points closest to each other are averaged with their relative weights
 
-Finally the design points are scaled back into the original design space.
+Finally the design points are scaled back into the original design interval.
 """
-function simplify_merge(d::DesignMeasure, ds::DesignSpace, mindist::Real)
+function simplify_merge(d::DesignMeasure, ds::DesignInterval, mindist::Real)
     if length(d.weight) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
-    # scale design space into unit cube
+    # scale design interval into unit cube
     width = collect(upperbound(ds) .- lowerbound(ds))
     dps = [(dp .- lowerbound(ds)) ./ width for dp in d.designpoint]
     ws = weights(d)
@@ -480,30 +485,30 @@ end
 
 # == abstract point methods == #
 
-function randomize!(
+function ap_random_point!(
     d::DesignMeasure,
-    (ds, fixw, fixp)::Tuple{DesignSpace{N},Vector{Bool},Vector{Bool}},
+    c::DesignConstraints{N,DesignInterval{N}},
 ) where N
     K = length(d.weight)
-    scl = ds.upperbound .- ds.lowerbound
+    scl = c.ds.upperbound .- c.ds.lowerbound
     for k in 1:K
-        if !fixp[k]
+        if !c.fixp[k]
             rand!(d.designpoint[k])
             d.designpoint[k] .*= scl
-            d.designpoint[k] .+= ds.lowerbound
+            d.designpoint[k] .+= c.ds.lowerbound
         end
     end
-    if !all(fixw)
+    if !all(c.fixw)
         # Due to rounding errors, a sum > 1.0 can happen.
         # We need to prevent negative normalizing constants later on.
-        cum_sum_fix = min(1.0, sum(d.weight[fixw]))
+        cum_sum_fix = min(1.0, sum(d.weight[c.fixw]))
         if cum_sum_fix == 1.0
             @warn "fixed weights already sum to one"
         end
         cum_sum_rand = 0.0
         while cum_sum_rand < eps() # we don't want to divide by too small numbers
             for k in 1:K
-                if !fixw[k]
+                if !c.fixw[k]
                     d.weight[k] = rand()
                     cum_sum_rand += d.weight[k]
                 end
@@ -511,7 +516,7 @@ function randomize!(
         end
         norm_const = (1 - cum_sum_fix) / cum_sum_rand
         for k in 1:K
-            if !fixw[k]
+            if !c.fixw[k]
                 d.weight[k] *= norm_const
             end
         end
@@ -519,28 +524,16 @@ function randomize!(
     return d
 end
 
-function difference!(v::AbstractVector{<:Real}, p::DesignMeasure, q::DesignMeasure)
-    # v layout: concatenate the designpoints, then the first K-1 weights
+function ap_difference!(v::SignedMeasure, p::DesignMeasure, q::DesignMeasure)
     K = length(p.weight)
-    weight_shift = K * length(p.designpoint[1])
-    i = 1
-    flat_dp_p = Iterators.flatten(p.designpoint)
-    flat_dp_q = Iterators.flatten(q.designpoint)
-    for (x, y) in Iterators.zip(flat_dp_p, flat_dp_q)
-        v[i] = x - y
-        i += 1
-    end
-    for k in 1:(K - 1)
-        v[k + weight_shift] = p.weight[k] - q.weight[k]
+    v.weight .= p.weight .- q.weight
+    for k in 1:K
+        v.atom[k] .= p.designpoint[k] .- q.designpoint[k]
     end
     return v
 end
 
-function flat_length(p::DesignMeasure)
-    return length(p.weight) * (length(p.designpoint[1]) + 1) - 1
-end
-
-function copy!(to::DesignMeasure, from::DesignMeasure)
+function ap_copy!(to::DesignMeasure, from::DesignMeasure)
     to.weight .= from.weight
     for k in 1:length(from.designpoint)
         to.designpoint[k] .= from.designpoint[k]
@@ -548,86 +541,116 @@ function copy!(to::DesignMeasure, from::DesignMeasure)
     return to
 end
 
-function move!(
-    p::DesignMeasure,
-    v::AbstractVector{<:Real},
-    (ds, fixw, fixp)::Tuple{DesignSpace{N},Vector{Bool},Vector{Bool}},
-) where N
-    K = length(p.designpoint) # number of design points
-    D = length(p.designpoint[1]) # dimension of the design space
-    weight_shift = K * D # weight offset into displacement vector
-    # ignore velocity components in directions that correspond to fixed weights or points
-    move_handle_fixed!(v, fixw, fixp, K, weight_shift, D)
-    # handle intersections: find maximal 0<=t<=1 such that p+tv remains in the search volume
-    t = move_how_far(p, v, ds, K, weight_shift, D)
-    if t < 0
-        @warn "t=$t means point was already outside search volume" p
+function ap_as_difference(p::DesignMeasure)
+    return SignedMeasure(deepcopy(p.weight), deepcopy(p.designpoint))
+end
+
+function ap_random_difference!(v::SignedMeasure)
+    rand!(v.weight)
+    for k in 1:length(v.weight)
+        rand!(v.atom[k])
     end
+    return v
+end
+
+function ap_mul_hadamard!(v1::SignedMeasure, v2::SignedMeasure)
+    v1.weight .*= v2.weight
+    for k in 1:length(v1.weight)
+        v1.atom[k] .*= v2.atom[k]
+    end
+    return v1
+end
+
+function ap_mul_scalar!(v::SignedMeasure, a::Real)
+    v.weight .*= a
+    for k in 1:length(v.weight)
+        v.atom[k] .*= a
+    end
+    return v
+end
+
+function ap_add!(v1::SignedMeasure, v2::SignedMeasure)
+    v1.weight .+= v2.weight
+    for k in 1:length(v1.weight)
+        v1.atom[k] .+= v2.atom[k]
+    end
+    return v1
+end
+
+function ap_move!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
+    K = length(p.designpoint) # number of design points
+    # ignore velocity components in directions that correspond to fixed weights or points
+    move_handle_fixed!(v, c.fixw, c.fixp)
+    # handle intersections: find maximal 0<=t<=1 such that p+tv remains in the search volume
+    t = move_how_far(p, v, c.ds)
     # Then, set p to p + tv
-    move_add_v!(p, t, v, ds, fixw, K, weight_shift, D)
+    move_add_v!(p, t, v, c.ds, c.fixw)
     # Stop the particle if the boundary was hit.
     if t != 1.0
-        v .= 0.0
+        ap_mul_scalar!(v, 0)
     end
+    # check that we have not accidentally moved outside
+    check_compatible(p, c.ds)
     return p
 end
 
-function move_handle_fixed!(v, fixw, fixp, K, weight_shift, D)
-    # v layout: concatenate the designpoints, then the first K-1 weights
+function move_handle_fixed!(v::SignedMeasure, fixw, fixp)
+    K = length(v.weight)
     sum_vw_free = 0.0
     for k in 1:(K - 1)
         if fixw[k]
-            v[weight_shift + k] = 0.0
+            v.weight[k] = 0.0
         else
-            sum_vw_free += v[weight_shift + k]
+            sum_vw_free += v.weight[k]
         end
     end
-    # When the implicit last weight is fixed we must make sure only to move
-    # parallel to the simplex diagonal face, i.e. that
+    # We treat the final weight as implicitly determined by the first (K-1) ones. When it is
+    # not fixed this is unproblematic, as we can simply ignore the coresponding velocity
+    # compound in the move operation, and as a final step set it to 1 - sum(weight[1:K-1]).
     #
-    #   sum(v[.! fixw]) == 0.
+    # When all weights are fixed, we also don't have to do anything.
+    #
+    # Only when the final weight is fixed, but some others are not, we have to be more
+    # careful. We must make sure to only move parallel to the simplex diagonal face, i.e.
+    # that
+    #
+    #   sum(v.weight[.! fixw]) == 0.
     #
     # In oder not to prefer one direction over the others, we subtract the mean
-    # from every non-fixed element of v.
+    # from every non-fixed element of v.weight.
     n_fixw = count(fixw)
     if n_fixw != K && fixw[K]
         mean_free = sum_vw_free / (K - n_fixw)
         for k in 1:(K - 1)
             if !fixw[k]
-                v[weight_shift + k] -= mean_free
+                v.weight[k] -= mean_free
             end
         end
     end
     for k in 1:K
         if fixp[k]
-            for j in 1:D
-                flatindex = (k - 1) * D + j
-                v[flatindex] = 0.0
-            end
+            v.atom[k] .= 0.0
         end
     end
     return v
 end
 
-function move_how_far(p, v, ds, K, weight_shift, D)
-    # v layout: concatenate the designpoints, then the first K-1 weights.
+function move_how_far(p::DesignMeasure, v::SignedMeasure, ds::DesignInterval{N}) where N
     t = 1.0
+    K = length(p.designpoint)
     # box constraints
     for k in 1:K
-        for j in 1:D
-            # design point k element j is flattend to index (k-1)*D+j,
-            # where D is the length of a single designpoint
-            flatindex = (k - 1) * D + j
-            t = how_far_left(p.designpoint[k][j], t, v[flatindex], ds.lowerbound[j])
-            t = how_far_right(p.designpoint[k][j], t, v[flatindex], ds.upperbound[j])
+        for j in 1:N
+            t = how_far_left(p.designpoint[k][j], t, v.atom[k][j], ds.lowerbound[j])
+            t = how_far_right(p.designpoint[k][j], t, v.atom[k][j], ds.upperbound[j])
         end
     end
     # simplex constraints
-    for k in 1:(K - 1)
-        t = how_far_left(p.weight[k], t, v[weight_shift + k], 0.0)
+    for k in 1:(K - 1) # ingore implicit last weight
+        t = how_far_left(p.weight[k], t, v.weight[k], 0.0)
     end
     sum_x = 1.0 - p.weight[K]
-    sum_v = @views sum(v[(weight_shift + 1):end])
+    sum_v = @views sum(v.weight[1:(K - 1)])
     t = how_far_simplexdiag(sum_x, t, sum_v)
     return t
 end
@@ -638,7 +661,7 @@ function how_far_right(x, t, v, ub)
     return x + t * v > ub ? (ub - x) / v : t
 end
 
-# How far can we go from x in the direction of x + tv, without landig left of lb?
+# How far can we go from x in the direction of x + tv, without landing left of lb?
 # if x + tv >= lb, return `t`; else return `s` such that x + sv == lb
 function how_far_left(x, t, v, lb)
     return x + t * v < lb ? (lb - x) / v : t
@@ -652,34 +675,38 @@ function how_far_simplexdiag(sum_x, t, sum_v)
     return sum_x + t * sum_v > one(sum_x) ? (one(sum_x) - sum_x) / sum_v : t
 end
 
-function move_add_v!(p, t, v, ds, fixw, K, weight_shift, D)
+function move_add_v!(
+    p::DesignMeasure,
+    t,
+    v::SignedMeasure,
+    ds::DesignInterval{N},
+    fixw,
+) where N
+    K = length(p.designpoint)
     # first for the design points ...
-    i = 1 # index to flattened structure
-    for dp in p.designpoint
-        for j in 1:D
-            dp[j] += t * v[i]
+    for k in 1:K
+        p.designpoint[k] .+= t .* v.atom[k]
+        for j in 1:N
             # Due to rounding errors, design points can be just slightly outside the design
-            # space. We fix this here.
-            if dp[j] > ds.upperbound[j]
-                dp[j] = ds.upperbound[j]
+            # interval. We fix this here.
+            if p.designpoint[k][j] > ds.upperbound[j]
+                p.designpoint[k][j] = ds.upperbound[j]
             end
-            if dp[j] < ds.lowerbound[j]
-                dp[j] = ds.lowerbound[j]
+            if p.designpoint[k][j] < ds.lowerbound[j]
+                p.designpoint[k][j] = ds.lowerbound[j]
             end
-            i += 1
         end
     end
     # ... then for the weights.
+    p.weight .+= t .* v.weight
     weight_K = 1.0
     for k in 1:(K - 1)
-        p.weight[k] += t * v[weight_shift + k]
         # Again due to rounding erros, a weight can become slightly negative. We need to fix
         # this to prevent it snowballing later on.
         if p.weight[k] < 0.0
             p.weight[k] = 0.0
         end
         if p.weight[k] > 1.0
-            @warn "weight would move past 1.0 by $(p.weight[k] - 1.0)"
             p.weight[k] = 1.0
         end
         weight_K -= p.weight[k]
