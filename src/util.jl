@@ -6,7 +6,7 @@
 Generate code for defining a [`NonlinearRegression`](@ref) model, a corresponding
 [`Covariate`](@ref), and helper functions for a 1-dimensional unit of observation.
 
-## Example
+# Examples
 
 The call
 
@@ -87,7 +87,7 @@ A type defined this way has a keyword constructor.
 
 For the `module_name` argument see the note at [`@define_scalar_unit_model`](@ref).
 
-## Example
+# Examples
 
 The call
 
