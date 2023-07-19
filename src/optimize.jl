@@ -42,8 +42,8 @@ end
 function Base.show(
     io::IO,
     ::MIME"text/plain",
-    r::OptimizationResult{T,S},
-) where {T<:AbstractPoint,S<:OptimizerState{T}}
+    r::OptimizationResult{T,U,S},
+) where {T<:AbstractPoint,U<:AbstractPointDifference,S<:OptimizerState{T,U}}
     println(io, "OptimizationResult")
     println(io, "* iterations: ", length(r.trace_fx))
     println(io, "* evaluations: ", r.n_eval)
@@ -57,7 +57,7 @@ end
 
 function Base.show(
     io::IO,
-    r::OptimizationResult{T,S},
-) where {T<:AbstractPoint,S<:OptimizerState{T}}
+    r::OptimizationResult{T,U,S},
+) where {T<:AbstractPoint,U<:AbstractPointDifference,S<:OptimizerState{T,U}}
     print(io, "maximum: ", r.maximum)
 end
