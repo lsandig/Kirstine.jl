@@ -126,7 +126,7 @@ the argument `jacobian_matrix` must be a function
 that maps a parameter value `p`
 to the Jacobian matrix of ``T`` evaluated at `p`.
 
-# Example
+# Examples
 Suppose `p` has the fields `a` and `b`, and ``T(a, b) = (ab, b/a)'``.
 Then the Jacobian matrix of ``T`` is
 ```math
