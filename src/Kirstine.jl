@@ -11,7 +11,8 @@ using LinearAlgebra:
     Symmetric,
     diagind,
     mul!,
-    norm
+    norm,
+    tr
 using Random: rand, rand!
 using RecipesBase
 
@@ -19,6 +20,7 @@ export @define_scalar_unit_model,
     @define_vector_parameter,
     Covariate,
     CovariateParameterization,
+    AOptimality,
     DOptimality,
     DeltaMethod,
     DesignCriterion,
@@ -77,6 +79,7 @@ include("optimize.jl")
 include("pso.jl")
 include("design-common.jl")
 include("design-doptimal.jl")
+include("design-aoptimal.jl")
 include("util.jl")
 include("plot.jl")
 

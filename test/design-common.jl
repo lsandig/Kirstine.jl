@@ -200,6 +200,34 @@ include("example-compartment.jl")
             @test exp(-objective(a8, dp_for(g1, t3))) ≈ 0.030303 rtol = 1e-1
             @test exp(-objective(a9, dp_for(g1, t4))) ≈ 1.1133 rtol = 1e-1
         end
+
+        # DeltaMethod A-optimality for Atkinson et al Omnibus criterion
+        let g0 = DiscretePrior([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
+            _ = seed!(4711),
+            g1 = draw_from_prior(1000, 2),
+            t1 = DeltaMethod(DOmnibus),
+            t2 = DeltaMethod(p -> diagm(fill(1, 3))),
+            t3 = Identity(),
+            dp_for(pk, t) = DesignProblem(;
+                design_space = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = AOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = pk,
+                transformation = t,
+            ),
+            # Designs from Tables 1, 2
+            a5 = DesignMeasure([0.2176] => 0.2337, [1.4343] => 0.3878, [18.297] => 0.3785),
+            a10 = DesignMeasure([0.2235] => 0.2366, [1.4875] => 0.3838, [18.8293] => 0.3796)
+
+            # Locally optimal
+            @test -objective(a5, dp_for(g0, t1)) ≈ 6.883 atol = 1e-3
+            # Strong prior
+            @test -objective(a10, dp_for(g1, t1)) ≈ 7.1220 atol = 1e-1
+            # Compare DeltaMethod identity with actual Identity
+            @test objective(a5, dp_for(g0, t2)) ≈ objective(a5, dp_for(g0, t3))
+        end
     end
 
     @testset "gateauxderivative" begin
@@ -288,6 +316,42 @@ include("example-compartment.jl")
             # Now the Bayesian design problems with the strong prior
             # Due to MC error the published solutions are not very precise, checking gateaux
             # derivatives makes not mutch sense here.
+        end
+
+        # DeltaMethod A-optimality for Atkinson et al Omnibus criterion
+        let g0 = DiscretePrior([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
+            _ = seed!(4711),
+            g1 = draw_from_prior(1000, 2),
+            t1 = DeltaMethod(DOmnibus),
+            t2 = DeltaMethod(p -> diagm(fill(1, 3))),
+            t3 = Identity(),
+            dp_for(pk, t) = DesignProblem(;
+                design_space = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = AOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = pk,
+                transformation = t,
+            ),
+            # Designs from Tables 1, 2
+            a5 = DesignMeasure([0.2176] => 0.2337, [1.4343] => 0.3878, [18.297] => 0.3785),
+            a10 =
+                DesignMeasure([0.2235] => 0.2366, [1.4875] => 0.3838, [18.8293] => 0.3796),
+            dir = [one_point_design([t]) for t in range(0, 48; length = 21)],
+            gd(a, pk, t) = gateauxderivative(a, dir, dp_for(pk, t)),
+            dp2dir(d) = [one_point_design(dp) for dp in designpoints(d)],
+            abs_gd_at_sol_dp(a, pk, t) =
+                abs.(gateauxderivative(a, dp2dir(a), dp_for(pk, t)))
+
+            # Locally optimal
+            @test maximum(gd(a5, g0, t1)) <= 0
+            @test maximum(abs_gd_at_sol_dp(a5, g0, t1)) < 1e-2
+            # Bayesian optimal (less strict comparison due to MC error)
+            @test maximum(gd(a5, g1, t1)) <= 1e-1
+            @test maximum(abs_gd_at_sol_dp(a5, g1, t1)) < 0.5
+            # compare DeltaMethod identity with actual Identity
+            @test gd(a5, g0, t2) ≈ gd(a5, g0, t3)
         end
     end
 

@@ -179,6 +179,16 @@ struct GCDDeltaMethod <: GateauxConstants
     transformed_parameter_length::Int64
 end
 
+struct GCAIdentity <: GateauxConstants
+    B::Vector{Matrix{Float64}} # inv(M(at))^2
+    tr_C::Vector{Float64}      # tr(inv(M(at)))
+end
+
+struct GCADeltaMethod <: GateauxConstants
+    B::Vector{Matrix{Float64}} # inv(M(at)) * J' * J * inv(M(at))
+    tr_C::Vector{Float64}      # tr(J' * J * inv(M(at)))
+end
+
 """
     DesignCriterion
 
@@ -209,6 +219,15 @@ For details see p. 69 in Fedorov/Leonov [^FL13].
 [^FL13]: Valerii V. Fedorov and Sergei L. Leonov, "Optimal design for nonlinear response models", CRC Press, 2013. [doi:10.1201/b15054](https://doi.org/10.1201/b15054)
 """
 struct DOptimality <: DesignCriterion end
+
+"""
+    AOptimality <: DesignCriterion
+
+Criterion for A-optimal experimental design.
+
+Trace of the transformed parameter's information matrix.
+"""
+struct AOptimality <: DesignCriterion end
 
 abstract type AbstractPoint end
 abstract type AbstractPointDifference end

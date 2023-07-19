@@ -336,9 +336,9 @@ function objective!(
         update_model_covariate!(c[k], d.designpoint[k], m, cp)
     end
     # When the information matrix is singular, the objective function is undefined. Lower
-    # level calls may throw a PosDefException. This also means that `d` can not be a
-    # solution to the maximization problem, hence we return negative infinity in these
-    # cases.
+    # level calls may throw a PosDefException or a SingularException. This also means that
+    # `d` can not be a solution to the maximization problem, hence we return negative
+    # infinity in these cases.
     try
         acc = 0
         for i in 1:length(pk.p)
@@ -348,7 +348,7 @@ function objective!(
         end
         return acc
     catch e
-        if isa(e, PosDefException)
+        if isa(e, PosDefException) || isa(e, SingularException)
             return (-Inf)
         else
             rethrow(e)

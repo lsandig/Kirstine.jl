@@ -43,6 +43,7 @@ Pso
 ```@docs
 DesignCriterion
 DOptimality
+AOptimality
 objective
 gateauxderivative
 efficiency

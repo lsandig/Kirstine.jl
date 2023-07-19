@@ -63,6 +63,11 @@ function Dcmax(p)
     return [da de ds]
 end
 
+function DOmnibus(p)
+    # divide by asymptotic standard deviations (cf. Table 1 and p. 332/333)
+    return vcat(Dauc(p) ./ sqrt(2194), Dttm(p) ./ sqrt(0.02815), Dcmax(p) ./ sqrt(1.0))
+end
+
 function draw_from_prior(n, se_factor)
     # a, e, s
     mn = [4.298, 0.05884, 21.8]
