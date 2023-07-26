@@ -66,22 +66,22 @@ using Kirstine
     end
 
     @testset "random_design" begin
-        let ds = DesignInterval(:a => (2, 4), :b => (-1, 3)), d = random_design(ds, 4)
+        let dr = DesignInterval(:a => (2, 4), :b => (-1, 3)), d = random_design(dr, 4)
             for k in 1:4
-                @test all(d.designpoint[k] .<= upperbound(ds))
-                @test all(d.designpoint[k] .>= lowerbound(ds))
+                @test all(d.designpoint[k] .<= upperbound(dr))
+                @test all(d.designpoint[k] .>= lowerbound(dr))
             end
         end
     end
 
     @testset "DesignInterval" begin
         # Note: the inner constructor is tested in types.jl
-        let ds = DesignInterval(:a => (0, 1), :b => (0, 2)),
+        let dr = DesignInterval(:a => (0, 1), :b => (0, 2)),
             ref = DesignInterval((:a, :b), (0, 0), (1, 2))
 
-            @test all(ref.name .== ds.name)
-            @test all(ref.lowerbound .== ds.lowerbound)
-            @test all(ref.upperbound .== ds.upperbound)
+            @test all(ref.name .== dr.name)
+            @test all(ref.lowerbound .== dr.lowerbound)
+            @test all(ref.upperbound .== dr.upperbound)
         end
     end
 
@@ -127,15 +127,15 @@ using Kirstine
     end
 
     @testset "check_compatible" begin
-        let ds1 = DesignInterval(:a => (0, 1)),
-            ds2 = DesignInterval(:a => (2, 3), :b => (4, 5)),
-            d1 = equidistant_design(ds1, 3),
+        let dr1 = DesignInterval(:a => (0, 1)),
+            dr2 = DesignInterval(:a => (2, 3), :b => (4, 5)),
+            d1 = equidistant_design(dr1, 3),
             d2 = one_point_design([1, 1]),
             check = Kirstine.check_compatible
 
-            @test check(d1, ds1)
-            @test_throws "length must match" check(d1, ds2)
-            @test_throws "outside design space" check(d2, ds2)
+            @test check(d1, dr1)
+            @test_throws "length must match" check(d1, dr2)
+            @test_throws "outside design region" check(d2, dr2)
         end
     end
 
@@ -184,21 +184,21 @@ using Kirstine
 
     @testset "simplify_merge" begin
         let d = DesignMeasure([[1, 1], [5, 1], [3, 10]], [0.3, 0.1, 0.6]),
-            ds = DesignInterval(:a => (0, 100), :b => (0, 100)),
+            dr = DesignInterval(:a => (0, 100), :b => (0, 100)),
             ref = DesignMeasure([[2, 1], [3, 10]], [0.4, 0.6])
 
-            @test simplify_merge(d, ds, 0.05) == ref
+            @test simplify_merge(d, dr, 0.05) == ref
             # merge also on equality
-            @test simplify_merge(d, ds, 0.04) == ref
+            @test simplify_merge(d, dr, 0.04) == ref
             # return unchanged copy if nothing is dropped
-            @test simplify_merge(d, ds, 0.03) == d
-            @test simplify_merge(d, ds, 0.03) !== d
+            @test simplify_merge(d, dr, 0.03) == d
+            @test simplify_merge(d, dr, 0.03) !== d
         end
 
         # One-point-designs should be returned as an unchanged copy.
         let o = one_point_design([42]),
-            ds = DesignInterval(:a => (0, 100), :b => (1, 100)),
-            o_simp = simplify_merge(o, ds, 0.05)
+            dr = DesignInterval(:a => (0, 100), :b => (1, 100)),
+            o_simp = simplify_merge(o, dr, 0.05)
 
             @test o !== o_simp
             @test o == o_simp
@@ -234,25 +234,25 @@ using Kirstine
 
     @testset "ap_random_point!" begin
         # check that constraints are handled correctly
-        let ds = DesignInterval(:a => (0, 5)),
+        let dr = DesignInterval(:a => (0, 5)),
             d = DesignMeasure([[1], [4.2], [3]], [0.1, 0.42, 0.48]),
             dcon = Kirstine.DesignConstraints,
             _ = Random.seed!(7531),
             arp(dd, c) = Kirstine.ap_random_point!(deepcopy(dd), c),
             # nothng fixed
-            c0 = dcon(ds, fill(false, 3), fill(false, 3)),
+            c0 = dcon(dr, fill(false, 3), fill(false, 3)),
             r0 = arp(d, c0),
             # fixed weight
-            c1 = dcon(ds, [false, true, false], fill(false, 3)),
+            c1 = dcon(dr, [false, true, false], fill(false, 3)),
             r1 = arp(d, c1),
             # fixed design point
-            c2 = dcon(ds, fill(false, 3), [false, true, false]),
+            c2 = dcon(dr, fill(false, 3), [false, true, false]),
             r2 = arp(d, c2),
             # both fixed
-            c3 = dcon(ds, [false, false, true], [false, false, true]),
+            c3 = dcon(dr, [false, false, true], [false, false, true]),
             r3 = arp(d, c3)
             # some weights fixed that already sum to one (see below)
-            c4 = dcon(ds, [false, true, true, true], fill(false, 4))
+            c4 = dcon(dr, [false, true, true, true], fill(false, 4))
 
             # check that weights are non-negative and sum to one
             @test sum(weights(r0)) ≈ 1
@@ -265,10 +265,10 @@ using Kirstine
             @test all(weights(r3) .>= 0)
 
             # check that box constraints are honored
-            @test Kirstine.check_compatible(r0, ds)
-            @test Kirstine.check_compatible(r1, ds)
-            @test Kirstine.check_compatible(r2, ds)
-            @test Kirstine.check_compatible(r3, ds)
+            @test Kirstine.check_compatible(r0, dr)
+            @test Kirstine.check_compatible(r1, dr)
+            @test Kirstine.check_compatible(r2, dr)
+            @test Kirstine.check_compatible(r3, dr)
 
             # check that fixed weight/point constraints are honored
             @test r1.weight[2] == d.weight[2]
@@ -395,8 +395,8 @@ using Kirstine
         # only high-level checks, collision detection is tested below
         let d1 = DesignMeasure([[0.5], [0.5], [0.5]], [1 / 4, 1 / 4, 1 / 2]),
             d2 = deepcopy(d1),
-            ds = DesignInterval(:a => (0, 1)),
-            c = Kirstine.DesignConstraints(ds, fill(false, 3), fill(false, 3)),
+            dr = DesignInterval(:a => (0, 1)),
+            c = Kirstine.DesignConstraints(dr, fill(false, 3), fill(false, 3)),
             #                                                ignored! -----------v
             v1 = Kirstine.SignedMeasure([[0.1], [0.2], [0.3]], [1 / 8, -1 / 8, 1 / 2]),
             v1_copy = deepcopy(v1), #                   ignored! ----v
@@ -440,7 +440,7 @@ using Kirstine
     end
 
     @testset "move_how_far" begin
-        let ds = DesignInterval(:a => (0, 1)),
+        let dr = DesignInterval(:a => (0, 1)),
             d = DesignMeasure([[0.5], [0.5], [0.5]], [1 / 4, 1 / 4, 1 / 2]),
             # Note: the last weight is ignored
             # stay inside
@@ -457,16 +457,16 @@ using Kirstine
             v8 = Kirstine.SignedMeasure([[1], [1], [0.1]], [1, -1, 0.1]),
             v9 = Kirstine.SignedMeasure([[1], [-1], [0.1]], [1, 1, 0.1])
 
-            @test Kirstine.move_how_far(d, v1, ds) == 1.0
-            @test Kirstine.move_how_far(d, v2, ds) == 1 / 2
-            @test Kirstine.move_how_far(d, v3, ds) == 1 / 2
+            @test Kirstine.move_how_far(d, v1, dr) == 1.0
+            @test Kirstine.move_how_far(d, v2, dr) == 1 / 2
+            @test Kirstine.move_how_far(d, v3, dr) == 1 / 2
             # the remaining ones are always stopped at the simplex boundary
-            @test Kirstine.move_how_far(d, v4, ds) == 1 / 4
-            @test Kirstine.move_how_far(d, v5, ds) == 1 / 4
-            @test Kirstine.move_how_far(d, v6, ds) == 1 / 4
-            @test Kirstine.move_how_far(d, v7, ds) == 1 / 4
-            @test Kirstine.move_how_far(d, v8, ds) == 1 / 4
-            @test Kirstine.move_how_far(d, v9, ds) == 1 / 4
+            @test Kirstine.move_how_far(d, v4, dr) == 1 / 4
+            @test Kirstine.move_how_far(d, v5, dr) == 1 / 4
+            @test Kirstine.move_how_far(d, v6, dr) == 1 / 4
+            @test Kirstine.move_how_far(d, v7, dr) == 1 / 4
+            @test Kirstine.move_how_far(d, v8, dr) == 1 / 4
+            @test Kirstine.move_how_far(d, v9, dr) == 1 / 4
         end
     end
 
@@ -522,7 +522,7 @@ using Kirstine
     end
 
     @testset "move_add_v!" begin
-        let ds = DesignInterval(:a => (1, 3)),
+        let dr = DesignInterval(:a => (1, 3)),
             d = DesignMeasure([[1.5], [2], [2.5]], [3 / 8, 4 / 8, 1 / 8]),
             # Note:
             #
@@ -532,22 +532,22 @@ using Kirstine
             #
             # stay inside
             v1 = Kirstine.SignedMeasure([[1 / 4], [1 / 4], [1 / 4]], fill(1 / 32, 3)),
-            r1 = Kirstine.move_add_v!(deepcopy(d), 1.0, v1, ds, fill(false, 3)),
+            r1 = Kirstine.move_add_v!(deepcopy(d), 1.0, v1, dr, fill(false, 3)),
             # move out in design point right
             v2 = Kirstine.SignedMeasure([[4], [0.25], [0.25]], fill(1 / 32, 3)),
-            r2 = Kirstine.move_add_v!(deepcopy(d), 1.0, v2, ds, fill(false, 3)),
+            r2 = Kirstine.move_add_v!(deepcopy(d), 1.0, v2, dr, fill(false, 3)),
             # move out in design point left
             v3 = Kirstine.SignedMeasure([[-2], [0.25], [0.25]], fill(1 / 32, 3)),
-            r3 = Kirstine.move_add_v!(deepcopy(d), 1.0, v3, ds, fill(false, 3)),
+            r3 = Kirstine.move_add_v!(deepcopy(d), 1.0, v3, dr, fill(false, 3)),
             # move out in weight right, also set last weight to 0
             v4 = Kirstine.SignedMeasure([[1 / 4], [1 / 4], [1 / 4]], [1, -0.5, 0]),
-            r4 = Kirstine.move_add_v!(deepcopy(d), 1.0, v4, ds, fill(false, 3)),
+            r4 = Kirstine.move_add_v!(deepcopy(d), 1.0, v4, dr, fill(false, 3)),
             # move out in weight left
             v5 = Kirstine.SignedMeasure([[1 / 4], [1 / 4], [1 / 4]], [-1, 1 / 8, 2 / 8]),
-            r5 = Kirstine.move_add_v!(deepcopy(d), 1.0, v5, ds, fill(false, 3)),
+            r5 = Kirstine.move_add_v!(deepcopy(d), 1.0, v5, dr, fill(false, 3)),
             # special case: fixed last weight
             v6 = Kirstine.SignedMeasure([[1 / 4], [1 / 4], [1 / 4]], [1 / 4, -1 / 4, 0]),
-            r6 = Kirstine.move_add_v!(deepcopy(d), 1.0, v6, ds, [false, false, true])
+            r6 = Kirstine.move_add_v!(deepcopy(d), 1.0, v6, dr, [false, false, true])
 
             @test r1 == DesignMeasure([[1.75], [2.25], [2.75]], [13 / 32, 17 / 32, 1 / 16])
             @test r2 == DesignMeasure([[3.00], [2.25], [2.75]], [13 / 32, 17 / 32, 1 / 16])

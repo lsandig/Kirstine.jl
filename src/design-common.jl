@@ -47,7 +47,7 @@ end
 function solve_with(dp::DesignProblem, strategy::DirectMaximization, trace_state::Bool)
     constraints = DesignConstraints(
         strategy.prototype,
-        dp.ds,
+        dp.dr,
         strategy.fixedweights,
         strategy.fixedpoints,
     )
@@ -67,7 +67,7 @@ end
 
 function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
     (; candidate, ow, od, steps, simplify_args) = strategy
-    check_compatible(candidate, dp.ds)
+    check_compatible(candidate, dp.dr)
     tc = precalculate_trafo_constants(dp.trafo, dp.pk)
     wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
     c = allocate_initialize_covariates(
@@ -75,7 +75,7 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
         dp.m,
         dp.cp,
     )
-    constraints = DesignConstraints(dp.ds, [false], [false])
+    constraints = DesignConstraints(dp.dr, [false], [false])
     res = candidate
     or_pairs = map(1:(steps)) do i
         res = simplify(res, dp; simplify_args...)
@@ -90,7 +90,7 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
         if d.designpoint[1] in designpoints(simplify_drop(res, 0))
             # effectivly run the reweighting from the last round for some more iterations
             res = mixture(0, d, res) # make sure new point is at index 1
-            res = simplify_merge(res, dp.ds, 0)
+            res = simplify_merge(res, dp.dr, 0)
         else
             K += 1
             res = mixture(1 / K, d, res)
@@ -117,11 +117,11 @@ end
 
 function DesignConstraints(
     d::DesignMeasure,
-    ds::DesignSpace,
+    dr::DesignRegion,
     fixedweights::AbstractVector{<:Integer},
     fixedpoints::AbstractVector{<:Integer},
 )
-    check_compatible(d, ds)
+    check_compatible(d, dr)
     K = length(weights(d))
     if any(fixedweights .< 1) || any(fixedweights .> K)
         error("indices for fixed weights must be between 1 and $K")
@@ -137,7 +137,7 @@ function DesignConstraints(
         @info "explicitly fixing implicitly fixed weight"
         fixw .= true
     end
-    return DesignConstraints(ds, fixw, fixp)
+    return DesignConstraints(dr, fixw, fixp)
 end
 
 function precalculate_trafo_constants(trafo::Identity, pk::PriorSample)

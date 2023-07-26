@@ -348,23 +348,23 @@ struct SignedMeasure <: AbstractPointDifference
 end
 
 """
-    DesignSpace{N}
+    DesignRegion{N}
 
-Supertype for design spaces. A design space is a compact subset of ``\\mathbb{R}^N``.
+Supertype for design regions. A design region is a compact subset of ``\\mathbb{R}^N``.
 
 See also [`DesignInterval`](@ref), [`dimnames`](@ref).
 """
-abstract type DesignSpace{N} end
+abstract type DesignRegion{N} end
 
 """
-    DesignInterval{N} <: DesignSpace{N}
+    DesignInterval{N} <: DesignRegion{N}
 
 A (hyper)rectangular subset of ``\\mathbb{R}^N`` representing the set in which
 which the design points of a [`DesignMeasure`](@ref) live.
 
 See also [`lowerbound`](@ref), [`upperbound`](@ref), [`dimnames`](@ref).
 """
-struct DesignInterval{N} <: DesignSpace{N}
+struct DesignInterval{N} <: DesignRegion{N}
     name::NTuple{N,Symbol}
     lowerbound::NTuple{N,Float64}
     upperbound::NTuple{N,Float64}
@@ -396,15 +396,15 @@ struct DesignInterval{N} <: DesignSpace{N}
     end
 end
 
-struct DesignConstraints{N,T<:DesignSpace{N}} <: AbstractConstraints
-    ds::T
+struct DesignConstraints{N,T<:DesignRegion{N}} <: AbstractConstraints
+    dr::T
     fixw::Vector{Bool}
     fixp::Vector{Bool}
-    function DesignConstraints(ds::T, fixw, fixp) where {N,T<:DesignSpace{N}}
+    function DesignConstraints(dr::T, fixw, fixp) where {N,T<:DesignRegion{N}}
         if length(fixw) != length(fixp)
             throw(DimensionMismatch("fix vectors must have identical lengths"))
         end
-        return new{N,T}(ds, fixw, fixp)
+        return new{N,T}(dr, fixw, fixp)
     end
 end
 
@@ -428,7 +428,7 @@ Completely specifies a problem of optimal experimental design.
 A `DesignProblem` has 7 components:
 
   - a [`DesignCriterion`](@ref),
-  - a [`DesignSpace`](@ref),
+  - a [`DesignRegion`](@ref),
   - a [`Model`](@ref),
   - a [`CovariateParameterization`](@ref),
   - some [`PriorKnowledge`](@ref),
@@ -439,7 +439,7 @@ See also [`solve`](@ref).
 """
 struct DesignProblem{
     Tdc<:DesignCriterion,
-    Tds<:DesignSpace,
+    Tdr<:DesignRegion,
     Tm<:Model,
     Tcp<:CovariateParameterization,
     Tpk<:PriorKnowledge,
@@ -447,21 +447,21 @@ struct DesignProblem{
     Tna<:NormalApproximation,
 }
     dc::Tdc
-    ds::Tds
+    dr::Tdr
     m::Tm
     cp::Tcp
     pk::Tpk
     trafo::Tt
     na::Tna
     @doc """
-        DesignProblem(; design_criterion, design_space, model, covariate_parameterization, prior_knowledge,
+        DesignProblem(; design_criterion, design_region, model, covariate_parameterization, prior_knowledge,
                         transformation = Identity(), normal_approximation = FisherMatrix())
 
     Keyword-based constructor for design problems with some sensible defaults.
     """
     function DesignProblem(;
         design_criterion::Tdc,
-        design_space::Tds,
+        design_region::Tdr,
         model::Tm,
         covariate_parameterization::Tcp,
         prior_knowledge::Tpk,
@@ -469,16 +469,16 @@ struct DesignProblem{
         normal_approximation::Tna = FisherMatrix(),
     ) where {
         Tdc<:DesignCriterion,
-        Tds<:DesignSpace,
+        Tdr<:DesignRegion,
         Tm<:Model,
         Tcp<:CovariateParameterization,
         Tpk<:PriorKnowledge,
         Tt<:Transformation,
         Tna<:NormalApproximation,
     }
-        new{Tdc,Tds,Tm,Tcp,Tpk,Tt,Tna}(
+        new{Tdc,Tdr,Tm,Tcp,Tpk,Tt,Tna}(
             design_criterion,
-            design_space,
+            design_region,
             model,
             covariate_parameterization,
             prior_knowledge,

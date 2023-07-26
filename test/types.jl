@@ -51,16 +51,16 @@ include("example-testpar.jl")
         @test_throws "strictly larger" DesignInterval([:a, :b], [1, 2], [1, 4])
 
         # inner constructor: check conversion to Float64 and tuples
-        let ds = DesignInterval([:a, :b], [0, 0], [1, 2])
-            @test ds.name === (:a, :b)
-            @test ds.lowerbound === (0.0, 0.0)
-            @test ds.upperbound === (1.0, 2.0)
+        let dr = DesignInterval([:a, :b], [0, 0], [1, 2])
+            @test dr.name === (:a, :b)
+            @test dr.lowerbound === (0.0, 0.0)
+            @test dr.upperbound === (1.0, 2.0)
         end
     end
 
     @testset "DesignConstraints" begin
-        let ds = DesignInterval(:a => (0, 1)), dcon = Kirstine.DesignConstraints
-            @test_throws DimensionMismatch dcon(ds, [true], [true, false])
+        let dr = DesignInterval(:a => (0, 1)), dcon = Kirstine.DesignConstraints
+            @test_throws DimensionMismatch dcon(dr, [true], [true, false])
         end
     end
 

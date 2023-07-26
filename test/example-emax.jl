@@ -40,7 +40,7 @@ function Kirstine.jacobianmatrix!(jm, m::EmaxModel, c::Dose, p::EmaxPar)
     return jm
 end
 
-function emax_solution(p, ds)
+function emax_solution(p, dr)
     # Locally D-optimal design for the Emax model has an analytic solution,
     # see Theorem 2 in
     #
@@ -48,8 +48,8 @@ function emax_solution(p, ds)
     #   Optimal designs for the emax, log-linear and exponential models.
     #   Biometrika, 97(2), 513–518. http://dx.doi.org/10.1093/biomet/asq020
     #
-    a = ds.lowerbound[1]
-    b = ds.upperbound[1]
+    a = dr.lowerbound[1]
+    b = dr.upperbound[1]
     x_star = (a * (b + p.ec50) + b * (a + p.ec50)) / (a + b + 2 * p.ec50)
     return uniform_design([[a], [x_star], [b]])
 end

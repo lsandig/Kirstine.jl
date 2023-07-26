@@ -49,10 +49,10 @@ gateauxderivative
 efficiency
 ```
 
-## Design Spaces
+## Design Regions
 
 ```@docs
-DesignSpace
+DesignRegion
 DesignInterval
 DesignInterval()
 dimension

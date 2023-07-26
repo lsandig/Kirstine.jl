@@ -5,7 +5,7 @@ but about the transformed parameter ``T(\theta)``,
 where ``T(\theta)`` can be a number or a vector.
 
 !!! note
-    
+
     `Kirstine.jl` allows transformations to be freely combined with different design criteria.
     In this sense, c-optimality is just the special case of D-optimality
     combined with a transformation ``T: \mathbb{R}^r \to \mathbb{R}``.
@@ -82,7 +82,7 @@ because locally optimal designs for scalar ``T(\theta)`` usually don't exist
 due to their information matrices becoming singular.
 
 !!! note
-    
+
     Workarounds like generalized inverses or matrix regularization
     are currently not supported by `Kirstine.jl`.
 
@@ -113,7 +113,7 @@ Our design interval extends from `0` to `48` hours after administration of the d
 function dp_for_trafo(trafo)
     Random.seed!(4711)
     DesignProblem(
-        design_space = DesignInterval(:time => [0, 48]),
+        design_region = DesignInterval(:time => [0, 48]),
         design_criterion = DOptimality(),
         covariate_parameterization = Copy(),
         model = TPCMod(1),

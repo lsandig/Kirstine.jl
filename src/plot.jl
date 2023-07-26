@@ -58,21 +58,21 @@ end
     end
 end
 
-@recipe function f(d::DesignMeasure, ds::DesignInterval{2})
-    lb = lowerbound(ds)
-    ub = upperbound(ds)
-    xguide --> dimnames(ds)[1]
-    yguide --> dimnames(ds)[2]
+@recipe function f(d::DesignMeasure, dr::DesignInterval{2})
+    lb = lowerbound(dr)
+    ub = upperbound(dr)
+    xguide --> dimnames(dr)[1]
+    yguide --> dimnames(dr)[2]
     xlims --> (lb[1], ub[1])
     ylims --> (lb[2], ub[2])
     widen --> true
     d
 end
 
-@recipe function f(d::DesignMeasure, ds::DesignInterval{1})
-    lb = lowerbound(ds)
-    ub = upperbound(ds)
-    xguide --> dimnames(ds)[1]
+@recipe function f(d::DesignMeasure, dr::DesignInterval{1})
+    lb = lowerbound(dr)
+    ub = upperbound(dr)
+    xguide --> dimnames(dr)[1]
     xlims --> (lb[1], ub[1])
     widen --> true
     d
@@ -81,7 +81,7 @@ end
 struct DerivativePlot{
     N,
     Tdc<:DesignCriterion,
-    Tds<:DesignSpace{N},
+    Tdr<:DesignRegion{N},
     Tm<:Model,
     Tcp<:CovariateParameterization,
     Tpk<:PriorKnowledge,
@@ -89,7 +89,7 @@ struct DerivativePlot{
     Tna<:NormalApproximation,
 }
     d::DesignMeasure
-    dp::DesignProblem{Tdc,Tds,Tm,Tcp,Tpk,Tt,Tna}
+    dp::DesignProblem{Tdc,Tdr,Tm,Tcp,Tpk,Tt,Tna}
 end
 
 @recipe function f(
@@ -106,7 +106,7 @@ end
     subdivisions = 101,
 )
     (; d, dp) = dplot
-    range_x = range(lowerbound(dp.ds)[1], upperbound(dp.ds)[1]; length = subdivisions)
+    range_x = range(lowerbound(dp.dr)[1], upperbound(dp.dr)[1]; length = subdivisions)
     dsgpts = collect(Iterators.flatten(designpoints(d)))
     all_x = sort(vcat(range_x, dsgpts))
     directions = [one_point_design([d]) for d in all_x]
@@ -115,7 +115,7 @@ end
     seriestype := :line
     markershape := :none
     label --> ""
-    xguide --> dimnames(dp.ds)[1]
+    xguide --> dimnames(dp.dr)[1]
 
     all_x, gd
 end
@@ -135,8 +135,8 @@ end
 )
     (; d, dp) = dplot
     # calculate gateaux derivative
-    lb = lowerbound(dp.ds)
-    ub = upperbound(dp.ds)
+    lb = lowerbound(dp.dr)
+    ub = upperbound(dp.dr)
     range_x = range(lb[1], ub[1]; length = subdivisions[1])
     range_y = range(lb[2], ub[2]; length = subdivisions[2])
     xy_grid = collect(Iterators.product(range_x, range_y))
@@ -144,8 +144,8 @@ end
     gd = gateauxderivative(d, directions, dp)
     ex = extrema(gd)
 
-    xguide --> (dimnames(dp.ds)[1])
-    yguide --> (dimnames(dp.ds)[2])
+    xguide --> (dimnames(dp.dr)[1])
+    yguide --> (dimnames(dp.dr)[2])
     # perceptually uniform gradient from blue via white to red
     fillcolor --> :diverging_bwr_55_98_c37_n256
     max_abs_gd = max(abs(ex[1]), abs(ex[2]))
@@ -160,7 +160,7 @@ end
     plot_gateauxderivative(d::DesignMeasure, dp::DesignProblem)
 
 Plot the [`gateauxderivative`](@ref) at candidate solution `d` in directions taken from a
-grid over design space of the given [`DesignProblem`](@ref), together with the design points of `d`.
+grid over design region of the given [`DesignProblem`](@ref), together with the design points of `d`.
 
 Currently only implemented for 1- and 2-dimensional [`DesignInterval`](@ref)s.
 
@@ -173,7 +173,7 @@ default, `markersize` indicates the design weights.
 # Additional Keyword Arguments
 
   - `subdivisions::Union{Integer, Tuple{Integer, Integer}}`: number of points in the grid.
-    Must match the dimension of the design space.
+    Must match the dimension of the design region.
 """
 function plot_gateauxderivative(d::DesignMeasure, dp::DesignProblem; kw...)
     plt_gd = RecipesBase.plot(DerivativePlot(d, dp); kw...)

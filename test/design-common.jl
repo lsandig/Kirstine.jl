@@ -12,22 +12,22 @@ include("example-compartment.jl")
     # helpers
     @testset "DesignConstraints" begin
         let dc = DOptimality(),
-            ds = DesignInterval(:dose => (0, 10)),
-            d = equidistant_design(ds, 3),
+            dr = DesignInterval(:dose => (0, 10)),
+            d = equidistant_design(dr, 3),
             dcon = Kirstine.DesignConstraints,
-            c = dcon(d, ds, [2], [3])
+            c = dcon(d, dr, [2], [3])
 
             # Trigger erros for out-of-range weight / designpoint indices.
-            @test_throws "between 1 and 3" dcon(d, ds, [0], Int64[])
-            @test_throws "between 1 and 3" dcon(d, ds, [4], Int64[])
-            @test_throws "between 1 and 3" dcon(d, ds, Int64[], [-1])
-            @test_throws "between 1 and 3" dcon(d, ds, Int64[], [5])
+            @test_throws "between 1 and 3" dcon(d, dr, [0], Int64[])
+            @test_throws "between 1 and 3" dcon(d, dr, [4], Int64[])
+            @test_throws "between 1 and 3" dcon(d, dr, Int64[], [-1])
+            @test_throws "between 1 and 3" dcon(d, dr, Int64[], [5])
             # If only one weight index is not given as fixed, it is still implicitly fixed
             # because of the simplex constraint. In this case we want to have it fixed
             # explicitly.
             @test_logs(
                 (:info, "explicitly fixing implicitly fixed weight"),
-                dcon(d, ds, [1, 3], Int64[])
+                dcon(d, dr, [1, 3], Int64[])
             )
             @test c.fixw == [false, true, false]
             @test c.fixp == [false, false, true]
@@ -117,7 +117,7 @@ include("example-compartment.jl")
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
                 prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
-                design_space = DesignInterval(:dose => (0, 10)),
+                design_region = DesignInterval(:dose => (0, 10)),
                 transformation = trafo,
             ),
             t1 = Identity(),
@@ -132,21 +132,21 @@ include("example-compartment.jl")
 
         let p1 = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
             pk1 = PriorSample([p1]),
-            ds = DesignInterval(:dose => (0, 10)),
+            dr = DesignInterval(:dose => (0, 10)),
             dp_for(pk) = DesignProblem(;
                 design_criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
                 prior_knowledge = pk,
-                design_space = ds,
+                design_region = dr,
                 transformation = Identity(),
             ),
 
             # sol is optimal for pk1
-            sol = emax_solution(p1, ds),
-            a = ds.lowerbound[1],
-            b = ds.upperbound[1],
+            sol = emax_solution(p1, dr),
+            a = dr.lowerbound[1],
+            b = dr.upperbound[1],
             x_star = sol.designpoint[2][1],
             # not_sol is not optimal for pk1
             not_sol = DesignMeasure(
@@ -165,7 +165,7 @@ include("example-compartment.jl")
             _ = seed!(4711),
             g1 = draw_from_prior(1000, 2),
             dp_for(pk, t) = DesignProblem(;
-                design_space = DesignInterval(:time => [0, 48]),
+                design_region = DesignInterval(:time => [0, 48]),
                 model = TPCMod(1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = DOptimality(),
@@ -209,7 +209,7 @@ include("example-compartment.jl")
             t2 = DeltaMethod(p -> diagm(fill(1, 3))),
             t3 = Identity(),
             dp_for(pk, t) = DesignProblem(;
-                design_space = DesignInterval(:time => [0, 48]),
+                design_region = DesignInterval(:time => [0, 48]),
                 model = TPCMod(1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = AOptimality(),
@@ -240,7 +240,7 @@ include("example-compartment.jl")
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
                 prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
-                design_space = DesignInterval(:dose => (0, 10)),
+                design_region = DesignInterval(:dose => (0, 10)),
                 transformation = trafo,
             ),
             d = one_point_design([5])
@@ -255,20 +255,20 @@ include("example-compartment.jl")
             pk1 = PriorSample([p1]),
             pk2 = PriorSample([p1, p2], [0.75, 0.25]),
             pk3 = PriorSample([p1, p2]),
-            ds = DesignInterval(:dose => (0, 10)),
+            dr = DesignInterval(:dose => (0, 10)),
             dp_for_pk(pk) = DesignProblem(;
                 design_criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
                 prior_knowledge = pk,
-                design_space = ds,
+                design_region = dr,
                 transformation = Identity(),
             ),
             # sol is optimal for pk1
-            sol = emax_solution(p1, ds),
-            a = ds.lowerbound[1],
-            b = ds.upperbound[1],
+            sol = emax_solution(p1, dr),
+            a = dr.lowerbound[1],
+            b = dr.upperbound[1],
             x_star = sol.designpoint[2][1],
             # not_sol is not optimal for any of pk1, pk2, pk3
             not_sol = DesignMeasure(
@@ -295,7 +295,7 @@ include("example-compartment.jl")
                 prior_knowledge = PriorSample([
                     TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
                 ]),
-                design_space = DesignInterval(:time => [0, 48]),
+                design_region = DesignInterval(:time => [0, 48]),
                 transformation = trafo,
             ),
             # Some designs from Tables 1 and 2, and corresponding transformations
@@ -326,7 +326,7 @@ include("example-compartment.jl")
             t2 = DeltaMethod(p -> diagm(fill(1, 3))),
             t3 = Identity(),
             dp_for(pk, t) = DesignProblem(;
-                design_space = DesignInterval(:time => [0, 48]),
+                design_region = DesignInterval(:time => [0, 48]),
                 model = TPCMod(1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = AOptimality(),
@@ -357,12 +357,12 @@ include("example-compartment.jl")
 
     @testset "solve with DirectMaximization" begin
         # Can we find the locally D-optimal design?
-        let ds = DesignInterval(:dose => (0, 10)),
+        let dr = DesignInterval(:dose => (0, 10)),
             p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            sol = emax_solution(p, ds),
+            sol = emax_solution(p, dr),
             dp = DesignProblem(;
                 design_criterion = DOptimality(),
-                design_space = ds,
+                design_region = dr,
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
                 prior_knowledge = PriorSample([p]),
@@ -374,12 +374,12 @@ include("example-compartment.jl")
             _ = seed!(4711),
             (d1, r1) = solve(
                 dp,
-                DirectMaximization(; optimizer = pso, prototype = random_design(ds, 3)),
+                DirectMaximization(; optimizer = pso, prototype = random_design(dr, 3)),
             ),
             o1 = r1.or, # unwrap the OptimizationResult
             # search with lower and upper bound already known and fixed, uniform weights
             _ = seed!(4711),
-            cand = equidistant_design(ds, 3),
+            cand = equidistant_design(dr, 3),
             (d2, r2) = solve(
                 dp,
                 DirectMaximization(;
@@ -403,8 +403,8 @@ include("example-compartment.jl")
             # fixed weights should not change, using ≈ because numerically 1-2/3 != 1/3
             @test all(map(d -> all(d.weight .≈ 1 / 3), o2.trace_x))
             # fixed points should not move
-            @test all(map(d -> d.designpoint[1][1], o2.trace_x) .== ds.lowerbound[1])
-            @test all(map(d -> d.designpoint[3][1], o2.trace_x) .== ds.upperbound[1])
+            @test all(map(d -> d.designpoint[1][1], o2.trace_x) .== dr.lowerbound[1])
+            @test all(map(d -> d.designpoint[3][1], o2.trace_x) .== dr.upperbound[1])
             # the middle point should only get closer to the optimal one
             # (note that we don't need to sort the atoms of d)
             @test issorted(
@@ -412,7 +412,7 @@ include("example-compartment.jl")
                 rev = true,
             )
 
-            @test_throws "outside design space" solve(
+            @test_throws "outside design region" solve(
                 dp,
                 DirectMaximization(;
                     optimizer = pso,
@@ -440,7 +440,7 @@ include("example-compartment.jl")
                     dp,
                     DirectMaximization(;
                         optimizer = pso,
-                        prototype = equidistant_design(ds, 3),
+                        prototype = equidistant_design(dr, 3),
                     ),
                     minposdist = 1e-2,
                 )
@@ -451,7 +451,7 @@ include("example-compartment.jl")
         let p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
             dp = DesignProblem(;
                 design_criterion = DOptimality(),
-                design_space = ds = DesignInterval(:dose => (0, 10)),
+                design_region = dr = DesignInterval(:dose => (0, 10)),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
                 prior_knowledge = PriorSample([p]),
@@ -506,8 +506,8 @@ include("example-compartment.jl")
     @testset "solve with Exchange" begin
         # Does refinement work?
         let p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            ds = DesignInterval(:dose => (0, 10)),
-            sol = emax_solution(p, ds),
+            dr = DesignInterval(:dose => (0, 10)),
+            sol = emax_solution(p, dr),
             od = Pso(; iterations = 50, swarmsize = 100),
             ow = Pso(; iterations = 50, swarmsize = 50),
             _ = seed!(1234),
@@ -519,7 +519,7 @@ include("example-compartment.jl")
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
                 prior_knowledge = PriorSample([p]),
-                design_space = ds,
+                design_region = dr,
             ),
             (d, r) = solve(dp, Exchange(; ow = ow, od = od, candidate = cand, steps = 3))
 

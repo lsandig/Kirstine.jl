@@ -75,7 +75,7 @@ for ``x \neq 0``, and the limit
 
 ## Setup
 
-### Model and Design Space
+### Model and Design Region
 
 In `Kirstine.jl`, the regression model is defined by subtyping
 [`NonlinearRegression`](@ref),
@@ -129,11 +129,11 @@ end
 (We follow [the conventions](https://docs.julialang.org/en/v1/manual/style-guide/#bang-convention)
 and also return the modified argument `jm`.)
 
-Next, we set up the design space.
+Next, we set up the design region.
 Let's say we want to allow doses between `0` and `1` (in some unit).
 
 ```@example main
-ds = DesignInterval(:dose => (0, 1))
+dr = DesignInterval(:dose => (0, 1))
 nothing # hide
 ```
 
@@ -143,7 +143,7 @@ and a design point is represented by a `Vector{Float64}`.
 In our simple model, this vector has length `1`.
 
 Finally, we need to specify how a design point maps to a `SigEmaxCovariate`.
-Here, the design space is simply the interval of possible doses.
+Here, the design region is simply the interval of possible doses.
 This means we can just copy the only element of the design point
 into the covariate's `dose` field.
 To do this, we subtype [`CovariateParameterization`](@ref)
@@ -190,7 +190,7 @@ Now we collect all the parts in a [`DesignProblem`](@ref).
 ```@example main
 dp = DesignProblem(
     design_criterion = DOptimality(),
-    design_space = ds,
+    design_region = dr,
     model = SigEmax(1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior_sample,
@@ -224,7 +224,7 @@ let's use a `prototype` with `8` equally spaced design points.
 ```@example main
 strategy = DirectMaximization(
     optimizer = Pso(iterations = 50, swarmsize = 100),
-    prototype = equidistant_design(ds, 8),
+    prototype = equidistant_design(dr, 8),
 )
 
 Random.seed!(31415)
@@ -279,7 +279,7 @@ s2, r2 = solve(dp, strategy; minweight = 1e-3, mindist = 1e-2)
 The original, unsimplified solution can still be accessed at `maximizer(r2)`.
 
 In order to confirm that we have actually found the solution
-we visually check that the Gateaux derivative is non-positive over the whole design space.
+we visually check that the Gateaux derivative is non-positive over the whole design region.
 
 ```@example main
 gd = plot_gateauxderivative(s2, dp)
@@ -306,7 +306,7 @@ Let's compare how much better the optimal solution `s2` is
 than a 4-point [`equidistant_design`](@ref).
 
 ```@example main
-efficiency(equidistant_design(ds, 4), s2, dp)
+efficiency(equidistant_design(dr, 4), s2, dp)
 ```
 
 Their relative D-[`efficiency`](@ref) means

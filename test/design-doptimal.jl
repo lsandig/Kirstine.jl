@@ -9,7 +9,7 @@ include("example-compartment.jl")
 @testset "design-doptimal.jl" begin
     @testset "efficiency" begin
         # Atkinson et al. example
-        let ds = DesignInterval(:time => [0, 48]),
+        let dr = DesignInterval(:time => [0, 48]),
             _ = seed!(4711),
             # prior guess for locally optimal design
             g0 = PriorSample([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
@@ -23,7 +23,7 @@ include("example-compartment.jl")
             t_auc = DeltaMethod(Dauc),
             dp = DesignProblem(;
                 design_criterion = dc,
-                design_space = ds,
+                design_region = dr,
                 model = m,
                 covariate_parameterization = cp,
                 prior_knowledge = g0,
