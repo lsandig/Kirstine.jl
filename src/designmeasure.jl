@@ -70,7 +70,7 @@ DesignMeasure(
 function DesignMeasure(dp_w::Pair...)
     ws = [w for (_, w) in dp_w]
     dps = [dp for (dp, _) in dp_w]
-    return DesignMeasure(ws, dps)
+    return DesignMeasure(dps, ws)
 end
 
 """
@@ -106,7 +106,7 @@ function DesignMeasure(m::AbstractMatrix{<:Real})
     end
     ws = m[1, :]
     dps = [m[2:end, k] for k in 1:size(m, 2)]
-    return DesignMeasure(ws, dps)
+    return DesignMeasure(dps, ws)
 end
 
 """
@@ -115,7 +115,7 @@ end
 Construct a one-point [`DesignMeasure`](@ref).
 """
 function one_point_design(designpoint::AbstractVector{<:Real})
-    return DesignMeasure([1.0], [designpoint])
+    return DesignMeasure([designpoint], [1.0])
 end
 
 """
@@ -126,7 +126,7 @@ Construct a [`DesignMeasure`](@ref) with equal weights on the given `designpoint
 function uniform_design(designpoints::AbstractVector{<:AbstractVector{<:Real}})
     K = length(designpoints)
     w = fill(1 / K, K)
-    return DesignMeasure(w, designpoints)
+    return DesignMeasure(designpoints, w)
 end
 
 """
@@ -156,7 +156,7 @@ function random_design(ds::DesignInterval{N}, K::Integer) where N
     dp = [lowerbound(ds) .+ scl .* rand(N) for _ in 1:K]
     u = rand(K)
     w = u ./ sum(u)
-    d = DesignMeasure(w, dp)
+    d = DesignMeasure(dp, w)
     return d
 end
 
@@ -223,7 +223,7 @@ See also [`DesignMeasure`](@ref).
 # Examples
 
 ```jldoctest
-julia> as_matrix(DesignMeasure([0.5, 0.2, 0.3], [[7, 4], [8, 5], [9, 6]]))
+julia> as_matrix(DesignMeasure([[7, 4], [8, 5], [9, 6]], [0.5, 0.2, 0.3]))
 3×3 Matrix{Float64}:
  0.5  0.2  0.3
  7.0  8.0  9.0
@@ -281,7 +281,7 @@ function sort_designpoints(d::DesignMeasure; rev::Bool = false)
         dp = dp[p]
         w = w[p]
     end
-    return DesignMeasure(w, dp)
+    return DesignMeasure(dp, w)
 end
 
 """
@@ -295,7 +295,7 @@ See also [`sort_designpoints`](@ref).
 # Examples
 
 ```jldoctest
-julia> sort_weights(DesignMeasure([0.5, 0.2, 0.3], [[1], [2], [3]]))
+julia> sort_weights(DesignMeasure([[1], [2], [3]], [0.5, 0.2, 0.3]))
 DesignMeasure(
  [2.0] => 0.2,
  [3.0] => 0.3,
@@ -307,7 +307,7 @@ function sort_weights(d::DesignMeasure; rev::Bool = false)
     p = sortperm(d.weight; rev = rev)
     w = d.weight[p]
     dp = d.designpoint[p]
-    return DesignMeasure(w, dp)
+    return DesignMeasure(dp, w)
 end
 
 """
@@ -327,7 +327,7 @@ function mixture(alpha::Real, d1::DesignMeasure, d2::DesignMeasure)
     end
     w = vcat(alpha .* weights(d1), (1 - alpha) .* weights(d2))
     dp = vcat(designpoints(d1), designpoints(d2))
-    return DesignMeasure(w, dp)
+    return DesignMeasure(dp, w)
 end
 
 """
@@ -398,7 +398,7 @@ function simplify_drop(d::DesignMeasure, minweight::Real)
     dps = d.designpoint[enough_weight]
     ws = d.weight[enough_weight]
     ws ./= sum(ws)
-    return DesignMeasure(ws, dps)
+    return DesignMeasure(dps, ws)
 end
 
 """
@@ -480,7 +480,7 @@ function simplify_merge(d::DesignMeasure, ds::DesignInterval, mindist::Real)
     end
     # scale back
     dps = [(dp .* width) .+ lowerbound(ds) for dp in dps]
-    return DesignMeasure(ws, dps)
+    return DesignMeasure(dps, ws)
 end
 
 # == abstract point methods == #
@@ -542,7 +542,7 @@ function ap_copy!(to::DesignMeasure, from::DesignMeasure)
 end
 
 function ap_as_difference(p::DesignMeasure)
-    return SignedMeasure(deepcopy(p.weight), deepcopy(p.designpoint))
+    return SignedMeasure(deepcopy(p.designpoint), deepcopy(p.weight))
 end
 
 function ap_random_difference!(v::SignedMeasure)

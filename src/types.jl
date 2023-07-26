@@ -295,19 +295,17 @@ See also [`weights`](@ref), [`designpoints`](@ref), [`as_matrix`](@ref),
 [`apportion`](@ref).
 """
 struct DesignMeasure <: AbstractPoint
-    "the weights of the individual design points"
-    weight::Vector{Float64}
-    "the design points"
     designpoint::Vector{Vector{Float64}}
+    weight::Vector{Float64}
     @doc """
-        DesignMeasure(w, dp)
+        DesignMeasure(dp, w)
 
-    Construct a design measure with the given weights and a vector of design
-    points.
+    Construct a design measure with the given vector of design points
+     and the given weights.
 
     # Examples
     ```jldoctest
-    julia> DesignMeasure([0.5, 0.2, 0.3], [[1, 2], [3, 4], [5, 6]])
+    julia> DesignMeasure([[1, 2], [3, 4], [5, 6]], [0.5, 0.2, 0.3])
     DesignMeasure(
      [1.0, 2.0] => 0.5,
      [3.0, 4.0] => 0.2,
@@ -315,7 +313,10 @@ struct DesignMeasure <: AbstractPoint
     )
     ```
     """
-    function DesignMeasure(weight, designpoint)
+    function DesignMeasure(
+        designpoint::AbstractVector{<:AbstractVector{<:Real}},
+        weight::AbstractVector{<:Real},
+    )
         if length(weight) != length(designpoint)
             error("number of weights and design points must be equal")
         end
@@ -325,7 +326,7 @@ struct DesignMeasure <: AbstractPoint
         if any(weight .< 0) || !(sum(weight) ≈ 1)
             error("weights must be non-negative and sum to one")
         end
-        new(weight, designpoint)
+        new(designpoint, weight)
     end
 end
 
@@ -333,16 +334,16 @@ end
 # particle-based optimizers. Structurally the same as a DesignMeasure, but weights can be
 # arbitrary real numbers.
 struct SignedMeasure <: AbstractPointDifference
-    weight::Vector{Float64}
     atom::Vector{Vector{Float64}}
-    function SignedMeasure(weights, atoms)
+    weight::Vector{Float64}
+    function SignedMeasure(atoms, weights)
         if length(weights) != length(atoms)
             error("number of weights and atoms must be equal")
         end
         if !allequal(map(length, atoms))
             error("atoms must have identical lengths")
         end
-        new(weights, atoms)
+        new(atoms, weights)
     end
 end
 

@@ -22,22 +22,22 @@ include("example-testpar.jl")
 
     @testset "DesignMeasure" begin
         # Note: the outer constructors are covered in designmeasure.jl.
-        @test_throws "must be equal" DesignMeasure([0], [[1], [2]])
-        @test_throws "identical lengths" DesignMeasure([0.5, 0.5], [[1], [2, 3]])
-        @test_throws "non-negative" DesignMeasure([-0.5, 1.5], [[1], [2]])
-        @test_throws "sum to one" DesignMeasure([0.1, 0.2], [[1], [2]])
+        @test_throws "must be equal" DesignMeasure([[1], [2]], [0])
+        @test_throws "identical lengths" DesignMeasure([[1], [2, 3]], [0.5, 0.5])
+        @test_throws "non-negative" DesignMeasure([[1], [2]], [-0.5, 1.5])
+        @test_throws "sum to one" DesignMeasure([[1], [2]], [0.1, 0.2])
 
-        let d = DesignMeasure([0.2, 0.3, 0.5], [[1], [42], [9]])
+        let d = DesignMeasure([[1], [42], [9]], [0.2, 0.3, 0.5])
             @test d.weight == [0.2, 0.3, 0.5]
             @test d.designpoint == [[1], [42], [9]]
         end
     end
 
     @testset "SignedMeasure" begin
-        @test_throws "must be equal" Kirstine.SignedMeasure([0], [[1], [2]])
-        @test_throws "identical lengths" Kirstine.SignedMeasure([1, -2], [[1], [2, 3]])
+        @test_throws "must be equal" Kirstine.SignedMeasure([[1], [2]], [0])
+        @test_throws "identical lengths" Kirstine.SignedMeasure([[1], [2, 3]], [1, -2])
 
-        let s = Kirstine.SignedMeasure([1, -2, 0.5], [[1, 4], [2, 3], [5, 6]])
+        let s = Kirstine.SignedMeasure([[1, 4], [2, 3], [5, 6]], [1, -2, 0.5])
             @test s.weight == [1, -2, 0.5]
             @test s.atom == [[1, 4], [2, 3], [5, 6]]
         end

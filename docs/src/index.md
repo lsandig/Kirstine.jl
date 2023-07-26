@@ -105,7 +105,7 @@ FisherMatrix
 ```@docs
 DesignMeasure
 Base.:(==)(::DesignMeasure, ::DesignMeasure)
-DesignMeasure(::Any, ::Any)
+DesignMeasure(::AbstractVector{<:AbstractVector{<:Real}}, ::AbstractVector{<:Real})
 DesignMeasure(::Pair...)
 DesignMeasure(::AbstractMatrix{<:Real})
 as_matrix

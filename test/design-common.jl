@@ -150,8 +150,8 @@ include("example-compartment.jl")
             x_star = sol.designpoint[2][1],
             # not_sol is not optimal for pk1
             not_sol = DesignMeasure(
-                [0.2, 0.3, 0.5],
                 [[a + 0.1 * (b - a)], [x_star * 1.1], [a + (0.9 * (b - a))]],
+                [0.2, 0.3, 0.5],
             ),
             sng2 = uniform_design([[a], [b]])
 
@@ -272,8 +272,8 @@ include("example-compartment.jl")
             x_star = sol.designpoint[2][1],
             # not_sol is not optimal for any of pk1, pk2, pk3
             not_sol = DesignMeasure(
-                [0.2, 0.3, 0.5],
                 [[a + 0.1 * (b - a)], [x_star * 1.1], [a + (0.9 * (b - a))]],
+                [0.2, 0.3, 0.5],
             ),
             # a design with fewer than three points is singular
             to_dirac(d) = map(one_point_design, designpoints(simplify_drop(d, 0))),
@@ -460,7 +460,7 @@ include("example-compartment.jl")
             ),
             # this is not the optimal solution
             prototype =
-                DesignMeasure([0.1, 0.5, 0.0, 0.0, 0.4], [[0], [5], [7], [8], [10]]),
+                DesignMeasure([[0], [5], [7], [8], [10]], [0.1, 0.5, 0.0, 0.0, 0.4]),
             opt(; fw = Int64[], fp = Int64[]) = solve(
                 dp,
                 DirectMaximization(;
@@ -534,7 +534,7 @@ include("example-compartment.jl")
             # this here by starting with a candidate that has the correct design points, but
             # unequal weights. Then we do one step of refinement and examine the (unsorted!)
             # results.
-            near_sol = DesignMeasure([0.6, 0.3, 0.1], designpoints(sol))
+            near_sol = DesignMeasure(designpoints(sol), [0.6, 0.3, 0.1])
             (s, r) =
                 solve(dp, Exchange(; ow = ow, od = od, candidate = near_sol, steps = 1))
             @test length(weights(r.orw[1].maximizer)) == 3
