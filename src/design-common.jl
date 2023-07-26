@@ -140,7 +140,7 @@ function DesignConstraints(
     return DesignConstraints(ds, fixw, fixp)
 end
 
-function precalculate_trafo_constants(trafo::Identity, pk::DiscretePrior)
+function precalculate_trafo_constants(trafo::Identity, pk::PriorSample)
     return TCIdentity(parameter_dimension(pk))
 end
 
@@ -157,13 +157,13 @@ function check_trafo_jm_dimensions(jm, pk)
     return nothing
 end
 
-function precalculate_trafo_constants(trafo::DeltaMethod, pk::DiscretePrior)
+function precalculate_trafo_constants(trafo::DeltaMethod, pk::PriorSample)
     jm = [trafo.jacobian_matrix(p) for p in pk.p]
     check_trafo_jm_dimensions(jm, pk)
     return TCDeltaMethod(size(jm[1], 1), jm)
 end
 
-function parameter_dimension(pk::DiscretePrior)
+function parameter_dimension(pk::PriorSample)
     return dimension(pk.p[1])
 end
 
@@ -328,7 +328,7 @@ function objective!(
     d::DesignMeasure,
     m::NonlinearRegression,
     cp::CovariateParameterization,
-    pk::DiscretePrior,
+    pk::PriorSample,
     tc::TrafoConstants,
     na::NormalApproximation,
 )
@@ -372,7 +372,7 @@ function inverse_information_matrices(
     d::DesignMeasure,
     m::NonlinearRegression,
     cp::CovariateParameterization,
-    pk::DiscretePrior,
+    pk::PriorSample,
     na::NormalApproximation,
 )
     # Calculate inverse of normalized information matrix for each parameter value.
@@ -400,7 +400,7 @@ function gateauxderivative!(
     direction::DesignMeasure,
     m::NonlinearRegression,
     cp::CovariateParameterization,
-    pk::DiscretePrior,
+    pk::PriorSample,
     na::NormalApproximation,
 )
     update_model_covariate!(c[1], direction.designpoint[1], m, cp)

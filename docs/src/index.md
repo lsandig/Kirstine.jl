@@ -82,7 +82,7 @@ Parameter
 
 ```@docs
 PriorKnowledge
-DiscretePrior
+PriorSample
 ```
 
 ## Transformations

@@ -45,22 +45,22 @@ abstract type Parameter end
 
 Abstract supertype for structs representing prior knowledge of the model [`Parameter`](@ref).
 
-See also [`DiscretePrior`](@ref).
+See also [`PriorSample`](@ref).
 """
 abstract type PriorKnowledge{T<:Parameter} end
 
 """
-    DiscretePrior(p::AbstractVector{<:Parameter} [, weights])
+    PriorSample(p::AbstractVector{<:Parameter} [, weights])
 
 Represents a sample from a prior distribution, or a discrete prior distribution with finite
 support.
 
 If no `weights` are given, a uniform distribution on the elements of `p` is assumed.
 """
-struct DiscretePrior{T} <: PriorKnowledge{T}
+struct PriorSample{T} <: PriorKnowledge{T}
     weight::Vector{Float64}
     p::Vector{T}
-    function DiscretePrior(
+    function PriorSample(
         parameters::AbstractVector{T},
         weights = fill(1 / length(parameters), length(parameters)),
     ) where T<:Parameter

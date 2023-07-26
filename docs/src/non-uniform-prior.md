@@ -56,11 +56,11 @@ h\in\{1,2,3,4\}
 with prior probabilities ``\{0.1, 0.3, 0.4, 0.2\}`` are possible.
 For simplicity suppose further
 that we know the values of the remaining elements of ``θ`` exactly.
-With a [`DiscretePrior`](@ref),
+With a [`PriorSample`](@ref),
 we can pass the vector of prior probabilities as the optional second argument.
 
 ```@example main
-prior = DiscretePrior(
+prior = PriorSample(
     [SigEmaxPar(e0 = 1, emax = 2, ed50 = 0.4, h = h) for h in 1:4],
     [0.1, 0.3, 0.4, 0.2],
 )

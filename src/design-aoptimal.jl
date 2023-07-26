@@ -32,7 +32,7 @@ function gateaux_integrand(c::GCADeltaMethod, nim_direction, index)
 end
 
 #! format: off
-function precalculate_gateaux_constants(dc::AOptimality, d, m, cp, pk::DiscretePrior, tc::TCDeltaMethod, na)
+function precalculate_gateaux_constants(dc::AOptimality, d, m, cp, pk::PriorSample, tc::TCDeltaMethod, na)
 #! format: on
     invM = inverse_information_matrices(d, m, cp, pk, na)
     JpJ = map(J -> J' * J, tc.jm)

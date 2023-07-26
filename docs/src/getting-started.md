@@ -165,7 +165,7 @@ For Bayesian optimal design of experiments we need to specify a prior distributi
 
 For this example we use independent normal priors on the elements of ``θ``.
 We first draw a vector of `SigEmaxPar`s
-which we then wrap into a [`DiscretePrior`](@ref).
+which we then wrap into a [`PriorSample`](@ref).
 
 ```@example main
 using Random
@@ -177,7 +177,7 @@ sep_draws = map(1:1000) do i
     rnd = theta_mean .+ theta_sd .* randn(4)
     return SigEmaxPar(e0 = rnd[1], emax = rnd[2], ed50 = rnd[3], h = rnd[4])
 end
-prior_sample = DiscretePrior(sep_draws)
+prior_sample = PriorSample(sep_draws)
 nothing # hide
 ```
 

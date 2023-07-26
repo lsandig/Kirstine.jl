@@ -75,5 +75,5 @@ function draw_from_prior(n, se_factor)
     as = mn[1] .+ se_factor .* se[1] .* (2 .* rand(n) .- 1)
     es = mn[2] .+ se_factor .* se[2] .* (2 .* rand(n) .- 1)
     ss = mn[3] .+ se_factor .* se[3] .* (2 .* rand(n) .- 1)
-    return DiscretePrior(map((a, e, s) -> TPCPar(; a = a, e = e, s = s), as, es, ss))
+    return PriorSample(map((a, e, s) -> TPCPar(; a = a, e = e, s = s), as, es, ss))
 end

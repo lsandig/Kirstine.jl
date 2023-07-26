@@ -47,7 +47,7 @@ include("example-compartment.jl")
     end
 
     @testset "precalculate_trafo_constants" begin
-        let pk = DiscretePrior([TestPar2(1, 2), TestPar2(-1, -2)]),
+        let pk = PriorSample([TestPar2(1, 2), TestPar2(-1, -2)]),
             dt1 = p -> [p.a; p.b], # too few columns
             D1 = DeltaMethod(dt1),
             dt2 = p -> p.a > 0 ? [p.a p.b] : [p.a p.b; p.a p.b], # different number of rows
@@ -75,7 +75,7 @@ include("example-compartment.jl")
         # Note: we have to recreate the circumstances in which apply_transformation! is called:
         # nim is allowed to be only upper triangular, and is allowed to be overwritten. Hence we
         # must use deepcopys, and Symmetric wrappers where necessary.
-        let pk = DiscretePrior([TestPar3(1, 2, 3)]),
+        let pk = PriorSample([TestPar3(1, 2, 3)]),
             tid = DeltaMethod(p -> diagm(ones(3))),
             ctid = Kirstine.precalculate_trafo_constants(tid, pk),
             tsc = DeltaMethod(p -> diagm([0.5, 2.0, 4.0])),
@@ -116,7 +116,7 @@ include("example-compartment.jl")
                 normal_approximation = FisherMatrix(),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
-                prior_knowledge = DiscretePrior([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
                 design_space = DesignInterval(:dose => (0, 10)),
                 transformation = trafo,
             ),
@@ -131,7 +131,7 @@ include("example-compartment.jl")
         end
 
         let p1 = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            pk1 = DiscretePrior([p1]),
+            pk1 = PriorSample([p1]),
             ds = DesignInterval(:dose => (0, 10)),
             dp_for(pk) = DesignProblem(;
                 design_criterion = DOptimality(),
@@ -161,7 +161,7 @@ include("example-compartment.jl")
         end
 
         # DeltaMethod for Atkinson et al. examples
-        let g0 = DiscretePrior([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
+        let g0 = PriorSample([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
             _ = seed!(4711),
             g1 = draw_from_prior(1000, 2),
             dp_for(pk, t) = DesignProblem(;
@@ -202,7 +202,7 @@ include("example-compartment.jl")
         end
 
         # DeltaMethod A-optimality for Atkinson et al Omnibus criterion
-        let g0 = DiscretePrior([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
+        let g0 = PriorSample([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
             _ = seed!(4711),
             g1 = draw_from_prior(1000, 2),
             t1 = DeltaMethod(DOmnibus),
@@ -239,7 +239,7 @@ include("example-compartment.jl")
                 normal_approximation = FisherMatrix(),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
-                prior_knowledge = DiscretePrior([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
                 design_space = DesignInterval(:dose => (0, 10)),
                 transformation = trafo,
             ),
@@ -252,9 +252,9 @@ include("example-compartment.jl")
 
         let p1 = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
             p2 = EmaxPar(; e0 = 5, emax = -3, ec50 = 2),
-            pk1 = DiscretePrior([p1]),
-            pk2 = DiscretePrior([p1, p2], [0.75, 0.25]),
-            pk3 = DiscretePrior([p1, p2]),
+            pk1 = PriorSample([p1]),
+            pk2 = PriorSample([p1, p2], [0.75, 0.25]),
+            pk3 = PriorSample([p1, p2]),
             ds = DesignInterval(:dose => (0, 10)),
             dp_for_pk(pk) = DesignProblem(;
                 design_criterion = DOptimality(),
@@ -292,7 +292,7 @@ include("example-compartment.jl")
                 normal_approximation = FisherMatrix(),
                 model = TPCMod(1),
                 covariate_parameterization = CopyTime(),
-                prior_knowledge = DiscretePrior([
+                prior_knowledge = PriorSample([
                     TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
                 ]),
                 design_space = DesignInterval(:time => [0, 48]),
@@ -319,7 +319,7 @@ include("example-compartment.jl")
         end
 
         # DeltaMethod A-optimality for Atkinson et al Omnibus criterion
-        let g0 = DiscretePrior([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
+        let g0 = PriorSample([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
             _ = seed!(4711),
             g1 = draw_from_prior(1000, 2),
             t1 = DeltaMethod(DOmnibus),
@@ -365,7 +365,7 @@ include("example-compartment.jl")
                 design_space = ds,
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
-                prior_knowledge = DiscretePrior([p]),
+                prior_knowledge = PriorSample([p]),
                 transformation = Identity(),
                 normal_approximation = FisherMatrix(),
             ),
@@ -454,7 +454,7 @@ include("example-compartment.jl")
                 design_space = ds = DesignInterval(:dose => (0, 10)),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
-                prior_knowledge = DiscretePrior([p]),
+                prior_knowledge = PriorSample([p]),
                 transformation = Identity(),
                 normal_approximation = FisherMatrix(),
             ),
@@ -518,7 +518,7 @@ include("example-compartment.jl")
                 transformation = Identity(),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
-                prior_knowledge = DiscretePrior([p]),
+                prior_knowledge = PriorSample([p]),
                 design_space = ds,
             ),
             (d, r) = solve(dp, Exchange(; ow = ow, od = od, candidate = cand, steps = 3))

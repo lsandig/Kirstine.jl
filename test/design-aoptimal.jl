@@ -39,7 +39,7 @@ include("example-compartment.jl")
             cp = CopyTime(),
             g1 = TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
             g2 = TPCPar(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
-            pk = DiscretePrior([g1, g2]),
+            pk = PriorSample([g1, g2]),
             tc = Kirstine.TCIdentity(3), # the codomain dimension is not used in this test
             na = FisherMatrix(),
             pgc = Kirstine.precalculate_gateaux_constants,
@@ -75,7 +75,7 @@ include("example-compartment.jl")
             cp = CopyTime(),
             g1 = TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
             g2 = TPCPar(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
-            pk = DiscretePrior([g1, g2]),
+            pk = PriorSample([g1, g2]),
             J = [Dauc(g1), Dauc(g2)],
             tc = Kirstine.TCDeltaMethod(1, J),
             na = FisherMatrix(),

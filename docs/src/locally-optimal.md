@@ -53,7 +53,7 @@ that we used in the introduction,
 we here only use its mean vector as the single guess for ``θ``.
 
 ```@example main
-guess = DiscretePrior([SigEmaxPar(e0 = 1, emax = 2, ed50 = 0.4, h = 5)])
+guess = PriorSample([SigEmaxPar(e0 = 1, emax = 2, ed50 = 0.4, h = 5)])
 dp = DesignProblem(
     design_criterion = DOptimality(),
     design_space = ds,

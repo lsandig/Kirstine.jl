@@ -90,7 +90,7 @@ For the prior we will use “distribution I” from[^ACHJ93],
 which is constructed from two independent uniform distributions around estimates for ``a`` and ``e``,
 and a point mass for ``s``.
 The strength of the prior is controlled by the width of the uniform distributions.
-We generate a [`DiscretePrior`](@ref) from `1000` draws.
+We generate a [`PriorSample`](@ref) from `1000` draws.
 
 ```@example main
 function draw_from_prior(n, se_factor)
@@ -99,7 +99,7 @@ function draw_from_prior(n, se_factor)
     as = mn[1] .+ se_factor .* se[1] .* (2 .* rand(n) .- 1)
     es = mn[2] .+ se_factor .* se[2] .* (2 .* rand(n) .- 1)
     ss = mn[3] .+ se_factor .* se[3] .* (2 .* rand(n) .- 1)
-    return DiscretePrior(map((a, e, s) -> TPCPar(a = a, e = e, s = s), as, es, ss))
+    return PriorSample(map((a, e, s) -> TPCPar(a = a, e = e, s = s), as, es, ss))
 end
 nothing # hide
 ```
