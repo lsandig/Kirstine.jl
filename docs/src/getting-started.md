@@ -266,7 +266,7 @@ and merge all design points that are less than some minimum distance apart.
 
 ```@example main
 s2 = simplify(s1, dp, minweight = 1e-3, mindist = 1e-2)
-as_matrix(s2)
+sort_designpoints(s2)
 ```
 
 Because this issue occurs frequently
