@@ -15,5 +15,6 @@ makedocs(modules = [Kirstine],
                   "Locally Optimal Design" => "locally-optimal.md",
                   "Non-Uniform Prior Weights" => "non-uniform-prior.md",
                   "Handling Transformations" => "handling-transformations.md",
+                  "API Reference" => "api.md",
                   ],
          )
