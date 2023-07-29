@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # Three-parameter compartmental model from
 # Atkinson, A. C., Chaloner, K., Herzberg, A. M., & Juritz, J. (1993).
 # Optimum experimental designs for properties of a compartmental model.

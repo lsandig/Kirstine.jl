@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # A concrete parameter subtypes for tests where we do not need a full design problem
 
 struct TestPar2 <: Parameter

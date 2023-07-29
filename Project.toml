@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-License-Identifier: CC0-1.0
+
 name = "Kirstine"
 uuid = "e1105e74-6c7c-40f2-a29d-e017ea2ab17b"
 authors = ["Ludger Sandig <ludger.sandig@udo.edu>"]

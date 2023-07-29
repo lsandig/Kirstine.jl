@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 @recipe function f(r::OptimizationResult)
     niter = length(r.trace_fx)
     iter = collect(0:(niter - 1))

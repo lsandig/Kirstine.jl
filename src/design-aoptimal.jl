@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # A-optimal design
 
 function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::AOptimality)
