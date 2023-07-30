@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # == abstract supertypes for user-defined models == #
 
 """
@@ -45,22 +48,22 @@ abstract type Parameter end
 
 Abstract supertype for structs representing prior knowledge of the model [`Parameter`](@ref).
 
-See also [`DiscretePrior`](@ref).
+See also [`PriorSample`](@ref).
 """
 abstract type PriorKnowledge{T<:Parameter} end
 
 """
-    DiscretePrior(p::AbstractVector{<:Parameter} [, weights])
+    PriorSample(p::AbstractVector{<:Parameter} [, weights])
 
 Represents a sample from a prior distribution, or a discrete prior distribution with finite
 support.
 
 If no `weights` are given, a uniform distribution on the elements of `p` is assumed.
 """
-struct DiscretePrior{T} <: PriorKnowledge{T}
+struct PriorSample{T} <: PriorKnowledge{T}
     weight::Vector{Float64}
     p::Vector{T}
-    function DiscretePrior(
+    function PriorSample(
         parameters::AbstractVector{T},
         weights = fill(1 / length(parameters), length(parameters)),
     ) where T<:Parameter
@@ -295,19 +298,17 @@ See also [`weights`](@ref), [`designpoints`](@ref), [`as_matrix`](@ref),
 [`apportion`](@ref).
 """
 struct DesignMeasure <: AbstractPoint
-    "the weights of the individual design points"
-    weight::Vector{Float64}
-    "the design points"
     designpoint::Vector{Vector{Float64}}
+    weight::Vector{Float64}
     @doc """
-        DesignMeasure(w, dp)
+        DesignMeasure(dp, w)
 
-    Construct a design measure with the given weights and a vector of design
-    points.
+    Construct a design measure with the given vector of design points
+     and the given weights.
 
     # Examples
     ```jldoctest
-    julia> DesignMeasure([0.5, 0.2, 0.3], [[1, 2], [3, 4], [5, 6]])
+    julia> DesignMeasure([[1, 2], [3, 4], [5, 6]], [0.5, 0.2, 0.3])
     DesignMeasure(
      [1.0, 2.0] => 0.5,
      [3.0, 4.0] => 0.2,
@@ -315,7 +316,10 @@ struct DesignMeasure <: AbstractPoint
     )
     ```
     """
-    function DesignMeasure(weight, designpoint)
+    function DesignMeasure(
+        designpoint::AbstractVector{<:AbstractVector{<:Real}},
+        weight::AbstractVector{<:Real},
+    )
         if length(weight) != length(designpoint)
             error("number of weights and design points must be equal")
         end
@@ -325,7 +329,7 @@ struct DesignMeasure <: AbstractPoint
         if any(weight .< 0) || !(sum(weight) ≈ 1)
             error("weights must be non-negative and sum to one")
         end
-        new(weight, designpoint)
+        new(designpoint, weight)
     end
 end
 
@@ -333,37 +337,37 @@ end
 # particle-based optimizers. Structurally the same as a DesignMeasure, but weights can be
 # arbitrary real numbers.
 struct SignedMeasure <: AbstractPointDifference
-    weight::Vector{Float64}
     atom::Vector{Vector{Float64}}
-    function SignedMeasure(weights, atoms)
+    weight::Vector{Float64}
+    function SignedMeasure(atoms, weights)
         if length(weights) != length(atoms)
             error("number of weights and atoms must be equal")
         end
         if !allequal(map(length, atoms))
             error("atoms must have identical lengths")
         end
-        new(weights, atoms)
+        new(atoms, weights)
     end
 end
 
 """
-    DesignSpace{N}
+    DesignRegion{N}
 
-Supertype for design spaces. A design space is a compact subset of ``\\mathbb{R}^N``.
+Supertype for design regions. A design region is a compact subset of ``\\mathbb{R}^N``.
 
 See also [`DesignInterval`](@ref), [`dimnames`](@ref).
 """
-abstract type DesignSpace{N} end
+abstract type DesignRegion{N} end
 
 """
-    DesignInterval{N} <: DesignSpace{N}
+    DesignInterval{N} <: DesignRegion{N}
 
 A (hyper)rectangular subset of ``\\mathbb{R}^N`` representing the set in which
 which the design points of a [`DesignMeasure`](@ref) live.
 
 See also [`lowerbound`](@ref), [`upperbound`](@ref), [`dimnames`](@ref).
 """
-struct DesignInterval{N} <: DesignSpace{N}
+struct DesignInterval{N} <: DesignRegion{N}
     name::NTuple{N,Symbol}
     lowerbound::NTuple{N,Float64}
     upperbound::NTuple{N,Float64}
@@ -395,15 +399,15 @@ struct DesignInterval{N} <: DesignSpace{N}
     end
 end
 
-struct DesignConstraints{N,T<:DesignSpace{N}} <: AbstractConstraints
-    ds::T
+struct DesignConstraints{N,T<:DesignRegion{N}} <: AbstractConstraints
+    dr::T
     fixw::Vector{Bool}
     fixp::Vector{Bool}
-    function DesignConstraints(ds::T, fixw, fixp) where {N,T<:DesignSpace{N}}
+    function DesignConstraints(dr::T, fixw, fixp) where {N,T<:DesignRegion{N}}
         if length(fixw) != length(fixp)
             throw(DimensionMismatch("fix vectors must have identical lengths"))
         end
-        return new{N,T}(ds, fixw, fixp)
+        return new{N,T}(dr, fixw, fixp)
     end
 end
 
@@ -427,7 +431,7 @@ Completely specifies a problem of optimal experimental design.
 A `DesignProblem` has 7 components:
 
   - a [`DesignCriterion`](@ref),
-  - a [`DesignSpace`](@ref),
+  - a [`DesignRegion`](@ref),
   - a [`Model`](@ref),
   - a [`CovariateParameterization`](@ref),
   - some [`PriorKnowledge`](@ref),
@@ -438,7 +442,7 @@ See also [`solve`](@ref).
 """
 struct DesignProblem{
     Tdc<:DesignCriterion,
-    Tds<:DesignSpace,
+    Tdr<:DesignRegion,
     Tm<:Model,
     Tcp<:CovariateParameterization,
     Tpk<:PriorKnowledge,
@@ -446,21 +450,21 @@ struct DesignProblem{
     Tna<:NormalApproximation,
 }
     dc::Tdc
-    ds::Tds
+    dr::Tdr
     m::Tm
     cp::Tcp
     pk::Tpk
     trafo::Tt
     na::Tna
     @doc """
-        DesignProblem(; design_criterion, design_space, model, covariate_parameterization, prior_knowledge,
+        DesignProblem(; design_criterion, design_region, model, covariate_parameterization, prior_knowledge,
                         transformation = Identity(), normal_approximation = FisherMatrix())
 
     Keyword-based constructor for design problems with some sensible defaults.
     """
     function DesignProblem(;
         design_criterion::Tdc,
-        design_space::Tds,
+        design_region::Tdr,
         model::Tm,
         covariate_parameterization::Tcp,
         prior_knowledge::Tpk,
@@ -468,16 +472,16 @@ struct DesignProblem{
         normal_approximation::Tna = FisherMatrix(),
     ) where {
         Tdc<:DesignCriterion,
-        Tds<:DesignSpace,
+        Tdr<:DesignRegion,
         Tm<:Model,
         Tcp<:CovariateParameterization,
         Tpk<:PriorKnowledge,
         Tt<:Transformation,
         Tna<:NormalApproximation,
     }
-        new{Tdc,Tds,Tm,Tcp,Tpk,Tt,Tna}(
+        new{Tdc,Tdr,Tm,Tcp,Tpk,Tt,Tna}(
             design_criterion,
-            design_space,
+            design_region,
             model,
             covariate_parameterization,
             prior_knowledge,

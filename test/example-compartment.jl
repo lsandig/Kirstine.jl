@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # Three-parameter compartmental model from
 # Atkinson, A. C., Chaloner, K., Herzberg, A. M., & Juritz, J. (1993).
 # Optimum experimental designs for properties of a compartmental model.
@@ -75,5 +78,5 @@ function draw_from_prior(n, se_factor)
     as = mn[1] .+ se_factor .* se[1] .* (2 .* rand(n) .- 1)
     es = mn[2] .+ se_factor .* se[2] .* (2 .* rand(n) .- 1)
     ss = mn[3] .+ se_factor .* se[3] .* (2 .* rand(n) .- 1)
-    return DiscretePrior(map((a, e, s) -> TPCPar(; a = a, e = e, s = s), as, es, ss))
+    return PriorSample(map((a, e, s) -> TPCPar(; a = a, e = e, s = s), as, es, ss))
 end

@@ -14,7 +14,7 @@ This is because the prior guess ``θ_0`` needed for the latter
 can be thought of as a prior Dirac measure.
 
 Here we briefly illustrate this usage
-with the dose-response model from [“Getting Started”](getting-started.md).
+with the dose-response model from the [tutorial](tutorial.md).
 
 ## Model Setup
 
@@ -42,7 +42,7 @@ function Kirstine.update_model_covariate!(c::SigEmaxCovariate, dp, m::SigEmax, c
     c.dose = dp[1]
     return c
 end
-ds = DesignInterval(:dose => (0, 1))
+dr = DesignInterval(:dose => (0, 1))
 nothing # hide
 ```
 
@@ -53,10 +53,10 @@ that we used in the introduction,
 we here only use its mean vector as the single guess for ``θ``.
 
 ```@example main
-guess = DiscretePrior([SigEmaxPar(e0 = 1, emax = 2, ed50 = 0.4, h = 5)])
+guess = PriorSample([SigEmaxPar(e0 = 1, emax = 2, ed50 = 0.4, h = 5)])
 dp = DesignProblem(
     design_criterion = DOptimality(),
-    design_space = ds,
+    design_region = dr,
     model = SigEmax(1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = guess,
@@ -70,7 +70,7 @@ and can be solved with a smaller swarm and in fewer iterations.
 ```@example main
 str1 = DirectMaximization(
     optimizer = Pso(iterations = 20, swarmsize = 50),
-    prototype = equidistant_design(ds, 4),
+    prototype = equidistant_design(dr, 4),
 )
 
 Random.seed!(31415)
@@ -107,7 +107,7 @@ These weights and design points are also not randomized during the initializatio
 ```@example main
 str2 = DirectMaximization(
     optimizer = Pso(iterations = 20, swarmsize = 50),
-    prototype = equidistant_design(ds, 4),
+    prototype = equidistant_design(dr, 4),
     fixedweights = [1, 2, 3, 4],
     fixedpoints = [1, 4],
 )

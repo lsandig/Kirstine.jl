@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 module Kirstine
 
 using LinearAlgebra:
@@ -27,10 +30,9 @@ export @define_scalar_unit_model,
     DesignInterval,
     DesignMeasure,
     DesignProblem,
-    DesignSpace,
+    DesignRegion,
     DirectMaximization,
     DirectMaximizationResult,
-    DiscretePrior,
     Exchange,
     ExchangeResult,
     FisherMatrix,
@@ -42,6 +44,7 @@ export @define_scalar_unit_model,
     Optimizer,
     Parameter,
     PriorKnowledge,
+    PriorSample,
     ProblemSolvingResult,
     ProblemSolvingStrategy,
     Pso,

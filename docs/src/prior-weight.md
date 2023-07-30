@@ -11,7 +11,7 @@ end
 Sometimes prior knowledge is not described by a continuous distribution,
 from which we take a Monte-Carlo sample,
 but by a genuinely discrete distribution.
-We illustrate this here with the dose-response model from [“Getting Started”](getting-started.md).
+We illustrate this here with the dose-response model from the [tutorial](tutorial.md).
 
 ## Model Setup
 
@@ -39,7 +39,7 @@ function Kirstine.update_model_covariate!(c::SigEmaxCovariate, dp, m::SigEmax, c
     c.dose = dp[1]
     return c
 end
-ds = DesignInterval(:dose => (0, 1))
+dr = DesignInterval(:dose => (0, 1))
 nothing # hide
 ```
 
@@ -56,18 +56,18 @@ h\in\{1,2,3,4\}
 with prior probabilities ``\{0.1, 0.3, 0.4, 0.2\}`` are possible.
 For simplicity suppose further
 that we know the values of the remaining elements of ``θ`` exactly.
-With a [`DiscretePrior`](@ref),
+With a [`PriorSample`](@ref),
 we can pass the vector of prior probabilities as the optional second argument.
 
 ```@example main
-prior = DiscretePrior(
+prior = PriorSample(
     [SigEmaxPar(e0 = 1, emax = 2, ed50 = 0.4, h = h) for h in 1:4],
     [0.1, 0.3, 0.4, 0.2],
 )
 
 dp = DesignProblem(
     design_criterion = DOptimality(),
-    design_space = ds,
+    design_region = dr,
     model = SigEmax(1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior,
@@ -81,7 +81,7 @@ nothing # hide
 ```@example main
 strategy = DirectMaximization(
     optimizer = Pso(iterations = 50, swarmsize = 100),
-    prototype = equidistant_design(ds, 8),
+    prototype = equidistant_design(dr, 8),
 )
 
 Random.seed!(31415)

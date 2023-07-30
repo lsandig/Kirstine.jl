@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 module DesignDOptimalTests
 using Test
 using Kirstine
@@ -9,10 +12,10 @@ include("example-compartment.jl")
 @testset "design-doptimal.jl" begin
     @testset "efficiency" begin
         # Atkinson et al. example
-        let ds = DesignInterval(:time => [0, 48]),
+        let dr = DesignInterval(:time => [0, 48]),
             _ = seed!(4711),
             # prior guess for locally optimal design
-            g0 = DiscretePrior([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
+            g0 = PriorSample([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
             # a draw from the strongly informative prior
             g1 = draw_from_prior(1000, 2),
             m = TPCMod(1),
@@ -23,7 +26,7 @@ include("example-compartment.jl")
             t_auc = DeltaMethod(Dauc),
             dp = DesignProblem(;
                 design_criterion = dc,
-                design_space = ds,
+                design_region = dr,
                 model = m,
                 covariate_parameterization = cp,
                 prior_knowledge = g0,
@@ -92,7 +95,7 @@ include("example-compartment.jl")
             cp = CopyTime(),
             g1 = TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
             g2 = TPCPar(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
-            pk = DiscretePrior([g1, g2]),
+            pk = PriorSample([g1, g2]),
             tc = Kirstine.TCIdentity(3), # the codomain dimension is not used in this test
             na = FisherMatrix(),
             pgc = Kirstine.precalculate_gateaux_constants,
@@ -126,7 +129,7 @@ include("example-compartment.jl")
             cp = CopyTime(),
             g1 = TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
             g2 = TPCPar(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
-            pk = DiscretePrior([g1, g2]),
+            pk = PriorSample([g1, g2]),
             J = [Dauc(g1), Dauc(g2)],
             tc = Kirstine.TCDeltaMethod(1, J),
             na = FisherMatrix(),

@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 # D-optimal design
 
 function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::DOptimality)
@@ -28,7 +31,7 @@ function gateaux_integrand(c::GCDDeltaMethod, nim_direction, index)
 end
 
 #! format: off
-function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::DiscretePrior, tc::TCDeltaMethod, na)
+function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::PriorSample, tc::TCDeltaMethod, na)
 #! format: on
     invM = inverse_information_matrices(d, m, cp, pk, na)
     t = codomain_dimension(tc)
@@ -90,7 +93,7 @@ end
                m2::NonlinearRegression,
                cp1::CovariateParameterization,
                cp2::CovariateParameterization,
-               pk::DiscretePrior,
+               pk::PriorSample,
                trafo::Transformation,
                na1::NormalApproximation,
                na2::NormalApproximation)
@@ -107,7 +110,7 @@ function efficiency(
     m2::NonlinearRegression,
     cp1::CovariateParameterization,
     cp2::CovariateParameterization,
-    pk::DiscretePrior,
+    pk::PriorSample,
     trafo::Transformation,
     na1::NormalApproximation,
     na2::NormalApproximation,

@@ -1,6 +1,6 @@
 # Kirstine.jl
 
-*Optimal Designs for Nonlinear Regression.*
+*Bayesian Optimal Design for Nonlinear Regression.*
 
 ```@eval
 import Pkg
@@ -8,124 +8,46 @@ ver = Pkg.project().version
 "Version $(ver)"
 ```
 
-## Design Problems
+Kirstine.jl is free and open source software.
+The code is licensed under GPL-3.0 or later,
+and the documentation under GFDL-1.3 or later.
 
-```@docs
-DesignProblem
-DesignProblem()
+## Project Status
+
+Alpha.
+Expect bugs and breaking changes.
+Documentation is still sparse in some places.
+
+## Features
+
+  - arbitrary nonlinear regression models
+  - vector-valued response variable
+  - Bayesian and locally optimal design
+  - design criteria: D, A
+  - separation of design variables and model covariates
+  - particle swarm optimization
+  - modular and extendable
+  - minimal dependencies
+
+## Installation
+
+Kirstine.jl will be registered once it is stable.
+Until then, you can install it with
+
+```julia
+Pkg.install("https://git.sr.ht/~lsandig/Kirstine.jl")
 ```
 
-Different high-level algorithms are available for trying to solve a `DesignProblem`.
+## Documentation
 
-```@docs
-solve
-ProblemSolvingStrategy
-ProblemSolvingResult
-DirectMaximization
-DirectMaximization()
-DirectMaximizationResult
-Exchange
-Exchange()
-ExchangeResult
-```
+To get started, read the [tutorial](tutorial.md).
 
-Particle-based optimizers are operating on a lower level,
-and are used as part of a `ProblemSolvingStrategy`.
+## Contributing
 
-```@docs
-Optimizer
-OptimizationResult
-Pso
-```
+There is a [git repository at sourcehut](https://git.sr.ht/%7Elsandig/Kirstine.jl).
 
-## Design Criteria
-
-```@docs
-DesignCriterion
-DOptimality
-AOptimality
-objective
-gateauxderivative
-efficiency
-```
-
-## Design Spaces
-
-```@docs
-DesignSpace
-DesignInterval
-DesignInterval()
-dimension
-dimnames
-upperbound
-lowerbound
-```
-
-## Nonlinear Regression Models
-
-Regression models are implemented
-by first subtyping `Model`, `Covariate`, `CovariateParameterization`, and `Parameter`,
-and then defining several helper methods on them.
-See [“Getting Started”](getting-started.md) for a hands-on example.
-
-```@docs
-Model
-NonlinearRegression
-Covariate
-@define_scalar_unit_model
-CovariateParameterization
-Parameter
-@define_vector_parameter
-```
-
-## Prior Knowledge
-
-```@docs
-PriorKnowledge
-DiscretePrior
-```
-
-## Transformations
-
-```@docs
-Transformation
-Identity
-DeltaMethod
-```
-
-## Normal Approximations
-
-```@docs
-NormalApproximation
-FisherMatrix
-```
-
-## Design Measures
-
-```@docs
-DesignMeasure
-Base.:(==)(::DesignMeasure, ::DesignMeasure)
-DesignMeasure(::Pair...)
-DesignMeasure(::AbstractMatrix{<:Real})
-as_matrix
-one_point_design
-uniform_design
-equidistant_design
-random_design
-weights
-designpoints
-sort_designpoints
-sort_weights
-mixture
-apportion
-simplify
-simplify_drop
-simplify_unique
-simplify_merge
-```
-
-## Plotting
-
-```@docs
-plot_gateauxderivative
-```
+If you have already solved design problems with other software packages,
+you can try to replicate your solutions with Kirstine.jl.
+I'd be grateful to hear about your results,
+especially if they differ from what you expect.
+Ditto if you think Kirstine.jl is missing some crucial feature.

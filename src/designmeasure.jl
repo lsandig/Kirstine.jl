@@ -1,4 +1,7 @@
-# Constructors and utility functions operating on design measures and design spaces
+# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Constructors and utility functions operating on design measures and design regions
 
 # === accessor functions === #
 
@@ -21,33 +24,33 @@ See also [`designpoints`](@ref), [`simplify_drop`](@ref).
 weights(d::DesignMeasure) = copy(d.weight)
 
 """
-    lowerbound(ds::DesignInterval)
+    lowerbound(dr::DesignInterval)
 
 Return the vector of lower bounds.
 """
-lowerbound(ds::DesignInterval) = ds.lowerbound
+lowerbound(dr::DesignInterval) = dr.lowerbound
 
 """
-    upperbound(ds::DesignInterval)
+    upperbound(dr::DesignInterval)
 
 Return the vector of upper bounds.
 """
-upperbound(ds::DesignInterval) = ds.upperbound
+upperbound(dr::DesignInterval) = dr.upperbound
 
 """
-    dimension(ds::DesignSpace{N})
+    dimension(dr::DesignRegion{N})
 
-Return the dimension `N` of the design space.
+Return the dimension `N` of the design region.
 """
-dimension(ds::DesignSpace{N}) where N = N
+dimension(dr::DesignRegion{N}) where N = N
 
 # Note: docstring for the supertype, implementation for the subtypes
 """
-    dimnames(ds::DesignSpace)
+    dimnames(dr::DesignRegion)
 
-Return the names of the design space's dimensions.
+Return the names of the design region's dimensions.
 """
-dimnames(ds::DesignInterval) = ds.name
+dimnames(dr::DesignInterval) = dr.name
 
 # === additional constructors === #
 
@@ -70,7 +73,7 @@ DesignMeasure(
 function DesignMeasure(dp_w::Pair...)
     ws = [w for (_, w) in dp_w]
     dps = [dp for (dp, _) in dp_w]
-    return DesignMeasure(ws, dps)
+    return DesignMeasure(dps, ws)
 end
 
 """
@@ -79,7 +82,7 @@ end
 Construct a design measure from its matrix representation `m`.
 
 The `(N+1, K)` matrix `m` represents a `DesignMeasure` with `K` design points from an
-`N`-dimensional design space. The first row of `m` must contain the weights.
+`N`-dimensional design region. The first row of `m` must contain the weights.
 
 See also [`as_matrix`](@ref).
 
@@ -106,7 +109,7 @@ function DesignMeasure(m::AbstractMatrix{<:Real})
     end
     ws = m[1, :]
     dps = [m[2:end, k] for k in 1:size(m, 2)]
-    return DesignMeasure(ws, dps)
+    return DesignMeasure(dps, ws)
 end
 
 """
@@ -115,7 +118,7 @@ end
 Construct a one-point [`DesignMeasure`](@ref).
 """
 function one_point_design(designpoint::AbstractVector{<:Real})
-    return DesignMeasure([1.0], [designpoint])
+    return DesignMeasure([designpoint], [1.0])
 end
 
 """
@@ -126,37 +129,37 @@ Construct a [`DesignMeasure`](@ref) with equal weights on the given `designpoint
 function uniform_design(designpoints::AbstractVector{<:AbstractVector{<:Real}})
     K = length(designpoints)
     w = fill(1 / K, K)
-    return DesignMeasure(w, designpoints)
+    return DesignMeasure(designpoints, w)
 end
 
 """
-    equidistant_design(ds::DesignInterval{1}, K::Integer)
+    equidistant_design(dr::DesignInterval{1}, K::Integer)
 
 Construct a [`DesignMeasure`](@ref) with an equally-spaced grid of `K` design points
 and uniform weights on the given 1-dimensional design interval.
 """
-function equidistant_design(ds::DesignInterval{1}, K::Integer)
-    val = range(lowerbound(ds)[1], upperbound(ds)[1]; length = K)
+function equidistant_design(dr::DesignInterval{1}, K::Integer)
+    val = range(lowerbound(dr)[1], upperbound(dr)[1]; length = K)
     designpoints = [[dp] for dp in val]
     return uniform_design(designpoints)
 end
 
 # Note: docstring for abstract type, implementation for subtypes
 """
-    random_design(ds::DesignSpace, K::Integer)
+    random_design(dr::DesignRegion, K::Integer)
 
 Construct a [`DesignMeasure`](@ref) with design points drawn independently
-from a uniform distribution on the design space.
+from a uniform distribution on the design region.
 
 Independent weights weights are drawn from a uniform distribution on ``[0, 1]``
 and then normalized to sum to one.
 """
-function random_design(ds::DesignInterval{N}, K::Integer) where N
-    scl = upperbound(ds) .- lowerbound(ds)
-    dp = [lowerbound(ds) .+ scl .* rand(N) for _ in 1:K]
+function random_design(dr::DesignInterval{N}, K::Integer) where N
+    scl = upperbound(dr) .- lowerbound(dr)
+    dp = [lowerbound(dr) .+ scl .* rand(N) for _ in 1:K]
     u = rand(K)
     w = u ./ sum(u)
-    d = DesignMeasure(w, dp)
+    d = DesignMeasure(dp, w)
     return d
 end
 
@@ -215,7 +218,7 @@ end
 Return a matrix representation of `d`.
 
 A [`DesignMeasure`](@ref) with `K` design points from an `N`-dimensional
-design space corresponds to a `(N+1, K)` matrix.
+design region corresponds to a `(N+1, K)` matrix.
 The first row contains the weights.
 
 See also [`DesignMeasure`](@ref).
@@ -223,7 +226,7 @@ See also [`DesignMeasure`](@ref).
 # Examples
 
 ```jldoctest
-julia> as_matrix(DesignMeasure([0.5, 0.2, 0.3], [[7, 4], [8, 5], [9, 6]]))
+julia> as_matrix(DesignMeasure([[7, 4], [8, 5], [9, 6]], [0.5, 0.2, 0.3]))
 3×3 Matrix{Float64}:
  0.5  0.2  0.3
  7.0  8.0  9.0
@@ -234,12 +237,12 @@ function as_matrix(d::DesignMeasure)
     return vcat(transpose(weights(d)), reduce(hcat, designpoints(d)))
 end
 
-function check_compatible(d::DesignMeasure, ds::DesignInterval)
-    lb = ds.lowerbound
-    ub = ds.upperbound
+function check_compatible(d::DesignMeasure, dr::DesignInterval)
+    lb = dr.lowerbound
+    ub = dr.upperbound
     for dp in d.designpoint
         if length(dp) != length(lb)
-            error("designpoint length must match design space dimension")
+            error("designpoint length must match design region dimension")
         end
         if any(dp .< lb) || any(dp .> ub)
             sandwich = hcat([:lb, :dp, :ub], permutedims([[lb...] dp [ub...]]))
@@ -247,7 +250,7 @@ function check_compatible(d::DesignMeasure, ds::DesignInterval)
             b = IOBuffer()
             show(b, "text/plain", sandwich)
             sstr = String(take!(b))
-            error("designpoint is outside design space\n $sstr")
+            error("designpoint is outside design region\n $sstr")
         end
     end
     return true
@@ -281,7 +284,7 @@ function sort_designpoints(d::DesignMeasure; rev::Bool = false)
         dp = dp[p]
         w = w[p]
     end
-    return DesignMeasure(w, dp)
+    return DesignMeasure(dp, w)
 end
 
 """
@@ -295,7 +298,7 @@ See also [`sort_designpoints`](@ref).
 # Examples
 
 ```jldoctest
-julia> sort_weights(DesignMeasure([0.5, 0.2, 0.3], [[1], [2], [3]]))
+julia> sort_weights(DesignMeasure([[1], [2], [3]], [0.5, 0.2, 0.3]))
 DesignMeasure(
  [2.0] => 0.2,
  [3.0] => 0.3,
@@ -307,7 +310,7 @@ function sort_weights(d::DesignMeasure; rev::Bool = false)
     p = sortperm(d.weight; rev = rev)
     w = d.weight[p]
     dp = d.designpoint[p]
-    return DesignMeasure(w, dp)
+    return DesignMeasure(dp, w)
 end
 
 """
@@ -327,7 +330,7 @@ function mixture(alpha::Real, d1::DesignMeasure, d2::DesignMeasure)
     end
     w = vcat(alpha .* weights(d1), (1 - alpha) .* weights(d2))
     dp = vcat(designpoints(d1), designpoints(d2))
-    return DesignMeasure(w, dp)
+    return DesignMeasure(dp, w)
 end
 
 """
@@ -377,8 +380,8 @@ and [`simplify_merge`](@ref).
 """
 function simplify(d::DesignMeasure, dp::DesignProblem; minweight = 0, mindist = 0, uargs...)
     d = simplify_drop(d, minweight)
-    d = simplify_unique(d, dp.ds, dp.m, dp.cp; uargs...)
-    d = simplify_merge(d, dp.ds, mindist)
+    d = simplify_unique(d, dp.dr, dp.m, dp.cp; uargs...)
+    d = simplify_merge(d, dp.dr, mindist)
     return d
 end
 
@@ -398,11 +401,11 @@ function simplify_drop(d::DesignMeasure, minweight::Real)
     dps = d.designpoint[enough_weight]
     ws = d.weight[enough_weight]
     ws ./= sum(ws)
-    return DesignMeasure(ws, dps)
+    return DesignMeasure(dps, ws)
 end
 
 """
-    simplify_unique(d::DesignMeasure, ds::DesignSpace, m::M, cp::C; uargs...)
+    simplify_unique(d::DesignMeasure, dr::DesignRegion, m::M, cp::C; uargs...)
 
 Construct a new DesignMeasure that corresponds uniquely to its implied normalized
 information matrix.
@@ -426,7 +429,7 @@ When called via [`simplify`](@ref), user-model specific keyword arguments will b
 """
 function simplify_unique(
     d::DesignMeasure,
-    ds::DesignSpace,
+    dr::DesignRegion,
     m::Model,
     cp::CovariateParameterization;
     uargs...,
@@ -439,7 +442,7 @@ function simplify_unique(
 end
 
 """
-    simplify_merge(d::DesignMeasure, ds::DesignInterval, mindist::Real)
+    simplify_merge(d::DesignMeasure, dr::DesignInterval, mindist::Real)
 
 Merge designpoints with a normalized distance smaller or equal to `mindist`.
 
@@ -454,13 +457,13 @@ The following two steps are repeated until all points are more than `mindist` ap
 
 Finally the design points are scaled back into the original design interval.
 """
-function simplify_merge(d::DesignMeasure, ds::DesignInterval, mindist::Real)
+function simplify_merge(d::DesignMeasure, dr::DesignInterval, mindist::Real)
     if length(d.weight) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
     # scale design interval into unit cube
-    width = collect(upperbound(ds) .- lowerbound(ds))
-    dps = [(dp .- lowerbound(ds)) ./ width for dp in d.designpoint]
+    width = collect(upperbound(dr) .- lowerbound(dr))
+    dps = [(dp .- lowerbound(dr)) ./ width for dp in d.designpoint]
     ws = weights(d)
     cur_min_dist = 0
     while cur_min_dist <= mindist
@@ -479,8 +482,8 @@ function simplify_merge(d::DesignMeasure, ds::DesignInterval, mindist::Real)
         end
     end
     # scale back
-    dps = [(dp .* width) .+ lowerbound(ds) for dp in dps]
-    return DesignMeasure(ws, dps)
+    dps = [(dp .* width) .+ lowerbound(dr) for dp in dps]
+    return DesignMeasure(dps, ws)
 end
 
 # == abstract point methods == #
@@ -490,12 +493,12 @@ function ap_random_point!(
     c::DesignConstraints{N,DesignInterval{N}},
 ) where N
     K = length(d.weight)
-    scl = c.ds.upperbound .- c.ds.lowerbound
+    scl = c.dr.upperbound .- c.dr.lowerbound
     for k in 1:K
         if !c.fixp[k]
             rand!(d.designpoint[k])
             d.designpoint[k] .*= scl
-            d.designpoint[k] .+= c.ds.lowerbound
+            d.designpoint[k] .+= c.dr.lowerbound
         end
     end
     if !all(c.fixw)
@@ -542,7 +545,7 @@ function ap_copy!(to::DesignMeasure, from::DesignMeasure)
 end
 
 function ap_as_difference(p::DesignMeasure)
-    return SignedMeasure(deepcopy(p.weight), deepcopy(p.designpoint))
+    return SignedMeasure(deepcopy(p.designpoint), deepcopy(p.weight))
 end
 
 function ap_random_difference!(v::SignedMeasure)
@@ -582,15 +585,15 @@ function ap_move!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
     # ignore velocity components in directions that correspond to fixed weights or points
     move_handle_fixed!(v, c.fixw, c.fixp)
     # handle intersections: find maximal 0<=t<=1 such that p+tv remains in the search volume
-    t = move_how_far(p, v, c.ds)
+    t = move_how_far(p, v, c.dr)
     # Then, set p to p + tv
-    move_add_v!(p, t, v, c.ds, c.fixw)
+    move_add_v!(p, t, v, c.dr, c.fixw)
     # Stop the particle if the boundary was hit.
     if t != 1.0
         ap_mul_scalar!(v, 0)
     end
     # check that we have not accidentally moved outside
-    check_compatible(p, c.ds)
+    check_compatible(p, c.dr)
     return p
 end
 
@@ -635,14 +638,14 @@ function move_handle_fixed!(v::SignedMeasure, fixw, fixp)
     return v
 end
 
-function move_how_far(p::DesignMeasure, v::SignedMeasure, ds::DesignInterval{N}) where N
+function move_how_far(p::DesignMeasure, v::SignedMeasure, dr::DesignInterval{N}) where N
     t = 1.0
     K = length(p.designpoint)
     # box constraints
     for k in 1:K
         for j in 1:N
-            t = how_far_left(p.designpoint[k][j], t, v.atom[k][j], ds.lowerbound[j])
-            t = how_far_right(p.designpoint[k][j], t, v.atom[k][j], ds.upperbound[j])
+            t = how_far_left(p.designpoint[k][j], t, v.atom[k][j], dr.lowerbound[j])
+            t = how_far_right(p.designpoint[k][j], t, v.atom[k][j], dr.upperbound[j])
         end
     end
     # simplex constraints
@@ -679,7 +682,7 @@ function move_add_v!(
     p::DesignMeasure,
     t,
     v::SignedMeasure,
-    ds::DesignInterval{N},
+    dr::DesignInterval{N},
     fixw,
 ) where N
     K = length(p.designpoint)
@@ -689,11 +692,11 @@ function move_add_v!(
         for j in 1:N
             # Due to rounding errors, design points can be just slightly outside the design
             # interval. We fix this here.
-            if p.designpoint[k][j] > ds.upperbound[j]
-                p.designpoint[k][j] = ds.upperbound[j]
+            if p.designpoint[k][j] > dr.upperbound[j]
+                p.designpoint[k][j] = dr.upperbound[j]
             end
-            if p.designpoint[k][j] < ds.lowerbound[j]
-                p.designpoint[k][j] = ds.lowerbound[j]
+            if p.designpoint[k][j] < dr.lowerbound[j]
+                p.designpoint[k][j] = dr.lowerbound[j]
             end
         end
     end

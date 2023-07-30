@@ -5,7 +5,7 @@ but about the transformed parameter ``T(\theta)``,
 where ``T(\theta)`` can be a number or a vector.
 
 !!! note
-    
+
     `Kirstine.jl` allows transformations to be freely combined with different design criteria.
     In this sense, c-optimality is just the special case of D-optimality
     combined with a transformation ``T: \mathbb{R}^r \to \mathbb{R}``.
@@ -51,7 +51,7 @@ savefig_nothing(ans, "handling-transformations-tpc.png") # hide
 [^ACHJ93]: Anthony C. Atkinson, Kathryn Chaloner, Agnes M. Herzberg, and June Juritz, "Optimum experimental designs for properties of a compartmental model", Biometrics, 49(2), 325–337, 1993. [doi:10.2307/2532547](http://dx.doi.org/10.2307/2532547)
 ## Setup
 
-As in the [introductory example](getting-started.md),
+As in the [introductory example](tutorial.md),
 we start by defining the (single-row) Jacobian matrix of the mean function,
 and the mapping from design variables to model covariates.
 
@@ -82,7 +82,7 @@ because locally optimal designs for scalar ``T(\theta)`` usually don't exist
 due to their information matrices becoming singular.
 
 !!! note
-    
+
     Workarounds like generalized inverses or matrix regularization
     are currently not supported by `Kirstine.jl`.
 
@@ -90,7 +90,7 @@ For the prior we will use “distribution I” from[^ACHJ93],
 which is constructed from two independent uniform distributions around estimates for ``a`` and ``e``,
 and a point mass for ``s``.
 The strength of the prior is controlled by the width of the uniform distributions.
-We generate a [`DiscretePrior`](@ref) from `1000` draws.
+We generate a [`PriorSample`](@ref) from `1000` draws.
 
 ```@example main
 function draw_from_prior(n, se_factor)
@@ -99,7 +99,7 @@ function draw_from_prior(n, se_factor)
     as = mn[1] .+ se_factor .* se[1] .* (2 .* rand(n) .- 1)
     es = mn[2] .+ se_factor .* se[2] .* (2 .* rand(n) .- 1)
     ss = mn[3] .+ se_factor .* se[3] .* (2 .* rand(n) .- 1)
-    return DiscretePrior(map((a, e, s) -> TPCPar(a = a, e = e, s = s), as, es, ss))
+    return PriorSample(map((a, e, s) -> TPCPar(a = a, e = e, s = s), as, es, ss))
 end
 nothing # hide
 ```
@@ -113,7 +113,7 @@ Our design interval extends from `0` to `48` hours after administration of the d
 function dp_for_trafo(trafo)
     Random.seed!(4711)
     DesignProblem(
-        design_space = DesignInterval(:time => [0, 48]),
+        design_region = DesignInterval(:time => [0, 48]),
         design_criterion = DOptimality(),
         covariate_parameterization = Copy(),
         model = TPCMod(1),
