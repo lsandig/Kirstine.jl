@@ -44,10 +44,10 @@ plot(
     yguide = "response",
     label = "μ(dose, θ)",
 )
-savefig_nothing(ans, "getting-started-sigemax.png") # hide
+savefig_nothing(ans, "tutorial-sigemax.png") # hide
 ```
 
-![](getting-started-sigemax.png)
+![](tutorial-sigemax.png)
 
 In order to find an optimal design,
 we need to know the
@@ -283,20 +283,20 @@ we visually check that the Gateaux derivative is non-positive over the whole des
 
 ```@example main
 gd = plot_gateauxderivative(s2, dp)
-savefig_nothing(gd, "getting-started-gd.png") # hide
+savefig_nothing(gd, "tutorial-gd.png") # hide
 ```
 
-![](getting-started-gd.png)
+![](tutorial-gd.png)
 
 Finally, we can also look at a plot of the optimization progress
 and see that the particle swarm has converged already after about `20` iterations.
 
 ```@example main
 pr1 = plot(r1)
-savefig_nothing(pr1, "getting-started-pr1.png") # hide
+savefig_nothing(pr1, "tutorial-pr1.png") # hide
 ```
 
-![](getting-started-pr1.png)
+![](tutorial-pr1.png)
 
 ## Relative Efficiency and Apportionment
 

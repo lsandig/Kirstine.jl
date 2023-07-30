@@ -51,7 +51,7 @@ savefig_nothing(ans, "handling-transformations-tpc.png") # hide
 [^ACHJ93]: Anthony C. Atkinson, Kathryn Chaloner, Agnes M. Herzberg, and June Juritz, "Optimum experimental designs for properties of a compartmental model", Biometrics, 49(2), 325–337, 1993. [doi:10.2307/2532547](http://dx.doi.org/10.2307/2532547)
 ## Setup
 
-As in the [introductory example](getting-started.md),
+As in the [introductory example](tutorial.md),
 we start by defining the (single-row) Jacobian matrix of the mean function,
 and the mapping from design variables to model covariates.
 

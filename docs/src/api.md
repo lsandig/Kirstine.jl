@@ -58,7 +58,7 @@ lowerbound
 Regression models are implemented
 by first subtyping `Model`, `Covariate`, `CovariateParameterization`, and `Parameter`,
 and then defining several helper methods on them.
-See [“Getting Started”](getting-started.md) for a hands-on example.
+See the [tutorial](tutorial.md) for a hands-on example.
 
 ```@docs
 Model

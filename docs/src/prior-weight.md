@@ -11,7 +11,7 @@ end
 Sometimes prior knowledge is not described by a continuous distribution,
 from which we take a Monte-Carlo sample,
 but by a genuinely discrete distribution.
-We illustrate this here with the dose-response model from [“Getting Started”](getting-started.md).
+We illustrate this here with the dose-response model from the [tutorial](tutorial.md).
 
 ## Model Setup
 

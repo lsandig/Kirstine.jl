@@ -14,7 +14,7 @@ This is because the prior guess ``θ_0`` needed for the latter
 can be thought of as a prior Dirac measure.
 
 Here we briefly illustrate this usage
-with the dose-response model from [“Getting Started”](getting-started.md).
+with the dose-response model from the [tutorial](tutorial.md).
 
 ## Model Setup
 
