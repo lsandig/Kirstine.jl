@@ -35,7 +35,7 @@ Kirstine.jl will be registered once it is stable.
 Until then, you can install it with
 
 ```julia
-Pkg.install("https://git.sr.ht/~lsandig/Kirstine.jl")
+Pkg.add(url = "https://git.sr.ht/~lsandig/Kirstine.jl")
 ```
 
 ## Documentation
