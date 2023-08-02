@@ -692,12 +692,8 @@ function move_add_v!(
         for j in 1:N
             # Due to rounding errors, design points can be just slightly outside the design
             # interval. We fix this here.
-            if p.designpoint[k][j] > dr.upperbound[j]
-                p.designpoint[k][j] = dr.upperbound[j]
-            end
-            if p.designpoint[k][j] < dr.lowerbound[j]
-                p.designpoint[k][j] = dr.lowerbound[j]
-            end
+            p.designpoint[k][j] =
+                min(max(p.designpoint[k][j], dr.lowerbound[j]), dr.upperbound[j])
         end
     end
     # ... then for the weights.
@@ -706,12 +702,7 @@ function move_add_v!(
     for k in 1:(K - 1)
         # Again due to rounding erros, a weight can become slightly negative. We need to fix
         # this to prevent it snowballing later on.
-        if p.weight[k] < 0.0
-            p.weight[k] = 0.0
-        end
-        if p.weight[k] > 1.0
-            p.weight[k] = 1.0
-        end
+        p.weight[k] = min(max(p.weight[k], 0.0), 1.0)
         weight_K -= p.weight[k]
     end
     # In `handle_fixed()` we made sure that mathematically we have
@@ -724,8 +715,6 @@ function move_add_v!(
         p.weight[K] = weight_K
     end
     # Fix small rounding erros as above.
-    if p.weight[K] < 0.0
-        p.weight[K] = 0.0
-    end
+    p.weight[K] = max(p.weight[K], 0.0)
     return p
 end
