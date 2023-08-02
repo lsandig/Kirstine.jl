@@ -66,7 +66,7 @@ julia> DesignMeasure([1] => 0.2, [42] => 0.3, [9] => 0.5)
 DesignMeasure(
  [1.0] => 0.2,
  [42.0] => 0.3,
- [9.0] => 0.5
+ [9.0] => 0.5,
 )
 ```
 """
@@ -99,7 +99,7 @@ julia> DesignMeasure(m)
 DesignMeasure(
  [7.0, 4.0] => 0.5,
  [8.0, 5.0] => 0.2,
- [9.0, 6.0] => 0.3
+ [9.0, 6.0] => 0.3,
 )
 ```
 """
@@ -209,7 +209,7 @@ function Base.show(io::IO, ::MIME"text/plain", d::DesignMeasure)
     end
     print(io, typeof(d), "(\n")
     print(io, " ", join(pairs, ",\n "))
-    print(io, " \n)")
+    print(io, ",\n)")
 end
 
 """
@@ -271,7 +271,7 @@ DesignMeasure(
  [1.0, 1.0] => 0.25,
  [2.0, 1.0] => 0.25,
  [2.0, 3.0] => 0.25,
- [3.0, 4.0] => 0.25
+ [3.0, 4.0] => 0.25,
 )
 ```
 """
@@ -302,7 +302,7 @@ julia> sort_weights(DesignMeasure([[1], [2], [3]], [0.5, 0.2, 0.3]))
 DesignMeasure(
  [2.0] => 0.2,
  [3.0] => 0.3,
- [1.0] => 0.5
+ [1.0] => 0.5,
 )
 ```
 """
