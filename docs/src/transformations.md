@@ -43,10 +43,10 @@ plot(
     yguide = "response",
     label = "μ(time , θ)",
 )
-savefig_nothing(ans, "handling-transformations-tpc.png") # hide
+savefig_nothing(ans, "transformations-tpc.png") # hide
 ```
 
-![](handling-transformations-tpc.png)
+![](transformations-tpc.png)
 
 [^ACHJ93]: Anthony C. Atkinson, Kathryn Chaloner, Agnes M. Herzberg, and June Juritz, "Optimum experimental designs for properties of a compartmental model", Biometrics, 49(2), 325–337, 1993. [doi:10.2307/2532547](http://dx.doi.org/10.2307/2532547)
 ## Setup
@@ -151,10 +151,10 @@ s_id
 
 ```@example main
 plot_gateauxderivative(s_id, dp_id)
-savefig_nothing(ans, "handling-transformations-gd-id.png") # hide
+savefig_nothing(ans, "transformations-gd-id.png") # hide
 ```
 
-![](handling-transformations-gd-id.png)
+![](transformations-gd-id.png)
 
 ## Univariate functions of the parameter
 
@@ -198,10 +198,10 @@ s_auc
 
 ```@example main
 plot_gateauxderivative(s_auc, dp_auc)
-savefig_nothing(ans, "handling-transformations-gd-auc.png") # hide
+savefig_nothing(ans, "transformations-gd-auc.png") # hide
 ```
 
-![](handling-transformations-gd-auc.png)
+![](transformations-gd-auc.png)
 
 The design points are similar to those of `s_id`,
 but while its weights were practically uniform,
@@ -253,10 +253,10 @@ s_ttm
 
 ```@example main
 plot_gateauxderivative(s_ttm, dp_ttm)
-savefig_nothing(ans, "handling-transformations-gd-ttm.png") # hide
+savefig_nothing(ans, "transformations-gd-ttm.png") # hide
 ```
 
-![](handling-transformations-gd-ttm.png)
+![](transformations-gd-ttm.png)
 
 This solution differs markedly from the previous ones.
 
@@ -291,10 +291,10 @@ s_cmax
 
 ```@example main
 plot_gateauxderivative(s_cmax, dp_cmax)
-savefig_nothing(ans, "handling-transformations-gd-cmax.png") # hide
+savefig_nothing(ans, "transformations-gd-cmax.png") # hide
 ```
 
-![](handling-transformations-gd-cmax.png)
+![](transformations-gd-cmax.png)
 
 The solution is again mostly concentrated on one design point.
 The location of this point makes intuitive sense,
@@ -321,10 +321,10 @@ s_both
 
 ```@example main
 plot_gateauxderivative(s_both, dp_both)
-savefig_nothing(ans, "handling-transformations-gd-both.png") # hide
+savefig_nothing(ans, "transformations-gd-both.png") # hide
 ```
 
-![](handling-transformations-gd-both.png)
+![](transformations-gd-both.png)
 
 This solution is again similar to `s_id`, but with a different weight distribution.
 

@@ -91,7 +91,7 @@ s1
 
 ```@example main
 gd = plot_gateauxderivative(s1, dp)
-savefig_nothing(gd, "unequal-prior-weights-gd.png") # hide
+savefig_nothing(gd, "discrete-prior-gd.png") # hide
 ```
 
-![](unequal-prior-weights-gd.png)
+![](discrete-prior-gd.png)
