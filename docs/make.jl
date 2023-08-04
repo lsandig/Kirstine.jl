@@ -5,19 +5,74 @@ using Documenter, Kirstine
 
 DocMeta.setdocmeta!(Kirstine, :DocTestSetup, :(using Kirstine); recursive=true)
 
+math_macros = Dict(
+    # Numbers
+    raw"\DimDesignRegion" => raw"d",
+    raw"\DimUnit" => raw"m",
+    raw"\DimParameter" => raw"r",
+    raw"\DimTransformedParameter" => raw"t",
+    raw"\DimCovariate" => raw"c",
+    raw"\IndexDesignPoint" => raw"k",
+    raw"\NumDesignPoints" => raw"K",
+    raw"\IndexUnit" => raw"i",
+    raw"\SampleSize" => raw"n",
+    # Matrices
+    raw"\UnitCovariance" => raw"Σ",
+    # Sets
+    raw"\DesignRegion" => raw"D",
+    raw"\CovariateSet" => raw"X",
+    raw"\AllDesignMeasures" => raw"Δ",
+    raw"\ParameterSet" => raw"Θ",
+    raw"\SNNDMatrices" => raw"\mathrm{S}_{+}^{#1}",
+    raw"\IndexSet" => raw"I",
+    raw"\Reals" => raw"ℝ",
+    # Variables
+    raw"\DesignMeasure" => raw"ζ",
+    raw"\DesignPoint" => raw"z",
+    raw"\DesignWeight" => raw"w",
+    raw"\Parameter" => raw"θ",
+    raw"\Unit" => raw"y",
+    raw"\Covariate" => raw"x",
+    raw"\SomeMatrix" => raw"M",
+    # Functions
+    raw"\DesignCriterion" => raw"Ψ",
+    raw"\MeanFunction" => raw"μ",
+    raw"\CovariateParameterization" => raw"C",
+    raw"\Transformation" => raw"T",
+    raw"\PriorDensity" => raw"p",
+    raw"\Trace" => raw"\operatorname{tr}",
+    raw"\NIMatrix" => raw"\operatorname{M}",
+    raw"\TNIMatrix" => raw"\operatorname{M}_T",
+    raw"\Objective" => raw"f",
+    # Distributions
+    raw"\DiracDist" => raw"\operatorname{Dirac}",
+    raw"\MvNormDist" => raw"\operatorname{MvNorm}",
+    # Miscellaneous
+    raw"\simiid" => raw"\overset{\mathrm{iid}}{\sim}",
+    raw"\simappr" => raw"\overset{\mathrm{appr}}{\sim}",
+    raw"\Int" => raw"∫_{#1}#2\operatorname{d}\!#3",
+    raw"\IntD" => raw"∫_{#1}#2\,#3\operatorname{d}\!#4",
+    raw"\IntM" => raw"∫_{#1}#2\,#3(\operatorname{d}\!#4)",
+    # Abbreviations
+    raw"\PosteriorDensity" => raw"p(\Parameter\mid\Unit_1,…,\Unit_{\SampleSize})",
+)
+
 makedocs(modules = [Kirstine],
          sitename = "Kirstine.jl",
          strict = true,
          # doctest = :fix,
-         format = Documenter.HTML(prettyurls = false,
-                                  edit_link = nothing,
-                                  footer = nothing,
-                                  ),
+         format = Documenter.HTML(
+             prettyurls = false,
+             edit_link = nothing,
+             footer = nothing,
+             mathengine = KaTeX(Dict(:macros => math_macros)),
+         ),
          pages = ["Home" => "index.md",
                   "Getting Started" => "tutorial.md",
                   "Locally Optimal Design" => "locally-optimal.md",
                   "Discrete Prior" => "discrete-prior.md",
                   "Using Transformations" => "transformations.md",
                   "API Reference" => "api.md",
+                  "Mathematical Background" => "math.md",
                   ],
          )
