@@ -147,7 +147,8 @@ function precalculate_trafo_constants(trafo::Identity, pk::PriorSample)
     return TCIdentity(parameter_dimension(pk))
 end
 
-function check_trafo_jm_dimensions(jm, pk)
+function precalculate_trafo_constants(trafo::DeltaMethod, pk::PriorSample)
+    jm = [trafo.jacobian_matrix(p) for p in pk.p]
     r = parameter_dimension(pk)
     if any(j -> size(j) != size(jm[1]), jm)
         throw(DimensionMismatch("trafo jacobians must be identical in size"))
@@ -157,12 +158,6 @@ function check_trafo_jm_dimensions(jm, pk)
     if ncol != r
         throw(DimensionMismatch("trafo jacobian must have $(r) columns, got $(ncol)"))
     end
-    return nothing
-end
-
-function precalculate_trafo_constants(trafo::DeltaMethod, pk::PriorSample)
-    jm = [trafo.jacobian_matrix(p) for p in pk.p]
-    check_trafo_jm_dimensions(jm, pk)
     return TCDeltaMethod(size(jm[1], 1), jm)
 end
 
@@ -170,7 +165,11 @@ function parameter_dimension(pk::PriorSample)
     return dimension(pk.p[1])
 end
 
-function codomain_dimension(tc::TrafoConstants)
+function codomain_dimension(tc::TCIdentity)
+    return tc.codomain_dimension
+end
+
+function codomain_dimension(tc::TCDeltaMethod)
     return tc.codomain_dimension
 end
 
