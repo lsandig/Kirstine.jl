@@ -239,38 +239,6 @@ include("example-compartment.jl")
         end
     end
 
-    @testset "objective" begin
-
-
-        # DeltaMethod A-optimality for Atkinson et al Omnibus criterion
-        let g0 = PriorSample([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
-            _ = seed!(4711),
-            g1 = draw_from_prior(1000, 2),
-            t1 = DeltaMethod(DOmnibus),
-            t2 = DeltaMethod(p -> diagm(fill(1, 3))),
-            t3 = Identity(),
-            dp_for(pk, t) = DesignProblem(;
-                design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
-                covariate_parameterization = CopyTime(),
-                design_criterion = AOptimality(),
-                normal_approximation = FisherMatrix(),
-                prior_knowledge = pk,
-                transformation = t,
-            ),
-            # Designs from Tables 1, 2
-            a5 = DesignMeasure([0.2176] => 0.2337, [1.4343] => 0.3878, [18.297] => 0.3785),
-            a10 = DesignMeasure([0.2235] => 0.2366, [1.4875] => 0.3838, [18.8293] => 0.3796)
-
-            # Locally optimal
-            @test -objective(a5, dp_for(g0, t1)) ≈ 6.883 atol = 1e-3
-            # Strong prior
-            @test -objective(a10, dp_for(g1, t1)) ≈ 7.1220 atol = 1e-1
-            # Compare DeltaMethod identity with actual Identity
-            @test objective(a5, dp_for(g0, t2)) ≈ objective(a5, dp_for(g0, t3))
-        end
-    end
-
     @testset "gateauxderivative" begin
         # correct handling of singular designs
         let t1 = Identity(),

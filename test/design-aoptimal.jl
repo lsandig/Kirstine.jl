@@ -4,8 +4,7 @@
 module DesignDOptimalTests
 using Test
 using Kirstine
-# using Random: seed!
-using LinearAlgebra: SingularException, Symmetric, tr #  diagm,
+using LinearAlgebra: SingularException, Symmetric, tr, diagm
 
 include("example-compartment.jl")
 
@@ -24,6 +23,63 @@ include("example-compartment.jl")
             # interpret m as inverted
             @test ci!(deepcopy(mreg), true, dc) ≈ -3
             @test ci!(deepcopy(msng), true, dc) <= 0
+        end
+    end
+
+    @testset "objective" begin
+        # Note: this testset effectively tests functionality in `objective!`, since
+        # `objective` simply allocates a few objects to work on. Not having to do this
+        # manually to test the mutating version is a bit more convenient.
+
+        # Identity Transformation: Atkinson et al. model
+        # Note: no published results. Compare indirectly to DeltaMethod identity which we
+        # assume to be correct when the tests in the let block below work out.
+        let dpd = DesignProblem(;
+                transformation = DeltaMethod(p -> diagm([1, 1, 1])),
+                design_region = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = AOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = PriorSample([
+                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                ]),
+            ),
+            dpi = DesignProblem(;
+                transformation = Identity(),
+                design_region = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = AOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = PriorSample([
+                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                ]),
+            ),
+            d1 = DesignMeasure([0.2176] => 0.2337, [1.4343] => 0.3878, [18.297] => 0.3785)
+
+            @test objective(d1, dpd) ≈ objective(d1, dpi)
+        end
+
+        # DeltaMethod Transformation: Atkinson et al locally optimal Omnibus example
+        let dp = DesignProblem(;
+                design_region = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = AOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = PriorSample([
+                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                ]),
+                transformation = DeltaMethod(DOmnibus),
+            ),
+            # singular, with inversion of the information matrix
+            d0 = one_point_design([1]),
+            # solution
+            d1 = DesignMeasure([0.2176] => 0.2337, [1.4343] => 0.3878, [18.297] => 0.3785)
+
+            @test objective(d0, dp) == -Inf
+            @test -objective(d1, dp) ≈ 6.883 atol = 1e-3
         end
     end
 
