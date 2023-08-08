@@ -9,6 +9,7 @@ using Test
     include("types.jl")
     include("design-common.jl")
     include("design-doptimal.jl")
+    include("design-aoptimal.jl")
     include("util.jl")
     include("plot.jl")
 end

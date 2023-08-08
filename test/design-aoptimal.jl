@@ -64,10 +64,8 @@ include("example-compartment.jl")
 
         # DeltaMethod transformation
         #
-        # The GateauxConstants wrap the square and the trace of the inverse of the
-        # transformed normalized information matrix at the candidate solution. Only the
-        # upper triangle is stored. There is one matrix and trace for each prior parameter
-        # value.
+        # The GateauxConstants wrap M^{-1} J' J M^{-1} and the trace of M_T^{-1} at the
+        # candidate solution. There is one matrix and trace for each prior parameter value.
         #
         # We use an example model from Atkinson et al. with a two-point prior
         # and transformation to a 1-dimensional quantity
@@ -86,8 +84,6 @@ include("example-compartment.jl")
             # reference information matrices, already wrapped in Symmetric()
             m1 = informationmatrix(a1, m, cp, g1, na),
             m2 = informationmatrix(a1, m, cp, g2, na),
-            invMT_1 = J[1] * inv(m1) * J[1]',
-            invMT_2 = J[2] * inv(m2) * J[2]',
             gc = pgc(dc, a1, m, cp, pk, tc, na)
 
             # Singular designs should raise an exception. It will be caught by the caller.
@@ -95,10 +91,10 @@ include("example-compartment.jl")
             @test isa(gc, Kirstine.GCADeltaMethod)
             @test length(gc.B) == 2
             @test length(gc.tr_C) == 2
-            @test Symmetric(gc.B[1]) ≈ invMT_1^2
-            @test Symmetric(gc.B[2]) ≈ invMT_2^2
-            @test gc.tr_C[1] ≈ tr(invMT_1)
-            @test gc.tr_C[2] ≈ tr(invMT_2)
+            @test Symmetric(gc.B[1]) ≈ inv(m1) * J[1]' * J[1] * inv(m1)
+            @test Symmetric(gc.B[2]) ≈ inv(m2) * J[2]' * J[2] * inv(m2)
+            @test gc.tr_C[1] ≈ tr(J[1] * inv(m1) * J[1]')
+            @test gc.tr_C[2] ≈ tr(J[2] * inv(m2) * J[2]')
         end
     end
 
