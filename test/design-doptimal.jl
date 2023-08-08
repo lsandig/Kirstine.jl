@@ -80,6 +80,56 @@ include("example-compartment.jl")
         end
     end
 
+    @testset "objective" begin
+        # Note: this testset effectively tests functionality in `objective!`, since
+        # `objective` simply allocates a few objects to work on. Not having to do this
+        # manually to test the mutating version is a bit more convenient.
+
+        # Identity Transformation: Atkinson et al. locally optimal example
+        let dp = DesignProblem(;
+                design_region = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = DOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = PriorSample([
+                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                ]),
+                transformation = Identity(),
+            ),
+            # singular, no inversion of the information matrix
+            d0 = one_point_design([1]),
+            # solution
+            d1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3)
+
+            @test objective(d0, dp) == -Inf
+            # published objective value is rounded to four places
+            @test objective(d1, dp) ≈ 7.3887 atol = 1e-5
+        end
+
+        # DeltaMethod Transformation: Atkinson et al. strong prior AUC estimation example
+        let _ = seed!(4711),
+            dp = DesignProblem(;
+                design_region = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = DOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = draw_from_prior(1000, 2),
+                transformation = DeltaMethod(Dauc),
+            ),
+            # singular, with inversion of the information matrix
+            d0 = one_point_design([1]),
+            # solution
+            d1 = DesignMeasure([0.2449] => 0.0129, [1.4950] => 0.0387, [18.4903] => 0.9484)
+
+            @test objective(d0, dp) == -Inf
+            # The article uses numerical quadrature, we are using MC integration. Hence the
+            # objective value cannot be expected to be terribly accurate.
+            @test exp(-objective(d1, dp)) ≈ 2463.3 rtol = 1e-2
+        end
+    end
+
     @testset "precalculate_gateaux_constants" begin
         # Identity transformation
         #
