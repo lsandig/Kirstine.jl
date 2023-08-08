@@ -187,5 +187,66 @@ include("example-compartment.jl")
             @test gi(c, B, 1) != tr(A * B) - 1.8
         end
     end
+
+    @testset "gateauxderivative" begin
+        # Identity Transformation: no published example. Test indirectly under the
+        # assumption that the DeltaMethod is correct.
+        let dpi = DesignProblem(;
+                transformation = Identity(),
+                design_region = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = AOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = PriorSample([
+                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                ]),
+            ),
+            dpd = DesignProblem(;
+                transformation = DeltaMethod(p -> diagm([1, 1, 1])),
+                design_region = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = AOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = PriorSample([
+                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                ]),
+            ),
+            dir = [one_point_design([t]) for t in range(0, 48; length = 21)],
+            # singular, with inversion of the information matrix
+            d0 = one_point_design([1]),
+            # solution
+            d1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
+            d1dir = one_point_design.(designpoints(d1))
+
+            @test all(isnan.(gateauxderivative(d0, dir, dpi)))
+            @test gateauxderivative(d1, dir, dpi) ≈ gateauxderivative(d1, dir, dpd)
+        end
+
+        # DeltaMethod Transformation: Atkinson et al. locally optimal Omnibus example
+        let dp = DesignProblem(;
+                transformation = DeltaMethod(DOmnibus),
+                design_region = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = AOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = PriorSample([
+                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                ]),
+            ),
+            dir = [one_point_design([t]) for t in range(0, 48; length = 21)],
+            # singular, with inversion of the information matrix
+            d0 = one_point_design([1]),
+            # solution
+            d1 = DesignMeasure([0.2176] => 0.2337, [1.4343] => 0.3878, [18.297] => 0.3785),
+            d1dir = one_point_design.(designpoints(d1))
+
+            @test all(isnan.(gateauxderivative(d0, dir, dp)))
+            @test maximum(gateauxderivative(d1, dir, dp)) <= 0
+            @test all(abs.(gateauxderivative(d1, d1dir, dp)) .< 1e-2)
+        end
+    end
 end
 end
