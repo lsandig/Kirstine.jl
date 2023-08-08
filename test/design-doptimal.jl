@@ -234,5 +234,49 @@ include("example-compartment.jl")
             @test gi(c, B, 1) != tr(A * B) - 2
         end
     end
+
+    @testset "gateauxderivative" begin
+        # Identity Transformation: Atkinson et al. locally optimal example
+        #
+        # DeltaMethod Transformation: A direct test with Bayesian solution is not possible
+        # because of MC-integration variability. Indirectly check that an Identity
+        # transformation and an equivalent DeltaMethod transformation give the same results.
+        let dpi = DesignProblem(;
+                transformation = Identity(),
+                design_region = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = DOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = PriorSample([
+                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                ]),
+            ),
+            dpd = DesignProblem(;
+                transformation = DeltaMethod(p -> diagm([1, 1, 1])),
+                design_region = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = DOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = PriorSample([
+                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                ]),
+            ),
+            dir = [one_point_design([t]) for t in range(0, 48; length = 21)],
+            # singular, with inversion of the information matrix
+            d0 = one_point_design([1]),
+            # solution
+            d1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
+            d1dir = one_point_design.(designpoints(d1))
+
+            @test_throws "one-point design" gateauxderivative(d1, [d1], dpi)
+            @test all(isnan.(gateauxderivative(d0, dir, dpi)))
+            @test all(isnan.(gateauxderivative(d0, dir, dpd)))
+            @test maximum(gateauxderivative(d1, dir, dpi)) <= 0
+            @test all(abs.(gateauxderivative(d1, d1dir, dpi)) .< 1e-4)
+            @test gateauxderivative(d1, dir, dpi) ≈ gateauxderivative(d1, dir, dpd)
+        end
+    end
 end
 end
