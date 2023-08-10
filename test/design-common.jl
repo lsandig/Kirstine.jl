@@ -239,190 +239,211 @@ include("example-compartment.jl")
         end
     end
 
-    @testset "solve with DirectMaximization" begin
-        # Can we find the locally D-optimal design?
-        let dr = DesignInterval(:dose => (0, 10)),
-            p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            sol = emax_solution(p, dr),
-            dp = DesignProblem(;
+    @testset "solve" begin
+        # check that solution is sorted and simplified
+        let dp = DesignProblem(;
                 design_criterion = DOptimality(),
-                design_region = dr,
+                design_region = DesignInterval(:dose => (0, 10)),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
-                prior_knowledge = PriorSample([p]),
-                transformation = Identity(),
-                normal_approximation = FisherMatrix(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
             ),
-            pso = Pso(; iterations = 50, swarmsize = 20),
-            # search from a random starting design
-            _ = seed!(4711),
-            (d1, r1) = solve(
-                dp,
-                DirectMaximization(; optimizer = pso, prototype = random_design(dr, 3)),
+            str = DirectMaximization(;
+                optimizer = Pso(; swarmsize = 10, iterations = 20),
+                prototype = uniform_design([[0], [2.45], [2.55], [10]]),
             ),
-            o1 = r1.or, # unwrap the OptimizationResult
-            # search with lower and upper bound already known and fixed, uniform weights
-            _ = seed!(4711),
-            cand = equidistant_design(dr, 3),
-            (d2, r2) = solve(
-                dp,
-                DirectMaximization(;
-                    optimizer = pso,
-                    prototype = cand,
-                    fixedweights = 1:3,
-                    fixedpoints = [1, 3],
-                ),
-            ),
-            o2 = r2.or
+            _ = seed!(1234),
+            (d, r) = solve(dp, str; trace_state = true, mindist = 1e-1)
 
-            @test d1.weight ≈ sol.weight rtol = 1e-3
-            for k in 1:3
-                @test d1.designpoint[k] ≈ sol.designpoint[k] atol = 1e-2
-            end
+            # design points should be sorted...
+            @test issorted(reduce(vcat, designpoints(d)))
+            # ... and simplified
+            @test length(designpoints(d)) == 3
+            # states should be traced (initial + 20 iterations)
+            @test length(r.or.trace_state) == 21
 
-            @test d2.weight ≈ sol.weight rtol = 1e-3
-            for k in 1:3
-                @test d2.designpoint[k] ≈ sol.designpoint[k] atol = 1e-3
-            end
-            # fixed weights should not change, using ≈ because numerically 1-2/3 != 1/3
-            @test all(map(d -> all(d.weight .≈ 1 / 3), o2.trace_x))
-            # fixed points should not move
-            @test all(map(d -> d.designpoint[1][1], o2.trace_x) .== dr.lowerbound[1])
-            @test all(map(d -> d.designpoint[3][1], o2.trace_x) .== dr.upperbound[1])
-            # the middle point should only get closer to the optimal one
-            # (note that we don't need to sort the atoms of d)
-            @test issorted(
-                map(d -> abs(d.designpoint[2][1] - sol.designpoint[2][1]), o2.trace_x),
-                rev = true,
-            )
-
-            @test_throws "outside design region" solve(
-                dp,
-                DirectMaximization(;
-                    optimizer = pso,
-                    prototype = uniform_design([[0], [20]]),
-                ),
-            )
-            @test_throws "must match" solve(
-                dp,
-                DirectMaximization(;
-                    optimizer = pso,
-                    prototype = uniform_design([[0, 1], [1, 0]]),
-                ),
-            )
             # `minposdist` doesn't exist, the correct argument name is `mindist`. Because we
-            # have not implemented `simplify_unique()` for EmaxModel, the generic method should
-            # complain about gobbling up `minposdist` in its varargs. (We can't test this in
-            # designmeasure.jl because we need a Model and a CovariateParameterization in order
-            # to call `simplify()`.)
+            # have not implemented `simplify_unique()` for EmaxModel, the generic method
+            # should complain about gobbling up `minposdist` in its varargs. (We can't test
+            # this in designmeasure.jl because we need a Model and a
+            # CovariateParameterization in order to call `simplify()`.)
             @test_logs(
                 (
                     :warn,
                     "unused keyword arguments given to generic `simplify_unique` method",
                 ),
-                solve(
-                    dp,
-                    DirectMaximization(;
-                        optimizer = pso,
-                        prototype = equidistant_design(dr, 3),
-                    ),
-                    minposdist = 1e-2,
-                )
-            )
-        end
-
-        # fixed weights and / or points should never change
-        let p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            dp = DesignProblem(;
-                design_criterion = DOptimality(),
-                design_region = dr = DesignInterval(:dose => (0, 10)),
-                model = EmaxModel(1),
-                covariate_parameterization = CopyDose(),
-                prior_knowledge = PriorSample([p]),
-                transformation = Identity(),
-                normal_approximation = FisherMatrix(),
-            ),
-            # this is not the optimal solution
-            prototype =
-                DesignMeasure([[0], [5], [7], [8], [10]], [0.1, 0.5, 0.0, 0.0, 0.4]),
-            opt(; fw = Int64[], fp = Int64[]) = solve(
-                dp,
-                DirectMaximization(;
-                    optimizer = Pso(; iterations = 2, swarmsize = 5),
-                    prototype = prototype,
-                    fixedweights = fw,
-                    fixedpoints = fp,
-                );
-                trace_state = true,
-            ),
-            is_const_w(o, ref, k) = all([
-                all(map(d -> d.weight[k] == ref.weight[k], s.x)) for s in o.or.trace_state
-            ]),
-            is_const_d(o, ref, k) = all([
-                all(map(d -> d.designpoint[k] == ref.designpoint[k], s.x)) for
-                s in o.or.trace_state
-            ]),
-            _ = seed!(4711),
-            (_, o1) = opt(; fw = [2], fp = [2]),
-            (_, o2) = opt(; fw = [2]),
-            (_, o3) = opt(; fp = [2]),
-            (_, o4) = opt(; fw = [5], fp = [5]),
-            (_, o5) = opt(; fw = [1, 5], fp = [5])
-
-            @test is_const_w(o1, prototype, 2)
-            @test is_const_d(o1, prototype, 2)
-            @test is_const_w(o2, prototype, 2)
-            @test is_const_d(o3, prototype, 2)
-            @test is_const_w(o4, prototype, 5)
-            @test is_const_d(o4, prototype, 5)
-            @test is_const_w(o5, prototype, 1)
-            @test is_const_w(o5, prototype, 5)
-            @test is_const_d(o5, prototype, 5)
-
-            @test_logs(
-                (:warn, "fixed weights already sum to one"),
-                match_mode = :any,
-                opt(fw = [1, 2, 5])
+                solve(dp, str, minposdist = 1e-2)
             )
         end
     end
 
-    @testset "solve with Exchange" begin
-        # Does refinement work?
-        let p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            dr = DesignInterval(:dose => (0, 10)),
-            sol = emax_solution(p, dr),
-            od = Pso(; iterations = 50, swarmsize = 100),
-            ow = Pso(; iterations = 50, swarmsize = 50),
-            _ = seed!(1234),
-            cand = uniform_design([[[5]]; designpoints(sol)[[1, 3]]]),
-            dp = DesignProblem(;
+    @testset "solve_with" begin
+        # DirectMaximization
+        let dp = DesignProblem(;
                 design_criterion = DOptimality(),
-                normal_approximation = FisherMatrix(),
-                transformation = Identity(),
+                design_region = DesignInterval(:dose => (0, 10)),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
-                prior_knowledge = PriorSample([p]),
-                design_region = dr,
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
             ),
-            (d, r) = solve(dp, Exchange(; ow = ow, od = od, candidate = cand, steps = 3))
+            pso = Pso(; iterations = 20, swarmsize = 10),
+            # random init, no additional constraints
+            str1 =
+                DirectMaximization(; optimizer = pso, prototype = random_design(dp.dr, 3)),
+            # uniform init, weights and some points fixed
+            str2 = DirectMaximization(;
+                optimizer = pso,
+                prototype = equidistant_design(dp.dr, 3),
+                fixedweights = 1:3,
+                fixedpoints = [1, 3],
+            ),
+            # prototypes incompatible with design region
+            str3 = DirectMaximization(;
+                optimizer = pso,
+                prototype = uniform_design([[0], [20]]),
+            ),
+            str4 = DirectMaximization(;
+                optimizer = pso,
+                prototype = uniform_design([[0, 1], [1, 0]]),
+            ),
+            r1 = Kirstine.solve_with(dp, str1, false),
+            # additionally trace optimizer states
+            r2 = Kirstine.solve_with(dp, str2, true)
 
-            @test abs(designpoints(d)[2][1] - designpoints(sol)[2][1]) <
-                  abs(designpoints(cand)[1][1] - designpoints(sol)[2][1])
-            @test issorted([r.maximum for r in r.orw])
-            @test all([r.maximum > 0 for r in r.ord])
+            # errors from check_compatible() in DesignConstraints constructor
+            @test_throws "outside design region" solve(dp, str3)
+            @test_throws "must match" solve(dp, str4)
+            # result type
+            @test isa(r1, DirectMaximizationResult)
+            @test isa(r2, DirectMaximizationResult)
+            # traced state
+            @test length(r1.or.trace_state) == 1
+            @test length(r2.or.trace_state) == 21
+            # increasing objective
+            @test issorted(r1.or.trace_fx)
+            @test issorted(r2.or.trace_fx)
+            # fixed things
+            @test all(map(d -> all(d.weight .≈ 1 / 3), r2.or.trace_x))
+            @test all(map(d -> d.designpoint[1][1], r2.or.trace_x) .== dp.dr.lowerbound[1])
+            @test all(map(d -> d.designpoint[3][1], r2.or.trace_x) .== dp.dr.upperbound[1])
+            # non-fixed design point converges to 2.5
+            @test issorted(
+                map(d -> abs(d.designpoint[2][1] - 2.5), r2.or.trace_x),
+                rev = true,
+            )
+        end
 
+        # DirectMaximization, but with fixed weights / design points that we know are not
+        # optimal, in various combinations
+        let dp = DesignProblem(;
+                design_criterion = DOptimality(),
+                design_region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            pt = DesignMeasure([[0], [5], [7], [8], [10]], [0.1, 0.5, 0.0, 0.0, 0.4]),
+            sws(; fw, fp) = Kirstine.solve_with(
+                dp,
+                DirectMaximization(;
+                    optimizer = Pso(; iterations = 10, swarmsize = 5),
+                    prototype = pt,
+                    fixedweights = fw,
+                    fixedpoints = fp,
+                ),
+                true,
+            ),
+            r1 = sws(; fw = [2], fp = [2]),
+            r2 = sws(; fw = [2], fp = Int64[]),
+            r3 = sws(; fw = Int64[], fp = [2]),
+            r4 = sws(; fw = [5], fp = [5]),
+            r5 = sws(; fw = [1, 5], fp = [5]),
+            isconstw(r, k) = all([
+                all(map(d -> d.weight[k] == weights(pt)[k], s.x)) for s in r.or.trace_state
+            ]),
+            isconstp(r, k) = all([
+                all(map(d -> d.designpoint[k] == designpoints(pt)[k], s.x)) for
+                s in r.or.trace_state
+            ])
+
+            @test isconstw(r1, 2)
+            @test isconstp(r1, 2)
+            @test isconstw(r2, 2)
+            @test isconstp(r3, 2)
+            @test isconstw(r4, 5)
+            @test isconstp(r4, 5)
+            @test isconstw(r5, 1)
+            @test isconstw(r5, 5)
+            @test isconstp(r5, 5)
+            @test_logs(
+                (:warn, "fixed weights already sum to one"),
+                match_mode = :any,
+                sws(fw = [1, 2, 5], fp = Int64[])
+            )
+        end
+
+        # Exchange
+        let dp = DesignProblem(;
+                design_criterion = DOptimality(),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+                design_region = DesignInterval(:dose => (0, 10)),
+            ),
+            od = Pso(; iterations = 20, swarmsize = 10),
+            ow = Pso(; iterations = 20, swarmsize = 10),
+            str1 = Exchange(;
+                ow = ow,
+                od = od,
+                candidate = uniform_design([[5], [0], [10]]),
+                steps = 3,
+            ),
+            _ = seed!(54321),
+            r1 = Kirstine.solve_with(dp, str1, true),
             # When the direction of steepest ascent is in the support of the candidate, the
-            # support of the intermediate design measure should not grow. When merged, the
-            # new point should move to the front of the vector of design points. We check
-            # this here by starting with a candidate that has the correct design points, but
-            # unequal weights. Then we do one step of refinement and examine the (unsorted!)
-            # results.
-            near_sol = DesignMeasure(designpoints(sol), [0.6, 0.3, 0.1])
-            (s, r) =
-                solve(dp, Exchange(; ow = ow, od = od, candidate = near_sol, steps = 1))
-            @test length(weights(r.orw[1].maximizer)) == 3
-            @test designpoints(r.orw[1].maximizer)[1] == designpoints(near_sol)[3]
+            # number of design points of the intermediate design measure should not
+            # increase. When merged, the new point should move to the front of the vector of
+            # design points. We check this here by starting with a candidate that has the
+            # correct design points, but unequal weights.
+            str2 = Exchange(;
+                ow = ow,
+                od = od,
+                candidate = DesignMeasure([[0], [2.5], [10]], [0.6, 0.3, 0.1]),
+                steps = 1,
+            ),
+            _ = seed!(13579),
+            r2 = Kirstine.solve_with(dp, str2, false),
+            # prototypes incompatible with design region
+            str3 = Exchange(;
+                ow = ow,
+                od = od,
+                candidate = uniform_design([[0], [20]]),
+                steps = 1,
+            ),
+            str4 = Exchange(;
+                ow = ow,
+                od = od,
+                candidate = uniform_design([[0, 1], [1, 0]]),
+                steps = 1,
+            )
+
+            # errors from check_compatible
+            @test_throws "outside design region" solve(dp, str3)
+            @test_throws "must match" solve(dp, str4)
+            # result type
+            @test isa(r1, ExchangeResult)
+            @test isa(r2, ExchangeResult)
+            # traced state
+            @test all(or -> length(or.trace_state) == 21, r1.ord)
+            @test all(or -> length(or.trace_state) == 21, r1.orw)
+            @test all(or -> length(or.trace_state) == 1, r2.ord)
+            @test all(or -> length(or.trace_state) == 1, r2.orw)
+            # increasing objective (from step to step)
+            @test issorted(r1.orw, by = or -> or.maximum)
+            @test issorted(r2.orw, by = or -> or.maximum)
+            # no new point, but last one of the candidate
+            @test length(weights(r2.orw[1].maximizer)) == 3
+            @test designpoints(r2.orw[1].maximizer)[1] == [10]
         end
     end
 end
