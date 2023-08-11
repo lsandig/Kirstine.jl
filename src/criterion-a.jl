@@ -1,7 +1,28 @@
 # SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# A-optimal design
+## A-optimal design ##
+
+struct GCAIdentity <: GateauxConstants
+    B::Vector{Matrix{Float64}} # inv(M(at))^2
+    tr_C::Vector{Float64}      # tr(inv(M(at)))
+end
+
+struct GCADeltaMethod <: GateauxConstants
+    B::Vector{Matrix{Float64}} # inv(M(at)) * J' * J * inv(M(at))
+    tr_C::Vector{Float64}      # tr(J' * J * inv(M(at)))
+end
+
+"""
+    AOptimality <: DesignCriterion
+
+Criterion for A-optimal experimental design.
+
+Trace of the inverted normalized information matrix.
+
+See also the [mathematical background](math.md#A-Criterion).
+"""
+struct AOptimality <: DesignCriterion end
 
 function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::AOptimality)
     if is_inv

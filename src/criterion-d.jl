@@ -1,7 +1,28 @@
 # SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# D-optimal design
+## D-optimal design and relative D-efficiency ##
+
+struct GCDIdentity <: GateauxConstants
+    invM::Vector{Matrix{Float64}}
+    parameter_length::Int64
+end
+
+struct GCDDeltaMethod <: GateauxConstants
+    invM_B_invM::Vector{Matrix{Float64}}
+    transformed_parameter_length::Int64
+end
+
+@doc raw"""
+    DOptimality
+
+Criterion for D-optimal experimental design.
+
+Log-determinant of the normalized information matrix.
+
+See also the [mathematical background](math.md#D-Criterion).
+"""
+struct DOptimality <: DesignCriterion end
 
 function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::DOptimality)
     sgn = is_inv ? -1 : 1
@@ -13,7 +34,8 @@ function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::DOptimalit
     return cv
 end
 
-# == Gateaux derivative for identity transformation == #
+## Gateaux derivative: Identity ##
+
 function gateaux_integrand(c::GCDIdentity, nim_direction, index)
     return tr_prod(c.invM[index], nim_direction, :U) - c.parameter_length
 end
@@ -24,7 +46,8 @@ function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk, tc::TCIde
     return GCDIdentity(invM, parameter_length)
 end
 
-# == Gateaux derivative for delta method transformation == #
+## Gateaux derivative: DeltaMethod ##
+
 function gateaux_integrand(c::GCDDeltaMethod, nim_direction, index)
     # Note: invM_B_invM[index] is dense and symmetric, we can use the upper triangle
     return tr_prod(c.invM_B_invM[index], nim_direction, :U) - c.transformed_parameter_length
@@ -47,20 +70,7 @@ function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::PriorSamp
     return GCDDeltaMethod(invM_B_invM, t)
 end
 
-# == relative D-efficiency == #
-
-"""
-    efficiency(d1::DesignMeasure, d2::DesignMeasure, dp::DesignProblem)
-
-Relative D-efficiency of `d1` to `d2`.
-
-!!! note
-
-    This always computes D-efficiency, regardless of the criterion used in `dp`.
-"""
-function efficiency(d1::DesignMeasure, d2::DesignMeasure, dp::DesignProblem)
-    return efficiency(d1, d2, dp.m, dp.cp, dp.pk, dp.trafo, dp.na)
-end
+## relative D-efficiency ##
 
 """
     efficiency(d1::DesignMeasure,

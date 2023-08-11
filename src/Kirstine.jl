@@ -76,14 +76,22 @@ export @define_scalar_unit_model,
     upperbound,
     weights
 
-include("types.jl")
-include("designmeasure.jl")
+include("abstracttypes.jl")
 include("optimize.jl")
 include("pso.jl")
+include("designregion.jl")
+include("designmeasure.jl")
+include("designmeasure-abstractpoint.jl")
+include("priorknowledge.jl")
+include("transformation.jl")
+include("normalapproximation.jl")
+include("user.jl")
 include("design-common.jl")
-include("design-doptimal.jl")
-include("design-aoptimal.jl")
-include("util.jl")
+include("criterion-d.jl")
+include("criterion-a.jl")
+include("designproblem.jl")
+include("solve-directmaximization.jl")
+include("solve-exchange.jl")
 include("plot.jl")
 
 end

@@ -1,18 +1,7 @@
 # SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# generic particle swarm optimizer
-
-# declare functions to be overwritten for concrete subtypes of AbstractPoint and AbstractPointDifference
-function ap_random_point! end
-function ap_difference! end
-function ap_copy! end
-function ap_move! end
-function ap_as_difference end
-function ap_random_difference! end
-function ap_mul_hadamard! end
-function ap_mul_scalar! end
-function ap_add! end
+## generic particle swarm optimizer ##
 
 """
     Pso <: Optimizer
