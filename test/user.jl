@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-module UtilTests
+module UserTests
 using Test
 using Kirstine
 
