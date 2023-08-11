@@ -6,28 +6,33 @@
 """
     Model
 
-Abstract supertype for statistical models.
+Supertype for statistical models.
 """
 abstract type Model end
 
 """
     NonlinearRegression
 
-Abstract supertype for user-defined nonlinear regression models.
+Supertype for user-defined nonlinear regression models.
 """
 abstract type NonlinearRegression <: Model end
 
 """
     Covariate
 
-Abstract supertype for user-defined model covariates.
+Supertype for user-defined model covariates.
+
+# Implementation
+
+Subtypes of `Covariate` should be mutable, or have at least a mutable field. This is
+necessary for being able to modify them in [`update_model_covariate!`](@ref).
 """
 abstract type Covariate end
 
 """
     CovariateParameterization
 
-Abstract supertype for user-defined mappings from design points to model covariates.
+Supertype for user-defined mappings from design points to model covariates.
 """
 abstract type CovariateParameterization end
 
@@ -37,35 +42,36 @@ abstract type CovariateParameterization end
     Parameter
 
 Supertype for [`Model`](@ref) parameters.
-
-A user-defined subtype `P<:Parameter` should have a `dimension(p::P)` method
-which returns the dimension of the associated parameter space.
 """
 abstract type Parameter end
 
 """
     PriorKnowledge{T<:Parameter}
 
-Abstract supertype for structs representing prior knowledge of the model [`Parameter`](@ref).
+Supertype for representing prior knowledge of the model [`Parameter`](@ref).
 
 See also [`PriorSample`](@ref).
 """
 abstract type PriorKnowledge{T<:Parameter} end
 
 """
-    PriorSample(p::AbstractVector{<:Parameter} [, weights])
+    PriorSample{T} <: PriorKnowledge{T}
 
-Represents a sample from a prior distribution, or a discrete prior distribution with finite
-support.
-
-If no `weights` are given, a uniform distribution on the elements of `p` is assumed.
+A sample from a prior distribution, or a discrete prior distribution with finite support.
 """
 struct PriorSample{T} <: PriorKnowledge{T}
     weight::Vector{Float64}
     p::Vector{T}
+    @doc """
+    PriorSample(p::AbstractVector{<:Parameter} [, weights::AbstractVector{<:Real}])
+
+Construct a weighted prior sample on the given parameter draws.
+
+If no `weights` are given, a uniform distribution on the elements of `p` is assumed.
+"""
     function PriorSample(
         parameters::AbstractVector{T},
-        weights = fill(1 / length(parameters), length(parameters)),
+        weights::AbstractVector{<:Real} = fill(1 / length(parameters), length(parameters)),
     ) where T<:Parameter
         if length(weights) != length(parameters)
             error("number of weights and parameter values must be equal")
@@ -80,60 +86,60 @@ end
 """
     NormalApproximation
 
-Abstract supertype for different possible normal approximations to the posterior
-distribution.
+Supertype for different possible normal approximations to the posterior distribution.
 """
 abstract type NormalApproximation end
 
 """
     FisherMatrix
 
-Normal approximation based on the maximum-likelihood approach. The information matrix is
-obtained as the average of the Fisher information matrix with respect to the design measure.
-Singular information matrices can occur.
+Normal approximation based on the maximum-likelihood approach.
+
+The information matrix is obtained as the average of the Fisher information matrix with
+respect to the design measure. Singular information matrices can occur.
+
+See also the [mathematical background](math.md#Objective-Function).
 """
 struct FisherMatrix <: NormalApproximation end
 
 @doc raw"""
     Transformation
 
-Abstract supertype of posterior transformations.
+Supertype of posterior transformations.
 
-Consider the regression model
-``y_i \mid \theta \sim \mathrm{Normal}(\mu(\theta, x), \sigma^2)``
-with ``\theta\in\Theta\subset\mathbb{R}^q``.
-A `Transformation` represents the function ``T: \Theta\to\mathbb{R}^s``
-when we want to maximize a [`DesignCriterion`](@ref) for the posterior distribution of
-``T(\theta) \mid y``.
+See also [`Identity`](@ref), [`DeltaMethod`](@ref),
+and the [mathematical background](math.md#Objective-Function).
 """
 abstract type Transformation end
 
 """
-    Identity
+    Identity <: Transformation
 
-Represents the [`Transformation`](@ref) that maps a parameter to itself.
+The [`Transformation`](@ref) that maps a parameter to itself.
 """
 struct Identity <: Transformation end
 
 @doc raw"""
+    DeltaMethod <: Transformation
     DeltaMethod(jacobian_matrix::Function)
 
-Represents a nonlinear [`Transformation`](@ref) of the model parameter.
+A nonlinear [`Transformation`](@ref) of the model parameter.
 
 The [delta method](https://en.wikipedia.org/wiki/Delta_method)
-maps the asymptotic multivariate normal distribution of ``\theta``
-to the asymptotic multivariate normal distribution of ``T(\theta)``,
-using the Jacobian matrix ``\mathrm{D}T``.
+uses the Jacobian matrix ``\TotalDiff\Transformation``
+to map the asymptotic multivariate normal distribution of ``\Parameter``
+to the asymptotic multivariate normal distribution of ``\Transformation(\Parameter)``.
+
 To construct a `DeltaMethod` object,
-the argument `jacobian_matrix` must be a function
-that maps a parameter value `p`
-to the Jacobian matrix of ``T`` evaluated at `p`.
+`jacobian_matrix` must be a function
+that maps a [`Parameter`](@ref) `p`
+to the Jacobian matrix of ``\Transformation`` evaluated at `p`.
 
 # Examples
-Suppose `p` has the fields `a` and `b`, and ``T(a, b) = (ab, b/a)'``.
-Then the Jacobian matrix of ``T`` is
+Suppose `p` has the fields `a` and `b`, and ``\Transformation(\Parameter) = (ab, b/a)'``.
+Then the Jacobian matrix of ``\Transformation`` is
 ```math
-\mathrm{D}T(a, b) =
+\TotalDiff\Transformation(\Parameter) =
   \begin{bmatrix}
     b      & a   \\
     -b/a^2 & 1/a \\
@@ -147,7 +153,7 @@ DeltaMethod(jm1)
 DeltaMethod{typeof(jm1)}(jm1)
 ```
 Note that for a scalar quantity,
-e.g. ``T(a, b) = \sqrt{ab}``,
+e.g. ``\Transformation(\Parameter) = \sqrt{ab}``,
 the Jacobian matrix is a _row_ vector.
 ```jldoctest; output = false
 jm2(p) = [b a] ./ (2 * sqrt(p.a * p.b))
@@ -195,31 +201,20 @@ end
 """
     DesignCriterion
 
-Abstract supertype of criteria for optimal experimental design.
+Supertype for optimal experimental design criteria.
 
-See also [`DOptimality`](@ref).
+See also [`DOptimality`](@ref), [`AOptimality`](@ref).
 """
 abstract type DesignCriterion end
 
 @doc raw"""
     DOptimality
 
-Criterion for (Bayesian or locally) D-optimal experimental design.
+Criterion for D-optimal experimental design.
 
-Denote the normalized information matrix for a design measure ``\xi`` by ``\mathrm{M}(\xi,
-\theta)``. Assume for simplicity we are interested in the whole parameter ``\theta``, ie.
-the [`Transformation`](@ref) is [`Identity`](@ref). Then the objective function for Bayesian
-D-optimal design with respect to a prior density $p(\theta)$ is
+Log-determinant of the normalized information matrix.
 
-``\xi \mapsto \int_{\Theta} \log\det \mathrm{M}(\xi, \theta)\,p(\theta)\,\mathrm{d}\theta``
-
-and for locally D-optimal design with respect to a prior guess $\theta_0$ it is
-
-``\xi \mapsto \log\det \mathrm{M}(\xi, \theta_0)``
-
-For details see p. 69 in Fedorov/Leonov [^FL13].
-
-[^FL13]: Valerii V. Fedorov and Sergei L. Leonov, "Optimal design for nonlinear response models", CRC Press, 2013. [doi:10.1201/b15054](https://doi.org/10.1201/b15054)
+See also the [mathematical background](math.md#D-Criterion).
 """
 struct DOptimality <: DesignCriterion end
 
@@ -228,7 +223,9 @@ struct DOptimality <: DesignCriterion end
 
 Criterion for A-optimal experimental design.
 
-Trace of the transformed parameter's information matrix.
+Trace of the inverted normalized information matrix.
+
+See also the [mathematical background](math.md#A-Criterion).
 """
 struct AOptimality <: DesignCriterion end
 
@@ -238,7 +235,7 @@ abstract type AbstractPointDifference end
 """
     Optimizer
 
-Abstract supertype for particle-based optimization algorithms.
+Supertype for particle-based optimization algorithms.
 
 See also [`Pso`](@ref).
 """
@@ -250,7 +247,7 @@ abstract type AbstractConstraints end
 """
     OptimizationResult
 
-Wraps results of particle-based optimization.
+Wrapper for results of particle-based optimization.
 
 # `OptimizationResult` fields
 
@@ -264,8 +261,8 @@ Wraps results of particle-based optimization.
 | n_eval          | total number of objective evaluations                |
 | seconds_elapsed | total runtime                                        |
 
-Note that `trace_state` may only contain the initial state, if saving all
-states was not requested explicitly.
+Note that `trace_state` will only contain the initial state when saving all states was not
+explicitly requested.
 
 See also [`solve`](@ref).
 """
@@ -286,10 +283,10 @@ end
 """
     DesignMeasure
 
-A discrete probability measure with finite support
-representing a continuous experimental design.
+A probability measure with finite support representing a continuous experimental design.
 
-For details see p.62 in Fedorov/Leonov [^FL13].
+The support points of a design measure are called _design points_.
+In Julia, a design point is simply a `Vector{Float64}`.
 
 Special kinds of design measures can be constructed with [`one_point_design`](@ref),
 [`uniform_design`](@ref), [`equidistant_design`](@ref), [`random_design`](@ref).
@@ -301,10 +298,12 @@ struct DesignMeasure <: AbstractPoint
     designpoint::Vector{Vector{Float64}}
     weight::Vector{Float64}
     @doc """
-        DesignMeasure(dp, w)
+        DesignMeasure(
+            designpoints::AbstractVector{<:AbstractVector{<:Real}},
+            weights::AbstractVector{<:Real},
+        )
 
-    Construct a design measure with the given vector of design points
-     and the given weights.
+    Construct a design measure.
 
     # Examples
     ```jldoctest
@@ -353,7 +352,9 @@ end
 """
     DesignRegion{N}
 
-Supertype for design regions. A design region is a compact subset of ``\\mathbb{R}^N``.
+Supertype for design regions. A design region is a compact subset of ``\\Reals^N``.
+
+The design points of a [`DesignMeasure`](@ref) are taken from this set.
 
 See also [`DesignInterval`](@ref), [`dimnames`](@ref).
 """
@@ -362,8 +363,7 @@ abstract type DesignRegion{N} end
 """
     DesignInterval{N} <: DesignRegion{N}
 
-A (hyper)rectangular subset of ``\\mathbb{R}^N`` representing the set in which
-which the design points of a [`DesignMeasure`](@ref) live.
+A (hyper)rectangular subset of ``\\Reals^N``.
 
 See also [`lowerbound`](@ref), [`upperbound`](@ref), [`dimnames`](@ref).
 """
@@ -372,10 +372,9 @@ struct DesignInterval{N} <: DesignRegion{N}
     lowerbound::NTuple{N,Float64}
     upperbound::NTuple{N,Float64}
     @doc """
-        DesignInterval(names::AbsractVector{Symbol}, lb::AbstractVector{<:Real}, ub::AbstractVector{<:Real})
+        DesignInterval(names, lowerbounds, upperbounds)
 
-    Construct a design interval with the given dimension names (supplied as
-    symbols) and lower / upper bounds.
+    Construct a design interval.
 
     # Examples
     ```jldoctest
@@ -426,8 +425,6 @@ end
 """
     DesignProblem
 
-Completely specifies a problem of optimal experimental design.
-
 A `DesignProblem` has 7 components:
 
   - a [`DesignCriterion`](@ref),
@@ -438,7 +435,8 @@ A `DesignProblem` has 7 components:
   - a [`Transformation`](@ref),
   - and a [`NormalApproximation`](@ref).
 
-See also [`solve`](@ref).
+See also [`solve`](@ref),
+and the [mathematical background](math.md#Design-Problems).
 """
 struct DesignProblem{
     Tdc<:DesignCriterion,
@@ -457,10 +455,18 @@ struct DesignProblem{
     trafo::Tt
     na::Tna
     @doc """
-        DesignProblem(; design_criterion, design_region, model, covariate_parameterization, prior_knowledge,
-                        transformation = Identity(), normal_approximation = FisherMatrix())
+        DesignProblem(<keyword arguments>)
 
-    Keyword-based constructor for design problems with some sensible defaults.
+    Construct a design problem with some sensible defaults.
+
+    # Arguments
+    - `design_criterion::DesignCriterion`
+    - `design_region::DesignRegion`
+    - `model::Model`
+    - `covariate_parameterization::CovariateParameterization`
+    - `prior_knowledge::PriorKnowledge`
+    - `transformation::Transformation = Identity()`
+    - `normal_approximation::NormalApproximation = FisherMatrix()`
     """
     function DesignProblem(;
         design_criterion::Tdc,
@@ -501,7 +507,7 @@ abstract type ProblemSolvingStrategy end
 """
     DirectMaximization <: ProblemSolvingStrategy
 
-Represents the strategy of finding an optimal design by directly maximizing a criterion's objective function.
+Find an optimal design by directly maximizing a criterion's objective function.
 """
 struct DirectMaximization{To<:Optimizer} <: ProblemSolvingStrategy
     optimizer::To
@@ -511,23 +517,27 @@ struct DirectMaximization{To<:Optimizer} <: ProblemSolvingStrategy
     # Note: We don't use @kwdef because fixed{weights,points} should be able to accept an
     # AbstractVector, and esp. also a unit range
     @doc """
-    DirectMaximization(; optimizer<:Optimizer, prototype::DesignMeasure,
-                       fixedweights = [], fixedpoints = [])
+        DirectMaximization(;
+            optimizer::Optimizer,
+            prototype::DesignMeasure,
+            fixedweights = [],
+            fixedpoints = [],
+        )
 
-Initialize the `optimizer` with the `prototype`
-and attempt to directly maximize the objective function.
+    Initialize the `optimizer` with a single `prototype`
+    and attempt to directly maximize the objective function.
 
-For every index in `fixedweights`,
-the corresponding weight of `prototype` is held constant during optimization.
-The indices in `fixedpoints` do the same for the design points of the `prototype`.
-These additional constraints can be used to speed up computation
-in cases where some weights or design points are know analytically.
+    For every index in `fixedweights`,
+    the corresponding weight of `prototype` is held constant during optimization.
+    The indices in `fixedpoints` do the same for the design points of the `prototype`.
+    These additional constraints can be used to speed up computation
+    in cases where some weights or design points are know analytically.
 
-For more details on how the `prototype` is used,
-see the specific [`Optimizer`](@ref)s.
+    For more details on how the `prototype` is used,
+    see the specific [`Optimizer`](@ref)s.
 
-The return value of [`solve`](@ref) for this strategy is a [`DirectMaximizationResult`](@ref)
-"""
+    The return value of [`solve`](@ref) for this strategy is a [`DirectMaximizationResult`](@ref).
+    """
     function DirectMaximization(;
         optimizer::To,
         prototype::DesignMeasure,
@@ -541,12 +551,11 @@ end
 """
     Exchange <: ProblemSolvingStrategy
 
-Represents the strategy of finding an optimal design
-by ascending the gateaux derivative of the objective function.
+Find an optimal design by ascending the Gateaux derivative of the objective function.
 
 This is a variant of the basic idea in [^YBT13].
 
-[^YBT13]: Min Yang, Stefanie Biedermann, Elina Tang (2013). "On optimal designs for nonlinear models: a general and efficient algorithm." Journal of the American Statistical Association, 108(504), 1411–1420. [doi:10.1080/01621459.2013.806268](http://dx.doi.org/10.1080/01621459.2013.806268)
+[^YBT13]: Min Yang, Stefanie Biedermann, Elina Tang (2013). On optimal designs for nonlinear models: a general and efficient algorithm. Journal of the American Statistical Association, 108(504), 1411–1420. [doi:10.1080/01621459.2013.806268](http://dx.doi.org/10.1080/01621459.2013.806268)
 """
 struct Exchange{Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,Any}} <:
        ProblemSolvingStrategy
@@ -556,25 +565,32 @@ struct Exchange{Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,Any}} <:
     candidate::DesignMeasure
     simplify_args::Td
     @doc """
-    Exchange(; od::Optimizer, ow::Optimizer, steps::Integer, candidate::DesignMeasure, simplify_args::Dict)
+        Exchange(;
+            od::Optimizer,
+            ow::Optimizer,
+            steps::Integer,
+            candidate::DesignMeasure,
+            simplify_args::Dict,
+        )
 
-Improve the `candidate` design by the following `steps` times,
-starting with `r = candidate`:
+    Improve the `candidate` design by repeating the following `steps` times,
+    starting with `r = candidate`:
 
- 1. [`simplify`](@ref) the design `r`, passing along `sargs`.
- 2. Use the optimizer `od` to find the direction (one-point design / Dirac measure) `d`
-    of highest [`gateauxderivative`](@ref) at `r`.
-    The vector of `prototypes` that is used for initializing `od`
-    is constructed from one-point designs at the design points of `r`.
-    See the [`Optimizer`](@ref)s for algorithm-specific details.
- 3. Use the optimizer `ow` to re-calculcate optimal weights of a [`mixture`](@ref) of `r` and `d`
-    for the [`DesignCriterion`](@ref).
-    This is implemented as a call to [`solve`](@ref) with the [`DirectMaximization`](@ref) strategy
-    and with all of the designpoints of `r` kept fixed.
- 4. Set `r` to the result of step 3.
+     1. [`simplify`](@ref) the design `r`, passing along `sargs`.
+     2. Use the optimizer `od` to find the direction (one-point design / Dirac measure) `d`
+        of highest [`gateauxderivative`](@ref) at `r`.
+        The vector of `prototypes` that is used for initializing `od`
+        is constructed from one-point designs at the design points of `r`.
+        See the [`Optimizer`](@ref)s for algorithm-specific details.
+     3. Use the optimizer `ow` to re-calculcate optimal weights
+        of a [`mixture`](@ref) of `r` and `d` for the [`DesignCriterion`](@ref).
+        This is implemented as a call to [`solve`](@ref)
+        with the [`DirectMaximization`](@ref) strategy
+        and with all of the designpoints of `r` kept fixed.
+     4. Set `r` to the result of step 3.
 
-The return value of [`solve`](@ref) for this strategy is an [`ExchangeResult`](@ref).
-"""
+    The return value of [`solve`](@ref) for this strategy is an [`ExchangeResult`](@ref).
+    """
     function Exchange(;
         od::Tod,
         ow::Tow,
@@ -596,7 +612,7 @@ abstract type ProblemSolvingResult end
 """
     DirectMaximizationResult <: ProblemSolvingResult
 
-Wraps an [`OptimizationResult`](@ref) in the `or` field.
+Contains an [`OptimizationResult`](@ref) in the `or` field.
 """
 struct DirectMaximizationResult{S<:OptimizerState{DesignMeasure,SignedMeasure}} <:
        ProblemSolvingResult
@@ -606,8 +622,8 @@ end
 """
     ExchangeResult <: ProblemSolvingResult
 
-Wraps vectors `ord` and `orw` containting an [`OptimizationResult`](@ref)
-for each direction finding and reweighting step.
+Contains vectors `ord` and `orw` of [`OptimizationResult`](@ref)s,
+one for each direction finding and reweighting step.
 """
 struct ExchangeResult{
     S<:OptimizerState{DesignMeasure,SignedMeasure},

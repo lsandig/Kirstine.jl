@@ -94,7 +94,7 @@ with the following elements:
     However, `Kirstine.jl` currently only supports using the likelihood-based
     Fisher information matrix.
 
-[^B85]: James O. Berger. Statistical decision theory and Bayesian analysis. Springer, 1985.
+[^B85]: James O. Berger (1985). Statistical decision theory and Bayesian analysis. Springer.
 ## Design Measures
 
 A probability measure ``\DesignMeasure`` on

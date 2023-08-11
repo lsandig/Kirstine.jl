@@ -5,7 +5,7 @@ but about the transformed parameter ``T(\theta)``,
 where ``T(\theta)`` can be a number or a vector.
 
 !!! note
-
+    
     `Kirstine.jl` allows transformations to be freely combined with different design criteria.
     In this sense, c-optimality is just the special case of D-optimality
     combined with a transformation ``T: \mathbb{R}^r \to \mathbb{R}``.
@@ -48,7 +48,7 @@ savefig_nothing(ans, "transformations-tpc.png") # hide
 
 ![](transformations-tpc.png)
 
-[^ACHJ93]: Anthony C. Atkinson, Kathryn Chaloner, Agnes M. Herzberg, and June Juritz, "Optimum experimental designs for properties of a compartmental model", Biometrics, 49(2), 325–337, 1993. [doi:10.2307/2532547](http://dx.doi.org/10.2307/2532547)
+[^ACHJ93]: Anthony C. Atkinson, Kathryn Chaloner, Agnes M. Herzberg, and June Juritz (1993). Optimum experimental designs for properties of a compartmental model. Biometrics, 49(2), 325–337. [doi:10.2307/2532547](http://dx.doi.org/10.2307/2532547)
 ## Setup
 
 As in the [introductory example](tutorial.md),
@@ -82,7 +82,7 @@ because locally optimal designs for scalar ``T(\theta)`` usually don't exist
 due to their information matrices becoming singular.
 
 !!! note
-
+    
     Workarounds like generalized inverses or matrix regularization
     are currently not supported by `Kirstine.jl`.
 

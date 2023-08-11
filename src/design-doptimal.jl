@@ -53,7 +53,6 @@ end
     efficiency(d1::DesignMeasure, d2::DesignMeasure, dp::DesignProblem)
 
 Relative D-efficiency of `d1` to `d2`.
-When `d2` is D-optimal for `dp`, the efficiency is bounded by `1` from above.
 
 !!! note
 
@@ -72,7 +71,7 @@ end
                trafo::Transformation,
                na::NormalApproximation)
 
-Relative D-efficiency of `d1` to `d2` under prior knowledge `pk`.
+Relative D-efficiency of `d1` to `d2`.
 """
 function efficiency(
     d1::DesignMeasure,
@@ -98,10 +97,12 @@ end
                na1::NormalApproximation,
                na2::NormalApproximation)
 
-Relative D-efficiency of `d1` to `d2` under prior knowledge `pk`.
+Relative D-efficiency of `d1` to `d2`.
 
 Note that the models, covariate parameterizations or normal approximations need not be
 identical.
+
+See also the [mathematical background](math.md#Efficiency).
 """
 function efficiency(
     d1::DesignMeasure,

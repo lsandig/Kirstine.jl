@@ -8,7 +8,7 @@
 """
     designpoints(d::DesignMeasure)
 
-Return a copy of all designpoints, including those with zero weight.
+Return a copy of the design points.
 
 See also [`weights`](@ref), [`simplify_drop`](@ref).
 """
@@ -17,7 +17,7 @@ designpoints(d::DesignMeasure) = deepcopy(d.designpoint)
 """
     weights(d::DesignMeasure)
 
-Return a copy of the design point weights.
+Return a copy of the weights.
 
 See also [`designpoints`](@ref), [`simplify_drop`](@ref).
 """
@@ -57,7 +57,7 @@ dimnames(dr::DesignInterval) = dr.name
 """
     DesignMeasure(dp_w::Pair...)
 
-Construct a design measure out of `designpoint => weight` pairs.
+Construct a design measure from `designpoint => weight` pairs.
 
 # Examples
 
@@ -79,9 +79,9 @@ end
 """
     DesignMeasure(m::AbstractMatrix{<:Real})
 
-Construct a design measure from its matrix representation `m`.
+Construct a [`DesignMeasure`](@ref) from its matrix representation.
 
-The `(N+1, K)` matrix `m` represents a `DesignMeasure` with `K` design points from an
+An `(N+1, K)` matrix `m` represents a `DesignMeasure` with `K` design points from an
 `N`-dimensional design region. The first row of `m` must contain the weights.
 
 See also [`as_matrix`](@ref).
@@ -116,6 +116,15 @@ end
     one_point_design(designpoint::AbstractVector{<:Real})
 
 Construct a one-point [`DesignMeasure`](@ref).
+
+# Examples
+
+```jldoctest
+julia> one_point_design([42])
+DesignMeasure(
+ [42.0] => 1.0,
+)
+```
 """
 function one_point_design(designpoint::AbstractVector{<:Real})
     return DesignMeasure([designpoint], [1.0])
@@ -125,6 +134,18 @@ end
     uniform_design(designpoints::AbstractVector{<:AbstractVector{<:Real}})
 
 Construct a [`DesignMeasure`](@ref) with equal weights on the given `designpoints`.
+
+# Examples
+
+```jldoctest
+julia> uniform_design([[1], [2], [3], [4]])
+DesignMeasure(
+ [1.0] => 0.25,
+ [2.0] => 0.25,
+ [3.0] => 0.25,
+ [4.0] => 0.25,
+)
+```
 """
 function uniform_design(designpoints::AbstractVector{<:AbstractVector{<:Real}})
     K = length(designpoints)
@@ -137,6 +158,19 @@ end
 
 Construct a [`DesignMeasure`](@ref) with an equally-spaced grid of `K` design points
 and uniform weights on the given 1-dimensional design interval.
+
+# Examples
+
+```jldoctest
+julia> equidistant_design(DesignInterval(:z => (0, 1)), 5)
+DesignMeasure(
+ [0.0] => 0.2,
+ [0.25] => 0.2,
+ [0.5] => 0.2,
+ [0.75] => 0.2,
+ [1.0] => 0.2,
+)
+```
 """
 function equidistant_design(dr::DesignInterval{1}, K::Integer)
     val = range(lowerbound(dr)[1], upperbound(dr)[1]; length = K)
@@ -164,10 +198,9 @@ function random_design(dr::DesignInterval{N}, K::Integer) where N
 end
 
 """
-    DesignInterval(pairs::Pair...)
+    DesignInterval(name_bounds::Pair...)
 
-Convenience constructor that takes pairs of a `Symbol` name and a `Tuple` or 2-element
-`Vector` for bounds.
+Construct a design interval from `name => (lb, ub)` pairs for individual dimensions.
 
 # Examples
 
@@ -176,10 +209,10 @@ julia> DesignInterval(:dose => (0, 300), :time => (0, 20))
 DesignInterval{2}((:dose, :time), (0.0, 0.0), (300.0, 20.0))
 ```
 """
-function DesignInterval(pairs::Pair...)
-    name = [p[1] for p in pairs]
-    lb = [p[2][1] for p in pairs]
-    ub = [p[2][2] for p in pairs]
+function DesignInterval(name_bounds::Pair...)
+    name = [p[1] for p in name_bounds]
+    lb = [p[2][1] for p in name_bounds]
+    ub = [p[2][2] for p in name_bounds]
     return DesignInterval(name, lb, ub)
 end
 
@@ -190,7 +223,7 @@ end
 
 Test design measures for equality.
 
-Two design measures are considered equal when
+Two design measures are considered equal iff
 
   - they have the same number of design points,
   - and their design points and weights are equal,
@@ -316,10 +349,9 @@ end
 """
     mixture(alpha, d1::DesignMeasure, d2::DesignMeasure)
 
-Return the mixture ``\\alpha d_1 + (1-\\alpha) d_2``,
-i.e. the convex combination of `d1` and `d2`.
+Return the convex combination ``α d_1 + (1-α) d_2``.
 
-The result is not simplified, hence its design points may not be unique.
+The result is not simplified, hence its design points might not be unique.
 """
 function mixture(alpha::Real, d1::DesignMeasure, d2::DesignMeasure)
     if length(d1.designpoint[1]) != length(d2.designpoint[1])
@@ -336,12 +368,11 @@ end
 """
     apportion(weights::AbstractVector{<:Real}, n::Integer)
 
-For a vector of `weights`, find an integer vector `a` with `sum(a) == n`
-such that `a ./ n` best approximates `w`.
+Find integers `a` with `sum(a) == n` such that `a ./ n` best approximates `weights`.
 
-This is the _efficient design apportionment procedure_ from p. 309 in Pukelsheim [^P06].
+This is the efficient design apportionment procedure from Pukelsheim[^P06], p. 309.
 
-[^P06]: Friedrich Pukelsheim, "Optimal design of experiments", Wiley, 2006. [doi:10.1137/1.9780898719109](https://doi.org/10.1137/1.9780898719109)
+[^P06]: Friedrich Pukelsheim (2006). Optimal design of experiments. Wiley. [doi:10.1137/1.9780898719109](https://doi.org/10.1137/1.9780898719109)
 """
 function apportion(weights::AbstractVector{<:Real}, n::Integer)
     # Phase 1: initial multipliers
@@ -364,7 +395,7 @@ end
 """
     apportion(d::DesignMeasure, n)
 
-Find an apportionment for the weights of `d`.
+Apportion the weights of `d`.
 """
 function apportion(d::DesignMeasure, n::Integer)
     return apportion(weights(d), n)
@@ -373,7 +404,7 @@ end
 """
     simplify(d::DesignMeasure, dp::DesignProblem; minweight = 0, mindist = 0, uargs...)
 
-Convenience wrapper that calls
+A wrapper that calls
 [`simplify_drop`](@ref),
 [`simplify_unique`](@ref),
 and [`simplify_merge`](@ref).
@@ -407,7 +438,7 @@ end
 """
     simplify_unique(d::DesignMeasure, dr::DesignRegion, m::M, cp::C; uargs...)
 
-Construct a new DesignMeasure that corresponds uniquely to its implied normalized
+Construct a new [`DesignMeasure`](@ref) that corresponds uniquely to its implied normalized
 information matrix.
 
 Users can specialize this method for their concrete subtypes `M <: Model` and

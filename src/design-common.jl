@@ -4,31 +4,109 @@
 # generic design objective functions and Gateaux derivatives
 
 # declare functions to be redefined for user models
-#
-# (m::NonlinearRegression) -> Real
+
+"""
+    Kirstine.unit_length(m::M) -> Integer
+
+Return the length of one unit of observation.
+
+# Implementation
+
+For a user type `M <: NonlinearRegression` this should return the length ``\\DimUnit``
+of one unit of observation ``\\Unit``.
+
+See also the [mathematical background](math.md#Design-Problems).
+"""
 function unit_length end
-# m::NonlinearRegression -> Covariate
+
+"""
+    Kirstine.allocate_covariate(m::M) -> c::C
+
+Construct a single `Covariate` for the model.
+
+# Implementation
+
+For user types `M <: NonlinearRegression` and a corresponding `C <: Covariate`,
+this should construct a single instance `c` of `C`
+with some (model-specific) sensible initial value.
+
+See also the [mathematical background](math.md#Design-Problems).
+"""
 function allocate_covariate end
-# (jm::AbstractMatrix, m::NonlinearRegression, c::Covariate, p) -> jm
+
+"""
+    Kirstine.jacobianmatrix!(jm::AbstractMatrix{<:Real}, m::M, c::C, p::P) -> jm
+
+Compute Jacobian matrix of the mean function at `p`.
+
+# Implementation
+
+For user types `M <: NonlinearRegression`, `C <: Covariate`, and `P <: Parameter`,
+this should fill in the elements of the pre-allocated Jacobian matrix `jm`,
+and finally return `jm`.
+
+See also the [mathematical background](math.md#Objective-Function).
+"""
 function jacobianmatrix! end
-# (c::Covariate, dp::AbstractVector{<:Real}, m::NonlinearRegression, cp::CovariateParameterization) -> c
+
+"""
+    Kirstine.update_model_covariate!(c::C, dp::AbstractVector{<:Real}, m::M, cp::Cp) -> c
+
+Map a design point to a model covariate.
+
+# Implementation
+
+For user types `C <: Covariate`, `M <: NonlinearRegression`, and
+`Cp <: CovariateParameterization` this should set the fields of the single covariate `c`
+according to the single design point `dp`. Finally, this method should return `c`.
+
+See also the [mathematical background](math.md#Design-Problems).
+"""
 function update_model_covariate! end
-# m -> Real or m -> AbstractMatrix
+
+"""
+    Kirstine.invcov(m::M) -> Union{Real,AbstractMatrix}
+
+Return inverse variance-covariance matrix for one unit of observation.
+
+# Implementation
+
+For a user-type `M <: NonlinearRegression` this should return the inverse of the
+variance-covariance matrix ``\\UnitCovariance`` for a single unit of observation. When a
+unit of observation is a scalar, this may alternatively return its inverse error variance
+``1/\\ScalarUnitVariance`` as a single number.
+
+See also the [mathematical background](math.md#Design-Problems).
+"""
 function invcov end
-# p::Parameter -> Integer
+
+"""
+    Kirstine.dimension(p::P) -> Integer
+
+Return dimension of the parameter space.
+
+# Implementation
+
+For a user type `P <: Parameter`, this should return the dimension of the parameter space.
+
+See also the [mathematical background](math.md#Design-Problems).
+"""
 function dimension end
 
 ## main interface ##
 
 """
-    solve(dp::DesignProblem, strategy::ProblemSolvingStrategy; trace_state = false, sargs...)
+    solve(
+        dp::DesignProblem,
+        strategy::ProblemSolvingStrategy;
+        trace_state = false,
+        sargs...,
+    )
 
-Attempt to solve the design problem.
+Return a tuple `(d, r)`.
 
-Returns a tuple `(d, r)`:
-
-  - `d`: The best [`DesignMeasure`](@ref) found. As postprocessing, [`simplify`](@ref) is called
-    with `sargs` and the design points are sorted with [`sort_designpoints`](@ref).
+  - `d`: The best [`DesignMeasure`](@ref) found. As postprocessing, [`simplify`](@ref) is
+    called with `sargs` and the design points are sorted with [`sort_designpoints`](@ref).
 
   - `r`: A subtype of [`ProblemSolvingResult`](@ref) that is specific to the strategy used.
     If `trace_state=true`, this object contains additional debugging information.
@@ -199,6 +277,21 @@ end
 
 # For debugging purposes, one will typically want to look at an information matrix
 # corresponding to a single parameter value, not to all thousands of them in a prior sample.
+"""
+    informationmatrix(
+        d::DesignMeasure,
+        m::NonlinearRegression,
+        cp::CovariateParameterization,
+        p::Parameter,
+        na::NormalApproximation,
+    )
+
+Compute the normalized information matrix for a single `Parameter` value `p`.
+
+This function is useful for debugging.
+
+See also the [mathematical background](math.md#Objective-Function).
+"""
 function informationmatrix(
     d::DesignMeasure,
     m::NonlinearRegression,
@@ -361,7 +454,9 @@ end
 """
     objective(d::DesignMeasure, dp::DesignProblem)
 
-Objective function corresponding to the [`DesignProblem`](@ref) evaluated at `d`.
+Evaluate the objective function.
+
+See also the [mathematical background](math.md#Objective-Function).
 """
 function objective(d::DesignMeasure, dp::DesignProblem)
     tc = precalculate_trafo_constants(dp.trafo, dp.pk)
@@ -416,13 +511,17 @@ function gateauxderivative!(
 end
 
 """
-    gateauxderivative(at::DesignMeasure,
-                      directions::AbstractArray{DesignMeasure},
-                      dp::DesignProblem)
+    gateauxderivative(
+        at::DesignMeasure,
+        directions::AbstractArray{DesignMeasure},
+        dp::DesignProblem,
+    )
 
-Gateaux derivative of the [`objective`](@ref) function corresponding to `dp`,
-`at` the the given design measure into each of the `directions`,
-which must be one-point designs.
+Evaluate the Gateaux derivative for each direction.
+
+Directions must be one-point design measures.
+
+See also the [mathematical background](math.md#Gateaux-Derivative).
 """
 function gateauxderivative(
     at::DesignMeasure,

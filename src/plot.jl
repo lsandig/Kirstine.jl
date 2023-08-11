@@ -160,23 +160,28 @@ end
 end
 
 """
-    plot_gateauxderivative(d::DesignMeasure, dp::DesignProblem)
+    plot_gateauxderivative(d::DesignMeasure, dp::DesignProblem; <keyword arguments>)
 
-Plot the [`gateauxderivative`](@ref) at candidate solution `d` in directions taken from a
-grid over design region of the given [`DesignProblem`](@ref), together with the design points of `d`.
+Plot the [`gateauxderivative`](@ref) in directions from a grid on the design region of `dp`,
+overlaid with the design points of `d`.
 
-Currently only implemented for 1- and 2-dimensional [`DesignInterval`](@ref)s.
-
-The default color gradient for the heat map is `:diverging_bwr_55_98_c37_n256`, which is
-perceptually uniform from blue via white to red. Custom gradients can be set via the
-`fillcolor` keyword argument. The standard plotting keyword arguments (`markershape`,
-`markercolor`, `markersize`, `linecolor`, `linestyle`, `clims`, ...) are supported. By
-default, `markersize` indicates the design weights.
+For 2-dimensional design regions,
+the default color gradient for the heat map is `:diverging_bwr_55_98_c37_n256`,
+which is perceptually uniform from blue via white to red.
+Custom gradients can be set via the `fillcolor` keyword argument.
+The standard plotting keyword arguments
+(`markershape`, `markercolor`, `markersize`, `linecolor`, `linestyle`, `clims`, ...)
+are supported.
+By default, `markersize` indicates the design weights.
 
 # Additional Keyword Arguments
 
   - `subdivisions::Union{Integer, Tuple{Integer, Integer}}`: number of points in the grid.
     Must match the dimension of the design region.
+
+!!! note
+
+    Currently only implemented for 1- and 2-dimensional [`DesignInterval`](@ref)s.
 """
 function plot_gateauxderivative(d::DesignMeasure, dp::DesignProblem; kw...)
     plt_gd = RecipesBase.plot(DerivativePlot(d, dp); kw...)
