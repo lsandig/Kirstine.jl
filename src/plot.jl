@@ -134,7 +134,7 @@ end
         <:Transformation,
         <:NormalApproximation,
     };
-    subdivisions = (11, 11),
+    subdivisions = (51, 51),
 )
     (; d, dp) = dplot
     # calculate gateaux derivative
