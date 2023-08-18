@@ -45,7 +45,6 @@ end
     if N != 1 && N != 2
         throw(ArgumentError("only implemented for 1- or 2-dimensional design points"))
     end
-    legend --> :outerleft
     markersize --> permutedims(max.(2, sqrt.(100 .* weights(d))))
     # scatter each design point explicitly in its own series because grouping can't be used
     # in a recipe: https://github.com/JuliaPlots/Plots.jl/issues/1167

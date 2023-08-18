@@ -590,7 +590,7 @@ s4b
 ```
 
 ```@example main
-gd4b = plot_gateauxderivative(s4b, dp4)
+gd4b = plot_gateauxderivative(s4b, dp4; legend = :bottomleft)
 savefig_nothing(gd4b, "dtr-gd4b.png") # hide
 ```
 
@@ -696,7 +696,7 @@ s5b
 ```
 
 ```@example main
-gd5b = plot_gateauxderivative(s5b, dp5)
+gd5b = plot_gateauxderivative(s5b, dp5; legend = :bottomleft)
 savefig_nothing(gd5b, "dtr-gd5b.png") # hide
 ```
 
