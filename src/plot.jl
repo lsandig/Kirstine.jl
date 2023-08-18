@@ -40,7 +40,10 @@ end
     end
 end
 
-@recipe function f(d::DesignMeasure)
+@recipe function f(
+    d::DesignMeasure;
+    label_formatter = (k, dp, w) -> "$(round(100 * w; sigdigits=3))%",
+)
     N = length(designpoints(d)[1])
     if N != 1 && N != 2
         throw(ArgumentError("only implemented for 1- or 2-dimensional design points"))
@@ -53,7 +56,7 @@ end
         @series begin
             seriestype := :scatter
             markercolor --> k
-            label --> k
+            label --> (label_formatter(k, mat[2:end, k], mat[1, k]))
             y = (N == 1) ? 0 : mat[3, k]
             [mat[2, k]], [y]
         end
@@ -177,6 +180,9 @@ By default, `markersize` indicates the design weights.
 
   - `subdivisions::Union{Integer, Tuple{Integer, Integer}}`: number of points in the grid.
     Must match the dimension of the design region.
+  - `label_formatter::Function`: a function for mapping a triple `(k, pt, w)`
+    of an index, design point, and weight to a string for use as a label in the legend.
+    Default: weight in percentages rounded to 3 significant digits.
 
 !!! note
 
