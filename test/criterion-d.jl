@@ -9,7 +9,7 @@ using LinearAlgebra: Symmetric, diagm, tr
 
 include("example-compartment.jl")
 
-@testset "design-doptimal.jl" begin
+@testset "criterion-d.jl" begin
     @testset "criterion_integrand!" begin
         # The functional should be log(det(m)) or -(log(det(inv_m))), depending on whether m
         # is passed as already inverted. For singular matrices it should always return -Inf.

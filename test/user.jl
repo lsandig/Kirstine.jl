@@ -5,7 +5,7 @@ module UserTests
 using Test
 using Kirstine
 
-@testset "util.jl" begin
+@testset "user.jl" begin
     @testset "define_scalar_unit_model" begin
         let ex = @macroexpand(@define_scalar_unit_model(Kirstine, Foo, bar, baz)),
             _ = Base.remove_linenums!(ex),

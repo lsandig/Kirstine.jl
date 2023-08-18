@@ -8,7 +8,7 @@ using LinearAlgebra: SingularException, Symmetric, tr, diagm
 
 include("example-compartment.jl")
 
-@testset "design-aoptimal.jl" begin
+@testset "criterion-a.jl" begin
     @testset "criterion_integrand!" begin
         # The functional should be -tr(m) or -tr(inv_m), depending on whether m
         # is passed as already inverted. For singular matrices it should return 0 or -Inf.
