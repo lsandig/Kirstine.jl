@@ -1,7 +1,43 @@
 # SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# interface for abstract optimizer implementation
+## abstract particle based optimization ##
+
+"""
+    OptimizationResult
+
+Wrapper for results of particle-based optimization.
+
+# `OptimizationResult` fields
+
+| Field           | Description                                          |
+|:--------------- |:---------------------------------------------------- |
+| maximizer       | final maximizer                                      |
+| maximum         | final objective value                                |
+| trace_x         | vector of current maximizer in each iteration        |
+| trace_fx        | vector of current objective value in each iteration  |
+| trace_state     | vector of internal optimizer state in each iteration |
+| n_eval          | total number of objective evaluations                |
+| seconds_elapsed | total runtime                                        |
+
+Note that `trace_state` will only contain the initial state when saving all states was not
+explicitly requested.
+
+See also [`solve`](@ref).
+"""
+struct OptimizationResult{
+    T<:AbstractPoint,
+    U<:AbstractPointDifference,
+    S<:OptimizerState{T,U},
+}
+    maximizer::T
+    maximum::Float64
+    trace_x::Vector{T}
+    trace_fx::Vector{Float64}
+    trace_state::Vector{S}
+    n_eval::Int64
+    seconds_elapsed::Float64
+end
 
 function optimize(
     optimizer::Optimizer,
@@ -64,3 +100,15 @@ function Base.show(
 ) where {T<:AbstractPoint,U<:AbstractPointDifference,S<:OptimizerState{T,U}}
     print(io, "maximum: ", r.maximum)
 end
+
+# These functions need methods for concrete subtypes of AbstractPoint and
+# AbstractPointDifference.
+function ap_random_point! end
+function ap_difference! end
+function ap_copy! end
+function ap_move! end
+function ap_as_difference end
+function ap_random_difference! end
+function ap_mul_hadamard! end
+function ap_mul_scalar! end
+function ap_add! end

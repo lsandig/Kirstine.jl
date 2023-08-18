@@ -8,15 +8,21 @@ function savefig_nothing(plot, filename)
 end
 ```
 
-While `Kirstine.jl` is primarily aimed at finding Bayesian optimal designs,
-it implicitly also supports finding _locally_ optimal designs.
-This is because the prior guess ``θ_0`` needed for the latter
-can be thought of as a prior Dirac measure.
+This vignette briefly illustrates how to find a locally optimal design,
+and how to supply additional information to the solver
+when some design points or weights of the solution are already known.
 
-Here we briefly illustrate this usage
-with the dose-response model from the [tutorial](tutorial.md).
+While `Kirstine.jl` is primarily intended finding Bayesian optimal designs,
+finding _locally_ optimal designs is also implicitly supported.
+For locally optimal design,
+one tries to maximize ``\DesignCriterion(\TNIMatrix(\DesignMeasure, \Parameter_0))``
+for some prior guess ``\Parameter_0``.
+This prior guess can be thought of as a prior Dirac measure,
+making locally optimal design a special case of Bayesian optimal design.
 
 ## Model Setup
+
+For simplicity, we re-use the dose-response model from the [tutorial](tutorial.md).
 
 ```@example main
 using Kirstine, Random, Plots
@@ -50,7 +56,7 @@ nothing # hide
 
 Instead of the sample from the multivariate normal distribution
 that we used in the introduction,
-we here only use its mean vector as the single guess for ``θ``.
+we here only use its mean vector as the single guess for ``\Parameter``.
 
 ```@example main
 guess = PriorSample([SigEmaxPar(e0 = 1, emax = 2, ed50 = 0.4, h = 5)])

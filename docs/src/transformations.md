@@ -1,17 +1,12 @@
 # Optimal Design for Functions of the Parameter
 
-Suppose we are not primarily interested in a design that maximizes the expected posterior information about the parameter ``\theta``,
-but about the transformed parameter ``T(\theta)``,
-where ``T(\theta)`` can be a number or a vector.
-
-!!! note
-
-    `Kirstine.jl` allows transformations to be freely combined with different design criteria.
-    In this sense, c-optimality is just the special case of D-optimality
-    combined with a transformation ``T: \mathbb{R}^r \to \mathbb{R}``.
+This vignette shows how to find a D-optimal design
+for estimating some transformation ``\Transformation(\Parameter)`` of the model parameter.
+The function ``\Transformation : \ParameterSet → \Reals^{t}`` must be differentiable
+with a full-rank Jacobian matrix.
 
 Our example in this vignette is the three-parameter compartment model from Atkinson et al[^ACHJ93].
-Used in pharmacokinetics,
+In pharmacokinetics,
 it describes how the concentration of a drug in an experimental subject changes over time.
 The mean function for the regression is given by
 
@@ -43,12 +38,12 @@ plot(
     yguide = "response",
     label = "μ(time , θ)",
 )
-savefig_nothing(ans, "handling-transformations-tpc.png") # hide
+savefig_nothing(ans, "transformations-tpc.png") # hide
 ```
 
-![](handling-transformations-tpc.png)
+![](transformations-tpc.png)
 
-[^ACHJ93]: Anthony C. Atkinson, Kathryn Chaloner, Agnes M. Herzberg, and June Juritz, "Optimum experimental designs for properties of a compartmental model", Biometrics, 49(2), 325–337, 1993. [doi:10.2307/2532547](http://dx.doi.org/10.2307/2532547)
+[^ACHJ93]: Anthony C. Atkinson, Kathryn Chaloner, Agnes M. Herzberg, and June Juritz (1993). Optimum experimental designs for properties of a compartmental model. Biometrics, 49(2), 325–337. [doi:10.2307/2532547](http://dx.doi.org/10.2307/2532547)
 ## Setup
 
 As in the [introductory example](tutorial.md),
@@ -78,11 +73,11 @@ end
 ```
 
 In this vignette we will only look at Bayesian optimal designs
-because locally optimal designs for scalar ``T(\theta)`` usually don't exist
+because locally optimal designs for scalar ``\Transformation(\Parameter)`` usually don't exist
 due to their information matrices becoming singular.
 
 !!! note
-
+    
     Workarounds like generalized inverses or matrix regularization
     are currently not supported by `Kirstine.jl`.
 
@@ -151,10 +146,10 @@ s_id
 
 ```@example main
 plot_gateauxderivative(s_id, dp_id)
-savefig_nothing(ans, "handling-transformations-gd-id.png") # hide
+savefig_nothing(ans, "transformations-gd-id.png") # hide
 ```
 
-![](handling-transformations-gd-id.png)
+![](transformations-gd-id.png)
 
 ## Univariate functions of the parameter
 
@@ -198,10 +193,10 @@ s_auc
 
 ```@example main
 plot_gateauxderivative(s_auc, dp_auc)
-savefig_nothing(ans, "handling-transformations-gd-auc.png") # hide
+savefig_nothing(ans, "transformations-gd-auc.png") # hide
 ```
 
-![](handling-transformations-gd-auc.png)
+![](transformations-gd-auc.png)
 
 The design points are similar to those of `s_id`,
 but while its weights were practically uniform,
@@ -226,7 +221,7 @@ Differentiating ``\mu`` with respect to ``x``,
 equating with ``0`` and solving for ``x`` gives
 
 ```math
-t_{\max}(\theta) = \frac{\log(a / e)}{a - e}.
+t_{\max{}}(\theta) = \frac{\log(a / e)}{a - e}.
 ```
 
 Its Jacobian matrix is
@@ -253,17 +248,17 @@ s_ttm
 
 ```@example main
 plot_gateauxderivative(s_ttm, dp_ttm)
-savefig_nothing(ans, "handling-transformations-gd-ttm.png") # hide
+savefig_nothing(ans, "transformations-gd-ttm.png") # hide
 ```
 
-![](handling-transformations-gd-ttm.png)
+![](transformations-gd-ttm.png)
 
 This solution differs markedly from the previous ones.
 
 ### Maximum concentration
 
 What if we're not interested in the _time_ of maximum concentration,
-but in the _value_ of the maximum concentration ``\mu(t_{\max}(\theta), \theta)`` itself?
+but in the _value_ of the maximum concentration ``\mu(t_{\max{}}(\theta), \theta)`` itself?
 
 ```@example main
 ttm(p) = log(p.a / p.e) / (p.a - p.e)
@@ -291,10 +286,10 @@ s_cmax
 
 ```@example main
 plot_gateauxderivative(s_cmax, dp_cmax)
-savefig_nothing(ans, "handling-transformations-gd-cmax.png") # hide
+savefig_nothing(ans, "transformations-gd-cmax.png") # hide
 ```
 
-![](handling-transformations-gd-cmax.png)
+![](transformations-gd-cmax.png)
 
 The solution is again mostly concentrated on one design point.
 The location of this point makes intuitive sense,
@@ -321,10 +316,10 @@ s_both
 
 ```@example main
 plot_gateauxderivative(s_both, dp_both)
-savefig_nothing(ans, "handling-transformations-gd-both.png") # hide
+savefig_nothing(ans, "transformations-gd-both.png") # hide
 ```
 
-![](handling-transformations-gd-both.png)
+![](transformations-gd-both.png)
 
 This solution is again similar to `s_id`, but with a different weight distribution.
 

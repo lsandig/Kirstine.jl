@@ -1,7 +1,97 @@
 # SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# utitliy functions
+## function stubs for user methods ##
+
+"""
+    Kirstine.unit_length(m::M) -> Integer
+
+Return the length of one unit of observation.
+
+# Implementation
+
+For a user type `M <: NonlinearRegression` this should return the length ``\\DimUnit``
+of one unit of observation ``\\Unit``.
+
+See also the [mathematical background](math.md#Design-Problems).
+"""
+function unit_length end
+
+"""
+    Kirstine.allocate_covariate(m::M) -> c::C
+
+Construct a single `Covariate` for the model.
+
+# Implementation
+
+For user types `M <: NonlinearRegression` and a corresponding `C <: Covariate`,
+this should construct a single instance `c` of `C`
+with some (model-specific) sensible initial value.
+
+See also the [mathematical background](math.md#Design-Problems).
+"""
+function allocate_covariate end
+
+"""
+    Kirstine.jacobianmatrix!(jm::AbstractMatrix{<:Real}, m::M, c::C, p::P) -> jm
+
+Compute Jacobian matrix of the mean function at `p`.
+
+# Implementation
+
+For user types `M <: NonlinearRegression`, `C <: Covariate`, and `P <: Parameter`,
+this should fill in the elements of the pre-allocated Jacobian matrix `jm`,
+and finally return `jm`.
+
+See also the [mathematical background](math.md#Objective-Function).
+"""
+function jacobianmatrix! end
+
+"""
+    Kirstine.update_model_covariate!(c::C, dp::AbstractVector{<:Real}, m::M, cp::Cp) -> c
+
+Map a design point to a model covariate.
+
+# Implementation
+
+For user types `C <: Covariate`, `M <: NonlinearRegression`, and
+`Cp <: CovariateParameterization` this should set the fields of the single covariate `c`
+according to the single design point `dp`. Finally, this method should return `c`.
+
+See also the [mathematical background](math.md#Design-Problems).
+"""
+function update_model_covariate! end
+
+"""
+    Kirstine.invcov(m::M) -> Union{Real,AbstractMatrix}
+
+Return inverse variance-covariance matrix for one unit of observation.
+
+# Implementation
+
+For a user-type `M <: NonlinearRegression` this should return the inverse of the
+variance-covariance matrix ``\\UnitCovariance`` for a single unit of observation. When a
+unit of observation is a scalar, this may alternatively return its inverse error variance
+``1/\\ScalarUnitVariance`` as a single number.
+
+See also the [mathematical background](math.md#Design-Problems).
+"""
+function invcov end
+
+"""
+    Kirstine.dimension(p::P) -> Integer
+
+Return dimension of the parameter space.
+
+# Implementation
+
+For a user type `P <: Parameter`, this should return the dimension of the parameter space.
+
+See also the [mathematical background](math.md#Design-Problems).
+"""
+function dimension end
+
+## helper macros ##
 
 """
     @define_scalar_unit_model module_name model_name covariate_field_names...

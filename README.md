@@ -38,9 +38,9 @@ Pkg.add(url = "https://git.sr.ht/~lsandig/Kirstine.jl")
 
 ## Documentation
 
-[Markdown](docs/src/), [HTML](https://lsandig.srht.site/Kirstine.jl)
+[Markdown](docs/src/), [HTML](https://lsandig.srht.site/Kirstine.jl/index.html)
 
-To get started, read the [tutorial](https://lsandig.srht.site/Kirstine.jl/tutorial/).
+To get started, read the [tutorial](https://lsandig.srht.site/Kirstine.jl/tutorial.html).
 
 ## Contributing
 

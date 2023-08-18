@@ -9,60 +9,7 @@ using LinearAlgebra: Symmetric, diagm, tr
 
 include("example-compartment.jl")
 
-@testset "design-doptimal.jl" begin
-    @testset "efficiency" begin
-        # Atkinson et al. example
-        let dr = DesignInterval(:time => [0, 48]),
-            _ = seed!(4711),
-            # prior guess for locally optimal design
-            g0 = PriorSample([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
-            # a draw from the strongly informative prior
-            g1 = draw_from_prior(1000, 2),
-            m = TPCMod(1),
-            cp = CopyTime(),
-            dc = DOptimality(),
-            na = FisherMatrix(),
-            t_id = Identity(),
-            t_auc = DeltaMethod(Dauc),
-            dp = DesignProblem(;
-                design_criterion = dc,
-                design_region = dr,
-                model = m,
-                covariate_parameterization = cp,
-                prior_knowledge = g0,
-                transformation = t_auc,
-                normal_approximation = na,
-            ),
-            # singular locally optimal designs from Table 4
-            a3 = DesignMeasure([0.1793] => 0.6062, [3.5671] => 0.3938),
-            a4 = DesignMeasure([1.0122] => 1.0),
-            # Bayesian optimal designs from Table 5
-            a6 = DesignMeasure([0.2288] => 1 / 3, [1.4170] => 1 / 3, [18.4513] => 1 / 3),
-            a7 = DesignMeasure([0.2449] => 0.0129, [1.4950] => 0.0387, [18.4903] => 0.9484)
-
-            # Compare with published efficiencies in Table 5. Due to Monte-Carlo uncertainty
-            # and rounding of the published values, this is not very exact.
-            @test efficiency(a7, a6, m, cp, g1, t_id, na) ≈ 0.234 atol = 1e-2
-            @test efficiency(a6, a7, m, cp, g1, t_auc, na) ≈ 0.370 atol = 1e-2
-
-            # Check that singular designs are handled correctly both with Identity and with
-            # DeltaMethod transformation.
-            @test efficiency(a4, a6, m, cp, g0, t_id, na) == 0
-            @test efficiency(a4, a6, m, cp, g0, t_auc, na) == 0
-            @test efficiency(a6, a4, m, cp, g0, t_id, na) == Inf
-            @test efficiency(a6, a4, m, cp, g0, t_auc, na) == Inf
-            @test isnan(efficiency(a3, a4, m, cp, g0, t_id, na))
-            @test isnan(efficiency(a3, a4, m, cp, g0, t_auc, na))
-            # Note: although a mathematical argument could be made that the efficiency should be
-            # equal to 1 in the following case, we still want it to be NaN:
-            @test isnan(efficiency(a4, a4, m, cp, g0, t_id, na))
-            @test isnan(efficiency(a4, a4, m, cp, g0, t_auc, na))
-
-            # DesignProblem wrapper
-            @test efficiency(a6, a7, dp) == efficiency(a6, a7, m, cp, g0, t_auc, na)
-        end
-    end
-
+@testset "criterion-d.jl" begin
     @testset "criterion_integrand!" begin
         # The functional should be log(det(m)) or -(log(det(inv_m))), depending on whether m
         # is passed as already inverted. For singular matrices it should always return -Inf.
@@ -77,6 +24,56 @@ include("example-compartment.jl")
             # interpret m as inverted
             @test ci!(deepcopy(mreg), true, dc) ≈ -log(1.75)
             @test ci!(deepcopy(msng), true, dc) == -Inf
+        end
+    end
+
+    @testset "objective" begin
+        # Note: this testset effectively tests functionality in `objective!`, since
+        # `objective` simply allocates a few objects to work on. Not having to do this
+        # manually to test the mutating version is a bit more convenient.
+
+        # Identity Transformation: Atkinson et al. locally optimal example
+        let dp = DesignProblem(;
+                design_region = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = DOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = PriorSample([
+                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                ]),
+                transformation = Identity(),
+            ),
+            # singular, no inversion of the information matrix
+            d0 = one_point_design([1]),
+            # solution
+            d1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3)
+
+            @test objective(d0, dp) == -Inf
+            # published objective value is rounded to four places
+            @test objective(d1, dp) ≈ 7.3887 atol = 1e-5
+        end
+
+        # DeltaMethod Transformation: Atkinson et al. strong prior AUC estimation example
+        let _ = seed!(4711),
+            dp = DesignProblem(;
+                design_region = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = DOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = draw_from_prior(1000, 2),
+                transformation = DeltaMethod(Dauc),
+            ),
+            # singular, with inversion of the information matrix
+            d0 = one_point_design([1]),
+            # solution
+            d1 = DesignMeasure([0.2449] => 0.0129, [1.4950] => 0.0387, [18.4903] => 0.9484)
+
+            @test objective(d0, dp) == -Inf
+            # The article uses numerical quadrature, we are using MC integration. Hence the
+            # objective value cannot be expected to be terribly accurate.
+            @test exp(-objective(d1, dp)) ≈ 2463.3 rtol = 1e-2
         end
     end
 
@@ -182,6 +179,50 @@ include("example-compartment.jl")
             @test gi(c, B, 1) == tr(Symmetric(A) * Symmetric(B)) - 1
             # rule out unintentionally symmetric input
             @test gi(c, B, 1) != tr(A * B) - 2
+        end
+    end
+
+    @testset "gateauxderivative" begin
+        # Identity Transformation: Atkinson et al. locally optimal example
+        #
+        # DeltaMethod Transformation: A direct test with Bayesian solution is not possible
+        # because of MC-integration variability. Indirectly check that an Identity
+        # transformation and an equivalent DeltaMethod transformation give the same results.
+        let dpi = DesignProblem(;
+                transformation = Identity(),
+                design_region = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = DOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = PriorSample([
+                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                ]),
+            ),
+            dpd = DesignProblem(;
+                transformation = DeltaMethod(p -> diagm([1, 1, 1])),
+                design_region = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = DOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = PriorSample([
+                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                ]),
+            ),
+            dir = [one_point_design([t]) for t in range(0, 48; length = 21)],
+            # singular, with inversion of the information matrix
+            d0 = one_point_design([1]),
+            # solution
+            d1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
+            d1dir = one_point_design.(designpoints(d1))
+
+            @test_throws "one-point design" gateauxderivative(d1, [d1], dpi)
+            @test all(isnan.(gateauxderivative(d0, dir, dpi)))
+            @test all(isnan.(gateauxderivative(d0, dir, dpd)))
+            @test maximum(gateauxderivative(d1, dir, dpi)) <= 0
+            @test all(abs.(gateauxderivative(d1, d1dir, dpi)) .< 1e-4)
+            @test gateauxderivative(d1, dir, dpi) ≈ gateauxderivative(d1, dir, dpd)
         end
     end
 end

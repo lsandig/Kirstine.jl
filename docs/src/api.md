@@ -7,7 +7,7 @@ DesignProblem
 DesignProblem()
 ```
 
-Different high-level algorithms are available for trying to solve a `DesignProblem`.
+Different high-level strategies are available for trying to solve a `DesignProblem`.
 
 ```@docs
 solve
@@ -28,6 +28,7 @@ and are used as part of a `ProblemSolvingStrategy`.
 Optimizer
 OptimizationResult
 Pso
+Pso()
 ```
 
 ## Design Criteria
@@ -46,8 +47,9 @@ efficiency
 ```@docs
 DesignRegion
 DesignInterval
+DesignInterval(::Any, ::Any, ::Any)
 DesignInterval()
-dimension
+dimension(::DesignRegion)
 dimnames
 upperbound
 lowerbound
@@ -60,13 +62,44 @@ by first subtyping `Model`, `Covariate`, `CovariateParameterization`, and `Param
 and then defining several helper methods on them.
 See the [tutorial](tutorial.md) for a hands-on example.
 
+### Supertypes
+
 ```@docs
 Model
 NonlinearRegression
 Covariate
-@define_scalar_unit_model
 CovariateParameterization
 Parameter
+```
+
+### Implementing a Nonlinear Regression Model
+
+Suppose the following subtypes have been defined:
+
+  - `M <: NonlinearRegression`
+  - `C <: Covariate`
+  - `Cp <: CovariateParameterization`
+  - `P <: Parameter`
+
+Then methods need to be added for the following package-internal functions:
+
+```@docs
+Kirstine.allocate_covariate
+Kirstine.jacobianmatrix!
+Kirstine.update_model_covariate!
+Kirstine.invcov
+Kirstine.unit_length
+dimension
+```
+
+### Helper Macros
+
+To reduce boilerplate code in the common cases of a one-dimensional unit of observation,
+and for a vector parameter without any additional structure,
+the following helper macros can be used:
+
+```@docs
+@define_scalar_unit_model
 @define_vector_parameter
 ```
 
@@ -75,6 +108,7 @@ Parameter
 ```@docs
 PriorKnowledge
 PriorSample
+PriorSample(::AbstractVector{T}, ::AbstractVector{<:Real}) where T <: Parameter
 ```
 
 ## Transformations
@@ -115,10 +149,22 @@ simplify
 simplify_drop
 simplify_unique
 simplify_merge
+informationmatrix
 ```
 
 ## Plotting
 
 ```@docs
 plot_gateauxderivative
+```
+
+In addition, objects of the following types can be plotted directly:
+
+```julia
+plot(d::DesignMeasure)
+plot(d::DesignMeasure, dr::DesignInterval)
+plot(r::OptimizationResult)
+plot(rs::AbstractVector{<:OptimizationResult})
+plot(r::DirectMaximizationResult)
+plot(r::ExchangeResult)
 ```
