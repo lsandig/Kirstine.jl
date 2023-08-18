@@ -1,7 +1,7 @@
 # Mathematical Background
 
 Terms and notations in the field of experimental design vary between authors.
-This pages documents the notation for `Kirstine.jl`.
+This page documents the notation for `Kirstine.jl`.
 
 !!! warning
     
