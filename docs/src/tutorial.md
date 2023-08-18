@@ -28,11 +28,11 @@ y_i \mid θ \overset{\mathrm{iid}}{\sim} \mathrm{Normal}(\mu(x_k, θ), \sigma^2)
 with expected response at dose ``x``
 
 ```math
-\mu(x, θ) = E_0 + E_{\max} \frac{x^h}{\mathrm{ED}_{50}^h + x^h}
+\mu(x, θ) = E_0 + E_{\max{}} \frac{x^h}{\mathrm{ED}_{50}^h + x^h}
 ```
 
 and a four-element parameter vector
-``θ = (E_0, E_{\max}, \mathrm{ED}_{50}, h)``.
+``θ = (E_0, E_{\max{}}, \mathrm{ED}_{50}, h)``.
 
 ```@example main
 using Plots
@@ -61,9 +61,9 @@ we find
 ```math
 \begin{aligned}
 \partial_{E_0} \mu(x, θ)              &= 1 \\
-\partial_{E_{\max}} \mu(x, θ)         &= \frac{x^h}{\mathrm{ED}_{50}^h + x^h}\\
-\partial_{\mathrm{ED}_{50}} \mu(x, θ) &= \frac{h E_{\max} x^h\mathrm{ED}_{50}^{h-1}}{(\mathrm{ED}_{50}^h + x^h)^2} \\
-\partial_{h} \mu(x, θ)                &= \frac{E_{\max} x^h \mathrm{ED}_{50}^h (\log(x / \mathrm{ED}_{50}))}{(\mathrm{ED}_{50}^h + x^h)^2} \\
+\partial_{E_{\max{}}} \mu(x, θ)         &= \frac{x^h}{\mathrm{ED}_{50}^h + x^h}\\
+\partial_{\mathrm{ED}_{50}} \mu(x, θ) &= \frac{h E_{\max{}} x^h\mathrm{ED}_{50}^{h-1}}{(\mathrm{ED}_{50}^h + x^h)^2} \\
+\partial_{h} \mu(x, θ)                &= \frac{E_{\max{}} x^h \mathrm{ED}_{50}^h (\log(x / \mathrm{ED}_{50}))}{(\mathrm{ED}_{50}^h + x^h)^2} \\
 \end{aligned}
 ```
 
