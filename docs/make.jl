@@ -22,7 +22,7 @@ math_macros = Dict(
     # Sets
     raw"\AllDesignMeasures" => raw"Δ",
     raw"\CovariateSet" => raw"X",
-    raw"\DesignRegion" => raw"D",
+    raw"\DesignRegion" => raw"Z",
     raw"\IndexSet" => raw"I",
     raw"\ParameterSet" => raw"Θ",
     raw"\Reals" => raw"ℝ",
