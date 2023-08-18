@@ -9,7 +9,7 @@ end
 ```
 
 This vignette describes how to set up a simple non-linear regression model
-in order to find a Bayesian D-optimal design.
+in order to find a Bayesian D-optimal design for estimating the model parameter.
 
 ## Model
 
@@ -22,7 +22,7 @@ the corresponding regression model for a total of ``n`` observations
 at ``K`` different dose levels ``x_1,\dots,x_k`` is
 
 ```math
-y_i \overset{\mathrm{iid}}{\sim} \mathrm{Normal}(\mu(x_k, θ), \sigma^2) \quad\text{for all } i \in I_k, k = 1,\dots, K,
+y_i \mid θ \overset{\mathrm{iid}}{\sim} \mathrm{Normal}(\mu(x_k, θ), \sigma^2) \quad\text{for all } i \in I_k, k = 1,\dots, K,
 ```
 
 with expected response at dose ``x``
@@ -75,9 +75,15 @@ for ``x \neq 0``, and the limit
 
 ## Setup
 
+For specifying a model and a design problem,
+Kirstine.jl makes use of Julia's extendable [type system](https://docs.julialang.org/en/v1/manual/types/)
+and [method](https://docs.julialang.org/en/v1/manual/methods/) dispatching.
+If your working knowledge of this is rusty,
+now would be a good time to refresh it.
+
 ### Model and Design Region
 
-In `Kirstine.jl`, the regression model is defined by subtyping
+In `Kirstine.jl`, the regression model [is defined](api.md#Implementing-a-Nonlinear-Regression-Model) by subtyping
 [`NonlinearRegression`](@ref),
 [`Covariate`](@ref),
 [`Parameter`](@ref),
@@ -85,7 +91,7 @@ and [`CovariateParameterization`](@ref),
 and implementing a handful of methods for them.
 
 In the sigmoid Emax model,
-a single unit of observations is just a real number `y_i`.
+a single unit of observations is just a real number ``y_i``.
 For such a case,
 we can use the helper macro [`@define_scalar_unit_model`](@ref)
 to declare a model type named `SigEmax`,
@@ -138,7 +144,7 @@ nothing # hide
 ```
 
 Note that the name `:dose` does not necessarily have to match the field name of the `SigEmaxCovariate`.
-A design will then be a discrete probability measure with atoms (design points) from `ds`,
+A design will then be a discrete probability measure with atoms (design points) from `dr`,
 and a design point is represented by a `Vector{Float64}`.
 In our simple model, this vector has length `1`.
 

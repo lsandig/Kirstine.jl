@@ -1,17 +1,12 @@
 # Optimal Design for Functions of the Parameter
 
-Suppose we are not primarily interested in a design that maximizes the expected posterior information about the parameter ``\theta``,
-but about the transformed parameter ``T(\theta)``,
-where ``T(\theta)`` can be a number or a vector.
-
-!!! note
-    
-    `Kirstine.jl` allows transformations to be freely combined with different design criteria.
-    In this sense, c-optimality is just the special case of D-optimality
-    combined with a transformation ``T: \mathbb{R}^r \to \mathbb{R}``.
+This vignette shows how to find a D-optimal design
+for estimating some transformation ``\Transformation(\Parameter)`` of the model parameter.
+The function ``\Transformation : \ParameterSet → \Reals^{t}`` must be differentiable
+with a full-rank Jacobian matrix.
 
 Our example in this vignette is the three-parameter compartment model from Atkinson et al[^ACHJ93].
-Used in pharmacokinetics,
+In pharmacokinetics,
 it describes how the concentration of a drug in an experimental subject changes over time.
 The mean function for the regression is given by
 
@@ -78,7 +73,7 @@ end
 ```
 
 In this vignette we will only look at Bayesian optimal designs
-because locally optimal designs for scalar ``T(\theta)`` usually don't exist
+because locally optimal designs for scalar ``\Transformation(\Parameter)`` usually don't exist
 due to their information matrices becoming singular.
 
 !!! note

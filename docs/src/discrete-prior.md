@@ -9,11 +9,14 @@ end
 ```
 
 Sometimes prior knowledge is not described by a continuous distribution,
-from which we take a Monte-Carlo sample,
+which we approximately average over by Monte-Carlo integration,
 but by a genuinely discrete distribution.
-We illustrate this here with the dose-response model from the [tutorial](tutorial.md).
+This vignette illustrates how a [`PriorSample`](@ref)
+can be used as an exact representation of such a discrete prior.
 
 ## Model Setup
+
+For simplicity, we re-use the dose-response model from the [tutorial](tutorial.md).
 
 ```@example main
 using Kirstine, Random, Plots
