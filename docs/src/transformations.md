@@ -221,7 +221,7 @@ Differentiating ``\mu`` with respect to ``x``,
 equating with ``0`` and solving for ``x`` gives
 
 ```math
-t_{\max}(\theta) = \frac{\log(a / e)}{a - e}.
+t_{\max{}}(\theta) = \frac{\log(a / e)}{a - e}.
 ```
 
 Its Jacobian matrix is
@@ -258,7 +258,7 @@ This solution differs markedly from the previous ones.
 ### Maximum concentration
 
 What if we're not interested in the _time_ of maximum concentration,
-but in the _value_ of the maximum concentration ``\mu(t_{\max}(\theta), \theta)`` itself?
+but in the _value_ of the maximum concentration ``\mu(t_{\max{}}(\theta), \theta)`` itself?
 
 ```@example main
 ttm(p) = log(p.a / p.e) / (p.a - p.e)
