@@ -179,13 +179,57 @@ end
 
 """
     efficiency(d1::DesignMeasure, d2::DesignMeasure, dp::DesignProblem)
+    efficiency(d1::DesignMeasure, d2::DesignMeasure, dp1::DesignProblem, dp2::DesignProblem)
 
 Relative D-efficiency of `d1` to `d2`.
+
+Note that for the method with two design problems,
+the dimensions of the transformed parameters must be identical.
+All other aspects are allowed to be different.
+
+See also the [mathematical background](math.md#Efficiency).
 
 !!! note
 
     This always computes D-efficiency, regardless of the criterion used in `dp`.
 """
 function efficiency(d1::DesignMeasure, d2::DesignMeasure, dp::DesignProblem)
-    return efficiency(d1, d2, dp.m, dp.cp, dp.pk, dp.trafo, dp.na)
+    return efficiency(d1, d2, dp, dp)
+end
+
+function efficiency(
+    d1::DesignMeasure,
+    d2::DesignMeasure,
+    dp1::DesignProblem,
+    dp2::DesignProblem,
+)
+    # check that minimal requirements are met for efficiency to make sense
+    tc1 = precalculate_trafo_constants(dp1.trafo, dp1.pk)
+    tc2 = precalculate_trafo_constants(dp2.trafo, dp2.pk)
+    if codomain_dimension(tc1) != codomain_dimension(tc2)
+        throw(DimensionMismatch("dimensions of transformed parameters must match"))
+    end
+    t = codomain_dimension(tc1)
+    # Take a shortcut via D criterion objective, which already gives the average
+    # log-determinant of the transformed information matrices, and handles exceptions.
+    # Note that the design region is irrelevant for relative efficiency.
+    dp1d = DesignProblem(;
+        design_criterion = DOptimality(),
+        model = dp1.m,
+        design_region = dp1.dr,
+        covariate_parameterization = dp1.cp,
+        prior_knowledge = dp1.pk,
+        transformation = dp1.trafo,
+        normal_approximation = dp1.na,
+    )
+    dp2d = DesignProblem(;
+        design_criterion = DOptimality(),
+        model = dp2.m,
+        design_region = dp2.dr,
+        covariate_parameterization = dp2.cp,
+        prior_knowledge = dp2.pk,
+        transformation = dp2.trafo,
+        normal_approximation = dp2.na,
+    )
+    return exp((objective(d1, dp1) - objective(d2, dp2)) / t)
 end

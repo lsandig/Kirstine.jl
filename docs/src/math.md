@@ -370,3 +370,47 @@ this simplifies to
 \biggr)^{1/t}
 .
 ```
+
+Note that it is also possible to compute a relative efficiency under two different design problems
+
+```math
+(
+  \DesignCriterion_D,
+  \DesignRegion^{(1)},
+  \MeanFunction^{(1)},
+  \CovariateParameterization^{(1)},
+  \PriorDensity^{(1)},
+  \Transformation^{(1)}
+)
+\text{ and }
+(
+  \DesignCriterion_D,
+  \DesignRegion^{(2)},
+  \MeanFunction^{(2)},
+  \CovariateParameterization^{(2)},
+  \PriorDensity^{(2)},
+  \Transformation^{(2)}
+).
+```
+
+The only requirement is that both ``\Transformation^{(1)}`` and ``\Transformation^{(2)}``
+map into spaces with a common dimension ``\DimTransformedParameter``.
+In this general case, the two integrals must be calculated separately:
+
+```math
+\RelEff(\DesignMeasure_1, \DesignMeasure_2)
+=
+\exp\biggl(
+\frac{1}{t}\biggl(
+\IntD{\ParameterSet^{(1)}}{
+\log\det \TNIMatrix^{(1)}(\DesignMeasure_1, \Parameter^{(1)})
+}{\PriorDensity^{(1)}(\Parameter^{(1)})}{\Parameter^{(1)}}
+-
+\IntD{\ParameterSet^{(2)}}{
+\log\det \TNIMatrix^{(2)}(\DesignMeasure_2, \Parameter^{(2)})
+}{\PriorDensity^{(2)}(\Parameter^{(2)})}{\Parameter^{(2)}}
+\biggr)
+\biggr)
+```
+
+This more general quantity of course now also depends on the potentially different prior densities!

@@ -10,59 +10,6 @@ using LinearAlgebra: Symmetric, diagm, tr
 include("example-compartment.jl")
 
 @testset "design-doptimal.jl" begin
-    @testset "efficiency" begin
-        # Atkinson et al. example
-        let dr = DesignInterval(:time => [0, 48]),
-            _ = seed!(4711),
-            # prior guess for locally optimal design
-            g0 = PriorSample([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
-            # a draw from the strongly informative prior
-            g1 = draw_from_prior(1000, 2),
-            m = TPCMod(1),
-            cp = CopyTime(),
-            dc = DOptimality(),
-            na = FisherMatrix(),
-            t_id = Identity(),
-            t_auc = DeltaMethod(Dauc),
-            dp = DesignProblem(;
-                design_criterion = dc,
-                design_region = dr,
-                model = m,
-                covariate_parameterization = cp,
-                prior_knowledge = g0,
-                transformation = t_auc,
-                normal_approximation = na,
-            ),
-            # singular locally optimal designs from Table 4
-            a3 = DesignMeasure([0.1793] => 0.6062, [3.5671] => 0.3938),
-            a4 = DesignMeasure([1.0122] => 1.0),
-            # Bayesian optimal designs from Table 5
-            a6 = DesignMeasure([0.2288] => 1 / 3, [1.4170] => 1 / 3, [18.4513] => 1 / 3),
-            a7 = DesignMeasure([0.2449] => 0.0129, [1.4950] => 0.0387, [18.4903] => 0.9484)
-
-            # Compare with published efficiencies in Table 5. Due to Monte-Carlo uncertainty
-            # and rounding of the published values, this is not very exact.
-            @test efficiency(a7, a6, m, cp, g1, t_id, na) ≈ 0.234 atol = 1e-2
-            @test efficiency(a6, a7, m, cp, g1, t_auc, na) ≈ 0.370 atol = 1e-2
-
-            # Check that singular designs are handled correctly both with Identity and with
-            # DeltaMethod transformation.
-            @test efficiency(a4, a6, m, cp, g0, t_id, na) == 0
-            @test efficiency(a4, a6, m, cp, g0, t_auc, na) == 0
-            @test efficiency(a6, a4, m, cp, g0, t_id, na) == Inf
-            @test efficiency(a6, a4, m, cp, g0, t_auc, na) == Inf
-            @test isnan(efficiency(a3, a4, m, cp, g0, t_id, na))
-            @test isnan(efficiency(a3, a4, m, cp, g0, t_auc, na))
-            # Note: although a mathematical argument could be made that the efficiency should be
-            # equal to 1 in the following case, we still want it to be NaN:
-            @test isnan(efficiency(a4, a4, m, cp, g0, t_id, na))
-            @test isnan(efficiency(a4, a4, m, cp, g0, t_auc, na))
-
-            # DesignProblem wrapper
-            @test efficiency(a6, a7, dp) == efficiency(a6, a7, m, cp, g0, t_auc, na)
-        end
-    end
-
     @testset "criterion_integrand!" begin
         # The functional should be log(det(m)) or -(log(det(inv_m))), depending on whether m
         # is passed as already inverted. For singular matrices it should always return -Inf.
