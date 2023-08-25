@@ -9,6 +9,7 @@ using LinearAlgebra: Symmetric, UpperTriangular, tr, det, diagm
 
 include("example-testpar.jl")
 include("example-emax.jl")
+include("example-vector.jl")
 
 @testset "design-common.jl" begin
     @testset "WorkMatrices" begin
@@ -74,6 +75,24 @@ include("example-emax.jl")
             res = informationmatrix(d, m, cp, p, na)
 
             ref = [16 6 -6; 6 3 -3; -6 -3 3] ./ 16
+
+            @test res ≈ ref
+        end
+
+        # vector unit with non-constant covariance
+        let d = DesignMeasure([5] => 0.25, [20] => 0.75),
+            m = VUMod(0.1, 3),
+            cp = EquiTime(),
+            p = VUPar(; a = 4.298, e = 0.05884, s = 21.80),
+            na = FisherMatrix(),
+            res = informationmatrix(d, m, cp, p, na),
+            # recreate by hand
+            c = [VUCovariate([0, 5, 10]), VUCovariate([0, 20, 40])],
+            jm = Kirstine.jacobianmatrix!.([zeros(3, 3), zeros(3, 3)], [m], c, [p]),
+            S = [diagm([0.1, 0.6, 1.1]), diagm([0.1, 2.1, 4.1])],
+            F1 = jm[1]' * inv(S[1]) * jm[1],
+            F2 = jm[2]' * inv(S[2]) * jm[2],
+            ref = 0.25 * F1 + 0.75 * F2
 
             @test res ≈ ref
         end
