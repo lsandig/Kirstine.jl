@@ -87,7 +87,7 @@ Then methods need to be added for the following package-internal functions:
 Kirstine.allocate_covariate
 Kirstine.jacobianmatrix!
 Kirstine.update_model_covariate!
-Kirstine.invcov
+Kirstine.update_model_vcov!
 Kirstine.unit_length
 dimension
 ```

@@ -75,7 +75,7 @@ A unit of observation is a vector ``\Unit∈\Reals^{\DimUnit}``,
 collecting the responses at the ``\DimUnit`` measurement times.
 The unknown model parameter is ``\Parameter=(a, e, e_0, e_{\max{}}, \mathrm{EC}_{50})``.
 
-For simplicity we assume that the measurements are uncorrelated with identical variances,
+For simplicity we assume that the measurements are uncorrelated with identical constant variances,
 i.e. ``Σ = σ^2 I_{\DimUnit}``.
 Since ``σ^2`` enters the D-criterion objective only as a scaling factor,
 we may set ``σ^2=1`` for the remainder of this text.
@@ -88,7 +88,7 @@ but also the [other necessary methods](api.md#Implementing-a-Nonlinear-Regressio
 using Kirstine, Random, Plots
 
 struct DTRMod <: NonlinearRegression
-    inv_sigma_sq::Float64
+    sigma_squared::Float64
     m::Int64
 end
 
@@ -98,7 +98,12 @@ mutable struct DoseTimeCovariate <: Covariate
 end
 
 Kirstine.unit_length(m::DTRMod) = m.m
-Kirstine.invcov(m::DTRMod) = m.inv_sigma_sq
+function Kirstine.update_model_vcov!(s, c::DoseTimeCovariate, m::DTRMod)
+    fill!(s, 0.0)
+    for j in 1:(m.m)
+        s[j, j] = m.sigma_squared
+    end
+end
 Kirstine.allocate_covariate(m::DTRMod) = DoseTimeCovariate(0, zeros(m.m))
 
 @define_vector_parameter Kirstine DTRPar a e e0 emax ec50

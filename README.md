@@ -21,6 +21,7 @@ Documentation is still sparse in some places.
 
 - arbitrary nonlinear regression models
 - vector-valued response variable
+- variance-covariance matrix may depend on covariate
 - Bayesian and locally optimal design
 - design criteria: D, A
 - separation of design variables and model covariates

@@ -6,6 +6,7 @@ module Kirstine
 using LinearAlgebra:
     BLAS.symm!,
     BLAS.syrk!,
+    BLAS.trsm!,
     LAPACK.posv!,
     LAPACK.potrf!,
     LAPACK.potri!,

@@ -12,12 +12,16 @@ include("example-emax.jl")
 
 @testset "design-common.jl" begin
     @testset "WorkMatrices" begin
-        let m = 2, r = 4, t = 3, wm = Kirstine.WorkMatrices(m, r, t)
+        let K = 5, m = 2, r = 4, t = 3, wm = Kirstine.WorkMatrices(K, m, r, t)
             @test size(wm.r_x_r) == (r, r)
             @test size(wm.t_x_t) == (t, t)
             @test size(wm.r_x_t) == (r, t)
             @test size(wm.t_x_r) == (t, r)
             @test size(wm.m_x_r) == (m, r)
+            @test length(wm.m_x_m) == K
+            for k in 1:K
+                @test size(wm.m_x_m[k]) == (m, m)
+            end
         end
     end
 
@@ -38,15 +42,16 @@ include("example-emax.jl")
             jm = zeros(1, 3),
             w = [0.25, 0.75],
             m = EmaxModel(1),
-            ic = Kirstine.invcov(m),
+            # cholesky factor of the one-element 1.0 matrix is 1.0.
+            cvc = [[1.0;;] for _ in 1:length(w)],
             c = [Dose(0), Dose(5)],
             p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
             na = FisherMatrix(),
-            res = Kirstine.informationmatrix!(nim, jm, w, m, ic, c, p, na)
+            res = Kirstine.informationmatrix!(nim, jm, w, m, cvc, c, p, na)
 
             ref = mapreduce(+, enumerate(c)) do (k, dose)
                 Kirstine.jacobianmatrix!(jm, m, dose, p)
-                return w[k] * ic * jm' * jm
+                return w[k] * jm' * inv([1.0;;]) * jm
             end
 
             # returns first argument?
@@ -107,10 +112,11 @@ include("example-emax.jl")
             m = 1,
             r = 3,
             t = 3,
-            wm1 = Kirstine.WorkMatrices(m, r, t),
-            wm2 = Kirstine.WorkMatrices(m, r, t),
-            wm3 = Kirstine.WorkMatrices(m, r, t),
-            wm4 = Kirstine.WorkMatrices(m, r, t),
+            K = 1, # dummy, we already have the informationmatrix
+            wm1 = Kirstine.WorkMatrices(K, m, r, t),
+            wm2 = Kirstine.WorkMatrices(K, m, r, t),
+            wm3 = Kirstine.WorkMatrices(K, m, r, t),
+            wm4 = Kirstine.WorkMatrices(K, m, r, t),
             # workaround for `.=` not being valid let statement syntax
             _ = broadcast!(identity, wm1.r_x_r, nim),
             _ = broadcast!(identity, wm2.r_x_r, inv_nim),
@@ -146,8 +152,9 @@ include("example-emax.jl")
             m = 1,
             r = 3,
             t = 3,
-            wm1 = Kirstine.WorkMatrices(m, r, t),
-            wm2 = Kirstine.WorkMatrices(m, r, t),
+            K = 1, # dummy, we already have the informationmatrix
+            wm1 = Kirstine.WorkMatrices(K, m, r, t),
+            wm2 = Kirstine.WorkMatrices(K, m, r, t),
             # workaround for `.=` not being valid let statement syntax
             _ = broadcast!(identity, wm1.r_x_r, nim),
             _ = broadcast!(identity, wm2.r_x_r, inv_nim),

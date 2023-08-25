@@ -204,7 +204,7 @@ dp = DesignProblem(
 nothing # hide
 ```
 
-Note that the `SigEmax` constructor takes the inverse variance ``1/σ^2`` as an argument.
+Note that the `SigEmax` constructor takes the variance ``σ^2`` as an argument.
 For D-optimality, this only scales the objective function and has no influence on the optimal design.
 This is why we simply set it to `1` here.
 

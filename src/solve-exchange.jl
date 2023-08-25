@@ -79,7 +79,12 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
     (; candidate, ow, od, steps, simplify_args) = strategy
     check_compatible(candidate, dp.dr)
     tc = precalculate_trafo_constants(dp.trafo, dp.pk)
-    wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
+    wm = WorkMatrices(
+        1, # Dirac design measure corresponds to single covariate
+        unit_length(dp.m),
+        parameter_dimension(dp.pk),
+        codomain_dimension(tc),
+    )
     c = allocate_initialize_covariates(
         one_point_design(candidate.designpoint[1]),
         dp.m,
