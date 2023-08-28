@@ -44,7 +44,7 @@ To get started, read the [tutorial](https://lsandig.srht.site/Kirstine.jl/tutori
 
 ## Contributing
 
-There is a [git repository at sourcehut](https://git.sr.ht/~lsandig/Kirstine.jl).
+There is a [git repository and issue tracker at sourcehut](https://sr.ht/~lsandig/Kirstine.jl/).
 
 If you have already solved design problems with other software packages,
 you can try to replicate your solutions with Kirstine.jl.

@@ -57,7 +57,7 @@ Familiarity with the following topics is required:
 
 ## Contributing
 
-There is a [git repository at sourcehut](https://git.sr.ht/%7Elsandig/Kirstine.jl).
+There is a [git repository and issue tracker at sourcehut](https://sr.ht/%7Elsandig/Kirstine.jl/).
 
 If you have already solved design problems with other software packages,
 you can try to replicate your solutions with Kirstine.jl.
