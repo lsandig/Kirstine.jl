@@ -192,3 +192,119 @@ function plot_gateauxderivative(d::DesignMeasure, dp::DesignProblem; kw...)
     plt_gd = RecipesBase.plot(DerivativePlot(d, dp); kw...)
     return RecipesBase.plot!(plt_gd, d; kw...)
 end
+
+struct ExpectedFunctionPlot{
+    Tf<:Function,
+    Tg<:Function,
+    Th<:Function,
+    Tm<:Model,
+    Tcp<:CovariateParameterization,
+    Tpk<:PriorKnowledge,
+}
+    f::Tf
+    g::Tg
+    h::Th
+    x::Vector{Float64}
+    d::DesignMeasure
+    m::Tm
+    cp::Tcp
+    pk::Tpk
+end
+
+@recipe function f(
+    efplot::ExpectedFunctionPlot;
+    label_formatter = (k, dp, w) -> "$(round(100 * w; sigdigits=3))%",
+)
+    (; f, g, h, x, d, m, cp, pk) = efplot
+    K = length(weights(d))
+    # graphs
+    fx = zeros(length(x), K)
+    c = Kirstine.allocate_initialize_covariates(d, m, cp)
+    for k in 1:K
+        for i in 1:length(x)
+            fx[i, k] = mapreduce((w, p) -> w * f(x[i], c[k], p), +, pk.weight, pk.p)
+        end
+    end
+    @series begin
+        linecolor --> :black
+        label --> nothing
+        x, unique(fx; dims = 2)
+    end
+    # points
+    pt = designpoints(d)
+    wt = weights(d)
+    for k in 1:K
+        gx = g(c[k])
+        hx = mapreduce((w, p) -> w * h(c[k], p), +, pk.weight, pk.p)
+        @series begin
+            label --> (label_formatter(k, pt[k], wt[k]))
+            markersize --> max(2, sqrt.(100 .* wt[k]))
+            markercolor --> k
+            seriestype := :scatter
+            gx, hx
+        end
+    end
+end
+
+"""
+    plot_expected_function(
+        f,
+        g,
+        h,
+        xrange::AbstractVector{<:Real},
+        d::DesignMeasure,
+        m::Model,
+        cp::CovariateParameterization,
+        pk::PriorSample;
+        <keyword arguments>
+    )
+
+Plot a graph of the pointwise expected value of a function
+and design points on that graph.
+
+For user types `C<:Covariate` and `p<:Parameter`,
+the functions `f`, `g`, and `h` should have the following signatures:
+
+  - `f(x::Real, c::C, p::P)::Real`.
+    This function is for plotting a graph.
+  - `g(c::C)::AbstractVector{<:Real}`.
+    This function is for plotting points,
+    and should return the x coordinates corresponding to `c`.
+  - `h(c::C, p::P)::AbstractVector{<:Real}`.
+    This function is for plotting points,
+    and should return the y coordinates corresponding to `c`.
+
+For each value of the covariate `c` implied by the design measure `d`,
+the following things will be plotted:
+
+  - A graph of the average of `f` with respect to `pk` as a function of `x` over `xrange`.
+    If different `c` result in identical graphs, only one will be plotted.
+
+  - Points at `g(c)` and `h(c, p)` averaged with respect to `pk`.
+    By default, the `markersize` attribute is used to indicate the weight of the design point.
+
+# Additional Keyword Arguments
+
+  - `label_formatter::Function`: a function for mapping a triple `(k, pt, w)`
+    of an index, design point, and weight to a string for use as a label in the legend.
+    Default: weight in percentages rounded to 3 significant digits.
+
+# Examples
+
+For usage examples see the [tutorial](tutorial.md)
+and [dose-time-response](dtr.md) vignettes.
+"""
+function plot_expected_function(
+    f,
+    g,
+    h,
+    xrange::AbstractVector{<:Real},
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample;
+    kw...,
+)
+    efp = ExpectedFunctionPlot(f, g, h, collect(xrange), d, m, cp, pk)
+    return RecipesBase.plot(efp; kw...)
+end

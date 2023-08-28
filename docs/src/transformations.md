@@ -128,6 +128,24 @@ dms = DirectMaximization(optimizer = pso, prototype = uniform_design([[0], [24],
 nothing # hide
 ```
 
+The following is a small wrapper around [`plot_expected_function`](@ref)
+that plots a time-response curve
+and overlays the measurement points implied by the design.
+
+```@example main
+function plot_expected_response(d::DesignMeasure, dp::DesignProblem)
+    response(t, p) = p.s * (exp(-p.e * t) - exp(-p.a * t))
+    f(x, c, p) = response(x, p)
+    g(c) = [c.time]
+    h(c, p) = [response(c.time, p)]
+    xrange = range(0, 48; length = 101)
+    plt = plot_expected_function(f, g, h, xrange, d, dp.m, dp.cp, dp.pk)
+    plot!(plt; xguide = "time", yguide = "response", xticks = 0:6:48)
+    return plt
+end
+nothing # hide
+```
+
 ## Optimal design for estimating the parameter
 
 In order to have a design to compare other solutions against,
@@ -150,6 +168,13 @@ savefig_nothing(ans, "transformations-gd-id.png") # hide
 ```
 
 ![](transformations-gd-id.png)
+
+```@example main
+ef_id = plot_expected_response(s_id, dp_id)
+savefig_nothing(ef_id, "transformations-ef-id.png") # hide
+```
+
+![](transformations-ef-id.png)
 
 ## Univariate functions of the parameter
 
@@ -197,6 +222,13 @@ savefig_nothing(ans, "transformations-gd-auc.png") # hide
 ```
 
 ![](transformations-gd-auc.png)
+
+```@example main
+ef_auc = plot_expected_response(s_auc, dp_auc)
+savefig_nothing(ef_auc, "transformations-ef-auc.png") # hide
+```
+
+![](transformations-ef-auc.png)
 
 The design points are similar to those of `s_id`,
 but while its weights were practically uniform,
@@ -253,6 +285,13 @@ savefig_nothing(ans, "transformations-gd-ttm.png") # hide
 
 ![](transformations-gd-ttm.png)
 
+```@example main
+ef_ttm = plot_expected_response(s_ttm, dp_ttm)
+savefig_nothing(ef_ttm, "transformations-ef-ttm.png") # hide
+```
+
+![](transformations-ef-ttm.png)
+
 This solution differs markedly from the previous ones.
 
 ### Maximum concentration
@@ -291,6 +330,13 @@ savefig_nothing(ans, "transformations-gd-cmax.png") # hide
 
 ![](transformations-gd-cmax.png)
 
+```@example main
+ef_cmax = plot_expected_response(s_cmax, dp_cmax)
+savefig_nothing(ef_cmax, "transformations-ef-cmax.png") # hide
+```
+
+![](transformations-ef-cmax.png)
+
 The solution is again mostly concentrated on one design point.
 The location of this point makes intuitive sense,
 considering the prior expected time to maximum concentration:
@@ -320,6 +366,13 @@ savefig_nothing(ans, "transformations-gd-both.png") # hide
 ```
 
 ![](transformations-gd-both.png)
+
+```@example main
+ef_both = plot_expected_response(s_both, dp_both)
+savefig_nothing(ef_both, "transformations-ef-both.png") # hide
+```
+
+![](transformations-ef-both.png)
 
 This solution is again similar to `s_id`, but with a different weight distribution.
 

@@ -156,6 +156,7 @@ informationmatrix
 
 ```@docs
 plot_gateauxderivative
+plot_expected_function
 ```
 
 In addition, objects of the following types can be plotted directly:

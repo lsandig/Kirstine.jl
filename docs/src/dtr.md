@@ -150,41 +150,23 @@ prior = draw_from_prior(1000)
 nothing # hide
 ```
 
-Since the package does not yet contain functionality for plotting the expected response curves for arbitrary models,
-we quickly put together a helper function just for this vignette.
+The following is a small wrapper around [`plot_expected_function`](@ref)
+that plots a time-response curve for each initial dose
+and overlays the measurement point(s) implied by the design.
 
 ```@example main
 function plot_expected_response(d::DesignMeasure, dp::DesignProblem)
-    K = length(designpoints(d))
-    xrange = range(0, 24; length = 101)
-    y = zeros(length(xrange), K)
-    c = Kirstine.allocate_initialize_covariates(d, dp.m, dp.cp)
-    res = function (D, t, p)
+    response = function (D, t, p)
         con = D / (1 - p.e / p.a) * (exp(-p.e * t) - exp(-p.a * t))
         r = p.e0 + p.emax * con / (p.ec50 + con)
         return r
     end
-    for k in 1:K
-        for i in 1:length(xrange)
-            y[i, k] = mapreduce(
-                (w, p) -> w * res(c[k].dose, xrange[i], p),
-                +,
-                dp.pk.weight,
-                dp.pk.p,
-            )
-        end
-    end
-    plt = plot(xguide = "time", yguide = "response", xticks = 0:4:24)
-    plt = plot!(plt, xrange, unique(y; dims = 2); color = :black, label = nothing)
-    for k in 1:K
-        y = mapreduce(
-            (w, p) -> w * [res(c[k].dose, t, p) for t in c[k].time],
-            +,
-            dp.pk.weight,
-            dp.pk.p,
-        )
-        scatter!(plt, c[k].time, y; mc = k, label = k)
-    end
+    f(x, c, p) = response(c.dose, x, p)
+    g(c) = c.time
+    h(c, p) = [response(c.dose, t, p) for t in c.time]
+    xrange = range(0, 24; length = 101)
+    plt = plot_expected_function(f, g, h, xrange, d, dp.m, dp.cp, dp.pk)
+    plot!(plt; xguide = "time", yguide = "response", xticks = 0:4:24)
     return plt
 end
 nothing # hide

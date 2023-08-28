@@ -294,6 +294,28 @@ savefig_nothing(gd, "tutorial-gd.png") # hide
 
 ![](tutorial-gd.png)
 
+To visualize where the design points end up on the prior expected mean function,
+we can use [`plot_expected_function`](@ref).
+
+```@example main
+mu(dose, p) = p.e0 + p.emax * dose^p.h / (p.ed50^p.h + dose^p.h)
+ef = plot_expected_function(
+    (x, c, p) -> mu(x, p),
+    c -> [c.dose],
+    (c, p) -> [mu(c.dose, p)],
+    0:0.01:1,
+    s2,
+    dp.m,
+    dp.cp,
+    dp.pk;
+    xguide = "dose",
+    yguide = "response",
+)
+savefig_nothing(ef, "tutorial-ef.png") # hide
+```
+
+![](tutorial-ef.png)
+
 Finally, we can also look at a plot of the optimization progress
 and see that the particle swarm has converged already after about `20` iterations.
 
