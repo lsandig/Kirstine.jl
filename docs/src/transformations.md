@@ -318,7 +318,7 @@ nothing # hide
 
 ```@example main
 dp_cmax = dp_for_trafo(DeltaMethod(Dcmax))
-Random.seed!(1357)
+Random.seed!(13579)
 s_cmax, r_cmax = solve(dp_cmax, dms)
 s_cmax
 ```

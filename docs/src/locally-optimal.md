@@ -75,7 +75,7 @@ and can be solved with a smaller swarm and in fewer iterations.
 
 ```@example main
 str1 = DirectMaximization(
-    optimizer = Pso(iterations = 20, swarmsize = 50),
+    optimizer = Pso(iterations = 50, swarmsize = 50),
     prototype = equidistant_design(dr, 4),
 )
 

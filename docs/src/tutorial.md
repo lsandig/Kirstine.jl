@@ -233,7 +233,7 @@ strategy = DirectMaximization(
     prototype = equidistant_design(dr, 8),
 )
 
-Random.seed!(31415)
+Random.seed!(4711)
 s1, r1 = solve(dp, strategy)
 nothing # hide
 ```
@@ -256,23 +256,23 @@ as_matrix(s1)
 ```
 
 Looking closely at `s1`,
-we notice that three design points are nearly identical:
+we notice that two pairs of design points are nearly identical:
 
 ```julia
-[0.4720457753718496] => 0.0003693803605209383
-[0.4994069801758983] => 0.07074703398360908
-[0.5005657108099189] => 0.15038996534460683
+[0.008556746690981613] => 0.1467037403130661
+[0.01533821297800151] => 0.09523111106747992
+[0.49747439867621795] => 0.13065269230704638
+[0.4995388749410172] => 0.09478958653231902
 ```
 
-It seems plausible that they would merge into a single one
+It seems plausible that they would merge two three single ones
 if we ran the optimizer for some more iterations.
 But we can also do this after the fact by calling [`simplify`](@ref) on the solution.
 This way we remove all design points with negligible weight,
 and merge all design points that are less than some minimum distance apart.
 
 ```@example main
-s2 = simplify(s1, dp, minweight = 1e-3, mindist = 1e-2)
-sort_designpoints(s2)
+s2 = sort_designpoints(simplify(s1, dp, minweight = 1e-3, mindist = 1e-2))
 ```
 
 Because this issue occurs frequently

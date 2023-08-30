@@ -96,11 +96,13 @@ function ap_random_point!(
         if cum_sum_fix == 1.0
             @warn "fixed weights already sum to one"
         end
+        # rationale for the weights: when no indices are fixed, re-normalized exponential
+        # weights imply a uniform distribution on the simplex, i.e. Dirichlet(1, …, 1).
         cum_sum_rand = 0.0
         while cum_sum_rand < eps() # we don't want to divide by too small numbers
             for k in 1:K
                 if !c.fixw[k]
-                    d.weight[k] = rand()
+                    d.weight[k] = -log(rand())
                     cum_sum_rand += d.weight[k]
                 end
             end

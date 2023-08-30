@@ -553,17 +553,16 @@ st4b = Exchange(
     ow = Pso(swarmsize = 50, iterations = 20),
 )
 
-Random.seed!(31415)
-s4b, r4b = solve(dp4, st4b; minweight = 1e-3)
+Random.seed!(314)
+s4b, r4b = solve(dp4, st4b; minweight = 1e-3, mindist = 1e-2)
 pr4b = plot(r4b)
 savefig_nothing(pr4b, "dtr-pr4b.png") # hide
 ```
 
 ![](dtr-pr4b.png)
 
-We see that the maximal derivative drops sharply after even one step.
-The objective increases only in the fourth place after the decimal
-point, though.
+We see that the maximal derivative drops sharply after two steps,
+and the objective increases as well.
 
 Let's look at the solution.
 

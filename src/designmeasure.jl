@@ -185,17 +185,17 @@ end
 """
     random_design(dr::DesignRegion, K::Integer)
 
-Construct a [`DesignMeasure`](@ref) with design points drawn independently
-from a uniform distribution on the design region.
+Construct a random [`DesignMeasure`](@ref).
 
-Independent weights weights are drawn from a uniform distribution on ``[0, 1]``
-and then normalized to sum to one.
+The design points are drawn independently from the uniform distribution on the design region,
+and the weights drawn from the uniform distribution on a simplex.
 """
 function random_design(dr::DesignInterval{N}, K::Integer) where N
     scl = upperbound(dr) .- lowerbound(dr)
     dp = [lowerbound(dr) .+ scl .* rand(N) for _ in 1:K]
-    u = rand(K)
-    w = u ./ sum(u)
+    u = rand(K) # independent Uniform([0, 1])
+    v = -log.(u) # independent Exp(1)
+    w = v ./ sum(v) # Dirichlet(1, …, 1), i.e. uniform on simplex
     d = DesignMeasure(dp, w)
     return d
 end
