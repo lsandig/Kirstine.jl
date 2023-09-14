@@ -235,7 +235,7 @@ function Kirstine.simplify_unique(
 )
     res = deepcopy(d) # don't modify the input!
     if lowerbound(dr) == (0, 0)
-        map(res.designpoint) do dp
+        map(points(res)) do dp
             if dp[1] < minposdose || dp[2] < minpostime
                 dp[1] = 0
                 dp[2] = 0
@@ -473,14 +473,14 @@ function Kirstine.simplify_unique(
 )
     res = deepcopy(d)
     if lowerbound(dr)[1] == 0
-        map(res.designpoint) do dp
+        map(points(res)) do dp
             if dp[1] <= minposdose
                 dp[1] = 0
                 dp[2] = upperbound(dr)[2]
             end
         end
         if lowerbound(dr)[2] == 0
-            map(res.designpoint) do dp
+            map(points(res)) do dp
                 if dp[2] <= minposdelta
                     dp[1] = 0
                     dp[2] = upperbound(dr)[2]
@@ -629,14 +629,14 @@ function Kirstine.simplify_unique(
 )
     res = deepcopy(d)
     if lowerbound(dr)[1] == 0
-        map(res.designpoint) do dp
+        map(points(res)) do dp
             if dp[1] <= minposdose
                 dp[1] = 0
                 dp[2] = upperbound(dr)[2]
             end
         end
         if lowerbound(dr)[2] == 0
-            map(res.designpoint) do dp
+            map(points(res)) do dp
                 if dp[2] <= minposdelta
                     dp[1] = 0
                     dp[2] = upperbound(dr)[2]

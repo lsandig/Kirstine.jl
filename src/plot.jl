@@ -44,7 +44,7 @@ end
     d::DesignMeasure;
     label_formatter = (k, dp, w) -> "$(round(100 * w; sigdigits=3))%",
 )
-    N = length(designpoints(d)[1])
+    N = length(points(d)[1])
     if N != 1 && N != 2
         throw(ArgumentError("only implemented for 1- or 2-dimensional design points"))
     end
@@ -112,7 +112,7 @@ end
 )
     (; d, dp) = dplot
     range_x = range(lowerbound(dp.dr)[1], upperbound(dp.dr)[1]; length = subdivisions)
-    dsgpts = collect(Iterators.flatten(designpoints(d)))
+    dsgpts = collect(Iterators.flatten(points(d)))
     all_x = sort(vcat(range_x, dsgpts))
     directions = [one_point_design([d]) for d in all_x]
     gd = gateauxderivative(d, directions, dp)
@@ -231,7 +231,7 @@ end
         x, unique(fx; dims = 2)
     end
     # points
-    pt = designpoints(d)
+    pt = points(d)
     wt = weights(d)
     for k in 1:K
         gx = g(c[k])

@@ -131,6 +131,7 @@ FisherMatrix
 ```@docs
 DesignMeasure
 Base.:(==)(::DesignMeasure, ::DesignMeasure)
+DesignMeasure(::AbstractMatrix{<:Real}, ::AbstractVector{<:Real})
 DesignMeasure(::AbstractVector{<:AbstractVector{<:Real}}, ::AbstractVector{<:Real})
 DesignMeasure(::Pair...)
 DesignMeasure(::AbstractMatrix{<:Real})
@@ -139,8 +140,8 @@ one_point_design
 uniform_design
 equidistant_design
 random_design
+points
 weights
-designpoints
 sort_designpoints
 sort_weights
 mixture

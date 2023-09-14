@@ -80,16 +80,12 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
     check_compatible(candidate, dp.dr)
     tc = precalculate_trafo_constants(dp.trafo, dp.pk)
     wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
-    c = allocate_initialize_covariates(
-        one_point_design(candidate.designpoint[1]),
-        dp.m,
-        dp.cp,
-    )
+    c = allocate_initialize_covariates(one_point_design(points(candidate)[1]), dp.m, dp.cp)
     constraints = DesignConstraints(dp.dr, [false], [false])
     res = candidate
     or_pairs = map(1:(steps)) do i
         res = simplify(res, dp; simplify_args...)
-        dir_prot = map(one_point_design, designpoints(simplify_drop(res, 0)))
+        dir_prot = map(one_point_design, points(simplify_drop(res, 0)))
         gc = precalculate_gateaux_constants(dp.dc, res, dp.m, dp.cp, dp.pk, tc, dp.na)
         # find direction of steepest ascent
         gd(d) = gateauxderivative!(wm, c, gc, d, dp.m, dp.cp, dp.pk, dp.na)
@@ -97,7 +93,7 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
         d = or_gd.maximizer
         # append the new atom
         K = length(res.weight)
-        if d.designpoint[1] in designpoints(simplify_drop(res, 0))
+        if points(d)[1] in points(simplify_drop(res, 0))
             # effectivly run the reweighting from the last round for some more iterations
             res = mixture(0, d, res) # make sure new point is at index 1
             res = simplify_merge(res, dp.dr, 0)

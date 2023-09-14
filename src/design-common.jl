@@ -19,7 +19,7 @@ function allocate_initialize_covariates(d, m, cp)
     K = length(d.weight)
     cs = [allocate_covariate(m) for _ in 1:K]
     for k in 1:K
-        update_model_covariate!(cs[k], d.designpoint[k], m, cp)
+        update_model_covariate!(cs[k], points(d)[k], m, cp)
     end
     return cs
 end
@@ -38,7 +38,7 @@ function objective!(
     na::NormalApproximation,
 )
     for k in 1:length(c)
-        update_model_covariate!(c[k], d.designpoint[k], m, cp)
+        update_model_covariate!(c[k], points(d)[k], m, cp)
     end
     # When the information matrix is singular, the objective function is undefined. Lower
     # level calls may throw a PosDefException or a SingularException. This also means that
@@ -71,7 +71,7 @@ function gateauxderivative!(
     pk::PriorSample,
     na::NormalApproximation,
 )
-    update_model_covariate!(c[1], direction.designpoint[1], m, cp)
+    update_model_covariate!(c[1], points(direction)[1], m, cp)
     acc = 0
     ic = invcov(m)
     for i in 1:length(pk.p)

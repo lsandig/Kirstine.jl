@@ -70,7 +70,7 @@ include("example-emax.jl")
             @test issorted(r2.orw, by = or -> or.maximum)
             # no new point, but last one of the candidate
             @test length(weights(r2.orw[1].maximizer)) == 3
-            @test designpoints(r2.orw[1].maximizer)[1] == [10]
+            @test points(r2.orw[1].maximizer)[1] == [10]
         end
     end
 end

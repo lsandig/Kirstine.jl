@@ -215,7 +215,7 @@ include("example-compartment.jl")
             d0 = one_point_design([1]),
             # solution
             d1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
-            d1dir = one_point_design.(designpoints(d1))
+            d1dir = one_point_design.(points(d1))
 
             @test_throws "one-point design" gateauxderivative(d1, [d1], dpi)
             @test all(isnan.(gateauxderivative(d0, dir, dpi)))

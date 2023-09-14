@@ -13,9 +13,13 @@ using Kirstine
         @test_throws "non-negative" DesignMeasure([[1], [2]], [-0.5, 1.5])
         @test_throws "sum to one" DesignMeasure([[1], [2]], [0.1, 0.2])
 
-        let d = DesignMeasure([[1], [42], [9]], [0.2, 0.3, 0.5])
+        let pts = [[1], [42], [9]], d = DesignMeasure(pts, [0.2, 0.3, 0.5])
             @test d.weight == [0.2, 0.3, 0.5]
-            @test d.designpoint == [[1], [42], [9]]
+            @test points(d) == pts
+            # When constructed from a vector of design points, memory should not be shared.
+            points(d)[1][1] = 0
+            @test pts[1][1] == 1
+            @test points(d)[1][1] == 0
         end
 
         # constructor from point => weight pairs
@@ -34,6 +38,12 @@ using Kirstine
 
             @test d == DesignMeasure(d_as_matrix)
             @test dirac == DesignMeasure(dirac_as_matrix)
+
+            # The constructed design measure should not share memory with the input.
+            d_from_mat = DesignMeasure(d_as_matrix)
+            points(d_from_mat)[1] .= 1
+            @test points(d_from_mat)[1] == [1, 1]
+            @test d_as_matrix[2:3, 1] == [7, 4]
         end
     end
 
@@ -62,17 +72,21 @@ using Kirstine
     @testset "random_design" begin
         let dr = DesignInterval(:a => (2, 4), :b => (-1, 3)), d = random_design(dr, 4)
             for k in 1:4
-                @test all(d.designpoint[k] .<= upperbound(dr))
-                @test all(d.designpoint[k] .>= lowerbound(dr))
+                @test all(points(d)[k] .<= upperbound(dr))
+                @test all(points(d)[k] .>= lowerbound(dr))
             end
         end
     end
 
-    @testset "designpoints" begin
-        # accessor should return a copy
+    @testset "points" begin
+        # accessor should return a reference
         let d = DesignMeasure([[1], [42], [9]], [0.2, 0.3, 0.5])
-            @test designpoints(d) == [[1], [42], [9]]
-            @test designpoints(d) !== d.designpoint
+            @test points(d) == [[1], [42], [9]]
+            # points() should return a reference, so we can modify d.
+            points(d)[1][1] = 0
+            @test points(d)[1] == [0]
+            points(d)[1] = [2]
+            @test points(d)[1] == [2]
         end
     end
 
@@ -122,6 +136,12 @@ using Kirstine
             # roundtrips
             @test d == DesignMeasure(as_matrix(d))
             @test m == as_matrix(DesignMeasure(m))
+            # The resulting matrix should not share memory with d.
+            dm = as_matrix(m_as_designmeasure)
+            dm[1, :] .= 0.25
+            dm[1, 2] = 42
+            @test weights(m_as_designmeasure) == [0.1, 0.2, 0.3, 0.4]
+            @test points(m_as_designmeasure)[1] == [1]
         end
     end
 
@@ -200,7 +220,7 @@ using Kirstine
             # check that a copy is returned
             @test sort_designpoints(refp) !== refp
             @test sort_designpoints(d; rev = true).weight == reverse(refp.weight)
-            @test sort_designpoints(d; rev = true).designpoint == reverse(refp.designpoint)
+            @test points(sort_designpoints(d; rev = true)) == reverse(points(refp))
         end
     end
 
@@ -212,7 +232,7 @@ using Kirstine
             # check that a copy is returned
             @test sort_weights(refw) !== refw
             @test sort_weights(d; rev = true).weight == reverse(refw.weight)
-            @test sort_weights(d; rev = true).designpoint == reverse(refw.designpoint)
+            @test points(sort_weights(d; rev = true)) == reverse(points(refw))
         end
     end
 end
