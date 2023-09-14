@@ -43,6 +43,10 @@ For user types `M <: NonlinearRegression`, `C <: Covariate`, and `P <: Parameter
 this should fill in the elements of the pre-allocated Jacobian matrix `jm`,
 and finally return `jm`.
 
+Note that you are free how you map the partial derivatives to the columns of `jm`.
+The only thing that is required is to use the same order in any [`DeltaMethod`](@ref)
+that you want to implement.
+
 See also the [mathematical background](math.md#Objective-Function).
 """
 function jacobianmatrix! end
