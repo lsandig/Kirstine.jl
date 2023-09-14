@@ -265,7 +265,7 @@ st1 = DirectMaximization(
 )
 
 Random.seed!(2468)
-s1, r1 = solve(dp1, st1; minpostime = 1e-3)
+s1, r1 = solve(dp1, st1; minpostime = 1e-3, minposdose = 1e-3)
 s1
 ```
 
@@ -505,9 +505,9 @@ st4a = DirectMaximization(
     prototype = random_design(dp4.dr, 5),
 )
 
-Random.seed!(11681)
+Random.seed!(112358)
 s4a, r4a = solve(dp4, st4a)
-gd4a = plot_gateauxderivative(s4a, dp4)
+gd4a = plot_gateauxderivative(s4a, dp4; legend = :bottomleft)
 savefig_nothing(gd4a, "dtr-gd4a.png") # hide
 ```
 

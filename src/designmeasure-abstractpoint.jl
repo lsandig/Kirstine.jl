@@ -134,9 +134,7 @@ end
 
 function ap_random_difference!(v::SignedMeasure)
     rand!(v.weight)
-    for a in eachcol(v.atoms)
-        rand!(a)
-    end
+    rand!(v.atoms)
     return v
 end
 
