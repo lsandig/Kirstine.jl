@@ -175,10 +175,14 @@ using Kirstine
     # sorting
     @testset "sort_designpoints" begin
         let d = DesignMeasure([[3, 4], [2, 1], [1, 1], [2, 3]], [0.4, 0.2, 0.3, 0.1]),
+            d_sorted = sort_designpoints(d),
             refp = DesignMeasure([[1, 1], [2, 1], [2, 3], [3, 4]], [0.3, 0.2, 0.1, 0.4])
 
-            @test sort_designpoints(d) == refp
+            @test d_sorted == refp
             # check that a copy is returned
+            points(d_sorted)[1][1] = 42
+            @test points(d_sorted)[1] == [42, 1]
+            @test points(d)[3] == [1, 1]
             @test sort_designpoints(refp) !== refp
             @test weights(sort_designpoints(d; rev = true)) == reverse(weights(refp))
             @test points(sort_designpoints(d; rev = true)) == reverse(points(refp))
