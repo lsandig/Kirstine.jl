@@ -74,12 +74,22 @@ include("example-compartment.jl")
             a6 = DesignMeasure([0.2288] => 1 / 3, [1.4170] => 1 / 3, [18.4513] => 1 / 3),
             a7 = DesignMeasure([0.2449] => 0.0129, [1.4950] => 0.0387, [18.4903] => 0.9484),
             dp6 = dp_for(g1, t_id),
-            dp7 = dp_for(g1, t_auc)
+            dp7 = dp_for(g1, t_auc),
+            # swap out criterion
+            dp6a = DesignProblem(;
+                design_region = dp6.dr,
+                model = dp6.m,
+                covariate_parameterization = dp6.cp,
+                design_criterion = AOptimality(),
+                prior_knowledge = dp6.pk,
+            )
 
             # Compare with published efficiencies in Table 5. Due to Monte-Carlo uncertainty
             # and rounding of the published values, this is not very exact.
             @test efficiency(a7, a6, dp6) ≈ 0.234 atol = 1e-2
             @test efficiency(a6, a7, dp7) ≈ 0.370 atol = 1e-2
+            # check that criterion is ignored
+            @test efficiency(a7, a6, dp6a) ≈ 0.234 atol = 1e-2
             # Check that singular designs are handled correctly both with Identity and with
             # DeltaMethod transformation.
             @test efficiency(a4, a6, dp1) == 0

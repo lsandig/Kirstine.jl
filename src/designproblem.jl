@@ -229,7 +229,7 @@ function efficiency(
     # Note that the design region is irrelevant for relative efficiency.
     dp1d = as_doptimality_problem(dp1)
     dp2d = as_doptimality_problem(dp2)
-    return exp((objective(d1, dp1) - objective(d2, dp2)) / t)
+    return exp((objective(d1, dp1d) - objective(d2, dp2d)) / t)
 end
 
 """
