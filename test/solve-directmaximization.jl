@@ -53,7 +53,7 @@ include("example-emax.jl")
             @test issorted(r1.or.trace_fx)
             @test issorted(r2.or.trace_fx)
             # fixed things
-            @test all(map(d -> all(d.weight .≈ 1 / 3), r2.or.trace_x))
+            @test all(map(d -> all(weights(d) .≈ 1 / 3), r2.or.trace_x))
             @test all(map(d -> points(d)[1][1], r2.or.trace_x) .== dp.dr.lowerbound[1])
             @test all(map(d -> points(d)[3][1], r2.or.trace_x) .== dp.dr.upperbound[1])
             # non-fixed design point converges to 2.5
@@ -86,7 +86,8 @@ include("example-emax.jl")
             r4 = sws(; fw = [5], fp = [5]),
             r5 = sws(; fw = [1, 5], fp = [5]),
             isconstw(r, k) = all([
-                all(map(d -> d.weight[k] == weights(pt)[k], s.x)) for s in r.or.trace_state
+                all(map(d -> weights(d)[k] == weights(pt)[k], s.x)) for
+                s in r.or.trace_state
             ]),
             isconstp(r, k) = all([
                 all(map(d -> points(d)[k] == points(pt)[k], s.x)) for s in r.or.trace_state

@@ -19,7 +19,7 @@ See also [`weights`](@ref), [`points`](@ref), [`as_matrix`](@ref),
 """
 struct DesignMeasure <: AbstractPoint
     points::Matrix{Float64}
-    weight::Vector{Float64}
+    weights::Vector{Float64}
     @doc """
         DesignMeasure(
             points::AbstractMatrix{<:Real},
@@ -237,11 +237,11 @@ points(d::DesignMeasure) = eachcol(d.points)
 """
     weights(d::DesignMeasure)
 
-Return a copy of the weights.
+Return a reference to the weights of the design measure.
 
 See also [`points`](@ref).
 """
-weights(d::DesignMeasure) = copy(d.weight)
+weights(d::DesignMeasure) = d.weights
 
 """
     as_matrix(d::DesignMeasure)
@@ -321,7 +321,7 @@ DesignMeasure(
 function sort_designpoints(d::DesignMeasure; rev::Bool = false)
     # note: no (deep)copies needed because indexing with `p` generates a copy
     dp = points(d)
-    w = d.weight
+    w = weights(d)
     for i in length(dp[1]):-1:1
         p = sortperm(map(x -> x[i], dp); rev = rev)
         dp = dp[p]
@@ -350,8 +350,8 @@ DesignMeasure(
 ```
 """
 function sort_weights(d::DesignMeasure; rev::Bool = false)
-    p = sortperm(d.weight; rev = rev)
-    w = d.weight[p]
+    p = sortperm(weights(d); rev = rev)
+    w = weights(d)[p]
     dp = points(d)[p]
     return DesignMeasure(dp, w)
 end
@@ -424,12 +424,12 @@ Construct a new `DesignMeasure` where only design points with weights strictly l
 The vector of remaining weights is re-normalized.
 """
 function simplify_drop(d::DesignMeasure, minweight::Real)
-    if length(d.weight) == 1 # nothing to do for one-point-designs
+    if length(weights(d)) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
-    enough_weight = d.weight .> minweight
+    enough_weight = weights(d) .> minweight
     dps = points(d)[enough_weight]
-    ws = d.weight[enough_weight]
+    ws = weights(d)[enough_weight]
     ws ./= sum(ws)
     return DesignMeasure(dps, ws)
 end
@@ -494,7 +494,7 @@ The following two steps are repeated until all points are more than `mindist` ap
 Finally the design points are scaled back into the original design interval.
 """
 function simplify_merge(d::DesignMeasure, dr::DesignInterval, mindist::Real)
-    if length(d.weight) == 1 # nothing to do for one-point-designs
+    if length(weights(d)) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
     # scale design interval into unit cube

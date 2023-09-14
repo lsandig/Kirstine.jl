@@ -155,7 +155,7 @@ function gateauxderivative(
     directions::AbstractArray{DesignMeasure},
     dp::DesignProblem,
 )
-    if any(d -> length(d.weight) != 1, directions)
+    if any(d -> length(weights(d)) != 1, directions)
         error("Gateaux derivatives are only implemented for one-point design directions")
     end
     tc = precalculate_trafo_constants(dp.trafo, dp.pk)

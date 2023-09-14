@@ -92,7 +92,7 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
         or_gd = optimize(od, gd, dir_prot, constraints; trace_state = trace_state)
         d = or_gd.maximizer
         # append the new atom
-        K = length(res.weight)
+        K = length(weights(res))
         if points(d)[1] in points(simplify_drop(res, 0))
             # effectivly run the reweighting from the last round for some more iterations
             res = mixture(0, d, res) # make sure new point is at index 1

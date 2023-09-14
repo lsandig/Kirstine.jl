@@ -8,7 +8,7 @@
 # arbitrary real numbers.
 struct SignedMeasure <: AbstractPointDifference
     atoms::Matrix{Float64}
-    weight::Vector{Float64}
+    weights::Vector{Float64}
     function SignedMeasure(atoms, weights)
         if length(weights) != size(atoms, 2)
             error("number of weights and atoms must be equal")
@@ -77,7 +77,7 @@ function ap_random_point!(
     d::DesignMeasure,
     c::DesignConstraints{N,DesignInterval{N}},
 ) where N
-    K = length(d.weight)
+    K = length(weights(d))
     scl = c.dr.upperbound .- c.dr.lowerbound
     pts = points(d)
     for k in 1:K
@@ -90,7 +90,7 @@ function ap_random_point!(
     if !all(c.fixw)
         # Due to rounding errors, a sum > 1.0 can happen.
         # We need to prevent negative normalizing constants later on.
-        cum_sum_fix = min(1.0, sum(d.weight[c.fixw]))
+        cum_sum_fix = min(1.0, sum(weights(d)[c.fixw]))
         if cum_sum_fix == 1.0
             @warn "fixed weights already sum to one"
         end
@@ -100,15 +100,15 @@ function ap_random_point!(
         while cum_sum_rand < eps() # we don't want to divide by too small numbers
             for k in 1:K
                 if !c.fixw[k]
-                    d.weight[k] = -log(rand())
-                    cum_sum_rand += d.weight[k]
+                    d.weights[k] = -log(rand())
+                    cum_sum_rand += d.weights[k]
                 end
             end
         end
         norm_const = (1 - cum_sum_fix) / cum_sum_rand
         for k in 1:K
             if !c.fixw[k]
-                d.weight[k] *= norm_const
+                d.weights[k] *= norm_const
             end
         end
     end
@@ -116,42 +116,42 @@ function ap_random_point!(
 end
 
 function ap_difference!(v::SignedMeasure, p::DesignMeasure, q::DesignMeasure)
-    K = length(p.weight)
-    v.weight .= p.weight .- q.weight
+    K = length(p.weights)
+    v.weights .= p.weights .- q.weights
     v.atoms .= p.points .- q.points
     return v
 end
 
 function ap_copy!(to::DesignMeasure, from::DesignMeasure)
-    to.weight .= from.weight
+    to.weights .= from.weights
     to.points .= from.points
     return to
 end
 
 function ap_as_difference(p::DesignMeasure)
-    return SignedMeasure(deepcopy(p.points), deepcopy(p.weight))
+    return SignedMeasure(deepcopy(p.points), deepcopy(p.weights))
 end
 
 function ap_random_difference!(v::SignedMeasure)
-    rand!(v.weight)
+    rand!(v.weights)
     rand!(v.atoms)
     return v
 end
 
 function ap_mul_hadamard!(v1::SignedMeasure, v2::SignedMeasure)
-    v1.weight .*= v2.weight
+    v1.weights .*= v2.weights
     v1.atoms .*= v2.atoms
     return v1
 end
 
 function ap_mul_scalar!(v::SignedMeasure, a::Real)
-    v.weight .*= a
+    v.weights .*= a
     v.atoms .*= a
     return v
 end
 
 function ap_add!(v1::SignedMeasure, v2::SignedMeasure)
-    v1.weight .+= v2.weight
+    v1.weights .+= v2.weights
     v1.atoms .+= v2.atoms
     return v1
 end
@@ -174,13 +174,13 @@ function ap_move!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
 end
 
 function move_handle_fixed!(v::SignedMeasure, fixw, fixp)
-    K = length(v.weight)
+    K = length(v.weights)
     sum_vw_free = 0.0
     for k in 1:(K - 1)
         if fixw[k]
-            v.weight[k] = 0.0
+            v.weights[k] = 0.0
         else
-            sum_vw_free += v.weight[k]
+            sum_vw_free += v.weights[k]
         end
     end
     # We treat the final weight as implicitly determined by the first (K-1) ones. When it is
@@ -193,16 +193,16 @@ function move_handle_fixed!(v::SignedMeasure, fixw, fixp)
     # careful. We must make sure to only move parallel to the simplex diagonal face, i.e.
     # that
     #
-    #   sum(v.weight[.! fixw]) == 0.
+    #   sum(v.weights[.! fixw]) == 0.
     #
     # In oder not to prefer one direction over the others, we subtract the mean
-    # from every non-fixed element of v.weight.
+    # from every non-fixed element of v.weights.
     n_fixw = count(fixw)
     if n_fixw != K && fixw[K]
         mean_free = sum_vw_free / (K - n_fixw)
         for k in 1:(K - 1)
             if !fixw[k]
-                v.weight[k] -= mean_free
+                v.weights[k] -= mean_free
             end
         end
     end
@@ -226,10 +226,10 @@ function move_how_far(p::DesignMeasure, v::SignedMeasure, dr::DesignInterval{N})
     end
     # simplex constraints
     for k in 1:(K - 1) # ingore implicit last weight
-        t = how_far_left(p.weight[k], t, v.weight[k], 0.0)
+        t = how_far_left(p.weights[k], t, v.weights[k], 0.0)
     end
-    sum_x = 1.0 - p.weight[K]
-    sum_v = @views sum(v.weight[1:(K - 1)])
+    sum_x = 1.0 - p.weights[K]
+    sum_v = @views sum(v.weights[1:(K - 1)])
     t = how_far_simplexdiag(sum_x, t, sum_v)
     return t
 end
@@ -268,24 +268,24 @@ function move_add_v!(
     # interval. We fix this here.
     p.points .= min.(max.(p.points, dr.lowerbound), dr.upperbound)
     # ... then for the weights.
-    p.weight .+= t .* v.weight
+    p.weights .+= t .* v.weights
     weight_K = 1.0
     for k in 1:(K - 1)
         # Again due to rounding erros, a weight can become slightly negative. We need to fix
         # this to prevent it snowballing later on.
-        p.weight[k] = min(max(p.weight[k], 0.0), 1.0)
-        weight_K -= p.weight[k]
+        p.weights[k] = min(max(p.weights[k], 0.0), 1.0)
+        weight_K -= p.weights[k]
     end
     # In `handle_fixed()` we made sure that mathematically we have
     #
     #   weight_K == 1 - sum(weight[1:(K-1)]),
     #
     # but due to rounding errors this is not the case numerically. Hence we
-    # just don't touch p.weight[K] that case.
+    # just don't touch p.weights[K] that case.
     if !fixw[K]
-        p.weight[K] = weight_K
+        p.weights[K] = weight_K
     end
     # Fix small rounding erros as above.
-    p.weight[K] = max(p.weight[K], 0.0)
+    p.weights[K] = max(p.weights[K], 0.0)
     return p
 end

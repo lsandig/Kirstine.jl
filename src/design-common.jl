@@ -16,7 +16,7 @@ struct WorkMatrices
 end
 
 function allocate_initialize_covariates(d, m, cp)
-    K = length(d.weight)
+    K = length(weights(d))
     cs = [allocate_covariate(m) for _ in 1:K]
     for k in 1:K
         update_model_covariate!(cs[k], points(d)[k], m, cp)
@@ -47,7 +47,7 @@ function objective!(
     try
         acc = 0
         for i in 1:length(pk.p)
-            informationmatrix!(wm.r_x_r, wm.m_x_r, d.weight, m, invcov(m), c, pk.p[i], na)
+            informationmatrix!(wm.r_x_r, wm.m_x_r, weights(d), m, invcov(m), c, pk.p[i], na)
             _, is_inv = apply_transformation!(wm, false, tc, i)
             acc += pk.weight[i] * criterion_integrand!(wm.t_x_t, is_inv, dc)
         end
@@ -75,7 +75,7 @@ function gateauxderivative!(
     acc = 0
     ic = invcov(m)
     for i in 1:length(pk.p)
-        informationmatrix!(wm.r_x_r, wm.m_x_r, direction.weight, m, ic, c, pk.p[i], na)
+        informationmatrix!(wm.r_x_r, wm.m_x_r, weights(direction), m, ic, c, pk.p[i], na)
         acc += pk.weight[i] * gateaux_integrand(gconst, wm.r_x_r, i)
     end
     return acc
@@ -136,7 +136,7 @@ function informationmatrix(
     mm = unit_length(m)
     jm = zeros(mm, r)
     nim = zeros(r, r)
-    informationmatrix!(nim, jm, d.weight, m, invcov(m), c, p, na)
+    informationmatrix!(nim, jm, weights(d), m, invcov(m), c, p, na)
     return Symmetric(nim)
 end
 
@@ -157,7 +157,7 @@ function inverse_information_matrices(
     # input, and does _not_ call `potrf!` itself.
     # See also https://netlib.org/lapack/explore-html/d1/d7a/group__double_p_ocomputational_ga9dfc04beae56a3b1c1f75eebc838c14c.html
     inv_nims = map(pk.p) do p
-        informationmatrix!(wm.r_x_r, wm.m_x_r, d.weight, m, ic, c, p, na)
+        informationmatrix!(wm.r_x_r, wm.m_x_r, weights(d), m, ic, c, p, na)
         potrf!('U', wm.r_x_r)
         potri!('U', wm.r_x_r)
         return deepcopy(wm.r_x_r)

@@ -11,7 +11,7 @@ using Kirstine
         @test_throws "must be equal" Kirstine.SignedMeasure([1 2], [0])
 
         let s = Kirstine.SignedMeasure([1 2 5; 4 3 6], [1, -2, 0.5])
-            @test s.weight == [1, -2, 0.5]
+            @test s.weights == [1, -2, 0.5]
             @test s.atoms == [1 2 5; 4 3 6]
         end
     end
@@ -98,13 +98,13 @@ using Kirstine
             @test Kirstine.check_compatible(r3, dr)
 
             # check that fixed weight/point constraints are honored
-            @test r1.weight[2] == d.weight[2]
-            @test all(r1.weight[[1, 3]] .!= d.weight[[1, 3]])
+            @test weights(r1)[2] == weights(d)[2]
+            @test all(weights(r1)[[1, 3]] .!= weights(d)[[1, 3]])
             @test points(r2)[2] == points(d)[2]
             @test all(points(r2)[[1, 3]] .!= points(d)[[1, 3]])
-            @test r3.weight[3] == d.weight[3]
+            @test weights(r3)[3] == weights(d)[3]
             @test points(r3)[3] == points(d)[3]
-            @test all(r3.weight[1:2] .!= d.weight[1:2])
+            @test all(weights(r3)[1:2] .!= weights(d)[1:2])
             @test all(points(r3)[1:2] .!= points(d)[1:2])
 
             @test_logs(
@@ -122,7 +122,7 @@ using Kirstine
             s = Kirstine.SignedMeasure([0 0 0], zeros(3)),
             r = Kirstine.ap_difference!(s, d1, d2)
 
-            @test s.weight == [1 / 3, 0, -1 / 3]
+            @test s.weights == [1 / 3, 0, -1 / 3]
             @test s.atoms == [-5 -3 -1]
             # check against accidental modification
             @test d1 == ref1
@@ -151,12 +151,10 @@ using Kirstine
 
     @testset "ap_as_difference" begin
         let d = uniform_design([[0], [1], [2]]), s = Kirstine.ap_as_difference(d)
-
-            # Note: dont use allocating weights()/points() accessors
-            @test d.weight == s.weight
+            @test d.weights == s.weights
             @test d.points == s.atoms
             # check that they don't share memory
-            @test d.weight !== s.weight
+            @test d.weights !== s.weights
             @test d.points !== s.atoms
         end
     end
@@ -166,8 +164,8 @@ using Kirstine
             _ = Random.seed!(7531),
             r = Kirstine.ap_random_difference!(s)
 
-            @test all(s.weight .<= 1)
-            @test all(s.weight .>= 0)
+            @test all(s.weights .<= 1)
+            @test all(s.weights .>= 0)
             @test all(dp -> dp[1] < 1, eachcol(s.atoms))
             @test all(dp -> dp[1] > 0, eachcol(s.atoms))
             # check that first argument is returned
@@ -181,10 +179,10 @@ using Kirstine
             ref = deepcopy(s2),
             r = Kirstine.ap_mul_hadamard!(s1, s2)
 
-            @test s1.weight == [1e-3, 2e-4, 3e-5]
+            @test s1.weights == [1e-3, 2e-4, 3e-5]
             @test s1.atoms == [4 50 600]
             # check for no accidental modification
-            @test s2.weight == ref.weight
+            @test s2.weights == ref.weights
             @test s2.atoms == ref.atoms
             # check that first argument is returned
             @test r === s1
@@ -195,7 +193,7 @@ using Kirstine
         let s = Kirstine.SignedMeasure([4 5 6], [0.1, 0.2, 0.3]),
             r = Kirstine.ap_mul_scalar!(s, 42)
 
-            @test s.weight == [4.2, 8.4, 12.6]
+            @test s.weights == [4.2, 8.4, 12.6]
             @test s.atoms == [168 210 252]
             # check that first argument is returned
             @test r === s
@@ -208,10 +206,10 @@ using Kirstine
             ref = deepcopy(s2),
             r = Kirstine.ap_add!(s1, s2)
 
-            @test s1.weight == [0, 0, 0]
+            @test s1.weights == [0, 0, 0]
             @test s1.atoms == [10 10 10]
             # check for no accidental modification
-            @test s2.weight == ref.weight
+            @test s2.weights == ref.weights
             @test s2.atoms == ref.atoms
             # check that first argument is returned
             @test r === s1
@@ -237,9 +235,9 @@ using Kirstine
             @test d1 == DesignMeasure([[0.6], [0.7], [0.8]], [3 / 8, 1 / 8, 1 / 2])
             @test d2 == DesignMeasure([[0], [1], [0.8]], [3 / 4, 1 / 4, 0])
             # test that velocity is unchanged or 0
-            @test v1.weight == v1_copy.weight
+            @test v1.weights == v1_copy.weights
             @test v1.atoms == v1_copy.atoms
-            @test v2.weight == [0, 0, 0]
+            @test v2.weights == [0, 0, 0]
             @test v2.atoms == [0 0 0]
             # test that d is modified and returned
             @test r1 === d1
@@ -257,11 +255,11 @@ using Kirstine
             # special case: last weight fixed
             r3 = mhv!(deepcopy(v), [false, false, true], fill(false, 3))
 
-            @test r1.weight == [0, 3 / 8, 1 / 32]
+            @test r1.weights == [0, 3 / 8, 1 / 32]
             @test r1.atoms == [0.25 0.25 0.25]
-            @test r2.weight == [1 / 8, 3 / 8, 1 / 32]
+            @test r2.weights == [1 / 8, 3 / 8, 1 / 32]
             @test r2.atoms == [0 0.25 0.25]
-            @test r3.weight == [-1 / 8, 1 / 8, 1 / 32]
+            @test r3.weights == [-1 / 8, 1 / 8, 1 / 32]
             @test r3.atoms == [0.25 0.25 0.25]
         end
     end

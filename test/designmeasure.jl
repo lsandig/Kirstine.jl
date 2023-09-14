@@ -14,7 +14,7 @@ using Kirstine
         @test_throws "sum to one" DesignMeasure([[1], [2]], [0.1, 0.2])
 
         let pts = [[1], [42], [9]], d = DesignMeasure(pts, [0.2, 0.3, 0.5])
-            @test d.weight == [0.2, 0.3, 0.5]
+            @test weights(d) == [0.2, 0.3, 0.5]
             @test points(d) == pts
             # When constructed from a vector of design points, memory should not be shared.
             points(d)[1][1] = 0
@@ -91,10 +91,10 @@ using Kirstine
     end
 
     @testset "weights" begin
-        # accessor should return a copy
+        # accessor should return a reference
         let d = DesignMeasure([[1], [42], [9]], [0.2, 0.3, 0.5])
             @test weights(d) == [0.2, 0.3, 0.5]
-            @test weights(d) !== d.weight
+            @test weights(d) === d.weights
         end
     end
 
@@ -219,7 +219,7 @@ using Kirstine
             @test sort_designpoints(d) == refp
             # check that a copy is returned
             @test sort_designpoints(refp) !== refp
-            @test sort_designpoints(d; rev = true).weight == reverse(refp.weight)
+            @test weights(sort_designpoints(d; rev = true)) == reverse(weights(refp))
             @test points(sort_designpoints(d; rev = true)) == reverse(points(refp))
         end
     end
@@ -231,7 +231,7 @@ using Kirstine
             @test sort_weights(d) == refw
             # check that a copy is returned
             @test sort_weights(refw) !== refw
-            @test sort_weights(d; rev = true).weight == reverse(refw.weight)
+            @test weights(sort_weights(d; rev = true)) == reverse(weights(refw))
             @test points(sort_weights(d; rev = true)) == reverse(points(refw))
         end
     end
