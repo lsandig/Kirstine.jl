@@ -29,7 +29,7 @@ include("example-compartment.jl")
             # design points should be sorted...
             @test issorted(reduce(vcat, points(d)))
             # ... and simplified
-            @test length(points(d)) == 3
+            @test numpoints(d) == 3
             # states should be traced (initial + 20 iterations)
             @test length(r.or.trace_state) == 21
 

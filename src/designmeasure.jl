@@ -191,7 +191,7 @@ end
 
 Return an iterator over the design points of `d`.
 
-See also [`weights`](@ref).
+See also [`weights`](@ref), [`numpoints`](@ref).
 """
 points(d::DesignMeasure) = eachcol(d.points)
 
@@ -200,9 +200,18 @@ points(d::DesignMeasure) = eachcol(d.points)
 
 Return a reference to the weights of the design measure.
 
-See also [`points`](@ref).
+See also [`points`](@ref), [`numpoints`](@ref).
 """
 weights(d::DesignMeasure) = d.weights
+
+"""
+    numpoints(d::DesignMeasure)
+
+Return the number of design points of `d`.
+
+See also [`points`](@ref), [`weights`](@ref).
+"""
+numpoints(d::DesignMeasure) = size(d.points, 2)
 
 ## utility operations ##
 
@@ -358,7 +367,7 @@ Construct a new `DesignMeasure` where only design points with weights strictly l
 The vector of remaining weights is re-normalized.
 """
 function simplify_drop(d::DesignMeasure, minweight::Real)
-    if length(weights(d)) == 1 # nothing to do for one-point-designs
+    if numpoints(d) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
     enough_weight = weights(d) .> minweight
@@ -428,7 +437,7 @@ The following two steps are repeated until all points are more than `mindist` ap
 Finally the design points are scaled back into the original design interval.
 """
 function simplify_merge(d::DesignMeasure, dr::DesignInterval, mindist::Real)
-    if length(weights(d)) == 1 # nothing to do for one-point-designs
+    if numpoints(d) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
     # scale design interval into unit cube

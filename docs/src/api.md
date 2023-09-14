@@ -140,6 +140,7 @@ equidistant_design
 random_design
 points
 weights
+numpoints
 sort_designpoints
 sort_weights
 mixture

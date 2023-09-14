@@ -53,7 +53,7 @@ end
     # in a recipe: https://github.com/JuliaPlots/Plots.jl/issues/1167
     pt = reduce(hcat, points(d))
     w = weights(d)
-    for k in 1:length(w)
+    for k in 1:numpoints(d)
         @series begin
             seriestype := :scatter
             markercolor --> k
@@ -217,7 +217,7 @@ end
     label_formatter = (k, dp, w) -> "$(round(100 * w; sigdigits=3))%",
 )
     (; f, g, h, x, d, m, cp, pk) = efplot
-    K = length(weights(d))
+    K = numpoints(d)
     # graphs
     fx = zeros(length(x), K)
     c = Kirstine.allocate_initialize_covariates(d, m, cp)

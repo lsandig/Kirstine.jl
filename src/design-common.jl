@@ -16,7 +16,7 @@ struct WorkMatrices
 end
 
 function allocate_initialize_covariates(d, m, cp)
-    K = length(weights(d))
+    K = numpoints(d)
     cs = [allocate_covariate(m) for _ in 1:K]
     for k in 1:K
         update_model_covariate!(cs[k], points(d)[k], m, cp)

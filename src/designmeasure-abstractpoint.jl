@@ -36,7 +36,7 @@ function DesignConstraints(
     fixedpoints::AbstractVector{<:Integer},
 )
     check_compatible(d, dr)
-    K = length(weights(d))
+    K = numpoints(d)
     if any(fixedweights .< 1) || any(fixedweights .> K)
         error("indices for fixed weights must be between 1 and $K")
     end
@@ -77,7 +77,7 @@ function ap_random_point!(
     d::DesignMeasure,
     c::DesignConstraints{N,DesignInterval{N}},
 ) where N
-    K = length(weights(d))
+    K = numpoints(d)
     scl = c.dr.upperbound .- c.dr.lowerbound
     pts = points(d)
     for k in 1:K
@@ -116,7 +116,6 @@ function ap_random_point!(
 end
 
 function ap_difference!(v::SignedMeasure, p::DesignMeasure, q::DesignMeasure)
-    K = length(p.weights)
     v.weights .= p.weights .- q.weights
     v.atoms .= p.points .- q.points
     return v
@@ -157,7 +156,6 @@ function ap_add!(v1::SignedMeasure, v2::SignedMeasure)
 end
 
 function ap_move!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
-    K = length(points(p)) # number of design points
     # ignore velocity components in directions that correspond to fixed weights or points
     move_handle_fixed!(v, c.fixw, c.fixp)
     # handle intersections: find maximal 0<=t<=1 such that p+tv remains in the search volume
@@ -216,7 +214,7 @@ end
 
 function move_how_far(p::DesignMeasure, v::SignedMeasure, dr::DesignInterval{N}) where N
     t = 1.0
-    K = length(points(p))
+    K = numpoints(p)
     # box constraints
     for k in 1:K
         for j in 1:N
@@ -261,7 +259,7 @@ function move_add_v!(
     dr::DesignInterval{N},
     fixw,
 ) where N
-    K = length(points(p))
+    K = numpoints(p)
     # first for the design points ...
     p.points .+= t .* v.atoms
     # Due to rounding errors, design points can be just slightly outside the design

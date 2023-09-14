@@ -169,7 +169,7 @@ include("example-emax.jl")
             cp = CopyDose(),
             c = Kirstine.allocate_initialize_covariates(d, m, cp)
 
-            @test length(c) == length(points(d))
+            @test length(c) == numpoints(d)
             @test c[1].dose == points(d)[1][1]
             @test c[2].dose == points(d)[2][1]
             @test c[3].dose == points(d)[3][1]
