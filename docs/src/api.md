@@ -40,6 +40,7 @@ AOptimality
 objective
 gateauxderivative
 efficiency
+shannon_information
 ```
 
 ## Design Regions

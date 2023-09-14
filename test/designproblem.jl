@@ -96,5 +96,39 @@ include("example-compartment.jl")
             @test_throws DimensionMismatch efficiency(a7, a6, dp1, dp2)
         end
     end
+
+    @testset "shannon_information" begin
+        # Atkinson et al. locally optimal example
+        let dp = DesignProblem(;
+                design_region = DesignInterval(:time => [0, 48]),
+                model = TPCMod(1),
+                covariate_parameterization = CopyTime(),
+                design_criterion = DOptimality(),
+                normal_approximation = FisherMatrix(),
+                prior_knowledge = PriorSample([
+                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                ]),
+                transformation = Identity(),
+            ),
+            dpa = DesignProblem(;
+                design_region = dp.dr,
+                model = dp.m,
+                covariate_parameterization = dp.cp,
+                design_criterion = AOptimality(),
+                prior_knowledge = dp.pk,
+            ),
+            d1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
+            c = 3 / 2 * (log(2 * pi) - 1),
+            half_ob = 0.5 * 7.3887,
+            si = shannon_information
+
+            # published objective value is rounded to four places
+            @test si(d1, dp, 1) ≈ c + half_ob atol = 5e-5
+            @test si(d1, dp, 42) ≈ 3 / 2 * log(42) + c + half_ob atol = 5e-5
+            @test si(d1, dp, 250) ≈ 3 / 2 * log(250) + c + half_ob atol = 5e-5
+            # the criterion of the problem should be ignored
+            @test si(d1, dpa, 1) ≈ c + half_ob atol = 5e-5
+        end
+    end
 end
 end

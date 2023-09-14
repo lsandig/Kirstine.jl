@@ -314,7 +314,7 @@ For ``\Transformation(\Parameter) = \Parameter`` this simplifies to
 .
 ```
 
-## Efficiency
+## Shannon Information
 
 The _approximate expected posterior Shannon information_ for an experiment with the design measure ``\DesignMeasure``
 and a sample size of ``\SampleSize`` is
@@ -327,6 +327,8 @@ and a sample size of ``\SampleSize`` is
 }{\PriorDensity(\Parameter)}{\Parameter}
 .
 ```
+
+## Efficiency
 
 Consider two experiments with design measures ``\DesignMeasure_1`` and ``\DesignMeasure_2``,
 and samples sizes ``\SampleSize^{(1)}`` and ``\SampleSize^{(2)}``.
