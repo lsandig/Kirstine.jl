@@ -244,15 +244,10 @@ The [`solve`](@ref) function returns two objects:
   - `r1`: a [`DirectMaximizationResult`](@ref)
     that contains additional information about the optimization run.
 
-We can display the solution as `designpoint => weight` pairs,
-or as a matrix with the weights in the first row.
+At the REPL, the solution is displayed as `designpoint => weight` pairs.
 
 ```@example main
 s1
-```
-
-```@example main
-as_matrix(s1)
 ```
 
 Looking closely at `s1`,

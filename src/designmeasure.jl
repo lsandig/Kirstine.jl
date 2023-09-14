@@ -14,8 +14,7 @@ In Julia, a design point is simply a `Vector{Float64}`.
 Special kinds of design measures can be constructed with [`one_point_design`](@ref),
 [`uniform_design`](@ref), [`equidistant_design`](@ref), [`random_design`](@ref).
 
-See also [`weights`](@ref), [`points`](@ref), [`as_matrix`](@ref),
-[`apportion`](@ref).
+See also [`weights`](@ref), [`points`](@ref), [`apportion`](@ref).
 """
 struct DesignMeasure <: AbstractPoint
     points::Matrix{Float64}
@@ -93,44 +92,6 @@ DesignMeasure(
 function DesignMeasure(dp_w::Pair...)
     ws = [w for (_, w) in dp_w]
     dps = [dp for (dp, _) in dp_w]
-    return DesignMeasure(dps, ws)
-end
-
-"""
-    DesignMeasure(m::AbstractMatrix{<:Real})
-
-Construct a [`DesignMeasure`](@ref) from its matrix representation.
-
-An `(N+1, K)` matrix `m` represents a `DesignMeasure` with `K` design points from an
-`N`-dimensional design region. The first row of `m` must contain the weights.
-
-The result does not share memory with `m`.
-
-See also [`as_matrix`](@ref).
-
-# Examples
-
-```jldoctest
-julia> m = [0.5 0.2 0.3; 7.0 8.0 9.0; 4.0 5.0 6.0]
-3×3 Matrix{Float64}:
- 0.5  0.2  0.3
- 7.0  8.0  9.0
- 4.0  5.0  6.0
-
-julia> DesignMeasure(m)
-DesignMeasure(
- [7.0, 4.0] => 0.5,
- [8.0, 5.0] => 0.2,
- [9.0, 6.0] => 0.3,
-)
-```
-"""
-function DesignMeasure(m::AbstractMatrix{<:Real})
-    if size(m, 1) < 2
-        throw(ArgumentError("m must have at least two rows"))
-    end
-    ws = m[1, :]
-    dps = [m[2:end, k] for k in 1:size(m, 2)]
     return DesignMeasure(dps, ws)
 end
 
@@ -242,33 +203,6 @@ Return a reference to the weights of the design measure.
 See also [`points`](@ref).
 """
 weights(d::DesignMeasure) = d.weights
-
-"""
-    as_matrix(d::DesignMeasure)
-
-Return a matrix representation of `d`.
-
-A [`DesignMeasure`](@ref) with `K` design points from an `N`-dimensional
-design region corresponds to a `(N+1, K)` matrix.
-The first row contains the weights.
-
-The result does not share memory with `d`.
-
-See also [`DesignMeasure`](@ref).
-
-# Examples
-
-```jldoctest
-julia> as_matrix(DesignMeasure([[7, 4], [8, 5], [9, 6]], [0.5, 0.2, 0.3]))
-3×3 Matrix{Float64}:
- 0.5  0.2  0.3
- 7.0  8.0  9.0
- 4.0  5.0  6.0
-```
-"""
-function as_matrix(d::DesignMeasure)
-    return vcat(transpose(weights(d)), d.points)
-end
 
 ## utility operations ##
 

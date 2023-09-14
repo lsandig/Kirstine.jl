@@ -28,23 +28,6 @@ using Kirstine
 
             @test d == ref
         end
-
-        # constructor from matrix
-        @test_throws "at least two rows" DesignMeasure([1 2 3])
-        let d = DesignMeasure([[7, 4], [8, 5], [9, 6]], [0.5, 0.2, 0.3]),
-            d_as_matrix = [0.5 0.2 0.3; 7 8 9; 4 5 6],
-            dirac = one_point_design([2, 3]),
-            dirac_as_matrix = reshape([1, 2, 3], :, 1)
-
-            @test d == DesignMeasure(d_as_matrix)
-            @test dirac == DesignMeasure(dirac_as_matrix)
-
-            # The constructed design measure should not share memory with the input.
-            d_from_mat = DesignMeasure(d_as_matrix)
-            points(d_from_mat)[1] .= 1
-            @test points(d_from_mat)[1] == [1, 1]
-            @test d_as_matrix[2:3, 1] == [7, 4]
-        end
     end
 
     @testset "one_point_design" begin
@@ -120,28 +103,6 @@ using Kirstine
 
             @test d1 != d2
             @test d1 == sort_designpoints(d2)
-        end
-    end
-
-    @testset "as_matrix" begin
-        let d = DesignMeasure([[7, 4], [8, 5], [9, 6]], [0.5, 0.2, 0.3]),
-            d_as_matrix = [0.5 0.2 0.3; 7 8 9; 4 5 6],
-            m = [0.1 0.2 0.3 0.4; 1 2 3 4],
-            m_as_designmeasure = DesignMeasure([[1], [2], [3], [4]], [0.1, 0.2, 0.3, 0.4]),
-            dirac = one_point_design([2, 3]),
-            dirac_as_matrix = reshape([1, 2, 3], :, 1)
-
-            @test m == as_matrix(m_as_designmeasure)
-            @test dirac_as_matrix == as_matrix(dirac)
-            # roundtrips
-            @test d == DesignMeasure(as_matrix(d))
-            @test m == as_matrix(DesignMeasure(m))
-            # The resulting matrix should not share memory with d.
-            dm = as_matrix(m_as_designmeasure)
-            dm[1, :] .= 0.25
-            dm[1, 2] = 42
-            @test weights(m_as_designmeasure) == [0.1, 0.2, 0.3, 0.4]
-            @test points(m_as_designmeasure)[1] == [1]
         end
     end
 

@@ -51,14 +51,15 @@ end
     markersize --> permutedims(max.(2, sqrt.(100 .* weights(d))))
     # scatter each design point explicitly in its own series because grouping can't be used
     # in a recipe: https://github.com/JuliaPlots/Plots.jl/issues/1167
-    mat = as_matrix(d)
-    for k in 1:size(mat, 2)
+    pt = reduce(hcat, points(d))
+    w = weights(d)
+    for k in 1:length(w)
         @series begin
             seriestype := :scatter
             markercolor --> k
-            label --> (label_formatter(k, mat[2:end, k], mat[1, k]))
-            y = (N == 1) ? 0 : mat[3, k]
-            [mat[2, k]], [y]
+            label --> (label_formatter(k, pt[:, k], w[k]))
+            y = (N == 1) ? 0 : pt[2, k]
+            [pt[1, k]], [y]
         end
     end
 end

@@ -134,8 +134,6 @@ Base.:(==)(::DesignMeasure, ::DesignMeasure)
 DesignMeasure(::AbstractMatrix{<:Real}, ::AbstractVector{<:Real})
 DesignMeasure(::AbstractVector{<:AbstractVector{<:Real}}, ::AbstractVector{<:Real})
 DesignMeasure(::Pair...)
-DesignMeasure(::AbstractMatrix{<:Real})
-as_matrix
 one_point_design
 uniform_design
 equidistant_design
