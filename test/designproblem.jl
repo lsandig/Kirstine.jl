@@ -45,6 +45,13 @@ include("example-compartment.jl")
                 ),
                 solve(dp, str, minposdist = 1e-2)
             )
+
+            # Warn on too strong simplification. An example with finite objective afterwards
+            # would be nicer, but is difficult to construct with this model and prior.
+            @test_logs(
+                (:warn, "simplification may have been too eager"),
+                solve(dp, str; mindist = 5)
+            )
         end
     end
     @testset "efficiency" begin

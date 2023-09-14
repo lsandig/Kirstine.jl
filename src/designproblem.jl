@@ -105,6 +105,13 @@ function solve(
 )
     or = solve_with(dp, strategy, trace_state)
     dopt = sort_designpoints(simplify(maximizer(or), dp; sargs...))
+    # check that we did not accidentally simplify too much
+    o_before = objective(maximizer(or), dp)
+    o_after = objective(dopt, dp)
+    rel_diff = (o_after - o_before) / abs(o_before)
+    if rel_diff < -0.01
+        @warn "simplification may have been too eager" o_before o_after rel_diff
+    end
     return dopt, or
 end
 
