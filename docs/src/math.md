@@ -176,6 +176,7 @@ the Gateaux derivative is given by
 \lim_{α→0} \frac{1}{α}(\Objective((1 - α)\DesignMeasure + α\DesignMeasureDirection))\\
 &=
 \IntD{\ParameterSet}{
+\biggl\{
 \Trace\biggl[
 \NIMatrix^{-1}(\DesignMeasure, \Parameter)
  (\TotalDiff \Transformation'(\Parameter))'
@@ -185,12 +186,14 @@ the Gateaux derivative is given by
  (\TotalDiff \Transformation(\Parameter))
 \NIMatrix^{-1}(\DesignMeasure, \Parameter)
 \NIMatrix(\DesignMeasureDirection, \Parameter)
-\biggr]
+\biggr] \\
+&\qquad
 -
 \Trace\biggl[
 \MatDeriv{\DesignCriterion}{\SomeMatrix}{\TNIMatrix(\DesignMeasure, \Parameter)}
 \TNIMatrix(\DesignMeasure, \Parameter)
 \biggr]
+\biggr\}
 }{\PriorDensity(\Parameter)}{\Parameter}
 .
 \end{aligned}
@@ -205,6 +208,7 @@ If ``\Transformation(\Parameter)=\Parameter``, the expression above simplifies t
 \GateauxDerivative(\DesignMeasure, \DesignMeasureDirection)
 =
 \IntD{\ParameterSet}{
+\biggl\{
 \Trace\biggl[
 \MatDeriv{\DesignCriterion}{\SomeMatrix}{\NIMatrix(\DesignMeasure, \Parameter)}
 \NIMatrix(\DesignMeasureDirection, \Parameter)
@@ -214,9 +218,35 @@ If ``\Transformation(\Parameter)=\Parameter``, the expression above simplifies t
 \MatDeriv{\DesignCriterion}{\SomeMatrix}{\NIMatrix(\DesignMeasure, \Parameter)}
 \NIMatrix(\DesignMeasure, \Parameter)
 \biggr]
+\biggr\}
 }{\PriorDensity(\Parameter)}{\Parameter}
 .
 ```
+
+In both cases, the general form of the Gateaux derivative is
+
+```math
+\GateauxDerivative(\DesignMeasure, \DesignMeasureDirection)
+=
+\IntD{\ParameterSet}{
+\bigl\{
+\Trace\bigl[
+A(\DesignMeasure, \Parameter)
+\NIMatrix(\DesignMeasureDirection, \Parameter)
+\bigr]
+-
+\Trace\bigl[
+B(\DesignMeasure, \Parameter)
+\bigr]
+\bigr\}
+}{\PriorDensity(\Parameter)}{\Parameter}
+,
+```
+
+where the matrices ``A`` and ``B`` are specific to the design criterion and transformation,
+but do not depend on the direction ``\DesignMeasureDirection``.
+Since they are constant in ``\DesignMeasureDirection``
+they only need to be computed once.
 
 An equivalence theorem states:
 A design measure ``\DesignMeasure^*`` maximizes ``\Objective`` iff
@@ -283,16 +313,19 @@ The Gateaux derivative is
 \GateauxDerivative(\DesignMeasure, \DesignMeasureDirection)
 =
 \IntD{\ParameterSet}{
-- \Trace\bigl[
+\bigl\{
+\Trace\bigl[
 \NIMatrix^{-1}(\DesignMeasure, \Parameter)
 (\TotalDiff\Transformation(\Parameter))'
 (\TotalDiff\Transformation(\Parameter))
 \NIMatrix^{-1}(\DesignMeasure, \Parameter)
 \NIMatrix(\DesignMeasureDirection, \Parameter)
 \bigr]
-+ \Trace\bigl[
+-
+\Trace\bigl[
 \TNIMatrix^{-1}(\DesignMeasure, \Parameter)
 \bigr]
+\bigr\}
 }{\PriorDensity(\Parameter)}{\Parameter}
 .
 ```
@@ -303,13 +336,16 @@ For ``\Transformation(\Parameter) = \Parameter`` this simplifies to
 \GateauxDerivative(\DesignMeasure, \DesignMeasureDirection)
 =
 \IntD{\ParameterSet}{
-- \Trace\bigl[
+\bigl\{
+\Trace\bigl[
 \NIMatrix^{-2}(\DesignMeasure, \Parameter)
 \NIMatrix(\DesignMeasureDirection, \Parameter)
 \bigr]
-+ \Trace\bigl[
+-
+\Trace\bigl[
 \NIMatrix^{-1}(\DesignMeasure, \Parameter)
 \bigr]
+\bigr\}
 }{\PriorDensity(\Parameter)}{\Parameter}
 .
 ```
