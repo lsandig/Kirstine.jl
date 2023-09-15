@@ -111,7 +111,7 @@ function dp_for_trafo(trafo)
         design_region = DesignInterval(:time => [0, 48]),
         design_criterion = DOptimality(),
         covariate_parameterization = Copy(),
-        model = TPCMod(1),
+        model = TPCMod(sigma = 1),
         prior_knowledge = draw_from_prior(1000, 2),
         transformation = trafo,
     )

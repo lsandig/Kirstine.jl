@@ -67,7 +67,7 @@ include("example-compartment.jl")
                 design_criterion = DOptimality(),
                 # not used in efficiency calculation!
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
+                model = TPCMod(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 prior_knowledge = pk,
                 transformation = trafo,
@@ -118,7 +118,7 @@ include("example-compartment.jl")
         # Atkinson et al. locally optimal example
         let dp = DesignProblem(;
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
+                model = TPCMod(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),

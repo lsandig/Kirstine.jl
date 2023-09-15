@@ -105,6 +105,9 @@ Generate code for defining a [`NonlinearRegression`](@ref) model, a correspondin
 [`Covariate`](@ref), and helper functions for a 1-dimensional unit of observation
 with constant measurement variance.
 
+The model constructor will have the measurement standard deviation `sigma` as a mandatory
+keyword argument.
+
 # Examples
 
 The call
@@ -118,7 +121,10 @@ is equivalent to manually spelling out
 
 ```julia
 struct FooMod <: Kirstine.NonlinearRegression
-    sigma_squared::Float64
+    sigma::Float64
+    function FooMod(; sigma::Real)
+        return new(sigma)
+    end
 end
 mutable struct FooModCovariate <: Kirstine.Covariate
     bar::Float64
@@ -127,7 +133,7 @@ end
 Kirstine.unit_length(m::FooMod) = 1
 Kirstine.invcov(m::FooMod) = m.inv_sigma_sq
 function Kirstine.upate_model_vcov!(Sigma::Matrix{Float64}, c::FooModCovariate, m::FooMod)
-    Sigma[1, 1] = m.sigma_squared
+    Sigma[1, 1] = m.sigma^2
     return Sigma
 end
 Kirstine.allocate_covariate(m::FooMod) = FooModCovariate(0, 0)
@@ -166,7 +172,10 @@ macro define_scalar_unit_model(module_name, model_name, covariate_field_names...
     return esc(
         quote
             struct $model_name <: $module_name.NonlinearRegression
-                sigma_squared::Float64
+                sigma::Float64
+                function $model_name(; sigma::Real)
+                    return new(sigma)
+                end
             end
             $covar_struct_expression
             function $module_name.unit_length(m::$model_name)
@@ -177,7 +186,7 @@ macro define_scalar_unit_model(module_name, model_name, covariate_field_names...
                 c::$covar_name,
                 m::$model_name,
             )
-                s[1, 1] = m.sigma_squared
+                s[1, 1] = m.sigma^2
                 return s
             end
             function $module_name.allocate_covariate(m::$model_name)

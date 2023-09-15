@@ -71,7 +71,7 @@ prior = PriorSample(
 dp = DesignProblem(
     design_criterion = DOptimality(),
     design_region = dr,
-    model = SigEmax(1),
+    model = SigEmax(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior,
 )

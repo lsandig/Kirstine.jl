@@ -11,7 +11,10 @@ using Kirstine
             _ = Base.remove_linenums!(ex),
             (a, b, c, d, e) = ex.args,
             aref = :(struct Foo <: Kirstine.NonlinearRegression
-                sigma_squared::Float64
+                sigma::Float64
+                function Foo(; sigma::Real)
+                    return new(sigma)
+                end
             end),
             bref = :(mutable struct FooCovariate <: Kirstine.Covariate
                 bar::Float64
@@ -26,7 +29,7 @@ using Kirstine
                     c::FooCovariate,
                     m::Foo,
                 )
-                    s[1, 1] = m.sigma_squared
+                    s[1, 1] = m.sigma^2
                     return s
                 end
             ),

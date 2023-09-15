@@ -197,14 +197,14 @@ Now we collect all the parts in a [`DesignProblem`](@ref).
 dp = DesignProblem(
     design_criterion = DOptimality(),
     design_region = dr,
-    model = SigEmax(1),
+    model = SigEmax(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior_sample,
 )
 nothing # hide
 ```
 
-Note that the `SigEmax` constructor takes the variance ``σ^2`` as an argument.
+Note that the `SigEmax` constructor takes the measurement standard deviation ``σ`` as an argument.
 For D-optimality, this only scales the objective function and has no influence on the optimal design.
 This is why we simply set it to `1` here.
 

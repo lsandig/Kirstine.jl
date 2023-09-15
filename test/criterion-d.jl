@@ -35,7 +35,7 @@ include("example-compartment.jl")
         # Identity Transformation: Atkinson et al. locally optimal example
         let dp = DesignProblem(;
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
+                model = TPCMod(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),
@@ -58,7 +58,7 @@ include("example-compartment.jl")
         let _ = seed!(4711),
             dp = DesignProblem(;
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
+                model = TPCMod(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),
@@ -88,7 +88,7 @@ include("example-compartment.jl")
         let dc = DOptimality(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
-            m = TPCMod(1),
+            m = TPCMod(; sigma = 1),
             cp = CopyTime(),
             g1 = TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
             g2 = TPCPar(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
@@ -123,7 +123,7 @@ include("example-compartment.jl")
         let dc = DOptimality(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
-            m = TPCMod(1),
+            m = TPCMod(; sigma = 1),
             cp = CopyTime(),
             g1 = TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
             g2 = TPCPar(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
@@ -193,7 +193,7 @@ include("example-compartment.jl")
         let dpi = DesignProblem(;
                 transformation = Identity(),
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
+                model = TPCMod(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),
@@ -204,7 +204,7 @@ include("example-compartment.jl")
             dpd = DesignProblem(;
                 transformation = DeltaMethod(p -> diagm([1, 1, 1])),
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
+                model = TPCMod(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),
