@@ -3,14 +3,28 @@
 
 ## A-optimal design ##
 
+# Constants for the Gateaux derivative.
+#
+# The general form is ∫(tr[A(ζ,θ)M(δ,θ)] - tr[B(ζ,θ)])p(θ)dθ.
+#
+# For the Identity trafo we precompute
+#
+#       A(ζ,θ) = M(ζ,θ)^{-2}
+#   tr[B(ζ,θ)] = tr[M(ζ,θ)^{-1}].
+#
+# For the DeltaMethod trafo we precompute
+#
+#       A(ζ,θ) = M(ζ,θ)^{-1} DT'(θ) DT(θ) M(ζ,θ)^{-1}
+#   tr[B(ζ,θ)] = tr[DT'(θ) DT(θ) M(ζ,θ)^{-1}].
+
 struct GCAIdentity <: GateauxConstants
-    B::Vector{Matrix{Float64}} # inv(M(at))^2
-    tr_C::Vector{Float64}      # tr(inv(M(at)))
+    A::Vector{Matrix{Float64}}
+    tr_B::Vector{Float64}
 end
 
 struct GCADeltaMethod <: GateauxConstants
-    B::Vector{Matrix{Float64}} # inv(M(at)) * J' * J * inv(M(at))
-    tr_C::Vector{Float64}      # tr(J' * J * inv(M(at)))
+    A::Vector{Matrix{Float64}}
+    tr_B::Vector{Float64}
 end
 
 """
@@ -40,27 +54,30 @@ function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::AOptimalit
     end
 end
 
+# Note: only the upper triangle of the symmetric matrix A needs to be filled out,
+# since `gateaux_integrand` uses `tr_prod` for the multiplication.
+# But producing a dense matrix does not hurt either.
 function gateaux_integrand(c::GCAIdentity, nim_direction, index)
-    return tr_prod(c.B[index], nim_direction, :U) - c.tr_C[index]
+    return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
 end
 
 function precalculate_gateaux_constants(dc::AOptimality, d, m, cp, pk, tc::TCIdentity, na)
     invM = inverse_information_matrices(d, m, cp, pk, na)
-    tr_C = map(tr, invM)
-    B = map(m -> Symmetric(m)^2, invM)
-    return GCAIdentity(B, tr_C)
+    tr_B = map(tr, invM)
+    A = map(m -> Symmetric(m)^2, invM)
+    return GCAIdentity(A, tr_B)
 end
 
 function gateaux_integrand(c::GCADeltaMethod, nim_direction, index)
-    return tr_prod(c.B[index], nim_direction, :U) - c.tr_C[index]
+    return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
 end
 
 #! format: off
 function precalculate_gateaux_constants(dc::AOptimality, d, m, cp, pk::PriorSample, tc::TCDeltaMethod, na)
-#! format: on
+    #! format: on
     invM = inverse_information_matrices(d, m, cp, pk, na)
     JpJ = map(J -> J' * J, tc.jm)
-    tr_C = map((J, iM) -> tr(J * Symmetric(iM)), JpJ, invM)
-    B = map((J, iM) -> Symmetric(iM) * J * Symmetric(iM), JpJ, invM)
-    return GCADeltaMethod(B, tr_C)
+    tr_B = map((J, iM) -> tr(J * Symmetric(iM)), JpJ, invM)
+    A = map((J, iM) -> Symmetric(iM) * J * Symmetric(iM), JpJ, invM)
+    return GCADeltaMethod(A, tr_B)
 end

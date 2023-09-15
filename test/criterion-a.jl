@@ -110,12 +110,12 @@ include("example-compartment.jl")
             # Singular designs should raise an exception. It will be caught by the caller.
             @test_throws "SingularException" pgc(dc, a4, m, cp, pk, tc, na)
             @test isa(gc, Kirstine.GCAIdentity)
-            @test length(gc.B) == 2
-            @test length(gc.tr_C) == 2
-            @test Symmetric(gc.B[1]) ≈ inv(m1)^2
-            @test Symmetric(gc.B[2]) ≈ inv(m2)^2
-            @test gc.tr_C[1] ≈ tr(inv(m1))
-            @test gc.tr_C[2] ≈ tr(inv(m2))
+            @test length(gc.A) == 2
+            @test length(gc.tr_B) == 2
+            @test Symmetric(gc.A[1]) ≈ inv(m1)^2
+            @test Symmetric(gc.A[2]) ≈ inv(m2)^2
+            @test gc.tr_B[1] ≈ tr(inv(m1))
+            @test gc.tr_B[2] ≈ tr(inv(m2))
         end
 
         # DeltaMethod transformation
@@ -145,12 +145,12 @@ include("example-compartment.jl")
             # Singular designs should raise an exception. It will be caught by the caller.
             @test_throws "SingularException" pgc(dc, a4, m, cp, pk, tc, na)
             @test isa(gc, Kirstine.GCADeltaMethod)
-            @test length(gc.B) == 2
-            @test length(gc.tr_C) == 2
-            @test Symmetric(gc.B[1]) ≈ inv(m1) * J[1]' * J[1] * inv(m1)
-            @test Symmetric(gc.B[2]) ≈ inv(m2) * J[2]' * J[2] * inv(m2)
-            @test gc.tr_C[1] ≈ tr(J[1] * inv(m1) * J[1]')
-            @test gc.tr_C[2] ≈ tr(J[2] * inv(m2) * J[2]')
+            @test length(gc.A) == 2
+            @test length(gc.tr_B) == 2
+            @test Symmetric(gc.A[1]) ≈ inv(m1) * J[1]' * J[1] * inv(m1)
+            @test Symmetric(gc.A[2]) ≈ inv(m2) * J[2]' * J[2] * inv(m2)
+            @test gc.tr_B[1] ≈ tr(J[1] * inv(m1) * J[1]')
+            @test gc.tr_B[2] ≈ tr(J[2] * inv(m2) * J[2]')
         end
     end
 

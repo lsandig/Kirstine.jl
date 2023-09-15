@@ -101,11 +101,12 @@ include("example-compartment.jl")
             # Singular designs should raise an exception. It will be caught by the caller.
             @test_throws "SingularException" pgc(dc, a4, m, cp, pk, tc, na)
             @test isa(gc, Kirstine.GCDIdentity)
-            @test length(gc.invM) == 2
+            @test length(gc.A) == 2
+            @test length(gc.tr_B) == 2
             # Note: the informationmatrix return value is already wrapped in Symmetric()
-            @test Symmetric(gc.invM[1]) ≈ inv(informationmatrix(a1, m, cp, g1, na))
-            @test Symmetric(gc.invM[2]) ≈ inv(informationmatrix(a1, m, cp, g2, na))
-            @test gc.parameter_length == 3
+            @test Symmetric(gc.A[1]) ≈ inv(informationmatrix(a1, m, cp, g1, na))
+            @test Symmetric(gc.A[2]) ≈ inv(informationmatrix(a1, m, cp, g2, na))
+            @test all(gc.tr_B .== 3)
         end
 
         # DeltaMethod transformation
@@ -141,10 +142,11 @@ include("example-compartment.jl")
             # Singular designs should raise an exception. It will be caught by the caller.
             @test_throws "SingularException" pgc(dc, a4, m, cp, pk, tc, na)
             @test isa(gc, Kirstine.GCDDeltaMethod)
-            @test length(gc.invM_B_invM) == 2
-            @test Symmetric(gc.invM_B_invM[1]) ≈ inv(M1) * B1 * inv(M1)
-            @test Symmetric(gc.invM_B_invM[2]) ≈ inv(M2) * B2 * inv(M2)
-            @test gc.transformed_parameter_length == 1
+            @test length(gc.A) == 2
+            @test length(gc.tr_B) == 2
+            @test Symmetric(gc.A[1]) ≈ inv(M1) * B1 * inv(M1)
+            @test Symmetric(gc.A[2]) ≈ inv(M2) * B2 * inv(M2)
+            @test all(gc.tr_B .== 1)
         end
     end
 
@@ -156,7 +158,7 @@ include("example-compartment.jl")
         # corresponding to the direction. Both matrices have size (r, r). Here we test an
         # example with r = 2.
         let A = [2.0 3.0; 0.0 7.0],
-            c = Kirstine.GCDIdentity([A], 2),
+            c = Kirstine.GCDIdentity([A], [2]),
             B = [0.4 1.0; 0.0 0.5],
             gi = Kirstine.gateaux_integrand
 
@@ -172,7 +174,7 @@ include("example-compartment.jl")
         # corresponding to the direction. Both matrices have size (r, r). t is the length of
         # the transformed parameter. Here we test an example with r = 2 and t = 1.
         let A = [2.0 3.0; 0.0 7.0],
-            c = Kirstine.GCDDeltaMethod([A], 1),
+            c = Kirstine.GCDDeltaMethod([A], [1]),
             B = [0.4 1.0; 0.0 0.5],
             gi = Kirstine.gateaux_integrand
 
