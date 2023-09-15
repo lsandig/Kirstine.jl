@@ -31,14 +31,14 @@ end
 ```@example main
 using Plots # hide
 θ = (a = 4.298, e = 0.05884, s = 21.80)
-plot(
+tpc = plot(
     x -> θ.s * (exp(-θ.e * x) - exp(-θ.a * x));
     xlims = (0, 10),
     xguide = "time [h]",
     yguide = "response",
     label = "μ(time , θ)",
 )
-savefig_nothing(ans, "transformations-tpc.png") # hide
+savefig_nothing(tpc, "transformations-tpc.png") # hide
 ```
 
 ![](transformations-tpc.png)
@@ -146,7 +146,7 @@ end
 nothing # hide
 ```
 
-## Optimal design for estimating the parameter
+## Identity Transformation
 
 In order to have a design to compare other solutions against,
 we first determine the Bayesian D-optimal design for the whole parameter ``\theta``.
@@ -163,8 +163,8 @@ s_id
 ```
 
 ```@example main
-plot_gateauxderivative(s_id, dp_id)
-savefig_nothing(ans, "transformations-gd-id.png") # hide
+gd_id = plot_gateauxderivative(s_id, dp_id)
+savefig_nothing(gd_id, "transformations-gd-id.png") # hide
 ```
 
 ![](transformations-gd-id.png)
@@ -176,7 +176,7 @@ savefig_nothing(ef_id, "transformations-ef-id.png") # hide
 
 ![](transformations-ef-id.png)
 
-## Univariate functions of the parameter
+## Univariate Functions
 
 ### Area under the curve
 
@@ -217,8 +217,8 @@ s_auc
 ```
 
 ```@example main
-plot_gateauxderivative(s_auc, dp_auc)
-savefig_nothing(ans, "transformations-gd-auc.png") # hide
+gd_auc = plot_gateauxderivative(s_auc, dp_auc)
+savefig_nothing(gd_auc, "transformations-gd-auc.png") # hide
 ```
 
 ![](transformations-gd-auc.png)
@@ -246,7 +246,7 @@ Note that this relation is not necessarily symmetric:
 efficiency(s_auc, s_id, dp_id)
 ```
 
-### Time to maximum concentration
+### Time to Maximum Concentration
 
 Now let's find a design that is optimal for estimating the point in time where the concentration is highest.
 Differentiating ``\mu`` with respect to ``x``,
@@ -279,8 +279,8 @@ s_ttm
 ```
 
 ```@example main
-plot_gateauxderivative(s_ttm, dp_ttm)
-savefig_nothing(ans, "transformations-gd-ttm.png") # hide
+gd_ttm = plot_gateauxderivative(s_ttm, dp_ttm)
+savefig_nothing(gd_ttm, "transformations-gd-ttm.png") # hide
 ```
 
 ![](transformations-gd-ttm.png)
@@ -294,7 +294,7 @@ savefig_nothing(ef_ttm, "transformations-ef-ttm.png") # hide
 
 This solution differs markedly from the previous ones.
 
-### Maximum concentration
+### Maximum Concentration
 
 What if we're not interested in the _time_ of maximum concentration,
 but in the _value_ of the maximum concentration ``\mu(t_{\max{}}(\theta), \theta)`` itself?
@@ -324,8 +324,8 @@ s_cmax
 ```
 
 ```@example main
-plot_gateauxderivative(s_cmax, dp_cmax)
-savefig_nothing(ans, "transformations-gd-cmax.png") # hide
+gd_cmax = plot_gateauxderivative(s_cmax, dp_cmax)
+savefig_nothing(gd_cmax, "transformations-gd-cmax.png") # hide
 ```
 
 ![](transformations-gd-cmax.png)
@@ -345,7 +345,7 @@ considering the prior expected time to maximum concentration:
 mean(ttm, dp_cmax.pk.p)
 ```
 
-## Multivariate functions of the parameter
+## Multivariate Functions
 
 Finding D-optimal designs for vector functions of the parameter is just as easy.
 Suppose we are interested in _both_ the time and the value of the maximum concentration.
@@ -361,8 +361,8 @@ s_both
 ```
 
 ```@example main
-plot_gateauxderivative(s_both, dp_both)
-savefig_nothing(ans, "transformations-gd-both.png") # hide
+gd_both = plot_gateauxderivative(s_both, dp_both)
+savefig_nothing(gd_both, "transformations-gd-both.png") # hide
 ```
 
 ![](transformations-gd-both.png)

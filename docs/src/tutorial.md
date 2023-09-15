@@ -37,14 +37,14 @@ and a four-element parameter vector
 ```@example main
 using Plots
 θ = (e0 = 1, emax = 2, ed50 = 4, h = 5)
-plot(
+pse = plot(
     x -> θ.e0 + θ.emax * x^θ.h / (θ.ed50^θ.h + x^θ.h);
     xlims = (0, 10),
     xguide = "dose",
     yguide = "response",
     label = "μ(dose, θ)",
 )
-savefig_nothing(ans, "tutorial-sigemax.png") # hide
+savefig_nothing(pse, "tutorial-sigemax.png") # hide
 ```
 
 ![](tutorial-sigemax.png)

@@ -26,7 +26,11 @@ This page documents the notation for `Kirstine.jl`.
     \frac{∂φ}{∂A_{ij}}(A)
     \biggr]_{i=1,…,a; j=1,…,b}
     ```
+    
+    For information on finding ``\MatDeriv{φ}{A}{·}`` for certain ``φ``,
+    see the book by Magnus and Neudecker[^MN99].
 
+[^MN99]: Jan R. Magnus and Heinz Neudecker (1999). Matrix differential calculus with applications in statistics and econometrics. Wiley. [doi:10.1002/9781119541219](https://doi.org/10.1002/9781119541219)
 ## Design Problems
 
 A design problem is a tuple
@@ -82,10 +86,10 @@ with the following elements:
   - A _prior density_ ``\PriorDensity : \ParameterSet → [0, ∞)``.
     This encodes the prior knowledge about the model parameter ``\Parameter``.
     The dominating measure is implicit,
-    and can be either the ``r``-dimensional Lebesgue measure
-    or a counting measure.l
+    and can be either the ``\DimParameter``-dimensional Lebesgue measure
+    or a counting measure.
   - A _posterior transformation_ ``\Transformation : \ParameterSet → \Reals^{\DimTransformedParameter}``.
-    This is used to indicate when we are not interested in finding a design for the parameter ``\Parameter``,
+    This is used to indicate when we are not interested in finding a design for the original parameter ``\Parameter``,
     but for some transformation of it.
     ``\Transformation`` must be continuously differentiable.
     In simple cases, ``\Transformation(\Parameter)=\Parameter``.
@@ -254,7 +258,7 @@ Since they are constant in ``\DesignMeasureDirection``
 they only need to be computed once.
 
 An equivalence theorem states:
-A design measure ``\DesignMeasure^*`` maximizes ``\Objective`` iff
+a design measure ``\DesignMeasure^*`` maximizes ``\Objective`` iff
 
 ```math
 \GateauxDerivative(\DesignMeasure^*, \DiracDist(\DesignPoint)) ≤ 0
@@ -441,19 +445,22 @@ map into spaces with a common dimension ``\DimTransformedParameter``.
 In this general case, the two integrals must be calculated separately:
 
 ```math
+\begin{aligned}
 \RelEff(\DesignMeasure_1, \DesignMeasure_2)
-=
+&=
 \exp\biggl(
-\frac{1}{t}\biggl(
+\frac{1}{t}\biggl\{
 \IntD{\ParameterSet^{(1)}}{
 \log\det \TNIMatrix^{(1)}(\DesignMeasure_1, \Parameter^{(1)})
-}{\PriorDensity^{(1)}(\Parameter^{(1)})}{\Parameter^{(1)}}
+}{\PriorDensity^{(1)}(\Parameter^{(1)})}{\Parameter^{(1)}} \\
+&\qquad
 -
 \IntD{\ParameterSet^{(2)}}{
 \log\det \TNIMatrix^{(2)}(\DesignMeasure_2, \Parameter^{(2)})
 }{\PriorDensity^{(2)}(\Parameter^{(2)})}{\Parameter^{(2)}}
+\biggr\}
 \biggr)
-\biggr)
+\end{aligned}
 ```
 
 This more general quantity of course now also depends on the potentially different prior densities!
