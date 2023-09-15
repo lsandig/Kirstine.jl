@@ -139,7 +139,12 @@ See also the [mathematical background](math.md#Objective-Function).
 """
 function objective(d::DesignMeasure, dp::DesignProblem)
     tc = precalculate_trafo_constants(dp.trafo, dp.pk)
-    wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
+    wm = WorkMatrices(
+        length(weights(d)),
+        unit_length(dp.m),
+        parameter_dimension(dp.pk),
+        codomain_dimension(tc),
+    )
     c = allocate_initialize_covariates(d, dp.m, dp.cp)
     return objective!(wm, c, dp.dc, d, dp.m, dp.cp, dp.pk, tc, dp.na)
 end
@@ -166,7 +171,12 @@ function gateauxderivative(
         error("Gateaux derivatives are only implemented for one-point design directions")
     end
     tc = precalculate_trafo_constants(dp.trafo, dp.pk)
-    wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
+    wm = WorkMatrices(
+        length(weights(at)),
+        unit_length(dp.m),
+        parameter_dimension(dp.pk),
+        codomain_dimension(tc),
+    )
     gconst = try
         precalculate_gateaux_constants(dp.dc, at, dp.m, dp.cp, dp.pk, tc, dp.na)
     catch e

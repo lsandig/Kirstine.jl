@@ -57,7 +57,8 @@ with the following elements:
     ```math
     \Unit_{\IndexUnit} \mid \Parameter
     \simiid
-    \MvNormDist(\MeanFunction(\Covariate_{\IndexDesignPoint}, \Parameter), \UnitCovariance)
+    \MvNormDist(\MeanFunction(\Covariate_{\IndexDesignPoint}, \Parameter),
+                \UnitCovariance(\Covariate_{\IndexDesignPoint}))
     \quad \text{ for } \IndexUnit ∈ \IndexSet_{\IndexDesignPoint}
     \text{ and } \IndexDesignPoint = 1,…,\NumDesignPoints
     ```
@@ -69,9 +70,13 @@ with the following elements:
     ``\Covariate_{\IndexDesignPoint} ∈ \CovariateSet ⊂ \Reals^{\DimCovariate}``.
     The mean function ``\MeanFunction`` must be continuous in ``\Covariate``
     and continuously differentiable in ``\Parameter``.
-    The covariance matrix ``\UnitCovariance ∈ \SNNDMatrices{\DimUnit}``
-    is assumed to be known and constant.
-    In simple cases, ``\DimUnit=1`` and ``\UnitCovariance = \ScalarUnitVariance``, or ``\DimCovariate=1``.
+    The covariance matrix ``\UnitCovariance : \CovariateSet → \SNNDMatrices{\DimUnit}``
+    may depend on the covariate,
+    but is otherwise assumed to be known.
+    In simple cases,
+    ``\DimUnit=1``,
+    ``\DimCovariate=1``,
+    with ``\UnitCovariance(\Covariate) = \ScalarUnitVariance`` constant.
   - A _covariate parameterization_ ``\CovariateParameterization : \DesignRegion → \CovariateSet``.
     This maps a design point to a model covariate.
   - A _prior density_ ``\PriorDensity : \ParameterSet → [0, ∞)``.
@@ -153,7 +158,7 @@ over the model's Fisher information matrix
 \FisherMatrix(\Covariate, \Parameter)
 =
 (\TotalDiff\MeanFunction(\Covariate, \Parameter))'
-\UnitCovariance^{-1}
+\UnitCovariance(\Covariate)^{-1}
 \TotalDiff\MeanFunction(\Covariate, \Parameter),
 ```
 

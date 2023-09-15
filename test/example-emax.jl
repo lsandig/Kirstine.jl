@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 struct EmaxModel <: NonlinearRegression
-    inv_sigma_sq::Float64
+    sigma_squared::Float64
 end
 
 mutable struct Dose <: Covariate
@@ -21,7 +21,10 @@ struct CopyDose <: CovariateParameterization end
 
 Kirstine.unit_length(m::EmaxModel) = 1
 
-Kirstine.invcov(m::EmaxModel) = m.inv_sigma_sq
+function Kirstine.update_model_vcov!(s, c::Dose, m::EmaxModel)
+    s[1, 1] = m.sigma_squared
+    return s
+end
 
 Kirstine.allocate_covariate(m::EmaxModel) = Dose(0)
 

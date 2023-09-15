@@ -76,7 +76,7 @@ function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::PriorSamp
 #! format: on
     invM = inverse_information_matrices(d, m, cp, pk, na)
     t = codomain_dimension(tc)
-    wm = WorkMatrices(unit_length(m), parameter_dimension(pk), t)
+    wm = WorkMatrices(numpoints(d), unit_length(m), parameter_dimension(pk), t)
     A = map(1:length(pk.p)) do i
         wm.r_x_r .= invM[i]
         inv_tnim, _ = apply_transformation!(wm, true, tc, i)

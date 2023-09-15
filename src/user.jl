@@ -67,20 +67,21 @@ See also the [mathematical background](math.md#Design-Problems).
 function update_model_covariate! end
 
 """
-    Kirstine.invcov(m::M) -> Union{Real,AbstractMatrix}
+    Kirstine.update_model_vcov!(Sigma::Matrix, c::C, m::M)
 
-Return inverse variance-covariance matrix for one unit of observation.
+Compute variance-covariance matrix of the nonlinear regression model
+for one unit of observation.
 
 # Implementation
 
-For a user-type `M <: NonlinearRegression` this should return the inverse of the
-variance-covariance matrix ``\\UnitCovariance`` for a single unit of observation. When a
-unit of observation is a scalar, this may alternatively return its inverse error variance
-``1/\\ScalarUnitVariance`` as a single number.
+For user types `C <: Covariate` and `M <: NonlinearRegression`,
+this should fill in the elements of `Sigma`
+for a unit of observation with covariate `c`.
+The `size` of the matrix is `(unit_length(m), unit_length(m))`.
 
 See also the [mathematical background](math.md#Design-Problems).
 """
-function invcov end
+function update_model_vcov! end
 
 """
     Kirstine.dimension(p::P) -> Integer
@@ -101,7 +102,8 @@ function dimension end
     @define_scalar_unit_model module_name model_name covariate_field_names...
 
 Generate code for defining a [`NonlinearRegression`](@ref) model, a corresponding
-[`Covariate`](@ref), and helper functions for a 1-dimensional unit of observation.
+[`Covariate`](@ref), and helper functions for a 1-dimensional unit of observation
+with constant measurement variance.
 
 # Examples
 
@@ -116,7 +118,7 @@ is equivalent to manually spelling out
 
 ```julia
 struct FooMod <: Kirstine.NonlinearRegression
-    inv_sigma_sq::Float64
+    sigma_squared::Float64
 end
 mutable struct FooModCovariate <: Kirstine.Covariate
     bar::Float64
@@ -124,6 +126,10 @@ mutable struct FooModCovariate <: Kirstine.Covariate
 end
 Kirstine.unit_length(m::FooMod) = 1
 Kirstine.invcov(m::FooMod) = m.inv_sigma_sq
+function Kirstine.upate_model_vcov!(Sigma::Matrix{Float64}, c::FooModCovariate, m::FooMod)
+    Sigma[1, 1] = m.sigma_squared
+    return Sigma
+end
 Kirstine.allocate_covariate(m::FooMod) = FooModCovariate(0, 0)
 ```
 
@@ -157,21 +163,28 @@ macro define_scalar_unit_model(module_name, model_name, covariate_field_names...
     )
     # Note: We have to `esc()` the definitions so that they are evaluated in the calling
     # Module. This has the nice side effect of not replacing `m` with a gensym.
-    return esc(quote
-        struct $model_name <: $module_name.NonlinearRegression
-            inv_sigma_sq::Float64
-        end
-        $covar_struct_expression
-        function $module_name.unit_length(m::$model_name)
-            return 1
-        end
-        function $module_name.invcov(m::$model_name)
-            return m.inv_sigma_sq
-        end
-        function $module_name.allocate_covariate(m::$model_name)
-            return $covar_name($(fill(0, length(covariate_field_names))...))
-        end
-    end)
+    return esc(
+        quote
+            struct $model_name <: $module_name.NonlinearRegression
+                sigma_squared::Float64
+            end
+            $covar_struct_expression
+            function $module_name.unit_length(m::$model_name)
+                return 1
+            end
+            function $module_name.update_model_vcov!(
+                s::Matrix{Float64},
+                c::$covar_name,
+                m::$model_name,
+            )
+                s[1, 1] = m.sigma_squared
+                return s
+            end
+            function $module_name.allocate_covariate(m::$model_name)
+                return $covar_name($(fill(0, length(covariate_field_names))...))
+            end
+        end,
+    )
 end
 
 """
