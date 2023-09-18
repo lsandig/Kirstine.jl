@@ -88,7 +88,7 @@ end
 
 Return a tuple `(d, r)`.
 
-  - `d`: The best [`DesignMeasure`](@ref) found. As postprocessing, [`simplify`](@ref) is
+  - `d`: The best [`DesignMeasure`](@ref) found. As post-processing, [`simplify`](@ref) is
     called with `sargs` and the design points are sorted with [`sort_designpoints`](@ref).
 
   - `r`: A subtype of [`ProblemSolvingResult`](@ref) that is specific to the strategy used.
@@ -105,6 +105,13 @@ function solve(
 )
     or = solve_with(dp, strategy, trace_state)
     dopt = sort_designpoints(simplify(maximizer(or), dp; sargs...))
+    # check that we did not accidentally simplify too much
+    o_before = objective(maximizer(or), dp)
+    o_after = objective(dopt, dp)
+    rel_diff = (o_after - o_before) / abs(o_before)
+    if rel_diff < -0.01
+        @warn "simplification may have been too eager" o_before o_after rel_diff
+    end
     return dopt, or
 end
 
@@ -132,7 +139,12 @@ See also the [mathematical background](math.md#Objective-Function).
 """
 function objective(d::DesignMeasure, dp::DesignProblem)
     tc = precalculate_trafo_constants(dp.trafo, dp.pk)
-    wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
+    wm = WorkMatrices(
+        length(weights(d)),
+        unit_length(dp.m),
+        parameter_dimension(dp.pk),
+        codomain_dimension(tc),
+    )
     c = allocate_initialize_covariates(d, dp.m, dp.cp)
     return objective!(wm, c, dp.dc, d, dp.m, dp.cp, dp.pk, tc, dp.na)
 end
@@ -155,11 +167,16 @@ function gateauxderivative(
     directions::AbstractArray{DesignMeasure},
     dp::DesignProblem,
 )
-    if any(d -> length(d.weight) != 1, directions)
+    if any(d -> numpoints(d) != 1, directions)
         error("Gateaux derivatives are only implemented for one-point design directions")
     end
     tc = precalculate_trafo_constants(dp.trafo, dp.pk)
-    wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
+    wm = WorkMatrices(
+        length(weights(at)),
+        unit_length(dp.m),
+        parameter_dimension(dp.pk),
+        codomain_dimension(tc),
+    )
     gconst = try
         precalculate_gateaux_constants(dp.dc, at, dp.m, dp.cp, dp.pk, tc, dp.na)
     catch e
@@ -197,6 +214,20 @@ function efficiency(d1::DesignMeasure, d2::DesignMeasure, dp::DesignProblem)
     return efficiency(d1, d2, dp, dp)
 end
 
+# same design problem as `dp`, but with criterion replaced by `DOptimality()`.
+function as_doptimality_problem(dp::DesignProblem)
+    dpd = DesignProblem(;
+        design_criterion = DOptimality(),
+        model = dp.m,
+        design_region = dp.dr,
+        covariate_parameterization = dp.cp,
+        prior_knowledge = dp.pk,
+        transformation = dp.trafo,
+        normal_approximation = dp.na,
+    )
+    return dpd
+end
+
 function efficiency(
     d1::DesignMeasure,
     d2::DesignMeasure,
@@ -213,23 +244,28 @@ function efficiency(
     # Take a shortcut via D criterion objective, which already gives the average
     # log-determinant of the transformed information matrices, and handles exceptions.
     # Note that the design region is irrelevant for relative efficiency.
-    dp1d = DesignProblem(;
-        design_criterion = DOptimality(),
-        model = dp1.m,
-        design_region = dp1.dr,
-        covariate_parameterization = dp1.cp,
-        prior_knowledge = dp1.pk,
-        transformation = dp1.trafo,
-        normal_approximation = dp1.na,
-    )
-    dp2d = DesignProblem(;
-        design_criterion = DOptimality(),
-        model = dp2.m,
-        design_region = dp2.dr,
-        covariate_parameterization = dp2.cp,
-        prior_knowledge = dp2.pk,
-        transformation = dp2.trafo,
-        normal_approximation = dp2.na,
-    )
-    return exp((objective(d1, dp1) - objective(d2, dp2)) / t)
+    dp1d = as_doptimality_problem(dp1)
+    dp2d = as_doptimality_problem(dp2)
+    return exp((objective(d1, dp1d) - objective(d2, dp2d)) / t)
+end
+
+"""
+    shannon_information(d::DesignMeasure, dp::DesignProblem, n::Integer)
+
+Compute the approximate expected posterior Shannon information for an experiment
+with `n` units of observation under design `d` and design problem `dp`.
+
+See also the [mathematical background](math.md#Shannon-Information).
+
+!!! note
+
+     1. `d` is not [`apportion`](@ref)ed.
+     2. Shannon information is motivated by D-optimal design,
+        so this function ignores the criterion used in `dp`.
+"""
+function shannon_information(d::DesignMeasure, dp::DesignProblem, n::Integer)
+    dpd = as_doptimality_problem(dp)
+    # this is somewhat ugly, computing all constants is a bit unnecessary
+    t = codomain_dimension(precalculate_trafo_constants(dp.trafo, dp.pk))
+    return (t / 2) * (log(n) - 1 + log(2 * pi)) + 0.5 * objective(d, dpd)
 end

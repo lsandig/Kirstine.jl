@@ -26,6 +26,9 @@ To construct a `DeltaMethod` object,
 that maps a [`Parameter`](@ref) `p`
 to the Jacobian matrix of ``\Transformation`` evaluated at `p`.
 
+Note that the order of the columns must match the order that you used
+when implementing the [`jacobianmatrix!`](@ref) for your model.
+
 # Examples
 Suppose `p` has the fields `a` and `b`, and ``\Transformation(\Parameter) = (ab, b/a)'``.
 Then the Jacobian matrix of ``\Transformation`` is

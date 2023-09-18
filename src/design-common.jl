@@ -10,16 +10,18 @@ struct WorkMatrices
     t_x_r::Matrix{Float64}
     t_x_t::Matrix{Float64}
     m_x_r::Matrix{Float64}
-    function WorkMatrices(m::Integer, r::Integer, t::Integer)
-        new(zeros(r, r), zeros(r, t), zeros(t, r), zeros(t, t), zeros(m, r))
+    m_x_m::Vector{Matrix{Float64}}
+    function WorkMatrices(K::Integer, m::Integer, r::Integer, t::Integer)
+        mxm = [zeros(m, m) for _ in 1:K]
+        new(zeros(r, r), zeros(r, t), zeros(t, r), zeros(t, t), zeros(m, r), mxm)
     end
 end
 
 function allocate_initialize_covariates(d, m, cp)
-    K = length(d.weight)
+    K = numpoints(d)
     cs = [allocate_covariate(m) for _ in 1:K]
     for k in 1:K
-        update_model_covariate!(cs[k], d.designpoint[k], m, cp)
+        update_model_covariate!(cs[k], points(d)[k], m, cp)
     end
     return cs
 end
@@ -38,7 +40,9 @@ function objective!(
     na::NormalApproximation,
 )
     for k in 1:length(c)
-        update_model_covariate!(c[k], d.designpoint[k], m, cp)
+        update_model_covariate!(c[k], points(d)[k], m, cp)
+        update_model_vcov!(wm.m_x_m[k], c[k], m)
+        potrf!('U', wm.m_x_m[k])
     end
     # When the information matrix is singular, the objective function is undefined. Lower
     # level calls may throw a PosDefException or a SingularException. This also means that
@@ -47,7 +51,7 @@ function objective!(
     try
         acc = 0
         for i in 1:length(pk.p)
-            informationmatrix!(wm.r_x_r, wm.m_x_r, d.weight, m, invcov(m), c, pk.p[i], na)
+            informationmatrix!(wm.r_x_r, wm.m_x_r, weights(d), m, wm.m_x_m, c, pk.p[i], na)
             _, is_inv = apply_transformation!(wm, false, tc, i)
             acc += pk.weight[i] * criterion_integrand!(wm.t_x_t, is_inv, dc)
         end
@@ -71,11 +75,21 @@ function gateauxderivative!(
     pk::PriorSample,
     na::NormalApproximation,
 )
-    update_model_covariate!(c[1], direction.designpoint[1], m, cp)
+    update_model_covariate!(c[1], points(direction)[1], m, cp)
+    update_model_vcov!(wm.m_x_m[1], c[1], m)
+    potrf!('U', wm.m_x_m[1])
     acc = 0
-    ic = invcov(m)
     for i in 1:length(pk.p)
-        informationmatrix!(wm.r_x_r, wm.m_x_r, direction.weight, m, ic, c, pk.p[i], na)
+        informationmatrix!(
+            wm.r_x_r,
+            wm.m_x_r,
+            weights(direction),
+            m,
+            wm.m_x_m,
+            c,
+            pk.p[i],
+            na,
+        )
         acc += pk.weight[i] * gateaux_integrand(gconst, wm.r_x_r, i)
     end
     return acc
@@ -88,7 +102,7 @@ function informationmatrix!(
     jm::AbstractMatrix,
     w::AbstractVector,
     m::NonlinearRegression,
-    invcov::Real,
+    chol_vcov::AbstractVector{<:AbstractMatrix{<:Real}},
     c::AbstractVector{<:Covariate},
     p::Parameter,
     na::FisherMatrix,
@@ -96,14 +110,15 @@ function informationmatrix!(
     fill!(nim, 0.0)
     for k in 1:length(w)
         jacobianmatrix!(jm, m, c[k], p)
-        # The call to syrk! is equivalent to
-        #
-        #   nim = w[k] * invcov * jm' * jm + 1 * nim
-        #
-        # The result is symmetric, and only the 'U'pper triangle of nim is actually written
-        # to. The lower triangle is not touched and is allowed to contain arbitrary garbage.
-        syrk!('U', 'T', w[k] * invcov, jm, 1.0, nim)
+        # set jm = solution to `chol_vcov[k]' * X = 1 * jm`
+        # i.e. triangular matrix is the 'L'eft factor, with data in 'U'pper triangle and
+        # 'T'ransposed, but 'N'o unit diagonal
+        trsm!('L', 'U', 'T', 'N', 1.0, chol_vcov[k], jm)
+        # update nim = w[k] jm' * jm + 1 * nim
+        # i.e. data in 'U'pper triangle and 'T'ransposed first
+        syrk!('U', 'T', w[k], jm, 1.0, nim)
     end
+    # Note: nim is implicitly symmetric, only the upper triangle contains data.
     return nim
 end
 
@@ -132,12 +147,14 @@ function informationmatrix(
     na::NormalApproximation,
 )
     c = Kirstine.allocate_initialize_covariates(d, m, cp)
-    r = dimension(p)
-    mm = unit_length(m)
-    jm = zeros(mm, r)
-    nim = zeros(r, r)
-    informationmatrix!(nim, jm, d.weight, m, invcov(m), c, p, na)
-    return Symmetric(nim)
+    # Note: t = 1 is a dummy value, no trafo will be applied
+    wm = WorkMatrices(numpoints(d), unit_length(m), dimension(p), 1)
+    for k in 1:length(c)
+        Kirstine.update_model_vcov!(wm.m_x_m[k], c[k], m)
+        potrf!('U', wm.m_x_m[k])
+    end
+    informationmatrix!(wm.r_x_r, wm.m_x_r, weights(d), m, wm.m_x_m, c, p, na)
+    return Symmetric(wm.r_x_r)
 end
 
 function inverse_information_matrices(
@@ -150,14 +167,17 @@ function inverse_information_matrices(
     # Calculate inverse of normalized information matrix for each parameter value.
     # Only the upper triangle of the (symmetric) information matrix is relevant.
     c = allocate_initialize_covariates(d, m, cp)
-    # the transformed parameter dimension is a dummy argument here
-    wm = WorkMatrices(unit_length(m), parameter_dimension(pk), 1)
-    ic = invcov(m)
+    # The transformed parameter dimension t = 1 is a dummy argument here.
+    wm = WorkMatrices(length(weights(d)), unit_length(m), parameter_dimension(pk), 1)
+    for k in 1:length(c)
+        Kirstine.update_model_vcov!(wm.m_x_m[k], c[k], m)
+        potrf!('U', wm.m_x_m[k])
+    end
     # The documentation of `potri!` is not very clear that it expects a Cholesky factor as
     # input, and does _not_ call `potrf!` itself.
     # See also https://netlib.org/lapack/explore-html/d1/d7a/group__double_p_ocomputational_ga9dfc04beae56a3b1c1f75eebc838c14c.html
     inv_nims = map(pk.p) do p
-        informationmatrix!(wm.r_x_r, wm.m_x_r, d.weight, m, ic, c, p, na)
+        informationmatrix!(wm.r_x_r, wm.m_x_r, weights(d), m, wm.m_x_m, c, p, na)
         potrf!('U', wm.r_x_r)
         potri!('U', wm.r_x_r)
         return deepcopy(wm.r_x_r)

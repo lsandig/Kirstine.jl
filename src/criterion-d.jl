@@ -3,14 +3,30 @@
 
 ## D-optimal design and relative D-efficiency ##
 
+# Constants for the Gateaux derivative.
+#
+# The general form is ∫(tr[A(ζ,θ)M(δ,θ)] - tr[B(ζ,θ)])p(θ)dθ.
+#
+# For the Identity trafo we precompute
+#
+#       A(ζ,θ) = M(ζ,θ)^{-1}
+#   tr[B(ζ,θ)] = r
+#
+# For the DeltaMethod trafo we precompute
+#
+#       A(ζ,θ) = M(ζ,θ)^{-1} DT'(θ) M_T(ζ,θ) DT(θ) M(ζ,θ)^{-1}
+#   tr[B(ζ,θ)] = t
+
+# Although tr_B is constant in both cases we store it redundantly in a vector
+# in order to keep the structure consistent with the GCA* types.
 struct GCDIdentity <: GateauxConstants
-    invM::Vector{Matrix{Float64}}
-    parameter_length::Int64
+    A::Vector{Matrix{Float64}}
+    tr_B::Vector{Float64}
 end
 
 struct GCDDeltaMethod <: GateauxConstants
-    invM_B_invM::Vector{Matrix{Float64}}
-    transformed_parameter_length::Int64
+    A::Vector{Matrix{Float64}}
+    tr_B::Vector{Float64}
 end
 
 @doc raw"""
@@ -36,21 +52,23 @@ end
 
 ## Gateaux derivative: Identity ##
 
+# Note: only the upper triangle of the symmetric matrix A needs to be filled out,
+# since `gateaux_integrand` uses `tr_prod` for the multiplication.
+# But producing a dense matrix does not hurt either.
 function gateaux_integrand(c::GCDIdentity, nim_direction, index)
-    return tr_prod(c.invM[index], nim_direction, :U) - c.parameter_length
+    return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
 end
 
 function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk, tc::TCIdentity, na)
-    invM = inverse_information_matrices(d, m, cp, pk, na)
-    parameter_length = parameter_dimension(pk)
-    return GCDIdentity(invM, parameter_length)
+    A = inverse_information_matrices(d, m, cp, pk, na)
+    tr_B = fill(parameter_dimension(pk), length(pk.p))
+    return GCDIdentity(A, tr_B)
 end
 
 ## Gateaux derivative: DeltaMethod ##
 
 function gateaux_integrand(c::GCDDeltaMethod, nim_direction, index)
-    # Note: invM_B_invM[index] is dense and symmetric, we can use the upper triangle
-    return tr_prod(c.invM_B_invM[index], nim_direction, :U) - c.transformed_parameter_length
+    return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
 end
 
 #! format: off
@@ -58,8 +76,8 @@ function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::PriorSamp
 #! format: on
     invM = inverse_information_matrices(d, m, cp, pk, na)
     t = codomain_dimension(tc)
-    wm = WorkMatrices(unit_length(m), parameter_dimension(pk), t)
-    invM_B_invM = map(1:length(pk.p)) do i
+    wm = WorkMatrices(numpoints(d), unit_length(m), parameter_dimension(pk), t)
+    A = map(1:length(pk.p)) do i
         wm.r_x_r .= invM[i]
         inv_tnim, _ = apply_transformation!(wm, true, tc, i)
         J = tc.jm[i]
@@ -67,5 +85,6 @@ function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::PriorSamp
         sym_invM = Symmetric(invM[i])
         return sym_invM * B * sym_invM
     end
-    return GCDDeltaMethod(invM_B_invM, t)
+    tr_B = fill(t, length(pk.p))
+    return GCDDeltaMethod(A, tr_B)
 end

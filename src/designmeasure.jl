@@ -14,48 +14,64 @@ In Julia, a design point is simply a `Vector{Float64}`.
 Special kinds of design measures can be constructed with [`one_point_design`](@ref),
 [`uniform_design`](@ref), [`equidistant_design`](@ref), [`random_design`](@ref).
 
-See also [`weights`](@ref), [`designpoints`](@ref), [`as_matrix`](@ref),
-[`apportion`](@ref).
+See also [`weights`](@ref), [`points`](@ref), [`apportion`](@ref).
 """
 struct DesignMeasure <: AbstractPoint
-    designpoint::Vector{Vector{Float64}}
-    weight::Vector{Float64}
+    points::Matrix{Float64}
+    weights::Vector{Float64}
     @doc """
         DesignMeasure(
-            designpoints::AbstractVector{<:AbstractVector{<:Real}},
-            weights::AbstractVector{<:Real},
+            points::AbstractMatrix{<:Real},
+            weights::AbstractVector{<:Real}
         )
 
-    Construct a design measure.
+    Construct a design measure with design points from the columns of `points`.
 
-    # Examples
-    ```jldoctest
-    julia> DesignMeasure([[1, 2], [3, 4], [5, 6]], [0.5, 0.2, 0.3])
-    DesignMeasure(
-     [1.0, 2.0] => 0.5,
-     [3.0, 4.0] => 0.2,
-     [5.0, 6.0] => 0.3,
-    )
-    ```
+    This is the only design measure constructor
+    where the result *does* share memory with `points` and `weights`.
     """
-    function DesignMeasure(
-        designpoint::AbstractVector{<:AbstractVector{<:Real}},
-        weight::AbstractVector{<:Real},
-    )
-        if length(weight) != length(designpoint)
+    function DesignMeasure(points::AbstractMatrix{<:Real}, weights::AbstractVector{<:Real})
+        if length(weights) != size(points, 2)
             error("number of weights and design points must be equal")
         end
-        if !allequal(map(length, designpoint))
-            error("design points must have identical lengths")
-        end
-        if any(weight .< 0) || !(sum(weight) ≈ 1)
+        if any(weights .< 0) || !(sum(weights) ≈ 1)
             error("weights must be non-negative and sum to one")
         end
-        new(designpoint, weight)
+        new(points, weights)
     end
 end
 
 ## constructors ##
+
+@doc """
+    DesignMeasure(
+        points::AbstractVector{<:AbstractVector{<:Real}},
+        weights::AbstractVector{<:Real},
+    )
+
+Construct a design measure from a vector of design points.
+
+The result does not share memory with `points`.
+
+# Examples
+```jldoctest
+julia> DesignMeasure([[1, 2], [3, 4], [5, 6]], [0.5, 0.2, 0.3])
+DesignMeasure(
+ [1.0, 2.0] => 0.5,
+ [3.0, 4.0] => 0.2,
+ [5.0, 6.0] => 0.3,
+)
+```
+"""
+function DesignMeasure(
+    points::AbstractVector{<:AbstractVector{<:Real}},
+    weights::AbstractVector{<:Real},
+)
+    if !allequal(map(length, points))
+        error("design points must have identical lengths")
+    end
+    return DesignMeasure(reduce(hcat, points), weights)
+end
 
 """
     DesignMeasure(dp_w::Pair...)
@@ -80,45 +96,11 @@ function DesignMeasure(dp_w::Pair...)
 end
 
 """
-    DesignMeasure(m::AbstractMatrix{<:Real})
-
-Construct a [`DesignMeasure`](@ref) from its matrix representation.
-
-An `(N+1, K)` matrix `m` represents a `DesignMeasure` with `K` design points from an
-`N`-dimensional design region. The first row of `m` must contain the weights.
-
-See also [`as_matrix`](@ref).
-
-# Examples
-
-```jldoctest
-julia> m = [0.5 0.2 0.3; 7.0 8.0 9.0; 4.0 5.0 6.0]
-3×3 Matrix{Float64}:
- 0.5  0.2  0.3
- 7.0  8.0  9.0
- 4.0  5.0  6.0
-
-julia> DesignMeasure(m)
-DesignMeasure(
- [7.0, 4.0] => 0.5,
- [8.0, 5.0] => 0.2,
- [9.0, 6.0] => 0.3,
-)
-```
-"""
-function DesignMeasure(m::AbstractMatrix{<:Real})
-    if size(m, 1) < 2
-        throw(ArgumentError("m must have at least two rows"))
-    end
-    ws = m[1, :]
-    dps = [m[2:end, k] for k in 1:size(m, 2)]
-    return DesignMeasure(dps, ws)
-end
-
-"""
     one_point_design(designpoint::AbstractVector{<:Real})
 
 Construct a one-point [`DesignMeasure`](@ref).
+
+The result does not share memory with `designpoint`.
 
 # Examples
 
@@ -137,6 +119,8 @@ end
     uniform_design(designpoints::AbstractVector{<:AbstractVector{<:Real}})
 
 Construct a [`DesignMeasure`](@ref) with equal weights on the given `designpoints`.
+
+The result does not share memory with `designpoints`.
 
 # Examples
 
@@ -185,17 +169,17 @@ end
 """
     random_design(dr::DesignRegion, K::Integer)
 
-Construct a [`DesignMeasure`](@ref) with design points drawn independently
-from a uniform distribution on the design region.
+Construct a random [`DesignMeasure`](@ref).
 
-Independent weights weights are drawn from a uniform distribution on ``[0, 1]``
-and then normalized to sum to one.
+The design points are drawn independently from the uniform distribution on the design region,
+and the weights drawn from the uniform distribution on a simplex.
 """
 function random_design(dr::DesignInterval{N}, K::Integer) where N
     scl = upperbound(dr) .- lowerbound(dr)
     dp = [lowerbound(dr) .+ scl .* rand(N) for _ in 1:K]
-    u = rand(K)
-    w = u ./ sum(u)
+    u = rand(K) # independent Uniform([0, 1])
+    v = -log.(u) # independent Exp(1)
+    w = v ./ sum(v) # Dirichlet(1, …, 1), i.e. uniform on simplex
     d = DesignMeasure(dp, w)
     return d
 end
@@ -203,47 +187,31 @@ end
 ## accessors ##
 
 """
-    designpoints(d::DesignMeasure)
+    points(d::DesignMeasure)
 
-Return a copy of the design points.
+Return an iterator over the design points of `d`.
 
-See also [`weights`](@ref), [`simplify_drop`](@ref).
+See also [`weights`](@ref), [`numpoints`](@ref).
 """
-designpoints(d::DesignMeasure) = deepcopy(d.designpoint)
+points(d::DesignMeasure) = eachcol(d.points)
 
 """
     weights(d::DesignMeasure)
 
-Return a copy of the weights.
+Return a reference to the weights of the design measure.
 
-See also [`designpoints`](@ref), [`simplify_drop`](@ref).
+See also [`points`](@ref), [`numpoints`](@ref).
 """
-weights(d::DesignMeasure) = copy(d.weight)
+weights(d::DesignMeasure) = d.weights
 
 """
-    as_matrix(d::DesignMeasure)
+    numpoints(d::DesignMeasure)
 
-Return a matrix representation of `d`.
+Return the number of design points of `d`.
 
-A [`DesignMeasure`](@ref) with `K` design points from an `N`-dimensional
-design region corresponds to a `(N+1, K)` matrix.
-The first row contains the weights.
-
-See also [`DesignMeasure`](@ref).
-
-# Examples
-
-```jldoctest
-julia> as_matrix(DesignMeasure([[7, 4], [8, 5], [9, 6]], [0.5, 0.2, 0.3]))
-3×3 Matrix{Float64}:
- 0.5  0.2  0.3
- 7.0  8.0  9.0
- 4.0  5.0  6.0
-```
+See also [`points`](@ref), [`weights`](@ref).
 """
-function as_matrix(d::DesignMeasure)
-    return vcat(transpose(weights(d)), reduce(hcat, designpoints(d)))
-end
+numpoints(d::DesignMeasure) = size(d.points, 2)
 
 ## utility operations ##
 
@@ -262,11 +230,11 @@ Note that this is stricter than when comparing measures as mathematical function
 where the order of the design points in the representation does not matter.
 """
 function Base.:(==)(d1::DesignMeasure, d2::DesignMeasure)
-    return weights(d1) == weights(d2) && designpoints(d1) == designpoints(d2)
+    return weights(d1) == weights(d2) && points(d1) == points(d2)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", d::DesignMeasure)
-    pairs = map(weights(d), designpoints(d)) do w, dp
+    pairs = map(weights(d), points(d)) do w, dp
         return string(dp) * " => " * string(w)
     end
     print(io, typeof(d), "(\n")
@@ -295,8 +263,8 @@ DesignMeasure(
 """
 function sort_designpoints(d::DesignMeasure; rev::Bool = false)
     # note: no (deep)copies needed because indexing with `p` generates a copy
-    dp = d.designpoint
-    w = d.weight
+    dp = points(d)
+    w = weights(d)
     for i in length(dp[1]):-1:1
         p = sortperm(map(x -> x[i], dp); rev = rev)
         dp = dp[p]
@@ -325,9 +293,9 @@ DesignMeasure(
 ```
 """
 function sort_weights(d::DesignMeasure; rev::Bool = false)
-    p = sortperm(d.weight; rev = rev)
-    w = d.weight[p]
-    dp = d.designpoint[p]
+    p = sortperm(weights(d); rev = rev)
+    w = weights(d)[p]
+    dp = points(d)[p]
     return DesignMeasure(dp, w)
 end
 
@@ -339,14 +307,14 @@ Return the convex combination ``α d_1 + (1-α) d_2``.
 The result is not simplified, hence its design points might not be unique.
 """
 function mixture(alpha::Real, d1::DesignMeasure, d2::DesignMeasure)
-    if length(d1.designpoint[1]) != length(d2.designpoint[1])
+    if length(points(d1)[1]) != length(points(d2)[1])
         error("design points must have identical lengths")
     end
     if alpha < 0 || alpha > 1
         error("mixture weight must be between 0 and 1")
     end
     w = vcat(alpha .* weights(d1), (1 - alpha) .* weights(d2))
-    dp = vcat(designpoints(d1), designpoints(d2))
+    dp = vcat(points(d1), points(d2))
     return DesignMeasure(dp, w)
 end
 
@@ -399,12 +367,12 @@ Construct a new `DesignMeasure` where only design points with weights strictly l
 The vector of remaining weights is re-normalized.
 """
 function simplify_drop(d::DesignMeasure, minweight::Real)
-    if length(d.weight) == 1 # nothing to do for one-point-designs
+    if numpoints(d) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
-    enough_weight = d.weight .> minweight
-    dps = d.designpoint[enough_weight]
-    ws = d.weight[enough_weight]
+    enough_weight = weights(d) .> minweight
+    dps = points(d)[enough_weight]
+    ws = weights(d)[enough_weight]
     ws ./= sum(ws)
     return DesignMeasure(dps, ws)
 end
@@ -415,22 +383,28 @@ end
 Construct a new [`DesignMeasure`](@ref) that corresponds uniquely to its implied normalized
 information matrix.
 
-Users can specialize this method for their concrete subtypes `M <: Model` and
-`C <: CovariateParameterization`. It is intended for cases where the mapping from design measure
-to normalized information matrix is not one-to-one. This depends on the model and covariate
-parameterization used. In such a case, `simplify_unique` should be implemented to select a
-canonical version of the design.
-
 The package default is a catch-all with the abstract types `M = Model` and
 `C = CovariateParameterization`, which simply returns a copy of `d`.
 
 When called via [`simplify`](@ref), user-model specific keyword arguments will be passed in
 `uargs`.
 
+# Implementation
+
+Users can specialize this method for their concrete subtypes `M <: Model` and
+`C <: CovariateParameterization`. It is intended for cases where the mapping from design measure
+to normalized information matrix is not one-to-one. This depends on the model and covariate
+parameterization used. In such a case, `simplify_unique` should be implemented to select a
+canonical version of the design.
+
 !!! note
 
     User-defined versions must have type annotations on all arguments to resolve method
     ambiguity.
+
+# Examples
+
+For several worked examples, see the [dose-time-response vignette](dtr.md).
 """
 function simplify_unique(
     d::DesignMeasure,
@@ -463,12 +437,12 @@ The following two steps are repeated until all points are more than `mindist` ap
 Finally the design points are scaled back into the original design interval.
 """
 function simplify_merge(d::DesignMeasure, dr::DesignInterval, mindist::Real)
-    if length(d.weight) == 1 # nothing to do for one-point-designs
+    if numpoints(d) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
     # scale design interval into unit cube
     width = collect(upperbound(dr) .- lowerbound(dr))
-    dps = [(dp .- lowerbound(dr)) ./ width for dp in d.designpoint]
+    dps = [(dp .- lowerbound(dr)) ./ width for dp in points(d)]
     ws = weights(d)
     cur_min_dist = 0
     while cur_min_dist <= mindist

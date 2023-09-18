@@ -17,7 +17,7 @@ function Kirstine.jacobianmatrix!(jm, m::TPCMod, c::TPCModCovariate, p::TPCPar)
     jm[1, 1] = A * p.s * c.time
     jm[1, 2] = -E * p.s * c.time
     jm[1, 3] = E - A
-    return m
+    return jm
 end
 
 function Kirstine.update_model_covariate!(

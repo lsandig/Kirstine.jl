@@ -1,7 +1,7 @@
 # Mathematical Background
 
 Terms and notations in the field of experimental design vary between authors.
-This pages documents the notation for `Kirstine.jl`.
+This page documents the notation for `Kirstine.jl`.
 
 !!! warning
     
@@ -26,7 +26,11 @@ This pages documents the notation for `Kirstine.jl`.
     \frac{∂φ}{∂A_{ij}}(A)
     \biggr]_{i=1,…,a; j=1,…,b}
     ```
+    
+    For information on finding ``\MatDeriv{φ}{A}{·}`` for certain ``φ``,
+    see the book by Magnus and Neudecker[^MN99].
 
+[^MN99]: Jan R. Magnus and Heinz Neudecker (1999). Matrix differential calculus with applications in statistics and econometrics. Wiley. [doi:10.1002/9781119541219](https://doi.org/10.1002/9781119541219)
 ## Design Problems
 
 A design problem is a tuple
@@ -57,7 +61,8 @@ with the following elements:
     ```math
     \Unit_{\IndexUnit} \mid \Parameter
     \simiid
-    \MvNormDist(\MeanFunction(\Covariate_{\IndexDesignPoint}, \Parameter), \UnitCovariance)
+    \MvNormDist(\MeanFunction(\Covariate_{\IndexDesignPoint}, \Parameter),
+                \UnitCovariance(\Covariate_{\IndexDesignPoint}))
     \quad \text{ for } \IndexUnit ∈ \IndexSet_{\IndexDesignPoint}
     \text{ and } \IndexDesignPoint = 1,…,\NumDesignPoints
     ```
@@ -69,18 +74,22 @@ with the following elements:
     ``\Covariate_{\IndexDesignPoint} ∈ \CovariateSet ⊂ \Reals^{\DimCovariate}``.
     The mean function ``\MeanFunction`` must be continuous in ``\Covariate``
     and continuously differentiable in ``\Parameter``.
-    The covariance matrix ``\UnitCovariance ∈ \SNNDMatrices{\DimUnit}``
-    is assumed to be known and constant.
-    In simple cases, ``\DimUnit=1`` and ``\UnitCovariance = \ScalarUnitVariance``, or ``\DimCovariate=1``.
+    The covariance matrix ``\UnitCovariance : \CovariateSet → \SNNDMatrices{\DimUnit}``
+    may depend on the covariate,
+    but is otherwise assumed to be known.
+    In simple cases,
+    ``\DimUnit=1``,
+    ``\DimCovariate=1``,
+    with ``\UnitCovariance(\Covariate) = \ScalarUnitVariance`` constant.
   - A _covariate parameterization_ ``\CovariateParameterization : \DesignRegion → \CovariateSet``.
     This maps a design point to a model covariate.
   - A _prior density_ ``\PriorDensity : \ParameterSet → [0, ∞)``.
     This encodes the prior knowledge about the model parameter ``\Parameter``.
     The dominating measure is implicit,
-    and can be either the ``r``-dimensional Lebesgue measure
-    or a counting measure.l
+    and can be either the ``\DimParameter``-dimensional Lebesgue measure
+    or a counting measure.
   - A _posterior transformation_ ``\Transformation : \ParameterSet → \Reals^{\DimTransformedParameter}``.
-    This is used to indicate when we are not interested in finding a design for the parameter ``\Parameter``,
+    This is used to indicate when we are not interested in finding a design for the original parameter ``\Parameter``,
     but for some transformation of it.
     ``\Transformation`` must be continuously differentiable.
     In simple cases, ``\Transformation(\Parameter)=\Parameter``.
@@ -153,7 +162,7 @@ over the model's Fisher information matrix
 \FisherMatrix(\Covariate, \Parameter)
 =
 (\TotalDiff\MeanFunction(\Covariate, \Parameter))'
-\UnitCovariance^{-1}
+\UnitCovariance(\Covariate)^{-1}
 \TotalDiff\MeanFunction(\Covariate, \Parameter),
 ```
 
@@ -176,6 +185,7 @@ the Gateaux derivative is given by
 \lim_{α→0} \frac{1}{α}(\Objective((1 - α)\DesignMeasure + α\DesignMeasureDirection))\\
 &=
 \IntD{\ParameterSet}{
+\biggl\{
 \Trace\biggl[
 \NIMatrix^{-1}(\DesignMeasure, \Parameter)
  (\TotalDiff \Transformation'(\Parameter))'
@@ -185,12 +195,14 @@ the Gateaux derivative is given by
  (\TotalDiff \Transformation(\Parameter))
 \NIMatrix^{-1}(\DesignMeasure, \Parameter)
 \NIMatrix(\DesignMeasureDirection, \Parameter)
-\biggr]
+\biggr] \\
+&\qquad
 -
 \Trace\biggl[
 \MatDeriv{\DesignCriterion}{\SomeMatrix}{\TNIMatrix(\DesignMeasure, \Parameter)}
 \TNIMatrix(\DesignMeasure, \Parameter)
 \biggr]
+\biggr\}
 }{\PriorDensity(\Parameter)}{\Parameter}
 .
 \end{aligned}
@@ -205,6 +217,7 @@ If ``\Transformation(\Parameter)=\Parameter``, the expression above simplifies t
 \GateauxDerivative(\DesignMeasure, \DesignMeasureDirection)
 =
 \IntD{\ParameterSet}{
+\biggl\{
 \Trace\biggl[
 \MatDeriv{\DesignCriterion}{\SomeMatrix}{\NIMatrix(\DesignMeasure, \Parameter)}
 \NIMatrix(\DesignMeasureDirection, \Parameter)
@@ -214,12 +227,38 @@ If ``\Transformation(\Parameter)=\Parameter``, the expression above simplifies t
 \MatDeriv{\DesignCriterion}{\SomeMatrix}{\NIMatrix(\DesignMeasure, \Parameter)}
 \NIMatrix(\DesignMeasure, \Parameter)
 \biggr]
+\biggr\}
 }{\PriorDensity(\Parameter)}{\Parameter}
 .
 ```
 
+In both cases, the general form of the Gateaux derivative is
+
+```math
+\GateauxDerivative(\DesignMeasure, \DesignMeasureDirection)
+=
+\IntD{\ParameterSet}{
+\bigl\{
+\Trace\bigl[
+A(\DesignMeasure, \Parameter)
+\NIMatrix(\DesignMeasureDirection, \Parameter)
+\bigr]
+-
+\Trace\bigl[
+B(\DesignMeasure, \Parameter)
+\bigr]
+\bigr\}
+}{\PriorDensity(\Parameter)}{\Parameter}
+,
+```
+
+where the matrices ``A`` and ``B`` are specific to the design criterion and transformation,
+but do not depend on the direction ``\DesignMeasureDirection``.
+Since they are constant in ``\DesignMeasureDirection``
+they only need to be computed once.
+
 An equivalence theorem states:
-A design measure ``\DesignMeasure^*`` maximizes ``\Objective`` iff
+a design measure ``\DesignMeasure^*`` maximizes ``\Objective`` iff
 
 ```math
 \GateauxDerivative(\DesignMeasure^*, \DiracDist(\DesignPoint)) ≤ 0
@@ -283,16 +322,19 @@ The Gateaux derivative is
 \GateauxDerivative(\DesignMeasure, \DesignMeasureDirection)
 =
 \IntD{\ParameterSet}{
-- \Trace\bigl[
+\bigl\{
+\Trace\bigl[
 \NIMatrix^{-1}(\DesignMeasure, \Parameter)
 (\TotalDiff\Transformation(\Parameter))'
 (\TotalDiff\Transformation(\Parameter))
 \NIMatrix^{-1}(\DesignMeasure, \Parameter)
 \NIMatrix(\DesignMeasureDirection, \Parameter)
 \bigr]
-+ \Trace\bigl[
+-
+\Trace\bigl[
 \TNIMatrix^{-1}(\DesignMeasure, \Parameter)
 \bigr]
+\bigr\}
 }{\PriorDensity(\Parameter)}{\Parameter}
 .
 ```
@@ -303,18 +345,21 @@ For ``\Transformation(\Parameter) = \Parameter`` this simplifies to
 \GateauxDerivative(\DesignMeasure, \DesignMeasureDirection)
 =
 \IntD{\ParameterSet}{
-- \Trace\bigl[
+\bigl\{
+\Trace\bigl[
 \NIMatrix^{-2}(\DesignMeasure, \Parameter)
 \NIMatrix(\DesignMeasureDirection, \Parameter)
 \bigr]
-+ \Trace\bigl[
+-
+\Trace\bigl[
 \NIMatrix^{-1}(\DesignMeasure, \Parameter)
 \bigr]
+\bigr\}
 }{\PriorDensity(\Parameter)}{\Parameter}
 .
 ```
 
-## Efficiency
+## Shannon Information
 
 The _approximate expected posterior Shannon information_ for an experiment with the design measure ``\DesignMeasure``
 and a sample size of ``\SampleSize`` is
@@ -327,6 +372,8 @@ and a sample size of ``\SampleSize`` is
 }{\PriorDensity(\Parameter)}{\Parameter}
 .
 ```
+
+## Efficiency
 
 Consider two experiments with design measures ``\DesignMeasure_1`` and ``\DesignMeasure_2``,
 and samples sizes ``\SampleSize^{(1)}`` and ``\SampleSize^{(2)}``.
@@ -398,19 +445,22 @@ map into spaces with a common dimension ``\DimTransformedParameter``.
 In this general case, the two integrals must be calculated separately:
 
 ```math
+\begin{aligned}
 \RelEff(\DesignMeasure_1, \DesignMeasure_2)
-=
+&=
 \exp\biggl(
-\frac{1}{t}\biggl(
+\frac{1}{t}\biggl\{
 \IntD{\ParameterSet^{(1)}}{
 \log\det \TNIMatrix^{(1)}(\DesignMeasure_1, \Parameter^{(1)})
-}{\PriorDensity^{(1)}(\Parameter^{(1)})}{\Parameter^{(1)}}
+}{\PriorDensity^{(1)}(\Parameter^{(1)})}{\Parameter^{(1)}} \\
+&\qquad
 -
 \IntD{\ParameterSet^{(2)}}{
 \log\det \TNIMatrix^{(2)}(\DesignMeasure_2, \Parameter^{(2)})
 }{\PriorDensity^{(2)}(\Parameter^{(2)})}{\Parameter^{(2)}}
+\biggr\}
 \biggr)
-\biggr)
+\end{aligned}
 ```
 
 This more general quantity of course now also depends on the potentially different prior densities!

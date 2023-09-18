@@ -43,6 +43,10 @@ For user types `M <: NonlinearRegression`, `C <: Covariate`, and `P <: Parameter
 this should fill in the elements of the pre-allocated Jacobian matrix `jm`,
 and finally return `jm`.
 
+Note that you are free how you map the partial derivatives to the columns of `jm`.
+The only thing that is required is to use the same order in any [`DeltaMethod`](@ref)
+that you want to implement.
+
 See also the [mathematical background](math.md#Objective-Function).
 """
 function jacobianmatrix! end
@@ -63,20 +67,21 @@ See also the [mathematical background](math.md#Design-Problems).
 function update_model_covariate! end
 
 """
-    Kirstine.invcov(m::M) -> Union{Real,AbstractMatrix}
+    Kirstine.update_model_vcov!(Sigma::Matrix, c::C, m::M)
 
-Return inverse variance-covariance matrix for one unit of observation.
+Compute variance-covariance matrix of the nonlinear regression model
+for one unit of observation.
 
 # Implementation
 
-For a user-type `M <: NonlinearRegression` this should return the inverse of the
-variance-covariance matrix ``\\UnitCovariance`` for a single unit of observation. When a
-unit of observation is a scalar, this may alternatively return its inverse error variance
-``1/\\ScalarUnitVariance`` as a single number.
+For user types `C <: Covariate` and `M <: NonlinearRegression`,
+this should fill in the elements of `Sigma`
+for a unit of observation with covariate `c`.
+The `size` of the matrix is `(unit_length(m), unit_length(m))`.
 
 See also the [mathematical background](math.md#Design-Problems).
 """
-function invcov end
+function update_model_vcov! end
 
 """
     Kirstine.dimension(p::P) -> Integer
@@ -97,7 +102,11 @@ function dimension end
     @define_scalar_unit_model module_name model_name covariate_field_names...
 
 Generate code for defining a [`NonlinearRegression`](@ref) model, a corresponding
-[`Covariate`](@ref), and helper functions for a 1-dimensional unit of observation.
+[`Covariate`](@ref), and helper functions for a 1-dimensional unit of observation
+with constant measurement variance.
+
+The model constructor will have the measurement standard deviation `sigma` as a mandatory
+keyword argument.
 
 # Examples
 
@@ -112,14 +121,20 @@ is equivalent to manually spelling out
 
 ```julia
 struct FooMod <: Kirstine.NonlinearRegression
-    inv_sigma_sq::Float64
+    sigma::Float64
+    function FooMod(; sigma::Real)
+        return new(sigma)
+    end
 end
 mutable struct FooModCovariate <: Kirstine.Covariate
     bar::Float64
     baz::Float64
 end
 Kirstine.unit_length(m::FooMod) = 1
-Kirstine.invcov(m::FooMod) = m.inv_sigma_sq
+function Kirstine.upate_model_vcov!(Sigma::Matrix{Float64}, c::FooModCovariate, m::FooMod)
+    Sigma[1, 1] = m.sigma^2
+    return Sigma
+end
 Kirstine.allocate_covariate(m::FooMod) = FooModCovariate(0, 0)
 ```
 
@@ -153,21 +168,31 @@ macro define_scalar_unit_model(module_name, model_name, covariate_field_names...
     )
     # Note: We have to `esc()` the definitions so that they are evaluated in the calling
     # Module. This has the nice side effect of not replacing `m` with a gensym.
-    return esc(quote
-        struct $model_name <: $module_name.NonlinearRegression
-            inv_sigma_sq::Float64
-        end
-        $covar_struct_expression
-        function $module_name.unit_length(m::$model_name)
-            return 1
-        end
-        function $module_name.invcov(m::$model_name)
-            return m.inv_sigma_sq
-        end
-        function $module_name.allocate_covariate(m::$model_name)
-            return $covar_name($(fill(0, length(covariate_field_names))...))
-        end
-    end)
+    return esc(
+        quote
+            struct $model_name <: $module_name.NonlinearRegression
+                sigma::Float64
+                function $model_name(; sigma::Real)
+                    return new(sigma)
+                end
+            end
+            $covar_struct_expression
+            function $module_name.unit_length(m::$model_name)
+                return 1
+            end
+            function $module_name.update_model_vcov!(
+                s::Matrix{Float64},
+                c::$covar_name,
+                m::$model_name,
+            )
+                s[1, 1] = m.sigma^2
+                return s
+            end
+            function $module_name.allocate_covariate(m::$model_name)
+                return $covar_name($(fill(0, length(covariate_field_names))...))
+            end
+        end,
+    )
 end
 
 """

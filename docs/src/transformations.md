@@ -31,14 +31,14 @@ end
 ```@example main
 using Plots # hide
 θ = (a = 4.298, e = 0.05884, s = 21.80)
-plot(
+tpc = plot(
     x -> θ.s * (exp(-θ.e * x) - exp(-θ.a * x));
     xlims = (0, 10),
     xguide = "time [h]",
     yguide = "response",
     label = "μ(time , θ)",
 )
-savefig_nothing(ans, "transformations-tpc.png") # hide
+savefig_nothing(tpc, "transformations-tpc.png") # hide
 ```
 
 ![](transformations-tpc.png)
@@ -111,7 +111,7 @@ function dp_for_trafo(trafo)
         design_region = DesignInterval(:time => [0, 48]),
         design_criterion = DOptimality(),
         covariate_parameterization = Copy(),
-        model = TPCMod(1),
+        model = TPCMod(sigma = 1),
         prior_knowledge = draw_from_prior(1000, 2),
         transformation = trafo,
     )
@@ -128,7 +128,25 @@ dms = DirectMaximization(optimizer = pso, prototype = uniform_design([[0], [24],
 nothing # hide
 ```
 
-## Optimal design for estimating the parameter
+The following is a small wrapper around [`plot_expected_function`](@ref)
+that plots a time-response curve
+and overlays the measurement points implied by the design.
+
+```@example main
+function plot_expected_response(d::DesignMeasure, dp::DesignProblem)
+    response(t, p) = p.s * (exp(-p.e * t) - exp(-p.a * t))
+    f(x, c, p) = response(x, p)
+    g(c) = [c.time]
+    h(c, p) = [response(c.time, p)]
+    xrange = range(0, 48; length = 101)
+    plt = plot_expected_function(f, g, h, xrange, d, dp.m, dp.cp, dp.pk)
+    plot!(plt; xguide = "time", yguide = "response", xticks = 0:6:48)
+    return plt
+end
+nothing # hide
+```
+
+## Identity Transformation
 
 In order to have a design to compare other solutions against,
 we first determine the Bayesian D-optimal design for the whole parameter ``\theta``.
@@ -145,13 +163,20 @@ s_id
 ```
 
 ```@example main
-plot_gateauxderivative(s_id, dp_id)
-savefig_nothing(ans, "transformations-gd-id.png") # hide
+gd_id = plot_gateauxderivative(s_id, dp_id)
+savefig_nothing(gd_id, "transformations-gd-id.png") # hide
 ```
 
 ![](transformations-gd-id.png)
 
-## Univariate functions of the parameter
+```@example main
+ef_id = plot_expected_response(s_id, dp_id)
+savefig_nothing(ef_id, "transformations-ef-id.png") # hide
+```
+
+![](transformations-ef-id.png)
+
+## Univariate Functions
 
 ### Area under the curve
 
@@ -192,11 +217,18 @@ s_auc
 ```
 
 ```@example main
-plot_gateauxderivative(s_auc, dp_auc)
-savefig_nothing(ans, "transformations-gd-auc.png") # hide
+gd_auc = plot_gateauxderivative(s_auc, dp_auc)
+savefig_nothing(gd_auc, "transformations-gd-auc.png") # hide
 ```
 
 ![](transformations-gd-auc.png)
+
+```@example main
+ef_auc = plot_expected_response(s_auc, dp_auc)
+savefig_nothing(ef_auc, "transformations-ef-auc.png") # hide
+```
+
+![](transformations-ef-auc.png)
 
 The design points are similar to those of `s_id`,
 but while its weights were practically uniform,
@@ -214,7 +246,7 @@ Note that this relation is not necessarily symmetric:
 efficiency(s_auc, s_id, dp_id)
 ```
 
-### Time to maximum concentration
+### Time to Maximum Concentration
 
 Now let's find a design that is optimal for estimating the point in time where the concentration is highest.
 Differentiating ``\mu`` with respect to ``x``,
@@ -247,15 +279,22 @@ s_ttm
 ```
 
 ```@example main
-plot_gateauxderivative(s_ttm, dp_ttm)
-savefig_nothing(ans, "transformations-gd-ttm.png") # hide
+gd_ttm = plot_gateauxderivative(s_ttm, dp_ttm)
+savefig_nothing(gd_ttm, "transformations-gd-ttm.png") # hide
 ```
 
 ![](transformations-gd-ttm.png)
 
+```@example main
+ef_ttm = plot_expected_response(s_ttm, dp_ttm)
+savefig_nothing(ef_ttm, "transformations-ef-ttm.png") # hide
+```
+
+![](transformations-ef-ttm.png)
+
 This solution differs markedly from the previous ones.
 
-### Maximum concentration
+### Maximum Concentration
 
 What if we're not interested in the _time_ of maximum concentration,
 but in the _value_ of the maximum concentration ``\mu(t_{\max{}}(\theta), \theta)`` itself?
@@ -279,17 +318,24 @@ nothing # hide
 
 ```@example main
 dp_cmax = dp_for_trafo(DeltaMethod(Dcmax))
-Random.seed!(1357)
+Random.seed!(13579)
 s_cmax, r_cmax = solve(dp_cmax, dms)
 s_cmax
 ```
 
 ```@example main
-plot_gateauxderivative(s_cmax, dp_cmax)
-savefig_nothing(ans, "transformations-gd-cmax.png") # hide
+gd_cmax = plot_gateauxderivative(s_cmax, dp_cmax)
+savefig_nothing(gd_cmax, "transformations-gd-cmax.png") # hide
 ```
 
 ![](transformations-gd-cmax.png)
+
+```@example main
+ef_cmax = plot_expected_response(s_cmax, dp_cmax)
+savefig_nothing(ef_cmax, "transformations-ef-cmax.png") # hide
+```
+
+![](transformations-ef-cmax.png)
 
 The solution is again mostly concentrated on one design point.
 The location of this point makes intuitive sense,
@@ -299,7 +345,7 @@ considering the prior expected time to maximum concentration:
 mean(ttm, dp_cmax.pk.p)
 ```
 
-## Multivariate functions of the parameter
+## Multivariate Functions
 
 Finding D-optimal designs for vector functions of the parameter is just as easy.
 Suppose we are interested in _both_ the time and the value of the maximum concentration.
@@ -315,11 +361,18 @@ s_both
 ```
 
 ```@example main
-plot_gateauxderivative(s_both, dp_both)
-savefig_nothing(ans, "transformations-gd-both.png") # hide
+gd_both = plot_gateauxderivative(s_both, dp_both)
+savefig_nothing(gd_both, "transformations-gd-both.png") # hide
 ```
 
 ![](transformations-gd-both.png)
+
+```@example main
+ef_both = plot_expected_response(s_both, dp_both)
+savefig_nothing(ef_both, "transformations-ef-both.png") # hide
+```
+
+![](transformations-ef-both.png)
 
 This solution is again similar to `s_id`, but with a different weight distribution.
 

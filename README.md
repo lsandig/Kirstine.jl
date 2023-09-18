@@ -7,10 +7,6 @@ A [Julia][julia-url] package for Bayesian optimal experimental design with nonli
 
 [julia-url]: https://julialang.org
 
-Kirstine.jl is free and open source software.
-The code is licensed under GPL-3.0 or later,
-and the documentation under GFDL-1.3 or later.
-
 ## Project Status
 
 Alpha.
@@ -20,7 +16,8 @@ Documentation is still sparse in some places.
 ## Features
 
 - arbitrary nonlinear regression models
-- vector-valued response variable
+- scalar or vector-valued response variable
+- variance-covariance matrix may depend on covariate
 - Bayesian and locally optimal design
 - design criteria: D, A
 - separation of design variables and model covariates
@@ -42,9 +39,15 @@ Pkg.add(url = "https://git.sr.ht/~lsandig/Kirstine.jl")
 
 To get started, read the [tutorial](https://lsandig.srht.site/Kirstine.jl/tutorial.html).
 
+## License
+
+Kirstine.jl is free and open source software.
+The code is licensed under GPL-3.0 or later,
+and the documentation under GFDL-1.3 or later.
+
 ## Contributing
 
-There is a [git repository at sourcehut](https://git.sr.ht/~lsandig/Kirstine.jl).
+There is a [git repository and issue tracker at sourcehut](https://sr.ht/~lsandig/Kirstine.jl/).
 
 If you have already solved design problems with other software packages,
 you can try to replicate your solutions with Kirstine.jl.

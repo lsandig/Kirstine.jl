@@ -37,7 +37,7 @@ include("example-compartment.jl")
         let dpd = DesignProblem(;
                 transformation = DeltaMethod(p -> diagm([1, 1, 1])),
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
+                model = TPCMod(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
@@ -48,7 +48,7 @@ include("example-compartment.jl")
             dpi = DesignProblem(;
                 transformation = Identity(),
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
+                model = TPCMod(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
@@ -64,7 +64,7 @@ include("example-compartment.jl")
         # DeltaMethod Transformation: Atkinson et al locally optimal Omnibus example
         let dp = DesignProblem(;
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
+                model = TPCMod(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
@@ -94,7 +94,7 @@ include("example-compartment.jl")
         let dc = AOptimality(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
-            m = TPCMod(1),
+            m = TPCMod(; sigma = 1),
             cp = CopyTime(),
             g1 = TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
             g2 = TPCPar(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
@@ -110,12 +110,12 @@ include("example-compartment.jl")
             # Singular designs should raise an exception. It will be caught by the caller.
             @test_throws "SingularException" pgc(dc, a4, m, cp, pk, tc, na)
             @test isa(gc, Kirstine.GCAIdentity)
-            @test length(gc.B) == 2
-            @test length(gc.tr_C) == 2
-            @test Symmetric(gc.B[1]) ≈ inv(m1)^2
-            @test Symmetric(gc.B[2]) ≈ inv(m2)^2
-            @test gc.tr_C[1] ≈ tr(inv(m1))
-            @test gc.tr_C[2] ≈ tr(inv(m2))
+            @test length(gc.A) == 2
+            @test length(gc.tr_B) == 2
+            @test Symmetric(gc.A[1]) ≈ inv(m1)^2
+            @test Symmetric(gc.A[2]) ≈ inv(m2)^2
+            @test gc.tr_B[1] ≈ tr(inv(m1))
+            @test gc.tr_B[2] ≈ tr(inv(m2))
         end
 
         # DeltaMethod transformation
@@ -128,7 +128,7 @@ include("example-compartment.jl")
         let dc = AOptimality(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
-            m = TPCMod(1),
+            m = TPCMod(; sigma = 1),
             cp = CopyTime(),
             g1 = TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
             g2 = TPCPar(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
@@ -145,12 +145,12 @@ include("example-compartment.jl")
             # Singular designs should raise an exception. It will be caught by the caller.
             @test_throws "SingularException" pgc(dc, a4, m, cp, pk, tc, na)
             @test isa(gc, Kirstine.GCADeltaMethod)
-            @test length(gc.B) == 2
-            @test length(gc.tr_C) == 2
-            @test Symmetric(gc.B[1]) ≈ inv(m1) * J[1]' * J[1] * inv(m1)
-            @test Symmetric(gc.B[2]) ≈ inv(m2) * J[2]' * J[2] * inv(m2)
-            @test gc.tr_C[1] ≈ tr(J[1] * inv(m1) * J[1]')
-            @test gc.tr_C[2] ≈ tr(J[2] * inv(m2) * J[2]')
+            @test length(gc.A) == 2
+            @test length(gc.tr_B) == 2
+            @test Symmetric(gc.A[1]) ≈ inv(m1) * J[1]' * J[1] * inv(m1)
+            @test Symmetric(gc.A[2]) ≈ inv(m2) * J[2]' * J[2] * inv(m2)
+            @test gc.tr_B[1] ≈ tr(J[1] * inv(m1) * J[1]')
+            @test gc.tr_B[2] ≈ tr(J[2] * inv(m2) * J[2]')
         end
     end
 
@@ -194,7 +194,7 @@ include("example-compartment.jl")
         let dpi = DesignProblem(;
                 transformation = Identity(),
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
+                model = TPCMod(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
@@ -205,7 +205,7 @@ include("example-compartment.jl")
             dpd = DesignProblem(;
                 transformation = DeltaMethod(p -> diagm([1, 1, 1])),
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
+                model = TPCMod(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
@@ -218,7 +218,7 @@ include("example-compartment.jl")
             d0 = one_point_design([1]),
             # solution
             d1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
-            d1dir = one_point_design.(designpoints(d1))
+            d1dir = one_point_design.(points(d1))
 
             @test all(isnan.(gateauxderivative(d0, dir, dpi)))
             @test gateauxderivative(d1, dir, dpi) ≈ gateauxderivative(d1, dir, dpd)
@@ -228,7 +228,7 @@ include("example-compartment.jl")
         let dp = DesignProblem(;
                 transformation = DeltaMethod(DOmnibus),
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
+                model = TPCMod(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
@@ -241,7 +241,7 @@ include("example-compartment.jl")
             d0 = one_point_design([1]),
             # solution
             d1 = DesignMeasure([0.2176] => 0.2337, [1.4343] => 0.3878, [18.297] => 0.3785),
-            d1dir = one_point_design.(designpoints(d1))
+            d1dir = one_point_design.(points(d1))
 
             @test all(isnan.(gateauxderivative(d0, dir, dp)))
             @test maximum(gateauxderivative(d1, dir, dp)) <= 0

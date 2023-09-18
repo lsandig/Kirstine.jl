@@ -44,21 +44,22 @@ end
     d::DesignMeasure;
     label_formatter = (k, dp, w) -> "$(round(100 * w; sigdigits=3))%",
 )
-    N = length(designpoints(d)[1])
+    N = length(points(d)[1])
     if N != 1 && N != 2
         throw(ArgumentError("only implemented for 1- or 2-dimensional design points"))
     end
     markersize --> permutedims(max.(2, sqrt.(100 .* weights(d))))
     # scatter each design point explicitly in its own series because grouping can't be used
     # in a recipe: https://github.com/JuliaPlots/Plots.jl/issues/1167
-    mat = as_matrix(d)
-    for k in 1:size(mat, 2)
+    pt = reduce(hcat, points(d))
+    w = weights(d)
+    for k in 1:numpoints(d)
         @series begin
             seriestype := :scatter
             markercolor --> k
-            label --> (label_formatter(k, mat[2:end, k], mat[1, k]))
-            y = (N == 1) ? 0 : mat[3, k]
-            [mat[2, k]], [y]
+            label --> (label_formatter(k, pt[:, k], w[k]))
+            y = (N == 1) ? 0 : pt[2, k]
+            [pt[1, k]], [y]
         end
     end
 end
@@ -112,7 +113,7 @@ end
 )
     (; d, dp) = dplot
     range_x = range(lowerbound(dp.dr)[1], upperbound(dp.dr)[1]; length = subdivisions)
-    dsgpts = collect(Iterators.flatten(designpoints(d)))
+    dsgpts = collect(Iterators.flatten(points(d)))
     all_x = sort(vcat(range_x, dsgpts))
     directions = [one_point_design([d]) for d in all_x]
     gd = gateauxderivative(d, directions, dp)
@@ -191,4 +192,120 @@ By default, `markersize` indicates the design weights.
 function plot_gateauxderivative(d::DesignMeasure, dp::DesignProblem; kw...)
     plt_gd = RecipesBase.plot(DerivativePlot(d, dp); kw...)
     return RecipesBase.plot!(plt_gd, d; kw...)
+end
+
+struct ExpectedFunctionPlot{
+    Tf<:Function,
+    Tg<:Function,
+    Th<:Function,
+    Tm<:Model,
+    Tcp<:CovariateParameterization,
+    Tpk<:PriorKnowledge,
+}
+    f::Tf
+    g::Tg
+    h::Th
+    x::Vector{Float64}
+    d::DesignMeasure
+    m::Tm
+    cp::Tcp
+    pk::Tpk
+end
+
+@recipe function f(
+    efplot::ExpectedFunctionPlot;
+    label_formatter = (k, dp, w) -> "$(round(100 * w; sigdigits=3))%",
+)
+    (; f, g, h, x, d, m, cp, pk) = efplot
+    K = numpoints(d)
+    # graphs
+    fx = zeros(length(x), K)
+    c = Kirstine.allocate_initialize_covariates(d, m, cp)
+    for k in 1:K
+        for i in 1:length(x)
+            fx[i, k] = mapreduce((w, p) -> w * f(x[i], c[k], p), +, pk.weight, pk.p)
+        end
+    end
+    @series begin
+        linecolor --> :black
+        label --> nothing
+        x, unique(fx; dims = 2)
+    end
+    # points
+    pt = points(d)
+    wt = weights(d)
+    for k in 1:K
+        gx = g(c[k])
+        hx = mapreduce((w, p) -> w * h(c[k], p), +, pk.weight, pk.p)
+        @series begin
+            label --> (label_formatter(k, pt[k], wt[k]))
+            markersize --> max(2, sqrt.(100 .* wt[k]))
+            markercolor --> k
+            seriestype := :scatter
+            gx, hx
+        end
+    end
+end
+
+"""
+    plot_expected_function(
+        f,
+        g,
+        h,
+        xrange::AbstractVector{<:Real},
+        d::DesignMeasure,
+        m::Model,
+        cp::CovariateParameterization,
+        pk::PriorSample;
+        <keyword arguments>
+    )
+
+Plot a graph of the pointwise expected value of a function
+and design points on that graph.
+
+For user types `C<:Covariate` and `p<:Parameter`,
+the functions `f`, `g`, and `h` should have the following signatures:
+
+  - `f(x::Real, c::C, p::P)::Real`.
+    This function is for plotting a graph.
+  - `g(c::C)::AbstractVector{<:Real}`.
+    This function is for plotting points,
+    and should return the x coordinates corresponding to `c`.
+  - `h(c::C, p::P)::AbstractVector{<:Real}`.
+    This function is for plotting points,
+    and should return the y coordinates corresponding to `c`.
+
+For each value of the covariate `c` implied by the design measure `d`,
+the following things will be plotted:
+
+  - A graph of the average of `f` with respect to `pk` as a function of `x` over `xrange`.
+    If different `c` result in identical graphs, only one will be plotted.
+
+  - Points at `g(c)` and `h(c, p)` averaged with respect to `pk`.
+    By default, the `markersize` attribute is used to indicate the weight of the design point.
+
+# Additional Keyword Arguments
+
+  - `label_formatter::Function`: a function for mapping a triple `(k, pt, w)`
+    of an index, design point, and weight to a string for use as a label in the legend.
+    Default: weight in percentages rounded to 3 significant digits.
+
+# Examples
+
+For usage examples see the [tutorial](tutorial.md)
+and [dose-time-response](dtr.md) vignettes.
+"""
+function plot_expected_function(
+    f,
+    g,
+    h,
+    xrange::AbstractVector{<:Real},
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample;
+    kw...,
+)
+    efp = ExpectedFunctionPlot(f, g, h, collect(xrange), d, m, cp, pk)
+    return RecipesBase.plot(efp; kw...)
 end

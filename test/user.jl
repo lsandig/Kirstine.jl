@@ -11,7 +11,10 @@ using Kirstine
             _ = Base.remove_linenums!(ex),
             (a, b, c, d, e) = ex.args,
             aref = :(struct Foo <: Kirstine.NonlinearRegression
-                inv_sigma_sq::Float64
+                sigma::Float64
+                function Foo(; sigma::Real)
+                    return new(sigma)
+                end
             end),
             bref = :(mutable struct FooCovariate <: Kirstine.Covariate
                 bar::Float64
@@ -20,9 +23,16 @@ using Kirstine
             cref = :(function Kirstine.unit_length(m::Foo)
                 return 1
             end),
-            dref = :(function Kirstine.invcov(m::Foo)
-                return m.inv_sigma_sq
-            end),
+            dref = :(
+                function Kirstine.update_model_vcov!(
+                    s::Matrix{Float64},
+                    c::FooCovariate,
+                    m::Foo,
+                )
+                    s[1, 1] = m.sigma^2
+                    return s
+                end
+            ),
             eref = :(function Kirstine.allocate_covariate(m::Foo)
                 return FooCovariate(0, 0)
             end)

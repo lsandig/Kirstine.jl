@@ -10,7 +10,7 @@ end
 
 This vignette covers four advanced topics:
 
-  - a two-dimensional design region
+  - a two-dimensional[^2d] design region
   - a non-trivial covariate parameterization
   - vector units of observations
   - the exchange algorithm
@@ -31,9 +31,10 @@ Fang and Hedayat[^FH08],
 Dette, Pepelyshev, and Wong[^DPW09],
 or Lange and Schmidli[^LS14].
 
-[^FH08]: Fang, X., & Hedayat, A. S. (2008). Locally d-optimal designs based on a class of composed models resulted from blending Emax and one-compartment models. The Annals of Statistics, 36(1). [doi:10.1214/009053607000000776](https://dx.doi.org/10.1214/009053607000000776)
-[^DPW09]: Dette, H., Pepelyshev, A., & Wong, W. K. (2009). Optimal designs for composed models in pharmacokinetic-pharmacodynamic experiments. [doi:10.17877/DE290R-810](https://dx.doi.org/10.17877/DE290R-810)
-[^LS14]: Lange, M. R., & Schmidli, H. (2014). Optimal design of clinical trials with biologics using dose-time-response models. Statistics in Medicine, 33(30), 5249–5264. [doi:10.1002/sim.6299](https://dx.doi.org/10.1002/sim.6299)
+[^2d]: Kirstine.jl supports an arbitrary number of design variables, but more than two become hard to visualize.
+[^FH08]: X. Fang and A. S. Hedayat (2008). Locally D-optimal designs based on a class of composed models resulted from blending Emax and one-compartment models. The Annals of Statistics, 36(1). [doi:10.1214/009053607000000776](https://dx.doi.org/10.1214/009053607000000776)
+[^DPW09]: Holger Dette, Andrey Pepelyshev, Wenk Kee Wong (2009). Optimal designs for composed models in pharmacokinetic-pharmacodynamic experiments. [doi:10.17877/DE290R-810](https://dx.doi.org/10.17877/DE290R-810)
+[^LS14]: Markus R. Lange and Heinz Schmidli (2014). Optimal design of clinical trials with biologics using dose-time-response models. Statistics in Medicine, 33(30), 5249–5264. [doi:10.1002/sim.6299](https://dx.doi.org/10.1002/sim.6299)
 ## Model Setup
 
 In this section we implement the model in Julia.
@@ -75,10 +76,10 @@ A unit of observation is a vector ``\Unit∈\Reals^{\DimUnit}``,
 collecting the responses at the ``\DimUnit`` measurement times.
 The unknown model parameter is ``\Parameter=(a, e, e_0, e_{\max{}}, \mathrm{EC}_{50})``.
 
-For simplicity we assume that the measurements are uncorrelated with identical variances,
+For simplicity we assume that the measurements are uncorrelated with identical constant variances,
 i.e. ``Σ = σ^2 I_{\DimUnit}``.
-Since ``σ^2`` enters the D-criterion objective only as a scaling factor,
-we may set ``σ^2=1`` for the remainder of this text.
+Since ``σ`` enters the D-criterion objective only as a scaling factor,
+we may set ``σ=1`` for the remainder of this text.
 
 For this more complex model there are no helper macros
 and we have to implement not only the Jacobian matrix,
@@ -88,7 +89,7 @@ but also the [other necessary methods](api.md#Implementing-a-Nonlinear-Regressio
 using Kirstine, Random, Plots
 
 struct DTRMod <: NonlinearRegression
-    inv_sigma_sq::Float64
+    sigma_squared::Float64
     m::Int64
 end
 
@@ -98,7 +99,12 @@ mutable struct DoseTimeCovariate <: Covariate
 end
 
 Kirstine.unit_length(m::DTRMod) = m.m
-Kirstine.invcov(m::DTRMod) = m.inv_sigma_sq
+function Kirstine.update_model_vcov!(s, c::DoseTimeCovariate, m::DTRMod)
+    fill!(s, 0.0)
+    for j in 1:(m.m)
+        s[j, j] = m.sigma_squared
+    end
+end
 Kirstine.allocate_covariate(m::DTRMod) = DoseTimeCovariate(0, zeros(m.m))
 
 @define_vector_parameter Kirstine DTRPar a e e0 emax ec50
@@ -150,41 +156,23 @@ prior = draw_from_prior(1000)
 nothing # hide
 ```
 
-Since the package does not yet contain functionality for plotting the expected response curves for arbitrary models,
-we quickly put together a helper function just for this vignette.
+The following is a small wrapper around [`plot_expected_function`](@ref)
+that plots a time-response curve for each initial dose
+and overlays the measurement point(s) implied by the design.
 
 ```@example main
 function plot_expected_response(d::DesignMeasure, dp::DesignProblem)
-    K = length(designpoints(d))
-    xrange = range(0, 24; length = 101)
-    y = zeros(length(xrange), K)
-    c = Kirstine.allocate_initialize_covariates(d, dp.m, dp.cp)
-    res = function (D, t, p)
+    response = function (D, t, p)
         con = D / (1 - p.e / p.a) * (exp(-p.e * t) - exp(-p.a * t))
         r = p.e0 + p.emax * con / (p.ec50 + con)
         return r
     end
-    for k in 1:K
-        for i in 1:length(xrange)
-            y[i, k] = mapreduce(
-                (w, p) -> w * res(c[k].dose, xrange[i], p),
-                +,
-                dp.pk.weight,
-                dp.pk.p,
-            )
-        end
-    end
-    plt = plot(xguide = "time", yguide = "response", xticks = 0:4:24)
-    plt = plot!(plt, xrange, unique(y; dims = 2); color = :black, label = nothing)
-    for k in 1:K
-        y = mapreduce(
-            (w, p) -> w * [res(c[k].dose, t, p) for t in c[k].time],
-            +,
-            dp.pk.weight,
-            dp.pk.p,
-        )
-        scatter!(plt, c[k].time, y; mc = k, label = k)
-    end
+    f(x, c, p) = response(c.dose, x, p)
+    g(c) = c.time
+    h(c, p) = [response(c.dose, t, p) for t in c.time]
+    xrange = range(0, 24; length = 101)
+    plt = plot_expected_function(f, g, h, xrange, d, dp.m, dp.cp, dp.pk)
+    plot!(plt; xguide = "time", yguide = "response", xticks = 0:4:24)
     return plt
 end
 nothing # hide
@@ -253,7 +241,7 @@ function Kirstine.simplify_unique(
 )
     res = deepcopy(d) # don't modify the input!
     if lowerbound(dr) == (0, 0)
-        map(res.designpoint) do dp
+        map(points(res)) do dp
             if dp[1] < minposdose || dp[2] < minpostime
                 dp[1] = 0
                 dp[2] = 0
@@ -283,7 +271,7 @@ st1 = DirectMaximization(
 )
 
 Random.seed!(2468)
-s1, r1 = solve(dp1, st1; minpostime = 1e-3)
+s1, r1 = solve(dp1, st1; minpostime = 1e-3, minposdose = 1e-3)
 s1
 ```
 
@@ -491,14 +479,14 @@ function Kirstine.simplify_unique(
 )
     res = deepcopy(d)
     if lowerbound(dr)[1] == 0
-        map(res.designpoint) do dp
+        map(points(res)) do dp
             if dp[1] <= minposdose
                 dp[1] = 0
                 dp[2] = upperbound(dr)[2]
             end
         end
         if lowerbound(dr)[2] == 0
-            map(res.designpoint) do dp
+            map(points(res)) do dp
                 if dp[2] <= minposdelta
                     dp[1] = 0
                     dp[2] = upperbound(dr)[2]
@@ -523,9 +511,9 @@ st4a = DirectMaximization(
     prototype = random_design(dp4.dr, 5),
 )
 
-Random.seed!(11681)
+Random.seed!(112358)
 s4a, r4a = solve(dp4, st4a)
-gd4a = plot_gateauxderivative(s4a, dp4)
+gd4a = plot_gateauxderivative(s4a, dp4; legend = :bottomleft)
 savefig_nothing(gd4a, "dtr-gd4a.png") # hide
 ```
 
@@ -571,17 +559,16 @@ st4b = Exchange(
     ow = Pso(swarmsize = 50, iterations = 20),
 )
 
-Random.seed!(31415)
-s4b, r4b = solve(dp4, st4b; minweight = 1e-3)
+Random.seed!(314)
+s4b, r4b = solve(dp4, st4b; minweight = 1e-3, mindist = 1e-2)
 pr4b = plot(r4b)
 savefig_nothing(pr4b, "dtr-pr4b.png") # hide
 ```
 
 ![](dtr-pr4b.png)
 
-We see that the maximal derivative drops sharply after even one step.
-The objective increases only in the fourth place after the decimal
-point, though.
+We see that the maximal derivative drops sharply after two steps,
+and the objective increases as well.
 
 Let's look at the solution.
 
@@ -648,14 +635,14 @@ function Kirstine.simplify_unique(
 )
     res = deepcopy(d)
     if lowerbound(dr)[1] == 0
-        map(res.designpoint) do dp
+        map(points(res)) do dp
             if dp[1] <= minposdose
                 dp[1] = 0
                 dp[2] = upperbound(dr)[2]
             end
         end
         if lowerbound(dr)[2] == 0
-            map(res.designpoint) do dp
+            map(points(res)) do dp
                 if dp[2] <= minposdelta
                     dp[1] = 0
                     dp[2] = upperbound(dr)[2]

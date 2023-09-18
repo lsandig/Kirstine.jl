@@ -9,15 +9,20 @@ using LinearAlgebra: Symmetric, UpperTriangular, tr, det, diagm
 
 include("example-testpar.jl")
 include("example-emax.jl")
+include("example-vector.jl")
 
 @testset "design-common.jl" begin
     @testset "WorkMatrices" begin
-        let m = 2, r = 4, t = 3, wm = Kirstine.WorkMatrices(m, r, t)
+        let K = 5, m = 2, r = 4, t = 3, wm = Kirstine.WorkMatrices(K, m, r, t)
             @test size(wm.r_x_r) == (r, r)
             @test size(wm.t_x_t) == (t, t)
             @test size(wm.r_x_t) == (r, t)
             @test size(wm.t_x_r) == (t, r)
             @test size(wm.m_x_r) == (m, r)
+            @test length(wm.m_x_m) == K
+            for k in 1:K
+                @test size(wm.m_x_m[k]) == (m, m)
+            end
         end
     end
 
@@ -38,15 +43,15 @@ include("example-emax.jl")
             jm = zeros(1, 3),
             w = [0.25, 0.75],
             m = EmaxModel(1),
-            ic = Kirstine.invcov(m),
+            # cholesky factor of the one-element 1.0 matrix is 1.0.
+            cvc = [[1.0;;] for _ in 1:length(w)],
             c = [Dose(0), Dose(5)],
             p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
             na = FisherMatrix(),
-            res = Kirstine.informationmatrix!(nim, jm, w, m, ic, c, p, na)
-
+            res = Kirstine.informationmatrix!(nim, jm, w, m, cvc, c, p, na),
             ref = mapreduce(+, enumerate(c)) do (k, dose)
                 Kirstine.jacobianmatrix!(jm, m, dose, p)
-                return w[k] * ic * jm' * jm
+                return w[k] * jm' * inv([1.0;;]) * jm
             end
 
             # returns first argument?
@@ -69,6 +74,24 @@ include("example-emax.jl")
             res = informationmatrix(d, m, cp, p, na)
 
             ref = [16 6 -6; 6 3 -3; -6 -3 3] ./ 16
+
+            @test res ≈ ref
+        end
+
+        # vector unit with non-constant covariance
+        let d = DesignMeasure([5] => 0.25, [20] => 0.75),
+            m = VUMod(0.1, 3),
+            cp = EquiTime(),
+            p = VUPar(; a = 4.298, e = 0.05884, s = 21.80),
+            na = FisherMatrix(),
+            res = informationmatrix(d, m, cp, p, na),
+            # recreate by hand
+            c = [VUCovariate([0, 5, 10]), VUCovariate([0, 20, 40])],
+            jm = Kirstine.jacobianmatrix!.([zeros(3, 3), zeros(3, 3)], [m], c, [p]),
+            S = [diagm([0.1, 0.6, 1.1]), diagm([0.1, 2.1, 4.1])],
+            F1 = jm[1]' * inv(S[1]) * jm[1],
+            F2 = jm[2]' * inv(S[2]) * jm[2],
+            ref = 0.25 * F1 + 0.75 * F2
 
             @test res ≈ ref
         end
@@ -107,10 +130,11 @@ include("example-emax.jl")
             m = 1,
             r = 3,
             t = 3,
-            wm1 = Kirstine.WorkMatrices(m, r, t),
-            wm2 = Kirstine.WorkMatrices(m, r, t),
-            wm3 = Kirstine.WorkMatrices(m, r, t),
-            wm4 = Kirstine.WorkMatrices(m, r, t),
+            K = 1, # dummy, we already have the informationmatrix
+            wm1 = Kirstine.WorkMatrices(K, m, r, t),
+            wm2 = Kirstine.WorkMatrices(K, m, r, t),
+            wm3 = Kirstine.WorkMatrices(K, m, r, t),
+            wm4 = Kirstine.WorkMatrices(K, m, r, t),
             # workaround for `.=` not being valid let statement syntax
             _ = broadcast!(identity, wm1.r_x_r, nim),
             _ = broadcast!(identity, wm2.r_x_r, inv_nim),
@@ -146,8 +170,9 @@ include("example-emax.jl")
             m = 1,
             r = 3,
             t = 3,
-            wm1 = Kirstine.WorkMatrices(m, r, t),
-            wm2 = Kirstine.WorkMatrices(m, r, t),
+            K = 1, # dummy, we already have the informationmatrix
+            wm1 = Kirstine.WorkMatrices(K, m, r, t),
+            wm2 = Kirstine.WorkMatrices(K, m, r, t),
             # workaround for `.=` not being valid let statement syntax
             _ = broadcast!(identity, wm1.r_x_r, nim),
             _ = broadcast!(identity, wm2.r_x_r, inv_nim),
@@ -169,10 +194,10 @@ include("example-emax.jl")
             cp = CopyDose(),
             c = Kirstine.allocate_initialize_covariates(d, m, cp)
 
-            @test length(c) == length(designpoints(d))
-            @test c[1].dose == designpoints(d)[1][1]
-            @test c[2].dose == designpoints(d)[2][1]
-            @test c[3].dose == designpoints(d)[3][1]
+            @test length(c) == numpoints(d)
+            @test c[1].dose == points(d)[1][1]
+            @test c[2].dose == points(d)[2][1]
+            @test c[3].dose == points(d)[3][1]
         end
     end
 

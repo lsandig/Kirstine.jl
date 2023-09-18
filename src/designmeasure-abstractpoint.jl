@@ -7,14 +7,11 @@
 # particle-based optimizers. Structurally the same as a DesignMeasure, but weights can be
 # arbitrary real numbers.
 struct SignedMeasure <: AbstractPointDifference
-    atom::Vector{Vector{Float64}}
-    weight::Vector{Float64}
+    atoms::Matrix{Float64}
+    weights::Vector{Float64}
     function SignedMeasure(atoms, weights)
-        if length(weights) != length(atoms)
+        if length(weights) != size(atoms, 2)
             error("number of weights and atoms must be equal")
-        end
-        if !allequal(map(length, atoms))
-            error("atoms must have identical lengths")
         end
         new(atoms, weights)
     end
@@ -39,7 +36,7 @@ function DesignConstraints(
     fixedpoints::AbstractVector{<:Integer},
 )
     check_compatible(d, dr)
-    K = length(weights(d))
+    K = numpoints(d)
     if any(fixedweights .< 1) || any(fixedweights .> K)
         error("indices for fixed weights must be between 1 and $K")
     end
@@ -60,9 +57,9 @@ end
 function check_compatible(d::DesignMeasure, dr::DesignInterval)
     lb = dr.lowerbound
     ub = dr.upperbound
-    for dp in d.designpoint
+    for dp in points(d)
         if length(dp) != length(lb)
-            error("designpoint length must match design region dimension")
+            error("design point length must match design region dimension")
         end
         if any(dp .< lb) || any(dp .> ub)
             sandwich = hcat([:lb, :dp, :ub], permutedims([[lb...] dp [ub...]]))
@@ -70,7 +67,7 @@ function check_compatible(d::DesignMeasure, dr::DesignInterval)
             b = IOBuffer()
             show(b, "text/plain", sandwich)
             sstr = String(take!(b))
-            error("designpoint is outside design region\n $sstr")
+            error("design point is outside design region\n $sstr")
         end
     end
     return true
@@ -80,35 +77,38 @@ function ap_random_point!(
     d::DesignMeasure,
     c::DesignConstraints{N,DesignInterval{N}},
 ) where N
-    K = length(d.weight)
+    K = numpoints(d)
     scl = c.dr.upperbound .- c.dr.lowerbound
+    pts = points(d)
     for k in 1:K
         if !c.fixp[k]
-            rand!(d.designpoint[k])
-            d.designpoint[k] .*= scl
-            d.designpoint[k] .+= c.dr.lowerbound
+            rand!(pts[k])
+            pts[k] .*= scl
+            pts[k] .+= c.dr.lowerbound
         end
     end
     if !all(c.fixw)
         # Due to rounding errors, a sum > 1.0 can happen.
         # We need to prevent negative normalizing constants later on.
-        cum_sum_fix = min(1.0, sum(d.weight[c.fixw]))
+        cum_sum_fix = min(1.0, sum(weights(d)[c.fixw]))
         if cum_sum_fix == 1.0
             @warn "fixed weights already sum to one"
         end
+        # rationale for the weights: when no indices are fixed, re-normalized exponential
+        # weights imply a uniform distribution on the simplex, i.e. Dirichlet(1, …, 1).
         cum_sum_rand = 0.0
         while cum_sum_rand < eps() # we don't want to divide by too small numbers
             for k in 1:K
                 if !c.fixw[k]
-                    d.weight[k] = rand()
-                    cum_sum_rand += d.weight[k]
+                    d.weights[k] = -log(rand())
+                    cum_sum_rand += d.weights[k]
                 end
             end
         end
         norm_const = (1 - cum_sum_fix) / cum_sum_rand
         for k in 1:K
             if !c.fixw[k]
-                d.weight[k] *= norm_const
+                d.weights[k] *= norm_const
             end
         end
     end
@@ -116,60 +116,46 @@ function ap_random_point!(
 end
 
 function ap_difference!(v::SignedMeasure, p::DesignMeasure, q::DesignMeasure)
-    K = length(p.weight)
-    v.weight .= p.weight .- q.weight
-    for k in 1:K
-        v.atom[k] .= p.designpoint[k] .- q.designpoint[k]
-    end
+    v.weights .= p.weights .- q.weights
+    v.atoms .= p.points .- q.points
     return v
 end
 
 function ap_copy!(to::DesignMeasure, from::DesignMeasure)
-    to.weight .= from.weight
-    for k in 1:length(from.designpoint)
-        to.designpoint[k] .= from.designpoint[k]
-    end
+    to.weights .= from.weights
+    to.points .= from.points
     return to
 end
 
 function ap_as_difference(p::DesignMeasure)
-    return SignedMeasure(deepcopy(p.designpoint), deepcopy(p.weight))
+    return SignedMeasure(deepcopy(p.points), deepcopy(p.weights))
 end
 
 function ap_random_difference!(v::SignedMeasure)
-    rand!(v.weight)
-    for k in 1:length(v.weight)
-        rand!(v.atom[k])
-    end
+    rand!(v.weights)
+    rand!(v.atoms)
     return v
 end
 
 function ap_mul_hadamard!(v1::SignedMeasure, v2::SignedMeasure)
-    v1.weight .*= v2.weight
-    for k in 1:length(v1.weight)
-        v1.atom[k] .*= v2.atom[k]
-    end
+    v1.weights .*= v2.weights
+    v1.atoms .*= v2.atoms
     return v1
 end
 
 function ap_mul_scalar!(v::SignedMeasure, a::Real)
-    v.weight .*= a
-    for k in 1:length(v.weight)
-        v.atom[k] .*= a
-    end
+    v.weights .*= a
+    v.atoms .*= a
     return v
 end
 
 function ap_add!(v1::SignedMeasure, v2::SignedMeasure)
-    v1.weight .+= v2.weight
-    for k in 1:length(v1.weight)
-        v1.atom[k] .+= v2.atom[k]
-    end
+    v1.weights .+= v2.weights
+    v1.atoms .+= v2.atoms
     return v1
 end
 
 function ap_move!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
-    K = length(p.designpoint) # number of design points
     # ignore velocity components in directions that correspond to fixed weights or points
     move_handle_fixed!(v, c.fixw, c.fixp)
     # handle intersections: find maximal 0<=t<=1 such that p+tv remains in the search volume
@@ -186,13 +172,13 @@ function ap_move!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
 end
 
 function move_handle_fixed!(v::SignedMeasure, fixw, fixp)
-    K = length(v.weight)
+    K = length(v.weights)
     sum_vw_free = 0.0
     for k in 1:(K - 1)
         if fixw[k]
-            v.weight[k] = 0.0
+            v.weights[k] = 0.0
         else
-            sum_vw_free += v.weight[k]
+            sum_vw_free += v.weights[k]
         end
     end
     # We treat the final weight as implicitly determined by the first (K-1) ones. When it is
@@ -205,22 +191,22 @@ function move_handle_fixed!(v::SignedMeasure, fixw, fixp)
     # careful. We must make sure to only move parallel to the simplex diagonal face, i.e.
     # that
     #
-    #   sum(v.weight[.! fixw]) == 0.
+    #   sum(v.weights[.! fixw]) == 0.
     #
     # In oder not to prefer one direction over the others, we subtract the mean
-    # from every non-fixed element of v.weight.
+    # from every non-fixed element of v.weights.
     n_fixw = count(fixw)
     if n_fixw != K && fixw[K]
         mean_free = sum_vw_free / (K - n_fixw)
         for k in 1:(K - 1)
             if !fixw[k]
-                v.weight[k] -= mean_free
+                v.weights[k] -= mean_free
             end
         end
     end
     for k in 1:K
         if fixp[k]
-            v.atom[k] .= 0.0
+            v.atoms[:, k] .= 0.0
         end
     end
     return v
@@ -228,20 +214,20 @@ end
 
 function move_how_far(p::DesignMeasure, v::SignedMeasure, dr::DesignInterval{N}) where N
     t = 1.0
-    K = length(p.designpoint)
+    K = numpoints(p)
     # box constraints
     for k in 1:K
         for j in 1:N
-            t = how_far_left(p.designpoint[k][j], t, v.atom[k][j], dr.lowerbound[j])
-            t = how_far_right(p.designpoint[k][j], t, v.atom[k][j], dr.upperbound[j])
+            t = how_far_left(p.points[j, k], t, v.atoms[j, k], dr.lowerbound[j])
+            t = how_far_right(p.points[j, k], t, v.atoms[j, k], dr.upperbound[j])
         end
     end
     # simplex constraints
     for k in 1:(K - 1) # ingore implicit last weight
-        t = how_far_left(p.weight[k], t, v.weight[k], 0.0)
+        t = how_far_left(p.weights[k], t, v.weights[k], 0.0)
     end
-    sum_x = 1.0 - p.weight[K]
-    sum_v = @views sum(v.weight[1:(K - 1)])
+    sum_x = 1.0 - p.weights[K]
+    sum_v = @views sum(v.weights[1:(K - 1)])
     t = how_far_simplexdiag(sum_x, t, sum_v)
     return t
 end
@@ -273,36 +259,31 @@ function move_add_v!(
     dr::DesignInterval{N},
     fixw,
 ) where N
-    K = length(p.designpoint)
+    K = numpoints(p)
     # first for the design points ...
-    for k in 1:K
-        p.designpoint[k] .+= t .* v.atom[k]
-        for j in 1:N
-            # Due to rounding errors, design points can be just slightly outside the design
-            # interval. We fix this here.
-            p.designpoint[k][j] =
-                min(max(p.designpoint[k][j], dr.lowerbound[j]), dr.upperbound[j])
-        end
-    end
+    p.points .+= t .* v.atoms
+    # Due to rounding errors, design points can be just slightly outside the design
+    # interval. We fix this here.
+    p.points .= min.(max.(p.points, dr.lowerbound), dr.upperbound)
     # ... then for the weights.
-    p.weight .+= t .* v.weight
+    p.weights .+= t .* v.weights
     weight_K = 1.0
     for k in 1:(K - 1)
         # Again due to rounding erros, a weight can become slightly negative. We need to fix
         # this to prevent it snowballing later on.
-        p.weight[k] = min(max(p.weight[k], 0.0), 1.0)
-        weight_K -= p.weight[k]
+        p.weights[k] = min(max(p.weights[k], 0.0), 1.0)
+        weight_K -= p.weights[k]
     end
     # In `handle_fixed()` we made sure that mathematically we have
     #
     #   weight_K == 1 - sum(weight[1:(K-1)]),
     #
     # but due to rounding errors this is not the case numerically. Hence we
-    # just don't touch p.weight[K] that case.
+    # just don't touch p.weights[K] that case.
     if !fixw[K]
-        p.weight[K] = weight_K
+        p.weights[K] = weight_K
     end
     # Fix small rounding erros as above.
-    p.weight[K] = max(p.weight[K], 0.0)
+    p.weights[K] = max(p.weights[K], 0.0)
     return p
 end

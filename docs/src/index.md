@@ -8,10 +8,6 @@ ver = Pkg.project().version
 "Version $(ver)"
 ```
 
-Kirstine.jl is free and open source software.
-The code is licensed under GPL-3.0 or later,
-and the documentation under GFDL-1.3 or later.
-
 ## Project Status
 
 Alpha.
@@ -22,6 +18,7 @@ Documentation is still sparse in some places.
 
   - arbitrary nonlinear regression models
   - vector-valued response variable
+  - variance-covariance matrix may depend on covariate
   - Bayesian and locally optimal design
   - design criteria: D, A
   - separation of design variables and model covariates
@@ -55,9 +52,15 @@ Familiarity with the following topics is required:
     and adding [methods](https://docs.julialang.org/en/v1/manual/methods/)
     for user-defined types.
 
+## License
+
+Kirstine.jl is free and open source software.
+The code is licensed under GPL-3.0 or later,
+and the documentation under GFDL-1.3 or later.
+
 ## Contributing
 
-There is a [git repository at sourcehut](https://git.sr.ht/%7Elsandig/Kirstine.jl).
+There is a [git repository and issue tracker at sourcehut](https://sr.ht/%7Elsandig/Kirstine.jl/).
 
 If you have already solved design problems with other software packages,
 you can try to replicate your solutions with Kirstine.jl.

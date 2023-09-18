@@ -40,6 +40,7 @@ AOptimality
 objective
 gateauxderivative
 efficiency
+shannon_information
 ```
 
 ## Design Regions
@@ -87,7 +88,7 @@ Then methods need to be added for the following package-internal functions:
 Kirstine.allocate_covariate
 Kirstine.jacobianmatrix!
 Kirstine.update_model_covariate!
-Kirstine.invcov
+Kirstine.update_model_vcov!
 Kirstine.unit_length
 dimension
 ```
@@ -131,16 +132,16 @@ FisherMatrix
 ```@docs
 DesignMeasure
 Base.:(==)(::DesignMeasure, ::DesignMeasure)
+DesignMeasure(::AbstractMatrix{<:Real}, ::AbstractVector{<:Real})
 DesignMeasure(::AbstractVector{<:AbstractVector{<:Real}}, ::AbstractVector{<:Real})
 DesignMeasure(::Pair...)
-DesignMeasure(::AbstractMatrix{<:Real})
-as_matrix
 one_point_design
 uniform_design
 equidistant_design
 random_design
+points
 weights
-designpoints
+numpoints
 sort_designpoints
 sort_weights
 mixture
@@ -156,9 +157,11 @@ informationmatrix
 
 ```@docs
 plot_gateauxderivative
+plot_expected_function
 ```
 
-In addition, objects of the following types can be plotted directly:
+In addition, objects of the following types can be plotted directly.
+Note that all plots involving a `DesignMeasure` can take the `label_formatter` keyword argument.
 
 ```julia
 plot(d::DesignMeasure)

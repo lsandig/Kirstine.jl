@@ -35,7 +35,7 @@ include("example-compartment.jl")
         # Identity Transformation: Atkinson et al. locally optimal example
         let dp = DesignProblem(;
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
+                model = TPCMod(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),
@@ -58,7 +58,7 @@ include("example-compartment.jl")
         let _ = seed!(4711),
             dp = DesignProblem(;
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
+                model = TPCMod(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),
@@ -88,7 +88,7 @@ include("example-compartment.jl")
         let dc = DOptimality(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
-            m = TPCMod(1),
+            m = TPCMod(; sigma = 1),
             cp = CopyTime(),
             g1 = TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
             g2 = TPCPar(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
@@ -101,11 +101,12 @@ include("example-compartment.jl")
             # Singular designs should raise an exception. It will be caught by the caller.
             @test_throws "SingularException" pgc(dc, a4, m, cp, pk, tc, na)
             @test isa(gc, Kirstine.GCDIdentity)
-            @test length(gc.invM) == 2
+            @test length(gc.A) == 2
+            @test length(gc.tr_B) == 2
             # Note: the informationmatrix return value is already wrapped in Symmetric()
-            @test Symmetric(gc.invM[1]) ≈ inv(informationmatrix(a1, m, cp, g1, na))
-            @test Symmetric(gc.invM[2]) ≈ inv(informationmatrix(a1, m, cp, g2, na))
-            @test gc.parameter_length == 3
+            @test Symmetric(gc.A[1]) ≈ inv(informationmatrix(a1, m, cp, g1, na))
+            @test Symmetric(gc.A[2]) ≈ inv(informationmatrix(a1, m, cp, g2, na))
+            @test all(gc.tr_B .== 3)
         end
 
         # DeltaMethod transformation
@@ -122,7 +123,7 @@ include("example-compartment.jl")
         let dc = DOptimality(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
-            m = TPCMod(1),
+            m = TPCMod(; sigma = 1),
             cp = CopyTime(),
             g1 = TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
             g2 = TPCPar(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
@@ -141,10 +142,11 @@ include("example-compartment.jl")
             # Singular designs should raise an exception. It will be caught by the caller.
             @test_throws "SingularException" pgc(dc, a4, m, cp, pk, tc, na)
             @test isa(gc, Kirstine.GCDDeltaMethod)
-            @test length(gc.invM_B_invM) == 2
-            @test Symmetric(gc.invM_B_invM[1]) ≈ inv(M1) * B1 * inv(M1)
-            @test Symmetric(gc.invM_B_invM[2]) ≈ inv(M2) * B2 * inv(M2)
-            @test gc.transformed_parameter_length == 1
+            @test length(gc.A) == 2
+            @test length(gc.tr_B) == 2
+            @test Symmetric(gc.A[1]) ≈ inv(M1) * B1 * inv(M1)
+            @test Symmetric(gc.A[2]) ≈ inv(M2) * B2 * inv(M2)
+            @test all(gc.tr_B .== 1)
         end
     end
 
@@ -156,7 +158,7 @@ include("example-compartment.jl")
         # corresponding to the direction. Both matrices have size (r, r). Here we test an
         # example with r = 2.
         let A = [2.0 3.0; 0.0 7.0],
-            c = Kirstine.GCDIdentity([A], 2),
+            c = Kirstine.GCDIdentity([A], [2]),
             B = [0.4 1.0; 0.0 0.5],
             gi = Kirstine.gateaux_integrand
 
@@ -172,7 +174,7 @@ include("example-compartment.jl")
         # corresponding to the direction. Both matrices have size (r, r). t is the length of
         # the transformed parameter. Here we test an example with r = 2 and t = 1.
         let A = [2.0 3.0; 0.0 7.0],
-            c = Kirstine.GCDDeltaMethod([A], 1),
+            c = Kirstine.GCDDeltaMethod([A], [1]),
             B = [0.4 1.0; 0.0 0.5],
             gi = Kirstine.gateaux_integrand
 
@@ -191,7 +193,7 @@ include("example-compartment.jl")
         let dpi = DesignProblem(;
                 transformation = Identity(),
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
+                model = TPCMod(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),
@@ -202,7 +204,7 @@ include("example-compartment.jl")
             dpd = DesignProblem(;
                 transformation = DeltaMethod(p -> diagm([1, 1, 1])),
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(1),
+                model = TPCMod(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),
@@ -215,7 +217,7 @@ include("example-compartment.jl")
             d0 = one_point_design([1]),
             # solution
             d1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
-            d1dir = one_point_design.(designpoints(d1))
+            d1dir = one_point_design.(points(d1))
 
             @test_throws "one-point design" gateauxderivative(d1, [d1], dpi)
             @test all(isnan.(gateauxderivative(d0, dir, dpi)))

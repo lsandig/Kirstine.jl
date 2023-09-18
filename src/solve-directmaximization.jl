@@ -69,7 +69,12 @@ function solve_with(dp::DesignProblem, strategy::DirectMaximization, trace_state
         strategy.fixedpoints,
     )
     tc = precalculate_trafo_constants(dp.trafo, dp.pk)
-    wm = WorkMatrices(unit_length(dp.m), parameter_dimension(dp.pk), codomain_dimension(tc))
+    wm = WorkMatrices(
+        length(weights(strategy.prototype)),
+        unit_length(dp.m),
+        parameter_dimension(dp.pk),
+        codomain_dimension(tc),
+    )
     c = allocate_initialize_covariates(strategy.prototype, dp.m, dp.cp)
     f = d -> objective!(wm, c, dp.dc, d, dp.m, dp.cp, dp.pk, tc, dp.na)
     or = optimize(

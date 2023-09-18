@@ -63,7 +63,7 @@ guess = PriorSample([SigEmaxPar(e0 = 1, emax = 2, ed50 = 0.4, h = 5)])
 dp = DesignProblem(
     design_criterion = DOptimality(),
     design_region = dr,
-    model = SigEmax(1),
+    model = SigEmax(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = guess,
 )
@@ -75,7 +75,7 @@ and can be solved with a smaller swarm and in fewer iterations.
 
 ```@example main
 str1 = DirectMaximization(
-    optimizer = Pso(iterations = 20, swarmsize = 50),
+    optimizer = Pso(iterations = 50, swarmsize = 50),
     prototype = equidistant_design(dr, 4),
 )
 
