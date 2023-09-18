@@ -59,7 +59,7 @@ function check_compatible(d::DesignMeasure, dr::DesignInterval)
     ub = dr.upperbound
     for dp in points(d)
         if length(dp) != length(lb)
-            error("designpoint length must match design region dimension")
+            error("design point length must match design region dimension")
         end
         if any(dp .< lb) || any(dp .> ub)
             sandwich = hcat([:lb, :dp, :ub], permutedims([[lb...] dp [ub...]]))
@@ -67,7 +67,7 @@ function check_compatible(d::DesignMeasure, dr::DesignInterval)
             b = IOBuffer()
             show(b, "text/plain", sandwich)
             sstr = String(take!(b))
-            error("designpoint is outside design region\n $sstr")
+            error("design point is outside design region\n $sstr")
         end
     end
     return true

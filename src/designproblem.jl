@@ -88,7 +88,7 @@ end
 
 Return a tuple `(d, r)`.
 
-  - `d`: The best [`DesignMeasure`](@ref) found. As postprocessing, [`simplify`](@ref) is
+  - `d`: The best [`DesignMeasure`](@ref) found. As post-processing, [`simplify`](@ref) is
     called with `sargs` and the design points are sorted with [`sort_designpoints`](@ref).
 
   - `r`: A subtype of [`ProblemSolvingResult`](@ref) that is specific to the strategy used.
