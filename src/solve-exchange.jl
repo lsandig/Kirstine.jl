@@ -41,7 +41,7 @@ struct Exchange{Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,Any}} <:
         of a [`mixture`](@ref) of `r` and `d` for the [`DesignCriterion`](@ref).
         This is implemented as a call to [`solve`](@ref)
         with the [`DirectMaximization`](@ref) strategy
-        and with all of the designpoints of `r` kept fixed.
+        and with all of the design points of `r` kept fixed.
      4. Set `r` to the result of step 3.
 
     The return value of [`solve`](@ref) for this strategy is an [`ExchangeResult`](@ref).

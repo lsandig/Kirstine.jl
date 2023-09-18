@@ -48,8 +48,7 @@ include("example-vector.jl")
             c = [Dose(0), Dose(5)],
             p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
             na = FisherMatrix(),
-            res = Kirstine.informationmatrix!(nim, jm, w, m, cvc, c, p, na)
-
+            res = Kirstine.informationmatrix!(nim, jm, w, m, cvc, c, p, na),
             ref = mapreduce(+, enumerate(c)) do (k, dose)
                 Kirstine.jacobianmatrix!(jm, m, dose, p)
                 return w[k] * jm' * inv([1.0;;]) * jm

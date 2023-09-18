@@ -40,16 +40,16 @@ struct AOptimality <: DesignCriterion end
 
 function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::AOptimality)
     if is_inv
-        # Note: In this branch there won't be an exception if tnum is singular. But as this
+        # Note: In this branch there won't be an exception if `tnim` is singular. But as this
         # branch is called with the DeltaMethod transformation, an exception will already
         # have been thrown in `apply_transformation!`.
         return -tr(tnim)
     else
-        potrf!('U', tnim) # cholesky factor
+        potrf!('U', tnim) # Cholesky factor
         potri!('U', tnim) # inverse thereof
         # Note that an exception thrown by `potri!` is caught in `objective!`, which then
-        # returns -Inf. This makes sense since tr(tnim) is the sum of the reciprocals of
-        # tnim's eigenvalues, which for singular tnim contain at least one zero.
+        # returns -Inf. This makes sense since `tr(tnim)` is the sum of the reciprocals of
+        # `tnim`'s eigenvalues, which for singular `tnim` contain at least one zero.
         return -tr(tnim)
     end
 end

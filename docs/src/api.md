@@ -160,7 +160,8 @@ plot_gateauxderivative
 plot_expected_function
 ```
 
-In addition, objects of the following types can be plotted directly:
+In addition, objects of the following types can be plotted directly.
+Note that all plots involving a `DesignMeasure` can take the `label_formatter` keyword argument.
 
 ```julia
 plot(d::DesignMeasure)

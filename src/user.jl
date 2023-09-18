@@ -131,7 +131,6 @@ mutable struct FooModCovariate <: Kirstine.Covariate
     baz::Float64
 end
 Kirstine.unit_length(m::FooMod) = 1
-Kirstine.invcov(m::FooMod) = m.inv_sigma_sq
 function Kirstine.upate_model_vcov!(Sigma::Matrix{Float64}, c::FooModCovariate, m::FooMod)
     Sigma[1, 1] = m.sigma^2
     return Sigma
