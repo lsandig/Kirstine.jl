@@ -10,7 +10,7 @@ end
 
 This vignette covers four advanced topics:
 
-  - a two-dimensional design region
+  - a two-dimensional[^2d] design region
   - a non-trivial covariate parameterization
   - vector units of observations
   - the exchange algorithm
@@ -31,6 +31,7 @@ Fang and Hedayat[^FH08],
 Dette, Pepelyshev, and Wong[^DPW09],
 or Lange and Schmidli[^LS14].
 
+[^2d]: Kirstine.jl supports an arbitrary number of design variables, but more than two become hard to visualize.
 [^FH08]: Fang, X., & Hedayat, A. S. (2008). Locally d-optimal designs based on a class of composed models resulted from blending Emax and one-compartment models. The Annals of Statistics, 36(1). [doi:10.1214/009053607000000776](https://dx.doi.org/10.1214/009053607000000776)
 [^DPW09]: Dette, H., Pepelyshev, A., & Wong, W. K. (2009). Optimal designs for composed models in pharmacokinetic-pharmacodynamic experiments. [doi:10.17877/DE290R-810](https://dx.doi.org/10.17877/DE290R-810)
 [^LS14]: Lange, M. R., & Schmidli, H. (2014). Optimal design of clinical trials with biologics using dose-time-response models. Statistics in Medicine, 33(30), 5249–5264. [doi:10.1002/sim.6299](https://dx.doi.org/10.1002/sim.6299)
@@ -77,8 +78,8 @@ The unknown model parameter is ``\Parameter=(a, e, e_0, e_{\max{}}, \mathrm{EC}_
 
 For simplicity we assume that the measurements are uncorrelated with identical constant variances,
 i.e. ``Σ = σ^2 I_{\DimUnit}``.
-Since ``σ^2`` enters the D-criterion objective only as a scaling factor,
-we may set ``σ^2=1`` for the remainder of this text.
+Since ``σ`` enters the D-criterion objective only as a scaling factor,
+we may set ``σ=1`` for the remainder of this text.
 
 For this more complex model there are no helper macros
 and we have to implement not only the Jacobian matrix,

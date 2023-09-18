@@ -16,7 +16,7 @@ in order to find a Bayesian D-optimal design for estimating the model parameter.
 Suppose we want to investigate the [dose-response relationship](https://en.wikipedia.org/wiki/Dose%E2%80%93response_relationship)
 between a drug and some clinical outcome.
 A commonly used model for this task is the _sigmoid Emax_ model:
-an s-shaped curve with a parameter for controlling the steepness of the slope.
+an s-shaped curve with four parameters.
 Assuming independent measurement errors,
 the corresponding regression model for a total of ``n`` observations
 at ``K`` different dose levels ``x_1,\dots,x_k`` is
@@ -33,6 +33,10 @@ with expected response at dose ``x``
 
 and a four-element parameter vector
 ``θ = (E_0, E_{\max{}}, \mathrm{ED}_{50}, h)``.
+Here, ``E_0`` is the baseline response,
+``E_{\max{}}`` is the maximum effect above (or below) baseline,
+``\mathrm{ED}_{50} > 0`` is the dose at which half of the maximum effect is attained,
+and ``h > 0`` controls the steepness of the increasing (or decreasing) part of the curve.
 
 ```@example main
 using Plots
@@ -91,7 +95,7 @@ and [`CovariateParameterization`](@ref),
 and implementing a handful of methods for them.
 
 In the sigmoid Emax model,
-a single unit of observations is just a real number ``y_i``.
+a single unit of observation is just a real number ``y_i``.
 For such a case,
 we can use the helper macro [`@define_scalar_unit_model`](@ref)
 to declare a model type named `SigEmax`,
@@ -115,7 +119,7 @@ Next we implement the Jacobian matrix.
 We do this by defining a method for `Kirstine.jacobianmatrix!`
 that specializes on our newly defined model, covariate and parameter types.
 This method will later be called from the package internals with a pre-allocated matrix `jm`
-(of the correct size `(1, 4)`).
+(of size `(1, 4)`).
 Now our job is to fill in the correct values:
 
 ```@example main
@@ -132,8 +136,13 @@ function Kirstine.jacobianmatrix!(jm, m::SigEmax, c::SigEmaxCovariate, p::SigEma
 end
 ```
 
-(We follow [the conventions](https://docs.julialang.org/en/v1/manual/style-guide/#bang-convention)
-and also return the modified argument `jm`.)
+!!! note
+    
+    The `jacobianmatrix!` function is the main place for achieving efficiency gains.
+    Note how we have re-arranged the derivatives
+    such that we compute the expensive exponentials only once.
+    (We also follow [the conventions](https://docs.julialang.org/en/v1/manual/style-guide/#bang-convention)
+    and also return the modified argument `jm`.)
 
 Next, we set up the design region.
 Let's say we want to allow doses between `0` and `1` (in some unit).
@@ -143,14 +152,15 @@ dr = DesignInterval(:dose => (0, 1))
 nothing # hide
 ```
 
-Note that the name `:dose` does not necessarily have to match the field name of the `SigEmaxCovariate`.
+(Note that the name `:dose` does not necessarily have to match the field name of the `SigEmaxCovariate`.)
+
 A design will then be a discrete probability measure with atoms (design points) from `dr`,
 and a design point is represented by a `Vector{Float64}`.
-In our simple model, this vector has length `1`.
+In our simple model, these vector have length `1`.
 
 Finally, we need to specify how a design point maps to a `SigEmaxCovariate`.
 Here, the design region is simply the interval of possible doses.
-This means we can just copy the only element of the design point
+This means that we can just copy the only element of the design point
 into the covariate's `dose` field.
 To do this, we subtype [`CovariateParameterization`](@ref)
 and define a method for `Kirstine.update_model_covariate!`.
@@ -170,7 +180,7 @@ For Bayesian optimal design of experiments we need to specify a prior distributi
 `Kirstine.jl` then needs a sample from this distribution.
 
 For this example we use independent normal priors on the elements of ``θ``.
-We first draw a vector of `SigEmaxPar`s
+We first draw a vector of `SigEmaxPar` values
 which we then wrap into a [`PriorSample`](@ref).
 
 ```@example main
@@ -210,22 +220,21 @@ This is why we simply set it to `1` here.
 
 ## Optimal Design
 
-`Kirstine.jl` provides several high-level [`ProblemSolvingStrategy`](@ref)s
+`Kirstine.jl` provides several high-level [`ProblemSolvingStrategy`](@ref) types
 for solving the design problem `dp`.
 A very simple, but often quite effective one,
 is direct maximization with a [particle swarm optimizer](https://en.wikipedia.org/wiki/Particle_swarm_optimization).
 
 Apart from the [`Pso`](@ref) parameters,
 the [`DirectMaximization`](@ref) strategy needs to know
-how many design points the design measures it searches over should have.
+how many points the design measures should have.
 This is indirectly specified by the `prototype` argument:
 it takes a [`DesignMeasure`](@ref) which is then used for initializing the swarm.
 One particle is set exactly to `prototype`.
 The remaining ones have the same number of design points,
 but their weights and design points are completely randomized.
-
 For our example,
-let's use a `prototype` with `8` equally spaced design points.
+we use a `prototype` with `8` equally spaced design points.
 
 ```@example main
 strategy = DirectMaximization(
@@ -242,7 +251,7 @@ The [`solve`](@ref) function returns two objects:
 
   - `s1`: a slightly post-processed [`DesignMeasure`](@ref)
   - `r1`: a [`DirectMaximizationResult`](@ref)
-    that contains additional information about the optimization run.
+    that contains diagnostic information about the optimization run.
 
 At the REPL, the solution is displayed as `designpoint => weight` pairs.
 
@@ -278,7 +287,10 @@ s2, r2 = solve(dp, strategy; minweight = 1e-3, mindist = 2e-2)
 The original, unsimplified solution can still be accessed at `maximizer(r2)`.
 
 In order to confirm that we have actually found the solution
-we visually check that the Gateaux derivative is non-positive over the whole design region.
+we visually check that the [Gateaux derivative](math.md#Gateaux-Derivative) is non-positive over the whole design region.
+In addition,
+the design points of the solution are indicated together with their weights.
+(The [`plot_gateauxderivative`](@ref) function has a keyword argument to configure the point labels.)
 
 ```@example main
 gd = plot_gateauxderivative(s2, dp)
@@ -331,7 +343,7 @@ efficiency(equidistant_design(dr, 4), s2, dp)
 ```
 
 Their relative D-[`efficiency`](@ref) means
-that `s2` on average only needs `0.72` as many observations as the equidistant design
+that `s2` on average only needs `0.72` as many observations as the equidistant design with `4` points
 in order to achieve the same estimation accuracy.
 
 Suppose we now actually want to run the experiment on ``n=42`` units.
@@ -343,7 +355,7 @@ This is achieved with the [`apportion`](@ref) function:
 apportion(s2, 42)
 ```
 
-This tells us to take `9` measurements at the first design point,
-`10` at the second,
-`2` at the third,
+This tells us to take `10` measurements at the first design point,
+`6` at the second,
+`7` at the third,
 and so on.

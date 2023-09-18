@@ -78,7 +78,7 @@ makedocs(modules = [Kirstine],
                   "Getting Started" => "tutorial.md",
                   "Examples" => [
                       "Transformations" => "transformations.md",
-                      "Two Design Variables" => "dtr.md",
+                      "Multiple Design Variables" => "dtr.md",
                       "Locally Optimal Design" => "locally-optimal.md",
                       "Discrete Prior" => "discrete-prior.md",
                   ],
