@@ -3,6 +3,8 @@
 
 using Documenter, Kirstine
 
+ENV["GKSwstype"] = "100"
+
 DocMeta.setdocmeta!(Kirstine, :DocTestSetup, :(using Kirstine); recursive=true)
 
 math_macros = Dict(
