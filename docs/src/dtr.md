@@ -32,9 +32,9 @@ Dette, Pepelyshev, and Wong[^DPW09],
 or Lange and Schmidli[^LS14].
 
 [^2d]: Kirstine.jl supports an arbitrary number of design variables, but more than two become hard to visualize.
-[^FH08]: Fang, X., & Hedayat, A. S. (2008). Locally d-optimal designs based on a class of composed models resulted from blending Emax and one-compartment models. The Annals of Statistics, 36(1). [doi:10.1214/009053607000000776](https://dx.doi.org/10.1214/009053607000000776)
-[^DPW09]: Dette, H., Pepelyshev, A., & Wong, W. K. (2009). Optimal designs for composed models in pharmacokinetic-pharmacodynamic experiments. [doi:10.17877/DE290R-810](https://dx.doi.org/10.17877/DE290R-810)
-[^LS14]: Lange, M. R., & Schmidli, H. (2014). Optimal design of clinical trials with biologics using dose-time-response models. Statistics in Medicine, 33(30), 5249–5264. [doi:10.1002/sim.6299](https://dx.doi.org/10.1002/sim.6299)
+[^FH08]: X. Fang and A. S. Hedayat (2008). Locally D-optimal designs based on a class of composed models resulted from blending Emax and one-compartment models. The Annals of Statistics, 36(1). [doi:10.1214/009053607000000776](https://dx.doi.org/10.1214/009053607000000776)
+[^DPW09]: Holger Dette, Andrey Pepelyshev, Wenk Kee Wong (2009). Optimal designs for composed models in pharmacokinetic-pharmacodynamic experiments. [doi:10.17877/DE290R-810](https://dx.doi.org/10.17877/DE290R-810)
+[^LS14]: Markus R. Lange and Heinz Schmidli (2014). Optimal design of clinical trials with biologics using dose-time-response models. Statistics in Medicine, 33(30), 5249–5264. [doi:10.1002/sim.6299](https://dx.doi.org/10.1002/sim.6299)
 ## Model Setup
 
 In this section we implement the model in Julia.
