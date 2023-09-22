@@ -77,7 +77,7 @@ collecting the responses at the ``\DimUnit`` measurement times.
 The unknown model parameter is ``\Parameter=(a, e, e_0, e_{\max{}}, \mathrm{EC}_{50})``.
 
 For simplicity we assume that the measurements are uncorrelated with identical constant variances,
-i.e. ``Σ = σ^2 I_{\DimUnit}``.
+i.e. ``\UnitCovariance = σ^2 I_{\DimUnit}``.
 Since ``σ`` enters the D-criterion objective only as a scaling factor,
 we may set ``σ=1`` for the remainder of this text.
 
@@ -88,8 +88,8 @@ but also the [other necessary methods](api.md#Implementing-a-Nonlinear-Regressio
 ```@example main
 using Kirstine, Random, Plots
 
-struct DTRMod <: NonlinearRegression
-    sigma_squared::Float64
+@kwdef struct DTRMod <: NonlinearRegression
+    sigma::Float64
     m::Int64
 end
 
@@ -102,7 +102,7 @@ Kirstine.unit_length(m::DTRMod) = m.m
 function Kirstine.update_model_vcov!(s, c::DoseTimeCovariate, m::DTRMod)
     fill!(s, 0.0)
     for j in 1:(m.m)
-        s[j, j] = m.sigma_squared
+        s[j, j] = m.sigma^2
     end
 end
 Kirstine.allocate_covariate(m::DTRMod) = DoseTimeCovariate(0, zeros(m.m))
@@ -259,7 +259,7 @@ set up the design problem and solve it with direct maximization.
 dp1 = DesignProblem(
     design_criterion = DOptimality(),
     design_region = DesignInterval(:dose => (0, 100), :time => (0, 24)),
-    model = DTRMod(1, 1),
+    model = DTRMod(sigma = 1, m = 1),
     covariate_parameterization = CopyBoth(),
     prior_knowledge = prior,
 )

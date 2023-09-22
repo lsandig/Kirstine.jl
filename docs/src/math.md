@@ -40,6 +40,7 @@ A design problem is a tuple
   \DesignCriterion,
   \DesignRegion,
   \MeanFunction,
+  \UnitCovariance,
   \CovariateParameterization,
   \PriorDensity,
   \Transformation
@@ -55,8 +56,9 @@ with the following elements:
 
   - A _design region_ ``\DesignRegion ⊂ \Reals^{\DimDesignRegion}``.
     ``\DesignRegion`` must be compact.
-  - A _mean function_ ``\MeanFunction : \CovariateSet × \ParameterSet → \Reals^{\DimUnit}``.
-    This represents the nonlinear regression model, which is defined as
+  - The _mean function_ ``\MeanFunction : \CovariateSet × \ParameterSet → \Reals^{\DimUnit}``
+    and _covariance matrix_ ``\UnitCovariance : \CovariateSet → \SNNDMatrices{\DimUnit}``
+    of a nonlinear regression model
     
     ```math
     \Unit_{\IndexUnit} \mid \Parameter
@@ -73,9 +75,9 @@ with the following elements:
     with corresponding covariates
     ``\Covariate_{\IndexDesignPoint} ∈ \CovariateSet ⊂ \Reals^{\DimCovariate}``
     and parameter set ``\ParameterSet ⊂ \Reals^{\DimParameter}``.
-    The mean function ``\MeanFunction`` must be continuous in ``\Covariate``
+    The _mean function_ ``\MeanFunction`` must be continuous in ``\Covariate``
     and continuously differentiable in ``\Parameter``.
-    The covariance matrix ``\UnitCovariance : \CovariateSet → \SNNDMatrices{\DimUnit}``
+    The covariance matrix ``\UnitCovariance``
     may depend on the covariate,
     but is otherwise assumed to be known.
     In simple cases,

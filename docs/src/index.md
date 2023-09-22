@@ -17,7 +17,7 @@ Documentation is still sparse in some places.
 ## Features
 
   - arbitrary nonlinear regression models
-  - vector-valued response variable
+  - scalar or vector-valued response variable
   - variance-covariance matrix may depend on covariate
   - Bayesian and locally optimal design
   - design criteria: D, A
