@@ -185,7 +185,7 @@ the Gateaux derivative is given by
 \begin{aligned}
 \GateauxDerivative(\DesignMeasure, \DesignMeasureDirection)
 &=
-\lim_{α→0} \frac{1}{α}(\Objective((1 - α)\DesignMeasure + α\DesignMeasureDirection))\\
+\lim_{α→0} \frac{1}{α}(\Objective((1 - α)\DesignMeasure + α\DesignMeasureDirection) - \Objective(\DesignMeasure))\\
 &=
 \IntD{\ParameterSet}{
 \biggl\{
