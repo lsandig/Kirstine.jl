@@ -71,7 +71,8 @@ with the following elements:
     across ``\NumDesignPoints`` groups of size
     ``\SampleSize_1,…,\SampleSize_{\NumDesignPoints}``
     with corresponding covariates
-    ``\Covariate_{\IndexDesignPoint} ∈ \CovariateSet ⊂ \Reals^{\DimCovariate}``.
+    ``\Covariate_{\IndexDesignPoint} ∈ \CovariateSet ⊂ \Reals^{\DimCovariate}``
+    and parameter set ``\ParameterSet ⊂ \Reals^{\DimParameter}``.
     The mean function ``\MeanFunction`` must be continuous in ``\Covariate``
     and continuously differentiable in ``\Parameter``.
     The covariance matrix ``\UnitCovariance : \CovariateSet → \SNNDMatrices{\DimUnit}``
