@@ -40,6 +40,7 @@ A design problem is a tuple
   \DesignCriterion,
   \DesignRegion,
   \MeanFunction,
+  \UnitCovariance,
   \CovariateParameterization,
   \PriorDensity,
   \Transformation
@@ -55,8 +56,9 @@ with the following elements:
 
   - A _design region_ ``\DesignRegion ⊂ \Reals^{\DimDesignRegion}``.
     ``\DesignRegion`` must be compact.
-  - A _mean function_ ``\MeanFunction : \CovariateSet × \ParameterSet → \Reals^{\DimUnit}``.
-    This represents the nonlinear regression model, which is defined as
+  - The _mean function_ ``\MeanFunction : \CovariateSet × \ParameterSet → \Reals^{\DimUnit}``
+    and _covariance matrix_ ``\UnitCovariance : \CovariateSet → \SNNDMatrices{\DimUnit}``
+    of a nonlinear regression model
     
     ```math
     \Unit_{\IndexUnit} \mid \Parameter
@@ -71,10 +73,11 @@ with the following elements:
     across ``\NumDesignPoints`` groups of size
     ``\SampleSize_1,…,\SampleSize_{\NumDesignPoints}``
     with corresponding covariates
-    ``\Covariate_{\IndexDesignPoint} ∈ \CovariateSet ⊂ \Reals^{\DimCovariate}``.
-    The mean function ``\MeanFunction`` must be continuous in ``\Covariate``
+    ``\Covariate_{\IndexDesignPoint} ∈ \CovariateSet ⊂ \Reals^{\DimCovariate}``
+    and parameter set ``\ParameterSet ⊂ \Reals^{\DimParameter}``.
+    The _mean function_ ``\MeanFunction`` must be continuous in ``\Covariate``
     and continuously differentiable in ``\Parameter``.
-    The covariance matrix ``\UnitCovariance : \CovariateSet → \SNNDMatrices{\DimUnit}``
+    The covariance matrix ``\UnitCovariance``
     may depend on the covariate,
     but is otherwise assumed to be known.
     In simple cases,
@@ -182,7 +185,7 @@ the Gateaux derivative is given by
 \begin{aligned}
 \GateauxDerivative(\DesignMeasure, \DesignMeasureDirection)
 &=
-\lim_{α→0} \frac{1}{α}(\Objective((1 - α)\DesignMeasure + α\DesignMeasureDirection))\\
+\lim_{α→0} \frac{1}{α}(\Objective((1 - α)\DesignMeasure + α\DesignMeasureDirection) - \Objective(\DesignMeasure))\\
 &=
 \IntD{\ParameterSet}{
 \biggl\{

@@ -77,7 +77,7 @@ collecting the responses at the ``\DimUnit`` measurement times.
 The unknown model parameter is ``\Parameter=(a, e, e_0, e_{\max{}}, \mathrm{EC}_{50})``.
 
 For simplicity we assume that the measurements are uncorrelated with identical constant variances,
-i.e. ``Σ = σ^2 I_{\DimUnit}``.
+i.e. ``\UnitCovariance = σ^2 I_{\DimUnit}``.
 Since ``σ`` enters the D-criterion objective only as a scaling factor,
 we may set ``σ=1`` for the remainder of this text.
 
@@ -88,8 +88,8 @@ but also the [other necessary methods](api.md#Implementing-a-Nonlinear-Regressio
 ```@example main
 using Kirstine, Random, Plots
 
-struct DTRMod <: NonlinearRegression
-    sigma_squared::Float64
+@kwdef struct DTRMod <: NonlinearRegression
+    sigma::Float64
     m::Int64
 end
 
@@ -102,7 +102,7 @@ Kirstine.unit_length(m::DTRMod) = m.m
 function Kirstine.update_model_vcov!(s, c::DoseTimeCovariate, m::DTRMod)
     fill!(s, 0.0)
     for j in 1:(m.m)
-        s[j, j] = m.sigma_squared
+        s[j, j] = m.sigma^2
     end
 end
 Kirstine.allocate_covariate(m::DTRMod) = DoseTimeCovariate(0, zeros(m.m))
@@ -259,7 +259,7 @@ set up the design problem and solve it with direct maximization.
 dp1 = DesignProblem(
     design_criterion = DOptimality(),
     design_region = DesignInterval(:dose => (0, 100), :time => (0, 24)),
-    model = DTRMod(1, 1),
+    model = DTRMod(sigma = 1, m = 1),
     covariate_parameterization = CopyBoth(),
     prior_knowledge = prior,
 )
@@ -599,8 +599,8 @@ For some multiplier ``b>1`` we have:
 ```math
 \begin{aligned}
 m &= 13 \\
-\DesignRegion &= [0, 100] × [0, 24/b^{\DimUnit-1}] \\
-\CovariateParameterization(z) &= (z_1, 0, z_2, bz_2, b^2z_2, …, b^{\DimUnit-1}z_2)\\
+\DesignRegion &= [0, 100] × [0, 24/b^{\DimUnit-2}] \\
+\CovariateParameterization(z) &= (z_1, 0, z_2, bz_2, b^2z_2, …, b^{\DimUnit-2}z_2)\\
 \end{aligned}
 ```
 
@@ -620,7 +620,7 @@ function Kirstine.update_model_covariate!(
     c.dose = dp[1]
     c.time[1] = 0
     for j in 2:(m.m)
-        c.time[j] = cp.b^(j - 1) * dp[2]
+        c.time[j] = cp.b^(j - 2) * dp[2]
     end
     return c
 end
@@ -657,40 +657,30 @@ dp5 = DesignProblem(
     design_criterion = DOptimality(),
     model = DTRMod(1, 13),
     covariate_parameterization = LogEquidistantTimes(sqrt(2)),
-    design_region = DesignInterval(:dose => (0, 100), :Δt => (0, 24 / sqrt(2)^12)),
+    design_region = DesignInterval(:dose => (0, 100), :Δt => (0, 24 / sqrt(2)^11)),
     prior_knowledge = prior,
 )
 
 Random.seed!(132435)
-st5a = DirectMaximization(
+st5 = DirectMaximization(
     optimizer = Pso(swarmsize = 50, iterations = 100),
     prototype = random_design(dp5.dr, 5),
 )
 
-Random.seed!(62831)
-s5a, r5a = solve(dp5, st5a; mindist = 1e-3)
-
-st5b = Exchange(
-    candidate = s5a,
-    steps = 1,
-    od = Pso(swarmsize = 50, iterations = 20),
-    ow = Pso(swarmsize = 50, iterations = 20),
-)
-
-Random.seed!(101112)
-s5b, r5b = solve(dp5, st5b; minweight = 1e-3)
-s5b
+Random.seed!(6283)
+s5, r5 = solve(dp5, st5; mindist = 1e-3, minweight = 1e-3)
+s5
 ```
 
 ```@example main
-gd5b = plot_gateauxderivative(s5b, dp5; legend = :bottomleft)
-savefig_nothing(gd5b, "dtr-gd5b.png") # hide
+gd5 = plot_gateauxderivative(s5, dp5; legend = :bottomleft)
+savefig_nothing(gd5, "dtr-gd5.png") # hide
 ```
 
-![](dtr-gd5b.png)
+![](dtr-gd5.png)
 
 ```@example main
-er5 = plot_expected_response(s5b, dp5)
+er5 = plot_expected_response(s5, dp5)
 savefig_nothing(er5, "dtr-er5.png") # hide
 ```
 
@@ -702,17 +692,17 @@ Let's finally compare the relative efficiency of all these designs
 under their respective design problems:
 
 ```@example main
-sol_prob = Iterators.zip([s1, s2, s3, s4b, s5b], [dp1, dp2, dp3, dp4, dp5])
+sol_prob = Iterators.zip([s1, s2, s3, s4b, s5], [dp1, dp2, dp3, dp4, dp5])
 eff = [efficiency(d1, d2, p1, p2) for (d1, p1) in sol_prob, (d2, p2) in sol_prob]
 ```
 
 In this matrix, `d1` varies over rows and `d2` varies over columns.
 We see that `s1` is better than `s2`
 (not surprising, since the former can have time-specific doses),
-and that `s3` through `s5b` are better than both `s1` and `s2`.
-We further see that both `s4b` and `s5b` are better than `s3`
+and that `s3` through `s5` are better than both `s1` and `s2`.
+We further see that both `s4b` and `s5` are better than `s3`
 (again not surprising, since the former has dose-specific intervals),
-and that `s4b` is slightly better than `s5b`.
+and that `s4b` is slightly better than `s5`.
 
 But in a sense this comparison is not entirely fair.
 What we have computed above is the efficiency
@@ -721,7 +711,7 @@ But isn't a unit with 13 measurements already inherently “larger” than a uni
 Because of our choice of ``\UnitCovariance``,
 a different comparison can be devised.
 Since we assumed uncorrelated within-unit errors with ``\UnitCovariance = σ^2I_{\DimUnit}``
-any of the solutions `s2` through `s5a` can be identified with candidate solution for `dp1`.
+any of the solutions `s2` through `s5` can be identified with candidate solution for `dp1`.
 For example, we can “split up” a design point from `s4`,
 
 ```math

@@ -178,7 +178,7 @@ savefig_nothing(ef_id, "transformations-ef-id.png") # hide
 
 ## Univariate Functions
 
-### Area under the curve
+### Area Under the Curve
 
 In pharmacokinetics,
 one quantity of particular interest is the area under the response curve.

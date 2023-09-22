@@ -3,6 +3,29 @@
 
 using Documenter, Kirstine
 
+struct SourceHut <: Remotes.Remote
+    user::String
+    repo::String
+    tracker::String
+end
+
+function Remotes.repourl(remote::SourceHut)
+    return "https://git.sr.ht/$(remote.user)/$(remote.repo)"
+end
+
+function Remotes.fileurl(remote::SourceHut, ref, filename, linerange)
+    url = "$(Remotes.repourl(remote))/tree/$(ref)/item/$(filename)"
+    if isnothing(linerange)
+        return url
+    end
+    a, b = first(linerange), last(linerange)
+    return (a == b) ? "$(url)#L$(a)" : "$(url)#L$(a)-$(b)"
+end
+
+function Remotes.issueurl(remote::SourceHut, issuenumber)
+    return "https://todo.sr.ht/$(remote.user)/$(remote.tracker)/$(issuenumber)"
+end
+
 ENV["GKSwstype"] = "100"
 
 DocMeta.setdocmeta!(Kirstine, :DocTestSetup, :(using Kirstine); recursive=true)
@@ -68,8 +91,10 @@ math_macros = Dict(
 
 makedocs(modules = [Kirstine],
          sitename = "Kirstine.jl",
-         strict = true,
+         repo = SourceHut("~lsandig", "Kirstine.jl", "Kirstine.jl"),
          # doctest = :fix,
+         # draft = true,
+         # warnonly = true,
          format = Documenter.HTML(
              prettyurls = false,
              edit_link = nothing,
