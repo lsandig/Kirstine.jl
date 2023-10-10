@@ -8,3 +8,5 @@
 /src/*.cov
 /test/*.cov
 /docs/Manifest.toml
+/paper/paper.jats
+/paper/paper.pdf
