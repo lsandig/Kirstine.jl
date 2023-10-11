@@ -109,6 +109,9 @@ makedocs(modules = [Kirstine],
                       "Locally Optimal Design" => "locally-optimal.md",
                       "Discrete Prior" => "discrete-prior.md",
                   ],
+                  "Extending Kirstine" => [
+                      "Overview" => "extend.md"
+                  ],
                   "API Reference" => "api.md",
                   "Mathematical Background" => "math.md",
                   ],
