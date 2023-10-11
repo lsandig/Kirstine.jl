@@ -20,9 +20,7 @@ using LinearAlgebra:
 using Random: rand, rand!
 using RecipesBase
 
-export @define_scalar_unit_model,
-    @define_vector_parameter,
-    @simple_model,
+export @simple_model,
     @simple_parameter,
     Covariate,
     CovariateParameterization,

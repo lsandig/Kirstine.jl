@@ -10,7 +10,6 @@ using Test
     include("designmeasure-abstractpoint.jl")
     include("priorknowledge.jl")
     include("transformation.jl")
-    include("user.jl")
     include("user-import.jl")
     include("user-using.jl")
     include("design-common.jl")
