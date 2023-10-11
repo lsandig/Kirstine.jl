@@ -97,22 +97,22 @@ and implementing a handful of methods for them.
 In the sigmoid Emax model,
 a single unit of observation is just a real number ``y_i``.
 For such a case,
-we can use the helper macro [`@define_scalar_unit_model`](@ref)
-to declare a model type named `SigEmax`,
+we can use the helper macro [`@simple_model`](@ref)
+to declare a model type named `SigEmaxModel`,
 and a covariate type named `SigEmaxCovariate` with the single field `dose`.
 
 ```@example main
 using Kirstine
-@define_scalar_unit_model Kirstine SigEmax dose
+@simple_model SigEmax dose
 ```
 
 The model parameter ``θ`` is just a vector with no additional structure,
-which is why we can use the helper macro [`@define_vector_parameter`](@ref)
-to define a parameter type `SigEmaxPar`
+which is why we can use the helper macro [`@simple_parameter`](@ref)
+to define a parameter type `SigEmaxParameter`
 with the fields fields `e0`, `emax`, `ed50`, and `h`.
 
 ```@example main
-@define_vector_parameter Kirstine SigEmaxPar e0 emax ed50 h
+@simple_parameter SigEmax e0 emax ed50 h
 ```
 
 Next we implement the Jacobian matrix.
@@ -123,7 +123,12 @@ This method will later be called from the package internals with a pre-allocated
 Now our job is to fill in the correct values:
 
 ```@example main
-function Kirstine.jacobianmatrix!(jm, m::SigEmax, c::SigEmaxCovariate, p::SigEmaxPar)
+function Kirstine.jacobianmatrix!(
+    jm,
+    m::SigEmaxModel,
+    c::SigEmaxCovariate,
+    p::SigEmaxParameter,
+)
     dose_pow_h = c.dose^p.h
     ed50_pow_h = p.ed50^p.h
     A = dose_pow_h / (dose_pow_h + ed50_pow_h)
@@ -168,7 +173,12 @@ and define a method for `Kirstine.update_model_covariate!`.
 ```@example main
 struct CopyDose <: CovariateParameterization end
 
-function Kirstine.update_model_covariate!(c::SigEmaxCovariate, dp, m::SigEmax, cp::CopyDose)
+function Kirstine.update_model_covariate!(
+    c::SigEmaxCovariate,
+    dp,
+    m::SigEmaxModel,
+    cp::CopyDose,
+)
     c.dose = dp[1]
     return c
 end
@@ -180,7 +190,7 @@ For Bayesian optimal design of experiments we need to specify a prior distributi
 `Kirstine.jl` then needs a sample from this distribution.
 
 For this example we use independent normal priors on the elements of ``θ``.
-We first draw a vector of `SigEmaxPar` values
+We first draw a vector of `SigEmaxParameter` values
 which we then wrap into a [`PriorSample`](@ref).
 
 ```@example main
@@ -191,13 +201,13 @@ theta_mean = [1, 2, 0.4, 5]
 theta_sd = [0.5, 0.5, 0.05, 0.5]
 sep_draws = map(1:1000) do i
     rnd = theta_mean .+ theta_sd .* randn(4)
-    return SigEmaxPar(e0 = rnd[1], emax = rnd[2], ed50 = rnd[3], h = rnd[4])
+    return SigEmaxParameter(e0 = rnd[1], emax = rnd[2], ed50 = rnd[3], h = rnd[4])
 end
 prior_sample = PriorSample(sep_draws)
 nothing # hide
 ```
 
-Note that the `SigEmaxPar` constructor takes keyword arguments.
+Note that the `SigEmaxParameter` constructor takes keyword arguments.
 
 ### Design Problem
 
@@ -207,14 +217,14 @@ Now we collect all the parts in a [`DesignProblem`](@ref).
 dp = DesignProblem(
     design_criterion = DOptimality(),
     design_region = dr,
-    model = SigEmax(sigma = 1),
+    model = SigEmaxModel(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior_sample,
 )
 nothing # hide
 ```
 
-Note that the `SigEmax` constructor takes the measurement standard deviation ``σ`` as an argument.
+Note that the `SigEmaxModel` constructor takes the measurement standard deviation ``σ`` as an argument.
 For D-optimality, this only scales the objective function and has no influence on the optimal design.
 This is why we simply set it to `1` here.
 

@@ -27,10 +27,15 @@ For simplicity, we re-use the dose-response model from the [tutorial](tutorial.m
 ```@example main
 using Kirstine, Random, Plots
 
-@define_scalar_unit_model Kirstine SigEmax dose
-@define_vector_parameter Kirstine SigEmaxPar e0 emax ed50 h
+@simple_model SigEmax dose
+@simple_parameter SigEmax e0 emax ed50 h
 
-function Kirstine.jacobianmatrix!(jm, m::SigEmax, c::SigEmaxCovariate, p::SigEmaxPar)
+function Kirstine.jacobianmatrix!(
+    jm,
+    m::SigEmaxModel,
+    c::SigEmaxCovariate,
+    p::SigEmaxParameter,
+)
     dose_pow_h = c.dose^p.h
     ed50_pow_h = p.ed50^p.h
     A = dose_pow_h / (dose_pow_h + ed50_pow_h)
@@ -44,7 +49,12 @@ end
 
 struct CopyDose <: CovariateParameterization end
 
-function Kirstine.update_model_covariate!(c::SigEmaxCovariate, dp, m::SigEmax, cp::CopyDose)
+function Kirstine.update_model_covariate!(
+    c::SigEmaxCovariate,
+    dp,
+    m::SigEmaxModel,
+    cp::CopyDose,
+)
     c.dose = dp[1]
     return c
 end
@@ -59,11 +69,11 @@ that we used in the introduction,
 we here only use its mean vector as the single guess for ``\Parameter``.
 
 ```@example main
-guess = PriorSample([SigEmaxPar(e0 = 1, emax = 2, ed50 = 0.4, h = 5)])
+guess = PriorSample([SigEmaxParameter(e0 = 1, emax = 2, ed50 = 0.4, h = 5)])
 dp = DesignProblem(
     design_criterion = DOptimality(),
     design_region = dr,
-    model = SigEmax(sigma = 1),
+    model = SigEmaxModel(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = guess,
 )

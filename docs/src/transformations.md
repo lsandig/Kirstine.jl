@@ -53,11 +53,11 @@ and the mapping from design variables to model covariates.
 ```@example main
 using Kirstine, Plots, Random, Statistics
 
-@define_scalar_unit_model Kirstine TPCMod time
-@define_vector_parameter Kirstine TPCPar a e s
+@simple_model TPC time
+@simple_parameter TPC a e s
 struct Copy <: CovariateParameterization end
 
-function Kirstine.jacobianmatrix!(jm, m::TPCMod, c::TPCModCovariate, p::TPCPar)
+function Kirstine.jacobianmatrix!(jm, m::TPCModel, c::TPCCovariate, p::TPCParameter)
     A = exp(-p.a * c.time)
     E = exp(-p.e * c.time)
     jm[1, 1] = A * p.s * c.time
@@ -66,7 +66,7 @@ function Kirstine.jacobianmatrix!(jm, m::TPCMod, c::TPCModCovariate, p::TPCPar)
     return m
 end
 
-function Kirstine.update_model_covariate!(c::TPCModCovariate, dp, m::TPCMod, cp::Copy)
+function Kirstine.update_model_covariate!(c::TPCCovariate, dp, m::TPCModel, cp::Copy)
     c.time = dp[1]
     return c
 end
@@ -94,7 +94,7 @@ function draw_from_prior(n, se_factor)
     as = mn[1] .+ se_factor .* se[1] .* (2 .* rand(n) .- 1)
     es = mn[2] .+ se_factor .* se[2] .* (2 .* rand(n) .- 1)
     ss = mn[3] .+ se_factor .* se[3] .* (2 .* rand(n) .- 1)
-    return PriorSample(map((a, e, s) -> TPCPar(a = a, e = e, s = s), as, es, ss))
+    return PriorSample(map((a, e, s) -> TPCParameter(a = a, e = e, s = s), as, es, ss))
 end
 nothing # hide
 ```
@@ -111,7 +111,7 @@ function dp_for_trafo(trafo)
         design_region = DesignInterval(:time => [0, 48]),
         design_criterion = DOptimality(),
         covariate_parameterization = Copy(),
-        model = TPCMod(sigma = 1),
+        model = TPCModel(sigma = 1),
         prior_knowledge = draw_from_prior(1000, 2),
         transformation = trafo,
     )

@@ -27,9 +27,9 @@ end
 
 Kirstine.allocate_covariate(m::VUMod) = VUCovariate(zeros(m.m))
 
-@define_vector_parameter Kirstine VUPar a e s
+@simple_parameter VU a e s
 
-function Kirstine.jacobianmatrix!(jm, m::VUMod, c::VUCovariate, p::VUPar)
+function Kirstine.jacobianmatrix!(jm, m::VUMod, c::VUCovariate, p::VUParameter)
     for j in 1:length(c.time)
         A = exp(-p.a * c.time[j])
         E = exp(-p.e * c.time[j])

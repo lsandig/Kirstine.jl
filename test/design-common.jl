@@ -82,7 +82,7 @@ include("example-vector.jl")
         let d = DesignMeasure([5] => 0.25, [20] => 0.75),
             m = VUMod(0.1, 3),
             cp = EquiTime(),
-            p = VUPar(; a = 4.298, e = 0.05884, s = 21.80),
+            p = VUParameter(; a = 4.298, e = 0.05884, s = 21.80),
             na = FisherMatrix(),
             res = informationmatrix(d, m, cp, p, na),
             # recreate by hand

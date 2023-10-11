@@ -107,9 +107,9 @@ function Kirstine.update_model_vcov!(s, c::DoseTimeCovariate, m::DTRMod)
 end
 Kirstine.allocate_covariate(m::DTRMod) = DoseTimeCovariate(0, zeros(m.m))
 
-@define_vector_parameter Kirstine DTRPar a e e0 emax ec50
+@simple_parameter DTR a e e0 emax ec50
 
-function Kirstine.jacobianmatrix!(jm, m::DTRMod, c::DoseTimeCovariate, p::DTRPar)
+function Kirstine.jacobianmatrix!(jm, m::DTRMod, c::DoseTimeCovariate, p::DTRParameter)
     for j in 1:length(c.time)
         A = exp(-p.a * c.time[j]) # calculate exponentials only once
         B = exp(-p.e * c.time[j])
@@ -146,7 +146,7 @@ function draw_from_prior(n)
         2.0 .+ 0.50 .* randn(n),
         exp.(2.3 .+ 0.6 .* randn(n)),
     ) do a, e, e0, emax, ec50
-        return DTRPar(a = a, e = e, e0 = e0, emax = emax, ec50 = ec50)
+        return DTRParameter(a = a, e = e, e0 = e0, emax = emax, ec50 = ec50)
     end
     return PriorSample(pars)
 end

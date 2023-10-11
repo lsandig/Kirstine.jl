@@ -58,7 +58,7 @@ include("example-compartment.jl")
         # Atkinson et al. example
         let _ = seed!(4711),
             # prior guess for locally optimal design
-            g0 = PriorSample([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
+            g0 = PriorSample([TPCParameter(; a = 4.298, e = 0.05884, s = 21.80)]),
             # a draw from the strongly informative prior
             g1 = draw_from_prior(1000, 2),
             t_id = Identity(),
@@ -67,7 +67,7 @@ include("example-compartment.jl")
                 design_criterion = DOptimality(),
                 # not used in efficiency calculation!
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(; sigma = 1),
+                model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 prior_knowledge = pk,
                 transformation = trafo,
@@ -118,12 +118,12 @@ include("example-compartment.jl")
         # Atkinson et al. locally optimal example
         let dp = DesignProblem(;
                 design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(; sigma = 1),
+                model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 design_criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
-                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                    TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
                 ]),
                 transformation = Identity(),
             ),
