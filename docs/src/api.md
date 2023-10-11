@@ -102,6 +102,8 @@ the following helper macros can be used:
 ```@docs
 @define_scalar_unit_model
 @define_vector_parameter
+@simple_model
+@simple_parameter
 ```
 
 ## Prior Knowledge

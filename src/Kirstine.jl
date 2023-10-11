@@ -22,6 +22,8 @@ using RecipesBase
 
 export @define_scalar_unit_model,
     @define_vector_parameter,
+    @simple_model,
+    @simple_parameter,
     Covariate,
     CovariateParameterization,
     AOptimality,

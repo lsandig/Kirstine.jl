@@ -11,6 +11,8 @@ using Test
     include("priorknowledge.jl")
     include("transformation.jl")
     include("user.jl")
+    include("user-import.jl")
+    include("user-using.jl")
     include("design-common.jl")
     include("criterion-d.jl")
     include("criterion-a.jl")
