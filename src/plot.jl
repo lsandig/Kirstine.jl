@@ -64,9 +64,8 @@ end
     end
 end
 
-@recipe function f(d::DesignMeasure, dr::DesignInterval{2})
-    lb = lowerbound(dr)
-    ub = upperbound(dr)
+@recipe function f(d::DesignMeasure, dr::DesignRegion{2})
+    lb, ub = bounding_box(dr)
     xguide --> dimnames(dr)[1]
     yguide --> dimnames(dr)[2]
     xlims --> (lb[1], ub[1])
@@ -75,9 +74,8 @@ end
     d
 end
 
-@recipe function f(d::DesignMeasure, dr::DesignInterval{1})
-    lb = lowerbound(dr)
-    ub = upperbound(dr)
+@recipe function f(d::DesignMeasure, dr::DesignRegion{1})
+    lb, ub = bounding_box(dr)
     xguide --> dimnames(dr)[1]
     xlims --> (lb[1], ub[1])
     widen --> true
@@ -102,7 +100,7 @@ end
     dplot::DerivativePlot{
         1,
         <:DesignCriterion,
-        <:DesignInterval{1},
+        <:DesignRegion{1},
         <:NonlinearRegression,
         <:CovariateParameterization,
         <:PriorKnowledge,
@@ -112,25 +110,30 @@ end
     subdivisions = 101,
 )
     (; d, dp) = dplot
-    range_x = range(lowerbound(dp.dr)[1], upperbound(dp.dr)[1]; length = subdivisions)
+    lb, ub = bounding_box(dp.dr)
+    range_x = range(lb[1], ub[1]; length = subdivisions[1])
     dsgpts = collect(Iterators.flatten(points(d)))
-    all_x = sort(vcat(range_x, dsgpts))
-    directions = [one_point_design([d]) for d in all_x]
+    x_grid = sort(vcat(range_x, dsgpts))
+    dp_grid = [[x] for x in x_grid]
+    inside_dr = isinside.(dp_grid, Ref(dp.dr))
+    directions = [one_point_design(dp) for dp in dp_grid]
+    gd_grid = fill(NaN, length(x_grid))
     gd = gateauxderivative(d, directions, dp)
+    gd_grid[inside_dr] .= gd
 
     seriestype := :line
     markershape := :none
     label --> ""
     xguide --> dimnames(dp.dr)[1]
 
-    all_x, gd
+    x_grid, gd_grid
 end
 
 @recipe function f(
     dplot::DerivativePlot{
         2,
         <:DesignCriterion,
-        <:DesignInterval{2},
+        <:DesignRegion{2},
         <:NonlinearRegression,
         <:CovariateParameterization,
         <:PriorKnowledge,
@@ -140,15 +143,20 @@ end
     subdivisions = (51, 51),
 )
     (; d, dp) = dplot
-    # calculate gateaux derivative
-    lb = lowerbound(dp.dr)
-    ub = upperbound(dp.dr)
+    # Calculate Gateaux derivative on a grid over the bounding box of dp.dr.
+    # Evaluate it only on those points that are inside and fill the rest with NaN,
+    # which renders transparently in the heatmap.
+    lb, ub = bounding_box(dp.dr)
     range_x = range(lb[1], ub[1]; length = subdivisions[1])
     range_y = range(lb[2], ub[2]; length = subdivisions[2])
-    xy_grid = collect(Iterators.product(range_x, range_y))
-    directions = [one_point_design([d...]) for d in xy_grid]
+    xy_grid = collect.(Iterators.product(range_x, range_y))
+    inside_dr = isinside.(xy_grid, Ref(dp.dr))
+    gd_grid = fill(NaN, subdivisions[1], subdivisions[2])
+    # note: indexing produces a vector
+    directions = [one_point_design([d...]) for d in xy_grid[inside_dr]]
     gd = gateauxderivative(d, directions, dp)
     ex = extrema(gd)
+    gd_grid[inside_dr] .= gd
 
     xguide --> (dimnames(dp.dr)[1])
     yguide --> (dimnames(dp.dr)[2])
@@ -159,7 +167,7 @@ end
     seriestype := :heatmap
     label := ""
 
-    range_x, range_y, permutedims(gd)
+    range_x, range_y, permutedims(gd_grid)
 end
 
 """

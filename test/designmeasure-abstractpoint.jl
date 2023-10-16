@@ -55,7 +55,7 @@ using Kirstine
 
             @test check(d1, dr1)
             @test_throws "length must match" check(d1, dr2)
-            @test_throws "outside design region" check(d2, dr2)
+            @test_throws "outside design region" (@test_warn "dp =" check(d2, dr2))
         end
     end
 
@@ -292,57 +292,6 @@ using Kirstine
             @test Kirstine.move_how_far(d, v7, dr) == 1 / 4
             @test Kirstine.move_how_far(d, v8, dr) == 1 / 4
             @test Kirstine.move_how_far(d, v9, dr) == 1 / 4
-        end
-    end
-
-    @testset "how_far_right" begin
-        # Can we move all the way from x to x + tv, or are we stopped at ub?
-        #
-        # 0   1   2   3   4   5   6
-        # |---|---|---|---|---|---|
-        #             x      ub
-        #                            x    t  v ub
-        @test Kirstine.how_far_right(3, 1.5, 1, 5) == 1.5
-        @test Kirstine.how_far_right(3, 1.0, 4, 5) == 0.5
-        @test Kirstine.how_far_right(3, 1.0, 3, 5) == 2 / 3
-    end
-
-    @testset "how_far_left" begin
-        # Can we move all the way from x to x + tv, or are we stopped at lb?
-        #
-        # 0   1   2   3   4   5   6
-        # |---|---|---|---|---|---|
-        #    lb       x
-        #                           x    t   v lb
-        @test Kirstine.how_far_left(3, 1.5, -1, 1) == 1.5
-        @test Kirstine.how_far_left(3, 1.0, -4, 1) == 0.5
-        @test Kirstine.how_far_left(3, 1.0, -3, 1) == 2 / 3
-    end
-
-    @testset "how_far_simplexdiag" begin
-        # Suppose there are three elements, the third being implicit. Can we move from x to
-        # x + tv, or are we stopped at the simplex diagonal face?
-        #
-        #  x_2 direction
-        #  |
-        #  |     x+tv
-        #  |
-        #  |\
-        #  | \
-        #  |  \
-        #  |   \
-        #  |    \
-        #  |     \
-        #  | x    \
-        # 0|_______\_____ x_1 direction
-        #  0
-        let x = [0.25, 0.25], v1 = [1, 2], v2 = [0.1, 0.2]
-
-            # This moves up to the intersection at [5/12, 7/12],
-            # which is 1/6 the length of v1.
-            @test Kirstine.how_far_simplexdiag(sum(x), 1.0, sum(v1)) == 1 / 6
-            # This stays inside.
-            @test Kirstine.how_far_simplexdiag(sum(x), 1.0, sum(v2)) == 1.0
         end
     end
 

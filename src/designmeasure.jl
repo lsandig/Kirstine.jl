@@ -421,28 +421,30 @@ function simplify_unique(
 end
 
 """
-    simplify_merge(d::DesignMeasure, dr::DesignInterval, mindist::Real)
+    simplify_merge(d::DesignMeasure, dr::DesignRegion, mindist::Real)
 
 Merge designpoints with a normalized distance smaller or equal to `mindist`.
 
-The design points are first transformed into the unit (hyper)cube.
+The design points are first transformed into the unit (hyper)cube
+by shifting and scaling them according to the bounding box of the design region.
 The argument `mindist` is intepreted relative to this unit cube,
-i.e. only `0 < mindist < sqrt(N)` make sense for a design interval of dimension `N`.
+i.e. only `0 < mindist < sqrt(N)` make sense for a design region of dimension `N`.
 
 The following two steps are repeated until all points are more than `mindist` apart:
 
  1. All pairwise euclidean distances are calculated.
  2. The two points closest to each other are averaged with their relative weights
 
-Finally the design points are scaled back into the original design interval.
+Finally the design points are scaled and shifted back into the original design region.
 """
-function simplify_merge(d::DesignMeasure, dr::DesignInterval, mindist::Real)
+function simplify_merge(d::DesignMeasure, dr::DesignRegion, mindist::Real)
     if numpoints(d) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
-    # scale design interval into unit cube
-    width = collect(upperbound(dr) .- lowerbound(dr))
-    dps = [(dp .- lowerbound(dr)) ./ width for dp in points(d)]
+    # scale bounding box of design region into unit cube
+    lb, ub = bounding_box(dr)
+    width = collect(lb .- ub)
+    dps = [(dp .- lb) ./ width for dp in points(d)]
     ws = weights(d)
     cur_min_dist = 0
     while cur_min_dist <= mindist
@@ -461,6 +463,6 @@ function simplify_merge(d::DesignMeasure, dr::DesignInterval, mindist::Real)
         end
     end
     # scale back
-    dps = [(dp .* width) .+ lowerbound(dr) for dp in dps]
+    dps = [(dp .* width) .+ lb for dp in dps]
     return DesignMeasure(dps, ws)
 end

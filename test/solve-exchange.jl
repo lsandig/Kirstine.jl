@@ -55,7 +55,7 @@ include("example-emax.jl")
             )
 
             # errors from check_compatible
-            @test_throws "outside design region" solve(dp, str3)
+            @test_throws "outside design region" (@test_warn "dp =" solve(dp, str3))
             @test_throws "must match" solve(dp, str4)
             # result type
             @test isa(r1, ExchangeResult)

@@ -41,7 +41,7 @@ include("example-emax.jl")
             r2 = Kirstine.solve_with(dp, str2, true)
 
             # errors from check_compatible() in DesignConstraints constructor
-            @test_throws "outside design region" solve(dp, str3)
+            @test_throws "outside design region" (@test_warn "dp =" solve(dp, str3))
             @test_throws "must match" solve(dp, str4)
             # result type
             @test isa(r1, DirectMaximizationResult)
