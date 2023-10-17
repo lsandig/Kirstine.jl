@@ -110,7 +110,8 @@ makedocs(modules = [Kirstine],
                       "Discrete Prior" => "discrete-prior.md",
                   ],
                   "Extending Kirstine" => [
-                      "Overview" => "extend.md"
+                      "Overview" => "extend.md",
+                      "Design Region" => "extend-region.md",
                   ],
                   "API Reference" => "api.md",
                   "Mathematical Background" => "math.md",
