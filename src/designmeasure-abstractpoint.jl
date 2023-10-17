@@ -151,6 +151,10 @@ function ap_move!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
     move_handle_fixed!(v, c.fixw, c.fixp)
     # handle intersections: find maximal 0<=t<=1 such that p+tv remains in the search volume
     t = move_how_far(p, v, c.dr)
+    # treat a very small t as zero to reduce numerical inaccuracies in the next step
+    if t < 1e-8
+        t = 0.0
+    end
     # Then, set p to p + tv
     move_add_v!(p, t, v, c.dr, c.fixw)
     # Stop the particle if the boundary was hit.
