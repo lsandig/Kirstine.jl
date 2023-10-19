@@ -122,6 +122,17 @@ function ap_as_difference(p::DesignMeasure)
     return SignedMeasure(deepcopy(p.points), deepcopy(p.weights))
 end
 
+function ap_distance(p::DesignMeasure, q::DesignMeasure)
+    acc = 0.0
+    for i in 1:length(p.points)
+        acc += (p.points[i] - q.points[i])^2
+    end
+    for k in 1:(length(p.weights) - 1)
+        acc += (p.weights[k] - q.weights[k])^2
+    end
+    return sqrt(acc)
+end
+
 function ap_random_difference!(v::SignedMeasure, lb::Real, ub::Real)
     rand!(v.weights)
     v.weights .*= (ub - lb)

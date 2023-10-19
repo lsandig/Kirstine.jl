@@ -112,3 +112,4 @@ function ap_random_difference! end
 function ap_mul_hadamard! end
 function ap_mul_scalar! end
 function ap_add! end
+function ap_distance end

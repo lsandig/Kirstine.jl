@@ -159,6 +159,16 @@ using Kirstine
         end
     end
 
+    @testset "ap_distance" begin
+        let p = DesignMeasure([[1], [7], [3]], [0.1, 0.3, 0.6]),
+            q = DesignMeasure([[-2], [5], [8]], [0.2, 0.4, 0.4]),
+            dist = Kirstine.ap_distance(p, q)
+
+            # This should ignore the last weight in p and q (squared diff 0.04)
+            @test dist == sqrt(38.02)
+        end
+    end
+
     @testset "ap_random_difference!" begin
         let s = Kirstine.SignedMeasure([4 5 6], [-1, 2, 3]),
             _ = Random.seed!(7531),
