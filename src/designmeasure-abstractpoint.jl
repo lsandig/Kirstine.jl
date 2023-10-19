@@ -122,9 +122,13 @@ function ap_as_difference(p::DesignMeasure)
     return SignedMeasure(deepcopy(p.points), deepcopy(p.weights))
 end
 
-function ap_random_difference!(v::SignedMeasure)
+function ap_random_difference!(v::SignedMeasure, lb::Real, ub::Real)
     rand!(v.weights)
+    v.weights .*= (ub - lb)
+    v.weights .+= lb
     rand!(v.atoms)
+    v.atoms .*= (ub - lb)
+    v.atoms .+= lb
     return v
 end
 

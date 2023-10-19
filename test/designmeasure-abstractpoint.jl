@@ -162,7 +162,7 @@ using Kirstine
     @testset "ap_random_difference!" begin
         let s = Kirstine.SignedMeasure([4 5 6], [-1, 2, 3]),
             _ = Random.seed!(7531),
-            r = Kirstine.ap_random_difference!(s)
+            r = Kirstine.ap_random_difference!(s, 0, 1)
 
             @test all(s.weights .<= 1)
             @test all(s.weights .>= 0)

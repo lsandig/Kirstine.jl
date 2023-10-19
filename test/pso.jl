@@ -49,8 +49,10 @@ function Kirstine.ap_as_difference(p::Pnt)
     return PntDiff(deepcopy(p.x))
 end
 
-function Kirstine.ap_random_difference!(d::PntDiff)
+function Kirstine.ap_random_difference!(d::PntDiff, lb::Real, ub::Real)
     rand!(d.v)
+    d.v .*= (ub - lb)
+    d.v .+= lb
     return d
 end
 
