@@ -196,8 +196,9 @@ dp1 = DesignProblem(
 )
 Random.seed!(1357)
 st1 = DirectMaximization(
-    optimizer = Pso(swarmsize = 50, iterations = 100),
+    optimizer = Pso(swarmsize = 30, iterations = 50),
     prototype = uniform_design([[25, 6], [25, 18], [50, 12], [75, 6], [75, 18]]),
+    fixedweights = 1:5,
 )
 
 Random.seed!(2468)

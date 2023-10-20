@@ -48,7 +48,7 @@ include("example-emax.jl")
             @test isa(r2, DirectMaximizationResult)
             # traced state
             @test length(r1.or.trace_state) == 1
-            @test length(r2.or.trace_state) == 21
+            @test length(r2.or.trace_state) == 20
             # increasing objective
             @test issorted(r1.or.trace_fx)
             @test issorted(r2.or.trace_fx)

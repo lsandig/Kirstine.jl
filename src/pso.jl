@@ -118,7 +118,13 @@ function optimizer_state(
     return state
 end
 
-function tick!(f, state::PsoState, optimizer::Pso, constraints::AbstractConstraints)
+function tick!(
+    f,
+    state::PsoState,
+    optimizer::Pso,
+    constraints::AbstractConstraints,
+    iter::Integer,
+)
     phi = optimizer.c1 + optimizer.c2
     chi = 2 / abs(2 - phi - sqrt(phi^2 - 4 * phi))
     pso_update_velocity!(state, optimizer.c1, optimizer.c2, chi)

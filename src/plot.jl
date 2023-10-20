@@ -3,12 +3,10 @@
 
 @recipe function f(r::OptimizationResult)
     niter = length(r.trace_fx)
-    iter = collect(0:(niter - 1))
     xguide --> "iteration"
     yguide --> "objective"
-    xlims --> (0, niter)
     label --> ""
-    iter, r.trace_fx
+    1:niter, r.trace_fx
 end
 
 @recipe function f(r::DirectMaximizationResult)

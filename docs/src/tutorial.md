@@ -273,8 +273,8 @@ Looking closely at `s1`,
 we notice that two design points are nearly identical:
 
 ```julia
-[0.35565412479715236] => 0.02494416751531916
-[0.35669823220544034] => 0.12724012991953187
+[0.35590085349128153] => 0.024903749604217627
+[0.3567666844285769] => 0.12742156052917672
 ```
 
 It seems plausible that they would merge to a single one

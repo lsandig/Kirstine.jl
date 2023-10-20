@@ -255,6 +255,11 @@ end
 The next steps are as in the [tutorial](tutorial.md):
 set up the design problem and solve it with direct maximization.
 
+!!! note
+    
+    Iteration numbers and swarm sizes in this vignette are hand-tuned to the lowest values that work.
+    This is in order to reduce the documentation's compilation time.
+
 ```@example main
 dp1 = DesignProblem(
     design_criterion = DOptimality(),
@@ -266,12 +271,12 @@ dp1 = DesignProblem(
 
 Random.seed!(1357)
 st1 = DirectMaximization(
-    optimizer = Pso(swarmsize = 50, iterations = 100),
-    prototype = random_design(dp1.dr, 5),
+    optimizer = Pso(swarmsize = 30, iterations = 100),
+    prototype = random_design(dp1.dr, 7),
 )
 
 Random.seed!(2468)
-s1, r1 = solve(dp1, st1; minpostime = 1e-3, minposdose = 1e-3)
+s1, r1 = solve(dp1, st1; minpostime = 1e-3, minposdose = 1e-3, mindist = 1e-2)
 s1
 ```
 
@@ -338,7 +343,7 @@ dp2 = DesignProblem(
 
 Random.seed!(111317)
 st2 = DirectMaximization(
-    optimizer = Pso(swarmsize = 50, iterations = 100),
+    optimizer = Pso(swarmsize = 30, iterations = 50),
     prototype = random_design(dp2.dr, 5),
 )
 
@@ -401,12 +406,12 @@ dp3 = DesignProblem(
 
 Random.seed!(9630)
 st3 = DirectMaximization(
-    optimizer = Pso(swarmsize = 50, iterations = 100),
-    prototype = random_design(dp3.dr, 5),
+    optimizer = Pso(swarmsize = 25, iterations = 20),
+    prototype = equidistant_design(dp3.dr, 5),
 )
 
 Random.seed!(1827)
-s3, r3 = solve(dp3, st3)
+s3, r3 = solve(dp3, st3; minweight = 1e-4)
 s3
 ```
 
@@ -507,12 +512,12 @@ dp4 = DesignProblem(
 
 Random.seed!(124816)
 st4a = DirectMaximization(
-    optimizer = Pso(swarmsize = 50, iterations = 100),
+    optimizer = Pso(swarmsize = 25, iterations = 75),
     prototype = random_design(dp4.dr, 5),
 )
 
 Random.seed!(112358)
-s4a, r4a = solve(dp4, st4a)
+s4a, r4a = solve(dp4, st4a; minposdose = 1e-3)
 gd4a = plot_gateauxderivative(s4a, dp4; legend = :bottomleft)
 savefig_nothing(gd4a, "dtr-gd4a.png") # hide
 ```
@@ -554,13 +559,13 @@ we can hope that it gives us the solution after a few steps.
 ```@example main
 st4b = Exchange(
     candidate = s4a,
-    steps = 5,
-    od = Pso(swarmsize = 50, iterations = 20),
-    ow = Pso(swarmsize = 50, iterations = 20),
+    steps = 8,
+    od = Pso(swarmsize = 25, iterations = 10),
+    ow = Pso(swarmsize = 25, iterations = 10),
 )
 
 Random.seed!(314)
-s4b, r4b = solve(dp4, st4b; minweight = 1e-3, mindist = 1e-2)
+s4b, r4b = solve(dp4, st4b; minposdose = 1e-3, mindist = 2e-2)
 pr4b = plot(r4b)
 savefig_nothing(pr4b, "dtr-pr4b.png") # hide
 ```
@@ -663,12 +668,12 @@ dp5 = DesignProblem(
 
 Random.seed!(132435)
 st5 = DirectMaximization(
-    optimizer = Pso(swarmsize = 50, iterations = 100),
+    optimizer = Pso(swarmsize = 40, iterations = 80),
     prototype = random_design(dp5.dr, 5),
 )
 
 Random.seed!(6283)
-s5, r5 = solve(dp5, st5; mindist = 1e-3, minweight = 1e-3)
+s5, r5 = solve(dp5, st5; mindist = 1e-3, minweight = 1e-3, minposdelta = 1e-3)
 s5
 ```
 
