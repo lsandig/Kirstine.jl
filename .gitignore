@@ -7,3 +7,4 @@
 /test/Manifest.toml
 /src/*.cov
 /test/*.cov
+/docs/Manifest.toml
