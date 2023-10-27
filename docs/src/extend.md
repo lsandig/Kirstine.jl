@@ -12,7 +12,7 @@ The following pages show how to implement custom versions of the following objec
   - model
   - transformation
   - normal approximation
-  - optimizer
+  - [optimizer](extend-optimizer.md)
   - problem solving strategy
 
 !!! warning

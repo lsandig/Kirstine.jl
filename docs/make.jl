@@ -59,6 +59,7 @@ math_macros = Dict(
     raw"\DesignPoint" => raw"z",
     raw"\DesignWeight" => raw"w",
     raw"\Parameter" => raw"θ",
+    raw"\SignedMeasure" => raw"η",
     raw"\SomeMatrix" => raw"M",
     raw"\Unit" => raw"y",
     # Functions
@@ -112,6 +113,7 @@ makedocs(modules = [Kirstine],
                   "Extending Kirstine" => [
                       "Overview" => "extend.md",
                       "Design Region" => "extend-region.md",
+                      "Optimizer" => "extend-optimizer.md",
                   ],
                   "API Reference" => "api.md",
                   "Mathematical Background" => "math.md",
