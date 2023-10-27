@@ -70,7 +70,7 @@ function check_compatible(d::DesignMeasure, dr::DesignRegion{N}) where N
     return true
 end
 
-function ap_random_point!(d::DesignMeasure, c::DesignConstraints)
+function ap_rand!(d::DesignMeasure, c::DesignConstraints)
     K = numpoints(d)
     pts = points(d)
     for k in 1:K
@@ -106,7 +106,7 @@ function ap_random_point!(d::DesignMeasure, c::DesignConstraints)
     return d
 end
 
-function ap_difference!(v::SignedMeasure, p::DesignMeasure, q::DesignMeasure)
+function ap_diff!(v::SignedMeasure, p::DesignMeasure, q::DesignMeasure)
     v.weights .= p.weights .- q.weights
     v.atoms .= p.points .- q.points
     return v
@@ -122,7 +122,7 @@ function ap_as_difference(p::DesignMeasure)
     return SignedMeasure(deepcopy(p.points), deepcopy(p.weights))
 end
 
-function ap_distance(p::DesignMeasure, q::DesignMeasure)
+function ap_dist(p::DesignMeasure, q::DesignMeasure)
     acc = 0.0
     for i in 1:length(p.points)
         acc += (p.points[i] - q.points[i])^2
@@ -133,7 +133,7 @@ function ap_distance(p::DesignMeasure, q::DesignMeasure)
     return sqrt(acc)
 end
 
-function ap_random_difference!(v::SignedMeasure, lb::Real, ub::Real)
+function ap_rand!(v::SignedMeasure, lb::Real, ub::Real)
     rand!(v.weights)
     v.weights .*= (ub - lb)
     v.weights .+= lb
@@ -143,13 +143,13 @@ function ap_random_difference!(v::SignedMeasure, lb::Real, ub::Real)
     return v
 end
 
-function ap_mul_hadamard!(v1::SignedMeasure, v2::SignedMeasure)
+function ap_mul!(v1::SignedMeasure, v2::SignedMeasure)
     v1.weights .*= v2.weights
     v1.atoms .*= v2.atoms
     return v1
 end
 
-function ap_mul_scalar!(v::SignedMeasure, a::Real)
+function ap_mul!(v::SignedMeasure, a::Real)
     v.weights .*= a
     v.atoms .*= a
     return v
@@ -161,7 +161,7 @@ function ap_add!(v1::SignedMeasure, v2::SignedMeasure)
     return v1
 end
 
-function ap_move!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
+function ap_add!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
     # ignore velocity components in directions that correspond to fixed weights or points
     move_handle_fixed!(v, c.fixw, c.fixp)
     # handle intersections: find maximal 0<=t<=1 such that p+tv remains in the search volume
@@ -174,7 +174,7 @@ function ap_move!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
     move_add_v!(p, t, v, c.dr, c.fixw)
     # Stop the particle if the boundary was hit.
     if t != 1.0
-        ap_mul_scalar!(v, 0)
+        ap_mul!(v, 0)
     end
     # check that we have not accidentally moved outside
     check_compatible(p, c.dr)

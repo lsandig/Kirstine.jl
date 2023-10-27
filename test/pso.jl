@@ -21,14 +21,14 @@ struct BoxConstraints <: Kirstine.AbstractConstraints
     ub::Pnt
 end
 
-function Kirstine.ap_random_point!(p::Pnt, c::BoxConstraints)
+function Kirstine.ap_rand!(p::Pnt, c::BoxConstraints)
     rand!(p.x)
     p.x .*= c.ub.x .- c.lb.x
     p.x .+= c.lb.x
     return p
 end
 
-function Kirstine.ap_difference!(d::PntDiff, p::Pnt, q::Pnt)
+function Kirstine.ap_diff!(d::PntDiff, p::Pnt, q::Pnt)
     d.v .= p.x .- q.x
     return d.v
 end
@@ -38,7 +38,7 @@ function Kirstine.ap_copy!(to::Pnt, from::Pnt)
     return to
 end
 
-function Kirstine.ap_move!(p::Pnt, d::PntDiff, c::BoxConstraints)
+function Kirstine.ap_add!(p::Pnt, d::PntDiff, c::BoxConstraints)
     p.x .+= d.v
     p.x .= max.(c.lb.x, p.x)
     p.x .= min.(c.ub.x, p.x)
@@ -49,19 +49,19 @@ function Kirstine.ap_as_difference(p::Pnt)
     return PntDiff(deepcopy(p.x))
 end
 
-function Kirstine.ap_random_difference!(d::PntDiff, lb::Real, ub::Real)
+function Kirstine.ap_rand!(d::PntDiff, lb::Real, ub::Real)
     rand!(d.v)
     d.v .*= (ub - lb)
     d.v .+= lb
     return d
 end
 
-function Kirstine.ap_mul_hadamard!(d1::PntDiff, d2::PntDiff)
+function Kirstine.ap_mul!(d1::PntDiff, d2::PntDiff)
     d1.v .*= d2.v
     return d1
 end
 
-function Kirstine.ap_mul_scalar!(d::PntDiff, a::Real)
+function Kirstine.ap_mul!(d::PntDiff, a::Real)
     d.v .*= a
     return d
 end

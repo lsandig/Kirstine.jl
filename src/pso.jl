@@ -93,12 +93,12 @@ function optimizer_state(
     n_random = o.swarmsize - length(prototypes)
     x_random = [deepcopy(prototypes[1]) for _ in 1:n_random]
     for i in 1:length(x_random)
-        ap_random_point!(x_random[i], constraints)
+        ap_rand!(x_random[i], constraints)
     end
     x = [x_given; x_random]
     # here we get the matching difference type for the concrete type of x[1]
     zero_diff = ap_as_difference(x[1])
-    ap_difference!(zero_diff, x[1], x[1]) # initialize at 0
+    ap_diff!(zero_diff, x[1], x[1]) # initialize at 0
     v = [deepcopy(zero_diff) for _ in 1:(o.swarmsize)]
     p = deepcopy(x)
     g = deepcopy(x[1])
@@ -142,24 +142,24 @@ function pso_update_velocity!(state::PsoState, c1, c2, chi)
         #   v[i] *= chi
         #
         # with elements of r1, r2 uniformly random from [0,1].
-        ap_difference!(state.diffp, state.p[i], state.x[i])
-        ap_difference!(state.diffg, state.g, state.x[i])
-        ap_random_difference!(state.r1, 0, 1)
-        ap_random_difference!(state.r2, 0, 1)
-        ap_mul_hadamard!(state.diffp, state.r1)
-        ap_mul_hadamard!(state.diffg, state.r2)
-        ap_mul_scalar!(state.diffp, c1)
-        ap_mul_scalar!(state.diffg, c2)
+        ap_diff!(state.diffp, state.p[i], state.x[i])
+        ap_diff!(state.diffg, state.g, state.x[i])
+        ap_rand!(state.r1, 0, 1)
+        ap_rand!(state.r2, 0, 1)
+        ap_mul!(state.diffp, state.r1)
+        ap_mul!(state.diffg, state.r2)
+        ap_mul!(state.diffp, c1)
+        ap_mul!(state.diffg, c2)
         ap_add!(state.v[i], state.diffp)
         ap_add!(state.v[i], state.diffg)
-        ap_mul_scalar!(state.v[i], chi)
+        ap_mul!(state.v[i], chi)
     end
     return state
 end
 
 function pso_update_position!(state::PsoState, constraints::AbstractConstraints)
     for i in 1:length(state.x)
-        ap_move!(state.x[i], state.v[i], constraints)
+        ap_add!(state.x[i], state.v[i], constraints)
     end
     return state
 end
