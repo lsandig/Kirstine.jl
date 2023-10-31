@@ -245,6 +245,24 @@ function apply_transformation!(wm::WorkMatrices, is_inv::Bool, tc::TCDeltaMethod
     return wm, true
 end
 
+# helper method to be used when computing gateaux constants
+function transformed_information_matrices(
+    nim::AbstractVector{<:AbstractMatrix},
+    is_inv::Bool,
+    pk::PriorSample,
+    tc::TrafoConstants,
+)
+    # dummies --------v--v
+    wm = WorkMatrices(1, 1, parameter_dimension(pk), codomain_dimension(tc))
+    res_is_inv = missing
+    tnim = map(1:length(pk.p)) do i
+        wm.r_x_r .= nim[i] # will be overwritten by the next call
+        _, res_is_inv = apply_transformation!(wm, is_inv, tc, i)
+        return deepcopy(wm.t_x_t)
+    end
+    return tnim, res_is_inv
+end
+
 ## linear algebra shortcuts ##
 
 # Calculate `log(det(A))`. `A` is implicitly treated as symmetric, i.e. only the upper

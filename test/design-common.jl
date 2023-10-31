@@ -188,6 +188,31 @@ include("example-vector.jl")
         end
     end
 
+    @testset "transformed_information_matrices" begin
+        # We suppose that `apply_transformation!` works as intended,
+        # and only check with DeltaMethod trafo constants and non-inverted input NIM.
+        let A1 = reshape(rand(9), 3, 3),
+            A2 = reshape(rand(9), 3, 3),
+            nim = [collect(UpperTriangular(A1' * A1)), collect(UpperTriangular(A2' * A2))],
+            nim_bkp = deepcopy(nim),
+            pk = PriorSample([TestPar3(1, 2, 3), TestPar3(4, 5, 6)]), # dummy values
+            t = DeltaMethod(p -> diagm([0.5, 2.0, 4.0])),
+            tc = Kirstine.precalculate_trafo_constants(t, pk),
+            (tnim, is_inv) = Kirstine.transformed_information_matrices(nim, false, pk, tc)
+
+            @test length(tnim) == 2
+            # with the DeltaMethod, the output is always inverted
+            @test is_inv == true
+            # results should not be the same reference
+            @test tnim[1] !== tnim[2]
+            # input nim not modified
+            @test nim == nim_bkp
+            # actual matrices
+            @test Symmetric(tnim[1]) ≈ tc.jm[1]' * inv(Symmetric(nim[1])) * tc.jm[1]
+            @test Symmetric(tnim[2]) ≈ tc.jm[2]' * inv(Symmetric(nim[2])) * tc.jm[2]
+        end
+    end
+
     @testset "allocate_initialize_covariates" begin
         let d = DesignMeasure([[0], [1], [2]], [0.2, 0.3, 0.5]),
             m = EmaxModel(1),

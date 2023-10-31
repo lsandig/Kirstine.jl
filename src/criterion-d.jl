@@ -77,16 +77,14 @@ function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::PriorSamp
     t = codomain_dimension(tc)
     # This computes the upper triangle of M(ζ,θ)^{-1}.
     inv_M = inverse_information_matrices(d, m, cp, pk, na)
-    wm = WorkMatrices(numpoints(d), unit_length(m), parameter_dimension(pk), t)
+    # We already know that the result will be inverted.
+    inv_MT, _ = transformed_information_matrices(inv_M, true, pk, tc)
     # Note that A will be dense.
-    A = map(1:length(pk.p)) do i
-        wm.r_x_r .= inv_M[i] # will be overwritten by the next call
-        apply_transformation!(wm, true, tc, i)
-        # Now, wm.t_x_t contains the upper triangle of (M_T(ζ,θ))^{-1}.
+    A = map(inv_M, inv_MT, tc.jm) do iM, iMT, DT
+        # Now, iMT contains the upper triangle of (M_T(ζ,θ))^{-1}.
         # Instead of an explicit inversion, we solve (M_T(ζ,θ))^{-1} X = DT for X.
-        # The Jacobian matrix of the transformation for the current parameter value is in tc.jm[i].
-        C = tc.jm[i]' * (Symmetric(wm.t_x_t) \ tc.jm[i])
-        return Symmetric(inv_M[i]) * C * Symmetric(inv_M[i])
+        C = DT' * (Symmetric(iMT) \ DT)
+        return Symmetric(iM) * C * Symmetric(iM)
     end
     tr_B = fill(t, length(pk.p))
     return GCDDeltaMethod(A, tr_B)
