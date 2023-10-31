@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-## D-optimal design and relative D-efficiency ##
+## D-optimal design ##
 
 # Constants for the Gateaux derivative.
 #
@@ -60,7 +60,7 @@ function gateaux_integrand(c::GCDIdentity, nim_direction, index)
 end
 
 function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk, tc::TCIdentity, na)
-    A = inverse_information_matrices(d, m, cp, pk, na)
+    A = inverse_information_matrices(d, m, cp, pk, na) # only upper triangles
     tr_B = fill(parameter_dimension(pk), length(pk.p))
     return GCDIdentity(A, tr_B)
 end
@@ -74,16 +74,19 @@ end
 #! format: off
 function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::PriorSample, tc::TCDeltaMethod, na)
 #! format: on
-    invM = inverse_information_matrices(d, m, cp, pk, na)
     t = codomain_dimension(tc)
+    # This computes the upper triangle of M(ζ,θ)^{-1}.
+    inv_M = inverse_information_matrices(d, m, cp, pk, na)
     wm = WorkMatrices(numpoints(d), unit_length(m), parameter_dimension(pk), t)
+    # Note that A will be dense.
     A = map(1:length(pk.p)) do i
-        wm.r_x_r .= invM[i]
-        inv_tnim, _ = apply_transformation!(wm, true, tc, i)
-        J = tc.jm[i]
-        B = J' * (Symmetric(inv_tnim) \ J)
-        sym_invM = Symmetric(invM[i])
-        return sym_invM * B * sym_invM
+        wm.r_x_r .= inv_M[i] # will be overwritten by the next call
+        apply_transformation!(wm, true, tc, i)
+        # Now, wm.t_x_t contains the upper triangle of (M_T(ζ,θ))^{-1}.
+        # Instead of an explicit inversion, we solve (M_T(ζ,θ))^{-1} X = DT for X.
+        # The Jacobian matrix of the transformation for the current parameter value is in tc.jm[i].
+        C = tc.jm[i]' * (Symmetric(wm.t_x_t) \ tc.jm[i])
+        return Symmetric(inv_M[i]) * C * Symmetric(inv_M[i])
     end
     tr_B = fill(t, length(pk.p))
     return GCDDeltaMethod(A, tr_B)
