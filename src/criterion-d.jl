@@ -59,7 +59,15 @@ function gateaux_integrand(c::GCDIdentity, nim_direction, index)
     return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
 end
 
-function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk, tc::TCIdentity, na)
+function gateaux_constants(
+    dc::DOptimality,
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample,
+    tc::TCIdentity,
+    na::NormalApproximation,
+)
     A = inverse_information_matrices(d, m, cp, pk, na) # only upper triangles
     tr_B = fill(parameter_dimension(pk), length(pk.p))
     return GCDIdentity(A, tr_B)
@@ -71,9 +79,15 @@ function gateaux_integrand(c::GCDDeltaMethod, nim_direction, index)
     return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
 end
 
-#! format: off
-function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::PriorSample, tc::TCDeltaMethod, na)
-#! format: on
+function gateaux_constants(
+    dc::DOptimality,
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample,
+    tc::TCDeltaMethod,
+    na::NormalApproximation,
+)
     t = codomain_dimension(tc)
     # This computes the upper triangle of M(ζ,θ)^{-1}.
     inv_M = inverse_information_matrices(d, m, cp, pk, na)

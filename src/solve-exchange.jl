@@ -91,7 +91,7 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
     or_pairs = map(1:(steps)) do i
         res = simplify(res, dp; simplify_args...)
         dir_prot = map(one_point_design, points(simplify_drop(res, 0)))
-        gc = precalculate_gateaux_constants(dp.dc, res, dp.m, dp.cp, dp.pk, tc, dp.na)
+        gc = gateaux_constants(dp.dc, res, dp.m, dp.cp, dp.pk, tc, dp.na)
         # find direction of steepest ascent
         gd(d) = gateauxderivative!(wm, c, gc, d, dp.m, dp.cp, dp.pk, dp.na)
         or_gd = optimize(od, gd, dir_prot, constraints; trace_state = trace_state)

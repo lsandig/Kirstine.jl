@@ -83,7 +83,7 @@ include("example-compartment.jl")
         end
     end
 
-    @testset "precalculate_gateaux_constants" begin
+    @testset "gateaux_constants" begin
         # Identity transformation
         #
         # The GateauxConstants wrap the square and the trace of the inverse of the
@@ -101,7 +101,7 @@ include("example-compartment.jl")
             pk = PriorSample([g1, g2]),
             tc = Kirstine.TCIdentity(3), # the codomain dimension is not used in this test
             na = FisherMatrix(),
-            pgc = Kirstine.precalculate_gateaux_constants,
+            pgc = Kirstine.gateaux_constants,
             # reference information matrices, already wrapped in Symmetric()
             m1 = informationmatrix(a1, m, cp, g1, na),
             m2 = informationmatrix(a1, m, cp, g2, na),
@@ -136,7 +136,7 @@ include("example-compartment.jl")
             J = [Dauc(g1), Dauc(g2)],
             tc = Kirstine.TCDeltaMethod(1, J),
             na = FisherMatrix(),
-            pgc = Kirstine.precalculate_gateaux_constants,
+            pgc = Kirstine.gateaux_constants,
             # reference information matrices, already wrapped in Symmetric()
             m1 = informationmatrix(a1, m, cp, g1, na),
             m2 = informationmatrix(a1, m, cp, g2, na),

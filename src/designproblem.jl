@@ -178,7 +178,7 @@ function gateauxderivative(
         codomain_dimension(tc),
     )
     gconst = try
-        precalculate_gateaux_constants(dp.dc, at, dp.m, dp.cp, dp.pk, tc, dp.na)
+        gateaux_constants(dp.dc, at, dp.m, dp.cp, dp.pk, tc, dp.na)
     catch e
         if isa(e, SingularException)
             # undefined objective implies no well-defined derivative

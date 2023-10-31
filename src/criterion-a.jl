@@ -61,7 +61,15 @@ function gateaux_integrand(c::GCAIdentity, nim_direction, index)
     return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
 end
 
-function precalculate_gateaux_constants(dc::AOptimality, d, m, cp, pk, tc::TCIdentity, na)
+function gateaux_constants(
+    dc::AOptimality,
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample,
+    tc::TCIdentity,
+    na::NormalApproximation,
+)
     invM = inverse_information_matrices(d, m, cp, pk, na)
     tr_B = map(tr, invM)
     A = map(m -> Symmetric(m)^2, invM)
@@ -72,9 +80,15 @@ function gateaux_integrand(c::GCADeltaMethod, nim_direction, index)
     return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
 end
 
-#! format: off
-function precalculate_gateaux_constants(dc::AOptimality, d, m, cp, pk::PriorSample, tc::TCDeltaMethod, na)
-    #! format: on
+function gateaux_constants(
+    dc::AOptimality,
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample,
+    tc::TCDeltaMethod,
+    na::NormalApproximation,
+)
     invM = inverse_information_matrices(d, m, cp, pk, na)
     JpJ = map(J -> J' * J, tc.jm)
     tr_B = map((J, iM) -> tr(J * Symmetric(iM)), JpJ, invM)
