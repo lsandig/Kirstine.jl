@@ -7,7 +7,7 @@ You can even implement your own high- or low-level optimization algorithms.
 
 The following pages show how to implement custom versions of the following objects:
 
-  - design criterion
+  - [design criterion](extend-criterion.md)
   - [design region](extend-region.md)
   - model
   - transformation

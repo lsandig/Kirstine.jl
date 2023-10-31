@@ -112,6 +112,7 @@ makedocs(modules = [Kirstine],
                   ],
                   "Extending Kirstine" => [
                       "Overview" => "extend.md",
+                      "Design Criterion" => "extend-criterion.md",
                       "Design Region" => "extend-region.md",
                       "Optimizer" => "extend-optimizer.md",
                   ],
