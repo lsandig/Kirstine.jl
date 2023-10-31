@@ -140,22 +140,22 @@ include("example-vector.jl")
             _ = broadcast!(identity, wm2.r_x_r, inv_nim),
             _ = broadcast!(identity, wm3.r_x_r, nim),
             _ = broadcast!(identity, wm4.r_x_r, inv_nim),
-            (tnim1, i1) = Kirstine.apply_transformation!(wm1, false, ctid, 1),
-            (tnim2, i2) = Kirstine.apply_transformation!(wm2, true, ctid, 1),
+            (r1, i1) = Kirstine.apply_transformation!(wm1, false, ctid, 1),
+            (r2, i2) = Kirstine.apply_transformation!(wm2, true, ctid, 1),
             # scaling parameters should be able to be pulled out
-            (tnim3, _) = Kirstine.apply_transformation!(wm3, false, ctsc, 1),
-            (tnim4, _) = Kirstine.apply_transformation!(wm4, true, ctsc, 1)
+            (r3, _) = Kirstine.apply_transformation!(wm3, false, ctsc, 1),
+            (r4, _) = Kirstine.apply_transformation!(wm4, true, ctsc, 1)
 
-            @test Symmetric(tnim1) ≈ Symmetric(inv_nim)
-            @test tnim1 === wm1.t_x_t
+            @test Symmetric(wm1.t_x_t) ≈ Symmetric(inv_nim)
+            @test r1 === wm1
             @test i1 = true
-            @test Symmetric(tnim2) ≈ Symmetric(inv_nim)
-            @test tnim2 === wm2.t_x_t
+            @test Symmetric(wm2.t_x_t) ≈ Symmetric(inv_nim)
+            @test r2 === wm2
             @test i1 == true
-            @test Symmetric(tnim3) ≈ Symmetric(tnim4)
-            @test tnim3 === wm3.t_x_t
-            @test tnim4 === wm4.t_x_t
-            @test det(Symmetric(tnim3)) ≈ 4^2 * det(Symmetric(inv_nim))
+            @test Symmetric(wm3.t_x_t) ≈ Symmetric(wm4.t_x_t)
+            @test r3 === wm3
+            @test r4 === wm4
+            @test det(Symmetric(wm3.t_x_t)) ≈ 4^2 * det(Symmetric(inv_nim))
         end
 
         # The Identity transformation simply passes through the input matrix and its
@@ -176,14 +176,14 @@ include("example-vector.jl")
             # workaround for `.=` not being valid let statement syntax
             _ = broadcast!(identity, wm1.r_x_r, nim),
             _ = broadcast!(identity, wm2.r_x_r, inv_nim),
-            (tnim1, i1) = Kirstine.apply_transformation!(wm1, false, tc, 1),
-            (tnim2, i2) = Kirstine.apply_transformation!(wm2, true, tc, 1)
+            (r1, i1) = Kirstine.apply_transformation!(wm1, false, tc, 1),
+            (r2, i2) = Kirstine.apply_transformation!(wm2, true, tc, 1)
 
-            @test Symmetric(tnim1) ≈ Symmetric(nim)
-            @test tnim1 === wm1.t_x_t
+            @test Symmetric(wm1.t_x_t) ≈ Symmetric(nim)
+            @test r1 === wm1
             @test i1 == false
-            @test Symmetric(tnim2) ≈ Symmetric(inv_nim)
-            @test tnim2 === wm2.t_x_t
+            @test Symmetric(wm2.t_x_t) ≈ Symmetric(inv_nim)
+            @test r2 === wm2
             @test i2 == true
         end
     end

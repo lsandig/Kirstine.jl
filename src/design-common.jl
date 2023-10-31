@@ -192,7 +192,7 @@ end
 # * `wm.r_x_r` holds the information matrix or its inverse, depending on the `is_inv` flag.
 # * Only the upper triangle of `wm.r_x_r` is used.
 # * `wm.t_x_t` will be overwritten with the transformed information matrix or its inverse.
-# * The return value are `wm.t_x_t` and a flag that indicates whether it is inverted.
+# * The return value are `wm` and a flag that indicates whether `wm.t_x_t` it is inverted.
 # * Only the upper triangle of `wm.t_x_t` is guaranteed to make sense, but specific methods
 #   are free to return a dense matrix.
 # * Whether the returned matrix will be inverted is _not_ controlled by `is_inv`.
@@ -200,7 +200,7 @@ end
 function apply_transformation!(wm::WorkMatrices, is_inv::Bool, tc::TCIdentity, index)
     # For the Identity transformation we just pass through the information matrix.
     wm.t_x_t .= wm.r_x_r
-    return wm.t_x_t, is_inv
+    return wm, is_inv
 end
 
 function apply_transformation!(wm::WorkMatrices, is_inv::Bool, tc::TCDeltaMethod, index)
@@ -242,7 +242,7 @@ function apply_transformation!(wm::WorkMatrices, is_inv::Bool, tc::TCDeltaMethod
     end
     # Note that for this method, the result is not just an upper triangle, but always a
     # dense matrix.
-    return wm.t_x_t, true
+    return wm, true
 end
 
 ## linear algebra shortcuts ##
