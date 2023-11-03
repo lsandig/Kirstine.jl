@@ -40,7 +40,11 @@ include("example-emax.jl")
             ),
             r1 = Kirstine.solve_with(dp, str1, false),
             # additionally trace optimizer states
-            r2 = Kirstine.solve_with(dp, str2, true)
+            r2 = Kirstine.solve_with(dp, str2, true),
+            design_trace = optimization_result(r2).trace_x,
+            lower_dp_vals = map(d -> points(d)[1][1], design_trace),
+            upper_dp_vals = map(d -> points(d)[3][1], design_trace),
+            middle_dp_dists = map(d -> abs(points(d)[2][1] - 2.5), design_trace)
 
             # errors from check_compatible() in DesignConstraints constructor
             @test_throws "outside design region" (@test_warn "dp =" solve(dp, str3))
@@ -49,21 +53,17 @@ include("example-emax.jl")
             @test isa(r1, DirectMaximizationResult)
             @test isa(r2, DirectMaximizationResult)
             # traced state
-            @test length(r1.or.trace_state) == 1
-            @test length(r2.or.trace_state) == 20
+            @test length(optimization_result(r1).trace_state) == 1
+            @test length(optimization_result(r2).trace_state) == 20
             # increasing objective
-            @test issorted(r1.or.trace_fx)
-            @test issorted(r2.or.trace_fx)
+            @test issorted(optimization_result(r1).trace_fx)
+            @test issorted(optimization_result(r2).trace_fx)
             # fixed things
-            @test all(map(d -> all(weights(d) .≈ 1 / 3), r2.or.trace_x))
-            @test all(
-                map(d -> points(d)[1][1], r2.or.trace_x) .== lowerbound(region(dp))[1],
-            )
-            @test all(
-                map(d -> points(d)[3][1], r2.or.trace_x) .== upperbound(region(dp))[1],
-            )
+            @test all(map(d -> all(weights(d) .≈ 1 / 3), design_trace))
+            @test all(lower_dp_vals .== lowerbound(region(dp))[1])
+            @test all(upper_dp_vals .== upperbound(region(dp))[1])
             # non-fixed design point converges to 2.5
-            @test issorted(map(d -> abs(points(d)[2][1] - 2.5), r2.or.trace_x), rev = true)
+            @test issorted(middle_dp_dists, rev = true)
         end
 
         # DirectMaximization, but with fixed weights / design points that we know are not
@@ -91,23 +91,20 @@ include("example-emax.jl")
             r3 = sws(; fw = Int64[], fp = [2]),
             r4 = sws(; fw = [5], fp = [5]),
             r5 = sws(; fw = [1, 5], fp = [5]),
-            isconstw(r, k) = all([
-                all(map(d -> weights(d)[k] == weights(pt)[k], s.x)) for
-                s in r.or.trace_state
-            ]),
-            isconstp(r, k) = all([
-                all(map(d -> points(d)[k] == points(pt)[k], s.x)) for s in r.or.trace_state
+            is_const_fn(acc, r, k) = all([
+                all(map(d -> acc(d)[k] == acc(pt)[k], s.x)) for
+                s in optimization_result(r).trace_state
             ])
 
-            @test isconstw(r1, 2)
-            @test isconstp(r1, 2)
-            @test isconstw(r2, 2)
-            @test isconstp(r3, 2)
-            @test isconstw(r4, 5)
-            @test isconstp(r4, 5)
-            @test isconstw(r5, 1)
-            @test isconstw(r5, 5)
-            @test isconstp(r5, 5)
+            @test is_const_fn(weights, r1, 2)
+            @test is_const_fn(points, r1, 2)
+            @test is_const_fn(weights, r2, 2)
+            @test is_const_fn(points, r3, 2)
+            @test is_const_fn(weights, r4, 5)
+            @test is_const_fn(points, r4, 5)
+            @test is_const_fn(weights, r5, 1)
+            @test is_const_fn(weights, r5, 5)
+            @test is_const_fn(points, r5, 5)
             @test_logs(
                 (:warn, "fixed weights already sum to one"),
                 match_mode = :any,

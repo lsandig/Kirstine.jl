@@ -11,7 +11,7 @@ end
 
 @recipe function f(r::DirectMaximizationResult)
     # just unwrap the OptimizationResult
-    r.or
+    optimization_result(r)
 end
 
 @recipe function f(rs::AbstractVector{<:OptimizationResult})
@@ -30,11 +30,11 @@ end
     @series begin
         subplot := 1
         yguide --> "max derivative"
-        r.ord
+        optimization_results_direction(r)
     end
     @series begin
         subplot := 2
-        r.orw
+        optimization_results_weight(r)
     end
 end
 

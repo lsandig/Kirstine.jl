@@ -50,7 +50,9 @@ end
 """
     DirectMaximizationResult <: ProblemSolvingResult
 
-Contains an [`OptimizationResult`](@ref) in the `or` field.
+Wraps the [`OptimizationResult`](@ref) from direct maximization.
+
+See also [`optimization_result`](@ref).
 """
 struct DirectMaximizationResult{S<:OptimizerState{DesignMeasure,SignedMeasure}} <:
        ProblemSolvingResult
@@ -59,6 +61,15 @@ end
 
 function maximizer(dmr::DirectMaximizationResult)
     return dmr.or.maximizer
+end
+
+"""
+    optimization_result(dmr::DirectMaximizationResult)
+
+Get the full [`OptimizationResult`](@ref).
+"""
+function optimization_result(dmr::DirectMaximizationResult)
+    return dmr.or
 end
 
 function solve_with(dp::DesignProblem, strategy::DirectMaximization, trace_state::Bool)

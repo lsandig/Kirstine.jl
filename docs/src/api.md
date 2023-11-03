@@ -23,9 +23,12 @@ ProblemSolvingResult
 DirectMaximization
 DirectMaximization()
 DirectMaximizationResult
+optimization_result
 Exchange
 Exchange()
 ExchangeResult
+optimization_results_direction
+optimization_results_weight
 ```
 
 Particle-based optimizers are operating on a lower level,

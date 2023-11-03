@@ -60,8 +60,9 @@ end
 """
     ExchangeResult <: ProblemSolvingResult
 
-Contains vectors `ord` and `orw` of [`OptimizationResult`](@ref)s,
-one for each direction finding and reweighting step.
+Wraps the [`OptimizationResult`](@ref)s from the individual steps.
+
+See also [`optimization_results_direction`](@ref), [`optimization_results_weight`](@ref).
 """
 struct ExchangeResult{
     S<:OptimizerState{DesignMeasure,SignedMeasure},
@@ -73,6 +74,24 @@ end
 
 function maximizer(er::ExchangeResult)
     return er.orw[end].maximizer
+end
+
+"""
+    optimization_results_direction(er::ExchangeResult)
+
+Get the vector of [`OptimizationResult`](@ref)s from the direction steps.
+"""
+function optimization_results_direction(er::ExchangeResult)
+    return er.ord
+end
+
+"""
+    optimization_results_weight(er::ExchangeResult)
+
+Get the full [`OptimizationResult`](@ref)s from the re-weighting steps.
+"""
+function optimization_results_weight(er::ExchangeResult)
+    return er.orw
 end
 
 function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
@@ -113,7 +132,7 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
         wstr = DirectMaximization(; optimizer = ow, prototype = res, fixedpoints = 1:K)
         _, rw = solve(dp, wstr; trace_state = trace_state, simplify_args...)
         res = maximizer(rw)
-        return or_gd, rw.or
+        return or_gd, optimization_result(rw)
     end
     ors_d = map(o -> o[1], or_pairs)
     ors_w = map(o -> o[2], or_pairs)

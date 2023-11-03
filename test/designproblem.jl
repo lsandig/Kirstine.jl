@@ -31,7 +31,7 @@ include("example-compartment.jl")
             # ... and simplified
             @test numpoints(d) == 3
             # states should be traced (20 iterations)
-            @test length(r.or.trace_state) == 20
+            @test length(optimization_result(r).trace_state) == 20
 
             # `minposdist` doesn't exist, the correct argument name is `mindist`. Because we
             # have not implemented `simplify_unique()` for EmaxModel, the generic method

@@ -558,7 +558,7 @@ savefig_nothing(gd, "extend-optimizer-gd.png") # hide
 ![](extend-optimizer-gd.png)
 
 ```@example main
-n_emp = map(st -> length(st.empire), r.or.trace_state)
+n_emp = map(st -> length(st.empire), optimization_result(r).trace_state)
 dia = plot(
     plot(r),
     plot(n_emp; xguide = "iteration", yguide = "no. of empires", legend = nothing),

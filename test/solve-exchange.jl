@@ -61,16 +61,19 @@ include("example-emax.jl")
             @test isa(r1, ExchangeResult)
             @test isa(r2, ExchangeResult)
             # traced state
-            @test all(or -> length(or.trace_state) == 20, r1.ord)
-            @test all(or -> length(or.trace_state) == 20, r1.orw)
-            @test all(or -> length(or.trace_state) == 1, r2.ord)
-            @test all(or -> length(or.trace_state) == 1, r2.orw)
+            @test all(
+                or -> length(or.trace_state) == 20,
+                optimization_results_direction(r1),
+            )
+            @test all(or -> length(or.trace_state) == 20, optimization_results_weight(r1))
+            @test all(or -> length(or.trace_state) == 1, optimization_results_direction(r2))
+            @test all(or -> length(or.trace_state) == 1, optimization_results_weight(r2))
             # increasing objective (from step to step)
-            @test issorted(r1.orw, by = or -> or.maximum)
-            @test issorted(r2.orw, by = or -> or.maximum)
+            @test issorted(optimization_results_weight(r1), by = or -> or.maximum)
+            @test issorted(optimization_results_weight(r2), by = or -> or.maximum)
             # no new point, but last one of the candidate
-            @test numpoints(r2.orw[1].maximizer) == 3
-            @test points(r2.orw[1].maximizer)[1] == [10]
+            @test numpoints(optimization_results_weight(r2)[1].maximizer) == 3
+            @test points(optimization_results_weight(r2)[1].maximizer)[1] == [10]
         end
     end
 end
