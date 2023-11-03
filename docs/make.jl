@@ -109,6 +109,7 @@ makedocs(modules = [Kirstine],
                       "Multiple Design Variables" => "dtr.md",
                       "Locally Optimal Design" => "locally-optimal.md",
                       "Discrete Prior" => "discrete-prior.md",
+                      "Automatic Differentiation" => "autodiff.md",
                   ],
                   "Extending Kirstine" => [
                       "Overview" => "extend.md",
