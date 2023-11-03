@@ -123,6 +123,8 @@ end
     markershape := :none
     label --> ""
     xguide --> dimnames(dp.dr)[1]
+    yguide --> "Gateaux derivative"
+    linecolor --> :black
 
     x_grid, gd_grid
 end
