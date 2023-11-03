@@ -108,8 +108,8 @@ Our design interval extends from `0` to `48` hours after administration of the d
 function dp_for_trafo(trafo)
     Random.seed!(4711)
     DesignProblem(
-        design_region = DesignInterval(:time => [0, 48]),
-        design_criterion = DOptimality(),
+        region = DesignInterval(:time => [0, 48]),
+        criterion = DOptimality(),
         covariate_parameterization = Copy(),
         model = TPCModel(sigma = 1),
         prior_knowledge = draw_from_prior(1000, 2),

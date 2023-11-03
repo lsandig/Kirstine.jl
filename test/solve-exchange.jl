@@ -11,11 +11,11 @@ include("example-emax.jl")
 @testset "solve-exchange.jl" begin
     @testset "solve_with" begin
         let dp = DesignProblem(;
-                design_criterion = DOptimality(),
+                criterion = DOptimality(),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
                 prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
-                design_region = DesignInterval(:dose => (0, 10)),
+                region = DesignInterval(:dose => (0, 10)),
             ),
             od = Pso(; iterations = 20, swarmsize = 10),
             ow = Pso(; iterations = 20, swarmsize = 10),

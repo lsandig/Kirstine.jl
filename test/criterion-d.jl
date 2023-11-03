@@ -34,10 +34,10 @@ include("example-compartment.jl")
 
         # Identity Transformation: Atkinson et al. locally optimal example
         let dp = DesignProblem(;
-                design_region = DesignInterval(:time => [0, 48]),
+                region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = DOptimality(),
+                criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -57,10 +57,10 @@ include("example-compartment.jl")
         # DeltaMethod Transformation: Atkinson et al. strong prior AUC estimation example
         let _ = seed!(4711),
             dp = DesignProblem(;
-                design_region = DesignInterval(:time => [0, 48]),
+                region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = DOptimality(),
+                criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = draw_from_prior(1000, 2),
                 transformation = DeltaMethod(Dauc),
@@ -192,10 +192,10 @@ include("example-compartment.jl")
         # transformation and an equivalent DeltaMethod transformation give the same results.
         let dpi = DesignProblem(;
                 transformation = Identity(),
-                design_region = DesignInterval(:time => [0, 48]),
+                region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = DOptimality(),
+                criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -203,10 +203,10 @@ include("example-compartment.jl")
             ),
             dpd = DesignProblem(;
                 transformation = DeltaMethod(p -> diagm([1, 1, 1])),
-                design_region = DesignInterval(:time => [0, 48]),
+                region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = DOptimality(),
+                criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),

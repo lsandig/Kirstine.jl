@@ -255,24 +255,24 @@ and once for only estimating `ed50` and `h`.
 
 ```@example main
 dp1a = DesignProblem(
-    design_criterion = DexpOptimality(),
-    design_region = dr,
+    criterion = DexpOptimality(),
+    region = dr,
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior,
 )
 
 dp1b = DesignProblem(
-    design_criterion = DOptimality(),
-    design_region = dr,
+    criterion = DOptimality(),
+    region = dr,
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior,
 )
 
 dp2a = DesignProblem(
-    design_criterion = DexpOptimality(),
-    design_region = dr,
+    criterion = DexpOptimality(),
+    region = dr,
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior,
@@ -280,8 +280,8 @@ dp2a = DesignProblem(
 )
 
 dp2b = DesignProblem(
-    design_criterion = DOptimality(),
-    design_region = dr,
+    criterion = DOptimality(),
+    region = dr,
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior,

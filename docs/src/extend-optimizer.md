@@ -526,8 +526,8 @@ prior = PriorSample(
 )
 
 dp = DesignProblem(
-    design_criterion = DOptimality(),
-    design_region = dr,
+    criterion = DOptimality(),
+    region = dr,
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior,

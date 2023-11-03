@@ -188,8 +188,8 @@ function Kirstine.update_model_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, c
 end
 
 dp1 = DesignProblem(
-    design_criterion = DOptimality(),
-    design_region = DesignEllipsoid((:dose, :time), (50.0, 12.0), (50.0, 12.0)),
+    criterion = DOptimality(),
+    region = DesignEllipsoid((:dose, :time), (50.0, 12.0), (50.0, 12.0)),
     model = DTRMod(sigma = 1, m = 1),
     covariate_parameterization = CopyBoth(),
     prior_knowledge = prior,

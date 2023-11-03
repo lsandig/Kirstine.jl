@@ -71,8 +71,8 @@ we here only use its mean vector as the single guess for ``\Parameter``.
 ```@example main
 guess = PriorSample([SigEmaxParameter(e0 = 1, emax = 2, ed50 = 0.4, h = 5)])
 dp = DesignProblem(
-    design_criterion = DOptimality(),
-    design_region = dr,
+    criterion = DOptimality(),
+    region = dr,
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = guess,

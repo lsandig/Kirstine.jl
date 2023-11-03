@@ -263,8 +263,8 @@ set up the design problem and solve it with direct maximization.
 
 ```@example main
 dp1 = DesignProblem(
-    design_criterion = DOptimality(),
-    design_region = DesignInterval(:dose => (0, 100), :time => (0, 24)),
+    criterion = DOptimality(),
+    region = DesignInterval(:dose => (0, 100), :time => (0, 24)),
     model = DTRMod(sigma = 1, m = 1),
     covariate_parameterization = CopyBoth(),
     prior_knowledge = prior,
@@ -335,8 +335,8 @@ function Kirstine.update_model_covariate!(
 end
 
 dp2 = DesignProblem(
-    design_criterion = DOptimality(),
-    design_region = DesignInterval(:time => (0, 24)),
+    criterion = DOptimality(),
+    region = DesignInterval(:time => (0, 24)),
     model = DTRMod(1, 1),
     covariate_parameterization = FixedDose(100),
     prior_knowledge = prior,
@@ -398,8 +398,8 @@ function Kirstine.update_model_covariate!(
 end
 
 dp3 = DesignProblem(
-    design_criterion = DOptimality(),
-    design_region = DesignInterval(:dose => (0, 100)),
+    criterion = DOptimality(),
+    region = DesignInterval(:dose => (0, 100)),
     model = DTRMod(1, 13), # measurements every two hours
     covariate_parameterization = FixedTimes(0:2:24),
     prior_knowledge = prior,
@@ -504,8 +504,8 @@ function Kirstine.simplify_unique(
 end
 
 dp4 = DesignProblem(
-    design_criterion = DOptimality(),
-    design_region = DesignInterval(:dose => (0, 100), :Δt => (0, 2)),
+    criterion = DOptimality(),
+    region = DesignInterval(:dose => (0, 100), :Δt => (0, 2)),
     model = DTRMod(1, 13),
     covariate_parameterization = EquidistantTimes(),
     prior_knowledge = prior,
@@ -660,10 +660,10 @@ function Kirstine.simplify_unique(
 end
 
 dp5 = DesignProblem(
-    design_criterion = DOptimality(),
+    criterion = DOptimality(),
     model = DTRMod(1, 13),
     covariate_parameterization = LogEquidistantTimes(sqrt(2)),
-    design_region = DesignInterval(:dose => (0, 100), :Δt => (0, 24 / sqrt(2)^11)),
+    region = DesignInterval(:dose => (0, 100), :Δt => (0, 24 / sqrt(2)^11)),
     prior_knowledge = prior,
 )
 

@@ -10,8 +10,8 @@ include("example-emax.jl")
 @testset "solve-directmaximization.jl" begin
     @testset "solve_with" begin
         let dp = DesignProblem(;
-                design_criterion = DOptimality(),
-                design_region = DesignInterval(:dose => (0, 10)),
+                criterion = DOptimality(),
+                region = DesignInterval(:dose => (0, 10)),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
                 prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
@@ -69,8 +69,8 @@ include("example-emax.jl")
         # DirectMaximization, but with fixed weights / design points that we know are not
         # optimal, in various combinations
         let dp = DesignProblem(;
-                design_criterion = DOptimality(),
-                design_region = DesignInterval(:dose => (0, 10)),
+                criterion = DOptimality(),
+                region = DesignInterval(:dose => (0, 10)),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
                 prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),

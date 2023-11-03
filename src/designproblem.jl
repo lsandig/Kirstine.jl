@@ -41,8 +41,8 @@ struct DesignProblem{
     Construct a design problem with some sensible defaults.
 
     # Arguments
-    - `design_criterion::DesignCriterion`
-    - `design_region::DesignRegion`
+    - `criterion::DesignCriterion`
+    - `region::DesignRegion`
     - `model::Model`
     - `covariate_parameterization::CovariateParameterization`
     - `prior_knowledge::PriorKnowledge`
@@ -50,8 +50,8 @@ struct DesignProblem{
     - `normal_approximation::NormalApproximation = FisherMatrix()`
     """
     function DesignProblem(;
-        design_criterion::Tdc,
-        design_region::Tdr,
+        criterion::Tdc,
+        region::Tdr,
         model::Tm,
         covariate_parameterization::Tcp,
         prior_knowledge::Tpk,
@@ -67,8 +67,8 @@ struct DesignProblem{
         Tna<:NormalApproximation,
     }
         new{Tdc,Tdr,Tm,Tcp,Tpk,Tt,Tna}(
-            design_criterion,
-            design_region,
+            criterion,
+            region,
             model,
             covariate_parameterization,
             prior_knowledge,
@@ -273,9 +273,9 @@ end
 # same design problem as `dp`, but with criterion replaced by `DOptimality()`.
 function as_doptimality_problem(dp::DesignProblem)
     dpd = DesignProblem(;
-        design_criterion = DOptimality(),
+        criterion = DOptimality(),
         model = model(dp),
-        design_region = region(dp),
+        region = region(dp),
         covariate_parameterization = covariate_parameterization(dp),
         prior_knowledge = prior_knowledge(dp),
         transformation = transformation(dp),

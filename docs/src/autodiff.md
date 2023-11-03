@@ -85,8 +85,8 @@ end
 prior_sample = PriorSample(sep_draws)
 
 dp = DesignProblem(
-    design_criterion = DOptimality(),
-    design_region = DesignInterval(:dose => (0, 1)),
+    criterion = DOptimality(),
+    region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior_sample,
@@ -212,8 +212,8 @@ function Kirstine.jacobianmatrix!(
 end
 
 dph = DesignProblem(
-    design_criterion = DOptimality(),
-    design_region = DesignInterval(:dose => (0, 1)),
+    criterion = DOptimality(),
+    region = DesignInterval(:dose => (0, 1)),
     model = HackySigEmaxModel(
         sigma = 1,
         pardim = 4,

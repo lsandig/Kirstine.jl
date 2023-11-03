@@ -36,10 +36,10 @@ include("example-compartment.jl")
         # assume to be correct when the tests in the let block below work out.
         let dpd = DesignProblem(;
                 transformation = DeltaMethod(p -> diagm([1, 1, 1])),
-                design_region = DesignInterval(:time => [0, 48]),
+                region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = AOptimality(),
+                criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -47,10 +47,10 @@ include("example-compartment.jl")
             ),
             dpi = DesignProblem(;
                 transformation = Identity(),
-                design_region = DesignInterval(:time => [0, 48]),
+                region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = AOptimality(),
+                criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -63,10 +63,10 @@ include("example-compartment.jl")
 
         # DeltaMethod Transformation: Atkinson et al locally optimal Omnibus example
         let dp = DesignProblem(;
-                design_region = DesignInterval(:time => [0, 48]),
+                region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = AOptimality(),
+                criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -193,10 +193,10 @@ include("example-compartment.jl")
         # assumption that the DeltaMethod is correct.
         let dpi = DesignProblem(;
                 transformation = Identity(),
-                design_region = DesignInterval(:time => [0, 48]),
+                region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = AOptimality(),
+                criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -204,10 +204,10 @@ include("example-compartment.jl")
             ),
             dpd = DesignProblem(;
                 transformation = DeltaMethod(p -> diagm([1, 1, 1])),
-                design_region = DesignInterval(:time => [0, 48]),
+                region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = AOptimality(),
+                criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -227,10 +227,10 @@ include("example-compartment.jl")
         # DeltaMethod Transformation: Atkinson et al. locally optimal Omnibus example
         let dp = DesignProblem(;
                 transformation = DeltaMethod(DOmnibus),
-                design_region = DesignInterval(:time => [0, 48]),
+                region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = AOptimality(),
+                criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
