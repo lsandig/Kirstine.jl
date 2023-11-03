@@ -62,7 +62,10 @@ end
 
 Wraps the [`OptimizationResult`](@ref)s from the individual steps.
 
-See also [`optimization_results_direction`](@ref), [`optimization_results_weight`](@ref).
+See also
+[`solution(::ExchangeResult)`](@ref),
+[`optimization_results_direction`](@ref),
+[`optimization_results_weight`](@ref).
 """
 struct ExchangeResult{
     S<:OptimizerState{DesignMeasure,SignedMeasure},
@@ -72,7 +75,12 @@ struct ExchangeResult{
     orw::Vector{OptimizationResult{DesignMeasure,SignedMeasure,T}}
 end
 
-function maximizer(er::ExchangeResult)
+"""
+    solution(er::ExchangeResult)
+
+Return the best candidate found.
+"""
+function solution(er::ExchangeResult)
     return er.orw[end].maximizer
 end
 
@@ -131,7 +139,7 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
         # optimize weights
         wstr = DirectMaximization(; optimizer = ow, prototype = res, fixedpoints = 1:K)
         _, rw = solve(dp, wstr; trace_state = trace_state, simplify_args...)
-        res = maximizer(rw)
+        res = solution(rw)
         return or_gd, optimization_result(rw)
     end
     ors_d = map(o -> o[1], or_pairs)

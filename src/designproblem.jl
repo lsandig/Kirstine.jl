@@ -142,7 +142,7 @@ Return a tuple `(d, r)`.
 
   - `r`: A subtype of [`ProblemSolvingResult`](@ref) that is specific to the strategy used.
     If `trace_state=true`, this object contains additional debugging information.
-    The unsimplified version of `d` can be accessed as `maximizer(r)`.
+    The unsimplified version of `d` can be accessed as `solution(r)`.
 
 See also [`DirectMaximization`](@ref), [`Exchange`](@ref).
 """
@@ -153,9 +153,9 @@ function solve(
     sargs...,
 )
     or = solve_with(dp, strategy, trace_state)
-    dopt = sort_points(simplify(maximizer(or), dp; sargs...))
+    dopt = sort_points(simplify(solution(or), dp; sargs...))
     # check that we did not accidentally simplify too much
-    o_before = objective(maximizer(or), dp)
+    o_before = objective(solution(or), dp)
     o_after = objective(dopt, dp)
     rel_diff = (o_after - o_before) / abs(o_before)
     if rel_diff < -0.01

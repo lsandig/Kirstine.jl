@@ -52,14 +52,19 @@ end
 
 Wraps the [`OptimizationResult`](@ref) from direct maximization.
 
-See also [`optimization_result`](@ref).
+See also [`solution(::DirectMaximizationResult)`](@ref), [`optimization_result`](@ref).
 """
 struct DirectMaximizationResult{S<:OptimizerState{DesignMeasure,SignedMeasure}} <:
        ProblemSolvingResult
     or::OptimizationResult{DesignMeasure,SignedMeasure,S}
 end
 
-function maximizer(dmr::DirectMaximizationResult)
+"""
+    solution(dmr::DirectMaximizationResult)
+
+Return the best candidate found.
+"""
+function solution(dmr::DirectMaximizationResult)
     return dmr.or.maximizer
 end
 

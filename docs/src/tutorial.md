@@ -294,7 +294,7 @@ we can directly pass the simplification arguments to `solve`:
 s2, r2 = solve(dp, strategy; minweight = 1e-3, mindist = 2e-2)
 ```
 
-The original, unsimplified solution can still be accessed at `maximizer(r2)`.
+The original, unsimplified solution can still be accessed at `solution(r2)`.
 
 In order to confirm that we have actually found the solution
 we visually check that the [Gateaux derivative](math.md#Gateaux-Derivative) is non-positive over the whole design region.

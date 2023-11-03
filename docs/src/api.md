@@ -23,10 +23,12 @@ ProblemSolvingResult
 DirectMaximization
 DirectMaximization()
 DirectMaximizationResult
+solution(::DirectMaximizationResult)
 optimization_result
 Exchange
 Exchange()
 ExchangeResult
+solution(::ExchangeResult)
 optimization_results_direction
 optimization_results_weight
 ```
