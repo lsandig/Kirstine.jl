@@ -52,7 +52,6 @@ function Kirstine.update_model_covariate!(
     c.dose = dp[1]
     return c
 end
-dr = DesignInterval(:dose => (0, 1))
 nothing # hide
 ```
 
@@ -80,7 +79,7 @@ prior = PriorSample(
 
 dp = DesignProblem(
     criterion = DOptimality(),
-    region = dr,
+    region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior,
@@ -94,7 +93,7 @@ nothing # hide
 ```@example main
 strategy = DirectMaximization(
     optimizer = Pso(iterations = 50, swarmsize = 100),
-    prototype = equidistant_design(dr, 8),
+    prototype = equidistant_design(region(dp), 8),
 )
 
 Random.seed!(31415)

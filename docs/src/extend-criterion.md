@@ -240,7 +240,6 @@ function Kirstine.update_model_covariate!(
     c.dose = dp[1]
     return c
 end
-dr = DesignInterval(:dose => (0, 1))
 
 prior = PriorSample(
     [SigEmaxParameter(e0 = 1, emax = 2, ed50 = 0.4, h = h) for h in 1:4],
@@ -256,7 +255,7 @@ and once for only estimating `ed50` and `h`.
 ```@example main
 dp1a = DesignProblem(
     criterion = DexpOptimality(),
-    region = dr,
+    region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior,
@@ -264,7 +263,7 @@ dp1a = DesignProblem(
 
 dp1b = DesignProblem(
     criterion = DOptimality(),
-    region = dr,
+    region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior,
@@ -272,7 +271,7 @@ dp1b = DesignProblem(
 
 dp2a = DesignProblem(
     criterion = DexpOptimality(),
-    region = dr,
+    region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior,
@@ -281,7 +280,7 @@ dp2a = DesignProblem(
 
 dp2b = DesignProblem(
     criterion = DOptimality(),
-    region = dr,
+    region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior,
@@ -290,7 +289,7 @@ dp2b = DesignProblem(
 
 strategy = DirectMaximization(
     optimizer = Pso(iterations = 50, swarmsize = 100),
-    prototype = equidistant_design(dr, 8),
+    prototype = equidistant_design(region(dp1a), 8),
 )
 
 Random.seed!(31415)

@@ -58,7 +58,6 @@ function Kirstine.update_model_covariate!(
     c.dose = dp[1]
     return c
 end
-dr = DesignInterval(:dose => (0, 1))
 nothing # hide
 ```
 
@@ -72,7 +71,7 @@ we here only use its mean vector as the single guess for ``\Parameter``.
 guess = PriorSample([SigEmaxParameter(e0 = 1, emax = 2, ed50 = 0.4, h = 5)])
 dp = DesignProblem(
     criterion = DOptimality(),
-    region = dr,
+    region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = guess,
@@ -86,7 +85,7 @@ and can be solved with a smaller swarm and in fewer iterations.
 ```@example main
 str1 = DirectMaximization(
     optimizer = Pso(iterations = 50, swarmsize = 50),
-    prototype = equidistant_design(dr, 4),
+    prototype = equidistant_design(region(dp), 4),
 )
 
 Random.seed!(31415)
@@ -123,7 +122,7 @@ These weights and design points are also not randomized during the initializatio
 ```@example main
 str2 = DirectMaximization(
     optimizer = Pso(iterations = 20, swarmsize = 50),
-    prototype = equidistant_design(dr, 4),
+    prototype = equidistant_design(region(dp), 4),
     fixedweights = [1, 2, 3, 4],
     fixedpoints = [1, 4],
 )
