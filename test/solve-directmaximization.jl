@@ -18,12 +18,14 @@ include("example-emax.jl")
             ),
             pso = Pso(; iterations = 20, swarmsize = 10),
             # random init, no additional constraints
-            str1 =
-                DirectMaximization(; optimizer = pso, prototype = random_design(dp.dr, 3)),
+            str1 = DirectMaximization(;
+                optimizer = pso,
+                prototype = random_design(region(dp), 3),
+            ),
             # uniform init, weights and some points fixed
             str2 = DirectMaximization(;
                 optimizer = pso,
-                prototype = equidistant_design(dp.dr, 3),
+                prototype = equidistant_design(region(dp), 3),
                 fixedweights = 1:3,
                 fixedpoints = [1, 3],
             ),
@@ -54,8 +56,12 @@ include("example-emax.jl")
             @test issorted(r2.or.trace_fx)
             # fixed things
             @test all(map(d -> all(weights(d) .≈ 1 / 3), r2.or.trace_x))
-            @test all(map(d -> points(d)[1][1], r2.or.trace_x) .== dp.dr.lowerbound[1])
-            @test all(map(d -> points(d)[3][1], r2.or.trace_x) .== dp.dr.upperbound[1])
+            @test all(
+                map(d -> points(d)[1][1], r2.or.trace_x) .== lowerbound(region(dp))[1],
+            )
+            @test all(
+                map(d -> points(d)[3][1], r2.or.trace_x) .== upperbound(region(dp))[1],
+            )
             # non-fixed design point converges to 2.5
             @test issorted(map(d -> abs(points(d)[2][1] - 2.5), r2.or.trace_x), rev = true)
         end

@@ -5,6 +5,13 @@
 ```@docs
 DesignProblem
 DesignProblem()
+criterion
+region
+model
+covariate_parameterization
+prior_knowledge
+transformation
+normal_approximation
 ```
 
 Different high-level strategies are available for trying to solve a `DesignProblem`.

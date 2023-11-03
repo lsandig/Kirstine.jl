@@ -139,7 +139,8 @@ function plot_expected_response(d::DesignMeasure, dp::DesignProblem)
     g(c) = [c.time]
     h(c, p) = [response(c.time, p)]
     xrange = range(0, 48; length = 101)
-    plt = plot_expected_function(f, g, h, xrange, d, dp.m, dp.cp, dp.pk)
+    cp = covariate_parameterization(dp)
+    plt = plot_expected_function(f, g, h, xrange, d, model(dp), cp, prior_knowledge(dp))
     plot!(plt; xguide = "time", yguide = "response", xticks = 0:6:48)
     return plt
 end

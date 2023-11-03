@@ -171,7 +171,8 @@ function plot_expected_response(d::DesignMeasure, dp::DesignProblem)
     g(c) = c.time
     h(c, p) = [response(c.dose, t, p) for t in c.time]
     xrange = range(0, 24; length = 101)
-    plt = plot_expected_function(f, g, h, xrange, d, dp.m, dp.cp, dp.pk)
+    cp = covariate_parameterization(dp)
+    plt = plot_expected_function(f, g, h, xrange, d, model(dp), cp, prior_knowledge(dp))
     plot!(plt; xguide = "time", yguide = "response", xticks = 0:4:24)
     return plt
 end
@@ -272,7 +273,7 @@ dp1 = DesignProblem(
 Random.seed!(1357)
 st1 = DirectMaximization(
     optimizer = Pso(swarmsize = 30, iterations = 100),
-    prototype = random_design(dp1.dr, 7),
+    prototype = random_design(region(dp1), 7),
 )
 
 Random.seed!(2468)
@@ -344,7 +345,7 @@ dp2 = DesignProblem(
 Random.seed!(111317)
 st2 = DirectMaximization(
     optimizer = Pso(swarmsize = 30, iterations = 50),
-    prototype = random_design(dp2.dr, 5),
+    prototype = random_design(region(dp2), 5),
 )
 
 Random.seed!(14916)
@@ -407,7 +408,7 @@ dp3 = DesignProblem(
 Random.seed!(9630)
 st3 = DirectMaximization(
     optimizer = Pso(swarmsize = 25, iterations = 20),
-    prototype = equidistant_design(dp3.dr, 5),
+    prototype = equidistant_design(region(dp3), 5),
 )
 
 Random.seed!(1827)
@@ -513,7 +514,7 @@ dp4 = DesignProblem(
 Random.seed!(124816)
 st4a = DirectMaximization(
     optimizer = Pso(swarmsize = 25, iterations = 75),
-    prototype = random_design(dp4.dr, 5),
+    prototype = random_design(region(dp4), 5),
 )
 
 Random.seed!(112358)
@@ -669,7 +670,7 @@ dp5 = DesignProblem(
 Random.seed!(132435)
 st5 = DirectMaximization(
     optimizer = Pso(swarmsize = 40, iterations = 80),
-    prototype = random_design(dp5.dr, 5),
+    prototype = random_design(region(dp5), 5),
 )
 
 Random.seed!(6283)

@@ -99,11 +99,11 @@ Let's first compare the time it takes to evaluate the Jacobian matrices once.
 ```@example main
 jm = zeros(1, 4)
 co = SigEmaxCovariate(0.5)
-bm1 = @benchmark jacobianmatrix_auto!($jm, $dp.m, $co, $sep_draws[1])
+bm1 = @benchmark jacobianmatrix_auto!($jm, $model(dp), $co, $sep_draws[1])
 ```
 
 ```@example main
-bm2 = @benchmark jacobianmatrix_manual!($jm, $dp.m, $co, $sep_draws[1])
+bm2 = @benchmark jacobianmatrix_manual!($jm, $model(dp), $co, $sep_draws[1])
 ```
 
 We clearly see that the automatic gradient is about three times slower,
@@ -119,12 +119,12 @@ this is no obstacle for timing comparisons.
 # force compilation before time measurement
 dummy = DirectMaximization(
     optimizer = Pso(iterations = 2, swarmsize = 2),
-    prototype = equidistant_design(dp.dr, 6),
+    prototype = equidistant_design(region(dp), 6),
 )
 
 strategy = DirectMaximization(
     optimizer = Pso(iterations = 20, swarmsize = 50),
-    prototype = equidistant_design(dp.dr, 6),
+    prototype = equidistant_design(region(dp), 6),
 )
 
 Kirstine.jacobianmatrix!(jm, m, c, p) = jacobianmatrix_auto!(jm, m, c, p)
@@ -223,7 +223,7 @@ dph = DesignProblem(
     prior_knowledge = prior_sample,
 )
 
-bm3 = @benchmark Kirstine.jacobianmatrix!($jm, $dph.m, $co, $sep_draws[1])
+bm3 = @benchmark Kirstine.jacobianmatrix!($jm, $model(dph), $co, $sep_draws[1])
 ```
 
 This time, the automatic gradient is only slower than the manual one by a factor of two.

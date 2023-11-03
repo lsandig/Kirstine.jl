@@ -320,9 +320,9 @@ ef = plot_expected_function(
     (c, p) -> [mu(c.dose, p)],
     0:0.01:1,
     s2,
-    dp.m,
-    dp.cp,
-    dp.pk;
+    model(dp),
+    covariate_parameterization(dp),
+    prior_knowledge(dp);
     xguide = "dose",
     yguide = "response",
 )

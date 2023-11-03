@@ -108,12 +108,12 @@ end
     subdivisions = 101,
 )
     (; d, dp) = dplot
-    lb, ub = bounding_box(dp.dr)
+    lb, ub = bounding_box(region(dp))
     range_x = range(lb[1], ub[1]; length = subdivisions[1])
     dsgpts = collect(Iterators.flatten(points(d)))
     x_grid = sort(vcat(range_x, dsgpts))
     dp_grid = [[x] for x in x_grid]
-    inside_dr = isinside.(dp_grid, Ref(dp.dr))
+    inside_dr = isinside.(dp_grid, Ref(region(dp)))
     directions = [one_point_design(dp) for dp in dp_grid]
     gd_grid = fill(NaN, length(x_grid))
     gd = gateauxderivative(d, directions, dp)
@@ -122,7 +122,7 @@ end
     seriestype := :line
     markershape := :none
     label --> ""
-    xguide --> dimnames(dp.dr)[1]
+    xguide --> dimnames(region(dp))[1]
     yguide --> "Gateaux derivative"
     linecolor --> :black
 
@@ -143,14 +143,14 @@ end
     subdivisions = (51, 51),
 )
     (; d, dp) = dplot
-    # Calculate Gateaux derivative on a grid over the bounding box of dp.dr.
+    # Calculate Gateaux derivative on a grid over the bounding box of region(dp).
     # Evaluate it only on those points that are inside and fill the rest with NaN,
     # which renders transparently in the heatmap.
-    lb, ub = bounding_box(dp.dr)
+    lb, ub = bounding_box(region(dp))
     range_x = range(lb[1], ub[1]; length = subdivisions[1])
     range_y = range(lb[2], ub[2]; length = subdivisions[2])
     xy_grid = collect.(Iterators.product(range_x, range_y))
-    inside_dr = isinside.(xy_grid, Ref(dp.dr))
+    inside_dr = isinside.(xy_grid, Ref(region(dp)))
     gd_grid = fill(NaN, subdivisions[1], subdivisions[2])
     # note: indexing produces a vector
     directions = [one_point_design([d...]) for d in xy_grid[inside_dr]]
@@ -158,8 +158,8 @@ end
     ex = extrema(gd)
     gd_grid[inside_dr] .= gd
 
-    xguide --> (dimnames(dp.dr)[1])
-    yguide --> (dimnames(dp.dr)[2])
+    xguide --> (dimnames(region(dp))[1])
+    yguide --> (dimnames(region(dp))[2])
     # perceptually uniform gradient from blue via white to red
     fillcolor --> :diverging_bwr_55_98_c37_n256
     max_abs_gd = max(abs(ex[1]), abs(ex[2]))

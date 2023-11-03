@@ -84,11 +84,11 @@ include("example-compartment.jl")
             dp7 = dp_for(g1, t_auc),
             # swap out criterion
             dp6a = DesignProblem(;
-                design_region = dp6.dr,
-                model = dp6.m,
-                covariate_parameterization = dp6.cp,
+                design_region = region(dp6),
+                model = model(dp6),
+                covariate_parameterization = covariate_parameterization(dp6),
                 design_criterion = AOptimality(),
-                prior_knowledge = dp6.pk,
+                prior_knowledge = prior_knowledge(dp6),
             )
 
             # Compare with published efficiencies in Table 5. Due to Monte-Carlo uncertainty
@@ -128,11 +128,11 @@ include("example-compartment.jl")
                 transformation = Identity(),
             ),
             dpa = DesignProblem(;
-                design_region = dp.dr,
-                model = dp.m,
-                covariate_parameterization = dp.cp,
+                design_region = region(dp),
+                model = model(dp),
+                covariate_parameterization = covariate_parameterization(dp),
                 design_criterion = AOptimality(),
-                prior_knowledge = dp.pk,
+                prior_knowledge = prior_knowledge(dp),
             ),
             d1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             c = 3 / 2 * (log(2 * pi) - 1),

@@ -79,6 +79,55 @@ struct DesignProblem{
 end
 
 """
+    criterion(dp::DesignProblem)
+
+Get the [`DesignCriterion`](@ref) of `dp`.
+"""
+criterion(dp::DesignProblem) = dp.dc
+
+"""
+    region(dp::DesignProblem)
+
+Get the [`DesignRegion`](@ref) of `dp`.
+"""
+region(dp::DesignProblem) = dp.dr
+
+"""
+    model(dp::DesignProblem)
+
+Get the [`Model`](@ref) of `dp`.
+"""
+model(dp::DesignProblem) = dp.m
+
+"""
+    covariate_parameterization(dp::DesignProblem)
+
+Get the [`CovariateParameterization`](@ref) of `dp`.
+"""
+covariate_parameterization(dp::DesignProblem) = dp.cp
+
+"""
+    prior_knowledge(dp::DesignProblem)
+
+Get the [`PriorKnowledge`](@ref) of `dp`.
+"""
+prior_knowledge(dp::DesignProblem) = dp.pk
+
+"""
+    transformation(dp::DesignProblem)
+
+Get the [`Transformation`](@ref) of `dp`.
+"""
+transformation(dp::DesignProblem) = dp.trafo
+
+"""
+    normal_approximation(dp::DesignProblem)
+
+Get the [`NormalApproximation`](@ref) of `dp`.
+"""
+normal_approximation(dp::DesignProblem) = dp.na
+
+"""
     solve(
         dp::DesignProblem,
         strategy::ProblemSolvingStrategy;
@@ -125,8 +174,8 @@ and [`simplify_merge`](@ref).
 """
 function simplify(d::DesignMeasure, dp::DesignProblem; minweight = 0, mindist = 0, uargs...)
     d = simplify_drop(d, minweight)
-    d = simplify_unique(d, dp.dr, dp.m, dp.cp; uargs...)
-    d = simplify_merge(d, dp.dr, mindist)
+    d = simplify_unique(d, region(dp), model(dp), covariate_parameterization(dp); uargs...)
+    d = simplify_merge(d, region(dp), mindist)
     return d
 end
 
@@ -138,15 +187,18 @@ Evaluate the objective function.
 See also the [mathematical background](math.md#Objective-Function).
 """
 function objective(d::DesignMeasure, dp::DesignProblem)
-    tc = precalculate_trafo_constants(dp.trafo, dp.pk)
+    pk = prior_knowledge(dp)
+    cp = covariate_parameterization(dp)
+    m = model(dp)
+    tc = precalculate_trafo_constants(transformation(dp), pk)
     wm = WorkMatrices(
         length(weights(d)),
-        unit_length(dp.m),
-        parameter_dimension(dp.pk),
+        unit_length(m),
+        parameter_dimension(pk),
         codomain_dimension(tc),
     )
-    c = allocate_initialize_covariates(d, dp.m, dp.cp)
-    return objective!(wm, c, dp.dc, d, dp.m, dp.cp, dp.pk, tc, dp.na)
+    c = allocate_initialize_covariates(d, m, cp)
+    return objective!(wm, c, criterion(dp), d, m, cp, pk, tc, normal_approximation(dp))
 end
 
 """
@@ -170,15 +222,19 @@ function gateauxderivative(
     if any(d -> numpoints(d) != 1, directions)
         error("Gateaux derivatives are only implemented for one-point design directions")
     end
-    tc = precalculate_trafo_constants(dp.trafo, dp.pk)
+    cp = covariate_parameterization(dp)
+    na = normal_approximation(dp)
+    pk = prior_knowledge(dp)
+    m = model(dp)
+    tc = precalculate_trafo_constants(transformation(dp), pk)
     wm = WorkMatrices(
         length(weights(at)),
-        unit_length(dp.m),
-        parameter_dimension(dp.pk),
+        unit_length(m),
+        parameter_dimension(pk),
         codomain_dimension(tc),
     )
     gconst = try
-        gateaux_constants(dp.dc, at, dp.m, dp.cp, dp.pk, tc, dp.na)
+        gateaux_constants(criterion(dp), at, m, cp, pk, tc, na)
     catch e
         if isa(e, SingularException)
             # undefined objective implies no well-defined derivative
@@ -187,9 +243,9 @@ function gateauxderivative(
             rethrow(e)
         end
     end
-    cs = allocate_initialize_covariates(directions[1], dp.m, dp.cp)
+    cs = allocate_initialize_covariates(directions[1], m, cp)
     gd = map(directions) do d
-        gateauxderivative!(wm, cs, gconst, d, dp.m, dp.cp, dp.pk, dp.na)
+        gateauxderivative!(wm, cs, gconst, d, m, cp, pk, na)
     end
     return gd
 end
@@ -218,12 +274,12 @@ end
 function as_doptimality_problem(dp::DesignProblem)
     dpd = DesignProblem(;
         design_criterion = DOptimality(),
-        model = dp.m,
-        design_region = dp.dr,
-        covariate_parameterization = dp.cp,
-        prior_knowledge = dp.pk,
-        transformation = dp.trafo,
-        normal_approximation = dp.na,
+        model = model(dp),
+        design_region = region(dp),
+        covariate_parameterization = covariate_parameterization(dp),
+        prior_knowledge = prior_knowledge(dp),
+        transformation = transformation(dp),
+        normal_approximation = normal_approximation(dp),
     )
     return dpd
 end
@@ -261,11 +317,13 @@ See also the [mathematical background](math.md#Shannon-Information).
 
      1. `d` is not [`apportion`](@ref)ed.
      2. Shannon information is motivated by D-optimal design,
-        so this function ignores the criterion used in `dp`.
+        so this function ignores the type of `criterion(dp)`.
 """
 function shannon_information(d::DesignMeasure, dp::DesignProblem, n::Integer)
     dpd = as_doptimality_problem(dp)
     # this is somewhat ugly, computing all constants is a bit unnecessary
-    t = codomain_dimension(precalculate_trafo_constants(dp.trafo, dp.pk))
+    t = codomain_dimension(
+        precalculate_trafo_constants(transformation(dp), prior_knowledge(dp)),
+    )
     return (t / 2) * (log(n) - 1 + log(2 * pi)) + 0.5 * objective(d, dpd)
 end

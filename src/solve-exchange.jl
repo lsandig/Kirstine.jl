@@ -77,23 +77,26 @@ end
 
 function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
     (; candidate, ow, od, steps, simplify_args) = strategy
-    check_compatible(candidate, dp.dr)
-    tc = precalculate_trafo_constants(dp.trafo, dp.pk)
+    check_compatible(candidate, region(dp))
+    pk = prior_knowledge(dp)
+    cp = covariate_parameterization(dp)
+    m = model(dp)
+    tc = precalculate_trafo_constants(transformation(dp), pk)
     wm = WorkMatrices(
         1, # Dirac design measure corresponds to single covariate
-        unit_length(dp.m),
-        parameter_dimension(dp.pk),
+        unit_length(m),
+        parameter_dimension(pk),
         codomain_dimension(tc),
     )
-    c = allocate_initialize_covariates(one_point_design(points(candidate)[1]), dp.m, dp.cp)
-    constraints = DesignConstraints(dp.dr, [false], [false])
+    c = allocate_initialize_covariates(one_point_design(points(candidate)[1]), m, cp)
+    constraints = DesignConstraints(region(dp), [false], [false])
     res = candidate
     or_pairs = map(1:(steps)) do i
         res = simplify(res, dp; simplify_args...)
         dir_prot = map(one_point_design, points(simplify_drop(res, 0)))
-        gc = gateaux_constants(dp.dc, res, dp.m, dp.cp, dp.pk, tc, dp.na)
+        gc = gateaux_constants(criterion(dp), res, m, cp, pk, tc, normal_approximation(dp))
         # find direction of steepest ascent
-        gd(d) = gateauxderivative!(wm, c, gc, d, dp.m, dp.cp, dp.pk, dp.na)
+        gd(d) = gateauxderivative!(wm, c, gc, d, m, cp, pk, normal_approximation(dp))
         or_gd = optimize(od, gd, dir_prot, constraints; trace_state = trace_state)
         d = or_gd.maximizer
         # append the new atom
@@ -101,7 +104,7 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
         if points(d)[1] in points(simplify_drop(res, 0))
             # effectivly run the reweighting from the last round for some more iterations
             res = mixture(0, d, res) # make sure new point is at index 1
-            res = simplify_merge(res, dp.dr, 0)
+            res = simplify_merge(res, region(dp), 0)
         else
             K += 1
             res = mixture(1 / K, d, res)
