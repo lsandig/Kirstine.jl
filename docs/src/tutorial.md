@@ -284,7 +284,7 @@ This way we remove all design points with negligible weight,
 and merge all design points that are less than some minimum distance apart.
 
 ```@example main
-s2 = sort_designpoints(simplify(s1, dp, minweight = 1e-3, mindist = 2e-2))
+s2 = sort_points(simplify(s1, dp, minweight = 1e-3, mindist = 2e-2))
 ```
 
 Because this issue occurs frequently

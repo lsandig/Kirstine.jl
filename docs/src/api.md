@@ -142,7 +142,7 @@ random_design
 points
 weights
 numpoints
-sort_designpoints
+sort_points
 sort_weights
 mixture
 apportion

@@ -243,7 +243,7 @@ function Base.show(io::IO, ::MIME"text/plain", d::DesignMeasure)
 end
 
 """
-    sort_designpoints(d::DesignMeasure; rev::Bool = false)
+    sort_points(d::DesignMeasure; rev::Bool = false)
 
 Return a representation of `d` where the design points are sorted lexicographically.
 
@@ -252,7 +252,7 @@ See also [`sort_weights`](@ref).
 # Examples
 
 ```jldoctest
-julia> sort_designpoints(uniform_design([[3, 4], [2, 1], [1, 1], [2, 3]]))
+julia> sort_points(uniform_design([[3, 4], [2, 1], [1, 1], [2, 3]]))
 DesignMeasure(
  [1.0, 1.0] => 0.25,
  [2.0, 1.0] => 0.25,
@@ -261,7 +261,7 @@ DesignMeasure(
 )
 ```
 """
-function sort_designpoints(d::DesignMeasure; rev::Bool = false)
+function sort_points(d::DesignMeasure; rev::Bool = false)
     # note: no (deep)copies needed because indexing with `p` generates a copy
     dp = points(d)
     w = weights(d)
@@ -279,7 +279,7 @@ end
 Return a representation of `d` where the design points are sorted by their
 corresponding weights.
 
-See also [`sort_designpoints`](@ref).
+See also [`sort_points`](@ref).
 
 # Examples
 

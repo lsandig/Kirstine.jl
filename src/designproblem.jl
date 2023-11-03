@@ -89,7 +89,7 @@ end
 Return a tuple `(d, r)`.
 
   - `d`: The best [`DesignMeasure`](@ref) found. As post-processing, [`simplify`](@ref) is
-    called with `sargs` and the design points are sorted with [`sort_designpoints`](@ref).
+    called with `sargs` and the design points are sorted with [`sort_points`](@ref).
 
   - `r`: A subtype of [`ProblemSolvingResult`](@ref) that is specific to the strategy used.
     If `trace_state=true`, this object contains additional debugging information.
@@ -104,7 +104,7 @@ function solve(
     sargs...,
 )
     or = solve_with(dp, strategy, trace_state)
-    dopt = sort_designpoints(simplify(maximizer(or), dp; sargs...))
+    dopt = sort_points(simplify(maximizer(or), dp; sargs...))
     # check that we did not accidentally simplify too much
     o_before = objective(maximizer(or), dp)
     o_after = objective(dopt, dp)
