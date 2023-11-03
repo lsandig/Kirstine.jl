@@ -3,10 +3,6 @@
 Terms and notations in the field of experimental design vary between authors.
 This page documents the notation for `Kirstine.jl`.
 
-!!! warning
-    
-    This overview is not yet mathematically rigorous and may contain errors.
-
 ## Preliminaries
 
   - The set of ``a×a`` symmetric non-negative definite matrices is denoted ``\SNNDMatrices{a}``.
@@ -259,6 +255,23 @@ where the matrices ``A`` and ``B`` are specific to the design criterion and tran
 but do not depend on the direction ``\DesignMeasureDirection``.
 Since they are constant in ``\DesignMeasureDirection``
 they only need to be computed once.
+
+Note that the function
+
+```math
+\Sensitivity : \AllDesignMeasures × \DesignRegion → \Reals,
+\quad
+\Sensitivity(\DesignMeasure, \DesignPoint)
+=
+\IntD{\ParameterSet}{
+\Trace\bigl[
+A(\DesignMeasure, \Parameter)
+\NIMatrix(\DiracDist(\DesignPoint), \Parameter)
+\bigr]
+}{\PriorDensity(\Parameter)}{\Parameter}
+```
+
+is sometimes known as the _sensitivity function_.
 
 An equivalence theorem states:
 a design measure ``\DesignMeasure^*`` maximizes ``\Objective`` iff
