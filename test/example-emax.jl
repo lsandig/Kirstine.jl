@@ -21,7 +21,7 @@ struct CopyDose <: CovariateParameterization end
 
 Kirstine.unit_length(m::EmaxModel) = 1
 
-function Kirstine.update_model_vcov!(s, c::Dose, m::EmaxModel)
+function Kirstine.update_model_vcov!(s, m::EmaxModel, c::Dose)
     s[1, 1] = m.sigma_squared
     return s
 end

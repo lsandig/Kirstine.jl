@@ -67,7 +67,7 @@ See also the [mathematical background](math.md#Design-Problems).
 function map_to_covariate! end
 
 """
-    Kirstine.update_model_vcov!(Sigma::Matrix, c::C, m::M)
+    Kirstine.update_model_vcov!(Sigma::Matrix, m::M, c::C)
 
 Compute variance-covariance matrix of the nonlinear regression model
 for one unit of observation.
@@ -151,7 +151,7 @@ mutable struct EmaxCovariate <: Kirstine.Covariate
     dose::Float64
 end
 Kirstine.unit_length(m::EmaxModel) = 1
-function Kirstine.update_model_vcov!(Sigma::Matrix{Float64}, c::EmaxCovariate, m::EmaxModel)
+function Kirstine.update_model_vcov!(Sigma::Matrix{Float64}, m::EmaxModel, c::EmaxCovariate)
     Sigma[1, 1] = m.sigma^2
     return Sigma
 end
@@ -200,8 +200,8 @@ macro simple_model(name, covariate_field_names...)
             end
             function $module_name.update_model_vcov!(
                 s::Matrix{Float64},
-                c::$covariate_name,
                 m::$model_name,
+                c::$covariate_name,
             )
                 s[1, 1] = m.sigma^2
                 return s

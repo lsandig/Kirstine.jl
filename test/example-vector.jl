@@ -17,7 +17,7 @@ end
 
 Kirstine.unit_length(m::VUMod) = m.m
 
-function Kirstine.update_model_vcov!(s, c::VUCovariate, m::VUMod)
+function Kirstine.update_model_vcov!(s, m::VUMod, c::VUCovariate)
     fill!(s, 0.0)
     for j in 1:(m.m)
         s[j, j] = m.sigma_squared * (1 + c.time[j])

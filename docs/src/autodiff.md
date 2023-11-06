@@ -181,7 +181,7 @@ end
 
 Kirstine.allocate_covariate(m::HackySigEmaxModel) = SigEmaxCovariate(0)
 Kirstine.unit_length(m::HackySigEmaxModel) = 1
-function Kirstine.update_model_vcov!(Sigma, c::SigEmaxCovariate, m::HackySigEmaxModel)
+function Kirstine.update_model_vcov!(Sigma, m::HackySigEmaxModel, c::SigEmaxCovariate)
     Sigma[1, 1] = m.sigma^2
     return Sigma
 end
