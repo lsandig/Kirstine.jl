@@ -18,21 +18,25 @@ between a drug and some clinical outcome.
 A commonly used model for this task is the _sigmoid Emax_ model:
 an s-shaped curve with four parameters.
 Assuming independent measurement errors,
-the corresponding regression model for a total of ``n`` observations
-at ``K`` different dose levels ``x_1,\dots,x_k`` is
+the corresponding regression model for a total of ``\SampleSize`` observations
+at ``\NumDesignPoints`` different dose levels ``\Covariate_1,\dots,\Covariate_{\IndexDesignPoint}`` is
 
 ```math
-y_i \mid θ \overset{\mathrm{iid}}{\sim} \mathrm{Normal}(\mu(x_k, θ), \sigma^2) \quad\text{for all } i \in I_k, k = 1,\dots, K,
+\Unit_{\IndexUnit} \mid \Parameter
+\overset{\mathrm{iid}}{\sim}
+\mathrm{Normal}(\MeanFunction(\Covariate_{\IndexDesignPoint}, \Parameter), \sigma^2)
+\quad
+\text{for all } \IndexUnit \in I_{\IndexDesignPoint}, \IndexDesignPoint = 1, \dots, \NumDesignPoints,
 ```
 
-with expected response at dose ``x``
+with expected response at dose ``\Covariate``
 
 ```math
-\mu(x, θ) = E_0 + E_{\max{}} \frac{x^h}{\mathrm{ED}_{50}^h + x^h}
+\MeanFunction(\Covariate, \Parameter) = E_0 + E_{\max{}} \frac{\Covariate^h}{\mathrm{ED}_{50}^h + \Covariate^h}
 ```
 
 and a four-element parameter vector
-``θ = (E_0, E_{\max{}}, \mathrm{ED}_{50}, h)``.
+``\Parameter = (E_0, E_{\max{}}, \mathrm{ED}_{50}, h)``.
 Here, ``E_0`` is the baseline response,
 ``E_{\max{}}`` is the maximum effect above (or below) baseline,
 ``\mathrm{ED}_{50} > 0`` is the dose at which half of the maximum effect is attained,
@@ -56,7 +60,7 @@ savefig_nothing(pse, "tutorial-sigemax.png") # hide
 In order to find an optimal design,
 we need to know the
 [Jacobian matrix](https://en.wikipedia.org/wiki/Jacobian_matrix_and_determinant)
-of ``\mu(x, θ)`` with respect to ``θ``.
+of ``\MeanFunction(\Covariate, \Parameter)`` with respect to ``\Parameter``.
 Calculating manually,
 or using a computer algebra system such as [Maxima](https://maxima.sourceforge.io/)
 or [WolframAlpha](https://www.wolframalpha.com/input?i=Jacobian+matrix++a+%2B+b+x%5Eh+%2F%28c%5Eh+%2B+x%5Eh%29+w.r.t.+a%2C+b%2C+c%2C+h),
@@ -64,17 +68,17 @@ we find
 
 ```math
 \begin{aligned}
-\partial_{E_0} \mu(x, θ)              &= 1 \\
-\partial_{E_{\max{}}} \mu(x, θ)         &= \frac{x^h}{\mathrm{ED}_{50}^h + x^h}\\
-\partial_{\mathrm{ED}_{50}} \mu(x, θ) &= \frac{h E_{\max{}} x^h\mathrm{ED}_{50}^{h-1}}{(\mathrm{ED}_{50}^h + x^h)^2} \\
-\partial_{h} \mu(x, θ)                &= \frac{E_{\max{}} x^h \mathrm{ED}_{50}^h (\log(x / \mathrm{ED}_{50}))}{(\mathrm{ED}_{50}^h + x^h)^2} \\
+\partial_{E_0} \MeanFunction(\Covariate, \Parameter)              &= 1 \\
+\partial_{E_{\max{}}} \MeanFunction(\Covariate, \Parameter)         &= \frac{\Covariate^h}{\mathrm{ED}_{50}^h + \Covariate^h}\\
+\partial_{\mathrm{ED}_{50}} \MeanFunction(\Covariate, \Parameter) &= \frac{h E_{\max{}} \Covariate^h\mathrm{ED}_{50}^{h-1}}{(\mathrm{ED}_{50}^h + \Covariate^h)^2} \\
+\partial_{h} \MeanFunction(\Covariate, \Parameter)                &= \frac{E_{\max{}} \Covariate^h \mathrm{ED}_{50}^h (\log(\Covariate / \mathrm{ED}_{50}))}{(\mathrm{ED}_{50}^h + \Covariate^h)^2} \\
 \end{aligned}
 ```
 
-for ``x \neq 0``, and the limit
+for ``\Covariate \neq 0``, and the limit
 
 ```math
-\lim_{x\to0} \partial_{h} \mu(x, θ) = 0.
+\lim_{\Covariate\to0} \partial_{h} \MeanFunction(\Covariate, \Parameter) = 0.
 ```
 
 ## Setup
@@ -95,7 +99,7 @@ and [`CovariateParameterization`](@ref),
 and implementing a handful of methods for them.
 
 In the sigmoid Emax model,
-a single unit of observation is just a real number ``y_i``.
+a single unit of observation is just a real number ``\Unit_{\IndexUnit}``.
 For such a case,
 we can use the helper macro [`@simple_model`](@ref)
 to declare a model type named `SigEmaxModel`,
@@ -106,7 +110,7 @@ using Kirstine
 @simple_model SigEmax dose
 ```
 
-The model parameter ``θ`` is just a vector with no additional structure,
+The model parameter ``\Parameter`` is just a vector with no additional structure,
 which is why we can use the helper macro [`@simple_parameter`](@ref)
 to define a parameter type `SigEmaxParameter`
 with the fields fields `e0`, `emax`, `ed50`, and `h`.
@@ -181,10 +185,10 @@ end
 
 ### Prior Knowledge
 
-For Bayesian optimal design of experiments we need to specify a prior distribution on ``θ``.
+For Bayesian optimal design of experiments we need to specify a prior distribution on ``\Parameter``.
 `Kirstine.jl` then needs a sample from this distribution.
 
-For this example we use independent normal priors on the elements of ``θ``.
+For this example we use independent normal priors on the elements of ``\Parameter``.
 We first draw a vector of `SigEmaxParameter` values
 which we then wrap into a [`PriorSample`](@ref).
 
@@ -338,7 +342,7 @@ savefig_nothing(pr1, "tutorial-pr1.png") # hide
 
 ## Relative Efficiency and Apportionment
 
-In order to be able to estimate ``θ`` at all,
+In order to be able to estimate ``\Parameter`` at all,
 we need a design with at least `4` points.
 Let's compare how much better the optimal solution `s2` is
 than a 4-point [`equidistant_design`](@ref).
@@ -351,9 +355,9 @@ Their relative D-[`efficiency`](@ref) means
 that `s2` on average only needs `0.72` as many observations as the equidistant design with `4` points
 in order to achieve the same estimation accuracy.
 
-Suppose we now actually want to run the experiment on ``n=42`` units.
+Suppose we now actually want to run the experiment on ``\SampleSize=42`` units.
 For this we need to convert the weights of `s1` to integers
-that add up to ``n``.
+that add up to ``\SampleSize``.
 This is achieved with the [`apportion`](@ref) function:
 
 ```@example main

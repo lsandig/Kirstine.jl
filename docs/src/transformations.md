@@ -2,7 +2,7 @@
 
 This vignette shows how to find a D-optimal design
 for estimating some transformation ``\Transformation(\Parameter)`` of the model parameter.
-The function ``\Transformation : \ParameterSet → \Reals^{t}`` must be differentiable
+The function ``\Transformation : \ParameterSet → \Reals^{\DimTransformedParameter}`` must be differentiable
 with a full-rank Jacobian matrix.
 
 Our example in this vignette is the three-parameter compartment model from Atkinson et al[^ACHJ93].
@@ -11,14 +11,14 @@ it describes how the concentration of a drug in an experimental subject changes 
 The mean function for the regression is given by
 
 ```math
-\mu(x, \theta) = s (\exp(-ex) - \exp(-ax))
+\MeanFunction(\Covariate, \Parameter) = s (\exp(-e\Covariate) - \exp(-a\Covariate))
 ```
 
-where the elements of ``\theta`` are
+where the elements of ``\Parameter`` are
 the absorption rate ``a``,
 the elimination rate ``e``,
 and a scaling factor ``s``.
-The covariate ``x`` denotes the time in hours.
+The covariate ``\Covariate`` denotes the time in hours.
 
 ```@setup main
 # we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
@@ -150,7 +150,7 @@ nothing # hide
 ## Identity Transformation
 
 In order to have a design to compare other solutions against,
-we first determine the Bayesian D-optimal design for the whole parameter ``\theta``.
+we first determine the Bayesian D-optimal design for the whole parameter ``\Parameter``.
 
 ```@example main
 dp_id = dp_for_trafo(Identity())
@@ -186,10 +186,10 @@ one quantity of particular interest is the area under the response curve.
 It can be calculated as
 
 ```math
-\mathrm{AUC}(\theta) = s \bigg( \frac{1}{e} - \frac{1}{a} \bigg).
+\mathrm{AUC}(\Parameter) = s \bigg( \frac{1}{e} - \frac{1}{a} \bigg).
 ```
 
-Suppose we want to find a design that maximizes the information about ``\mathrm{AUC}(\theta)``.
+Suppose we want to find a design that maximizes the information about ``\mathrm{AUC}(\Parameter)``.
 This needs an additional approximation step via the [delta method](https://en.wikipedia.org/wiki/Delta_method),
 for which we need to know the Jacobian matrix of ``\mathrm{AUC}``:
 
@@ -241,7 +241,7 @@ efficiency(s_id, s_auc, dp_auc)
 ```
 
 Note that this relation is not necessarily symmetric:
-`s_id` is five times as efficient as `s_auc` for estimating ``\theta``.
+`s_id` is five times as efficient as `s_auc` for estimating ``\Parameter``.
 
 ```@example main
 efficiency(s_auc, s_id, dp_id)
@@ -250,11 +250,11 @@ efficiency(s_auc, s_id, dp_id)
 ### Time to Maximum Concentration
 
 Now let's find a design that is optimal for estimating the point in time where the concentration is highest.
-Differentiating ``\mu`` with respect to ``x``,
-equating with ``0`` and solving for ``x`` gives
+Differentiating ``\MeanFunction`` with respect to ``\Covariate``,
+equating with ``0`` and solving for ``\Covariate`` gives
 
 ```math
-t_{\max{}}(\theta) = \frac{\log(a / e)}{a - e}.
+t_{\max{}}(\Parameter) = \frac{\log(a / e)}{a - e}.
 ```
 
 Its Jacobian matrix is
@@ -298,7 +298,7 @@ This solution differs markedly from the previous ones.
 ### Maximum Concentration
 
 What if we're not interested in the _time_ of maximum concentration,
-but in the _value_ of the maximum concentration ``\mu(t_{\max{}}(\theta), \theta)`` itself?
+but in the _value_ of the maximum concentration ``\MeanFunction(t_{\max{}}(\Parameter), \Parameter)`` itself?
 
 ```@example main
 ttm(p) = log(p.a / p.e) / (p.a - p.e)
