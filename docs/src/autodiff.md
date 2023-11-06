@@ -19,12 +19,7 @@ using BenchmarkTools: @benchmark
 
 struct CopyDose <: CovariateParameterization end
 
-function Kirstine.update_model_covariate!(
-    c::SigEmaxCovariate,
-    dp,
-    m::SigEmaxModel,
-    cp::CopyDose,
-)
+function Kirstine.map_to_covariate!(c::SigEmaxCovariate, dp, m::SigEmaxModel, cp::CopyDose)
     c.dose = dp[1]
     return c
 end
@@ -191,7 +186,7 @@ function Kirstine.update_model_vcov!(Sigma, c::SigEmaxCovariate, m::HackySigEmax
     return Sigma
 end
 
-function Kirstine.update_model_covariate!(
+function Kirstine.map_to_covariate!(
     c::SigEmaxCovariate,
     dp,
     m::HackySigEmaxModel,

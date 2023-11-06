@@ -200,7 +200,7 @@ i.e. the design region is identical to the covariate set.
 ```@example main
 struct CopyBoth <: CovariateParameterization end
 
-function Kirstine.update_model_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::CopyBoth)
+function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::CopyBoth)
     c.dose = dp[1]
     c.time[1] = dp[2]
     return c
@@ -323,12 +323,7 @@ struct FixedDose <: CovariateParameterization
     dose::Float64
 end
 
-function Kirstine.update_model_covariate!(
-    c::DoseTimeCovariate,
-    dp,
-    m::DTRMod,
-    cp::FixedDose,
-)
+function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::FixedDose)
     c.dose = cp.dose
     c.time[1] = dp[1]
     return c
@@ -386,12 +381,7 @@ struct FixedTimes <: CovariateParameterization
     time::Vector{Float64}
 end
 
-function Kirstine.update_model_covariate!(
-    c::DoseTimeCovariate,
-    dp,
-    m::DTRMod,
-    cp::FixedTimes,
-)
+function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::FixedTimes)
     c.dose = dp[1]
     c.time .= cp.time
     return c
@@ -462,7 +452,7 @@ For this setup we need to think about uniqueness again.
 ```@example main
 struct EquidistantTimes <: CovariateParameterization end
 
-function Kirstine.update_model_covariate!(
+function Kirstine.map_to_covariate!(
     c::DoseTimeCovariate,
     dp,
     m::DTRMod,
@@ -617,7 +607,7 @@ struct LogEquidistantTimes <: CovariateParameterization
     b::Float64
 end
 
-function Kirstine.update_model_covariate!(
+function Kirstine.map_to_covariate!(
     c::DoseTimeCovariate,
     dp,
     m::DTRMod,

@@ -78,7 +78,7 @@ dimnames(dr::DesignInterval) = dr.name
 Construct a design interval from `name => (lb, ub)` pairs for individual dimensions.
 
 Note that the order of the arguments matters
-and that it should match the implementation of [`update_model_covariate!`](@ref)
+and that it should match the implementation of [`map_to_covariate!`](@ref)
 for your `Model` and `Covariate` subtypes.
 
 # Examples

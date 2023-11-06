@@ -42,7 +42,7 @@ end
 
 struct EquiTime <: CovariateParameterization end
 
-function Kirstine.update_model_covariate!(c::VUCovariate, dp, m::VUMod, cp::EquiTime)
+function Kirstine.map_to_covariate!(c::VUCovariate, dp, m::VUMod, cp::EquiTime)
     for j in 1:(m.m)
         c.time[j] = (j - 1) * dp[1]
     end

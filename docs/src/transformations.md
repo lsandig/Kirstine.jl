@@ -66,7 +66,7 @@ function Kirstine.jacobianmatrix!(jm, m::TPCModel, c::TPCCovariate, p::TPCParame
     return m
 end
 
-function Kirstine.update_model_covariate!(c::TPCCovariate, dp, m::TPCModel, cp::Copy)
+function Kirstine.map_to_covariate!(c::TPCCovariate, dp, m::TPCModel, cp::Copy)
     c.time = dp[1]
     return c
 end

@@ -20,7 +20,7 @@ function Kirstine.jacobianmatrix!(jm, m::TPCModel, c::TPCCovariate, p::TPCParame
     return jm
 end
 
-function Kirstine.update_model_covariate!(
+function Kirstine.map_to_covariate!(
     c::TPCCovariate,
     dp::AbstractVector{<:Real},
     m::TPCModel,

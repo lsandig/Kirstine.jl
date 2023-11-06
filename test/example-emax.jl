@@ -28,7 +28,7 @@ end
 
 Kirstine.allocate_covariate(m::EmaxModel) = Dose(0)
 
-function Kirstine.update_model_covariate!(
+function Kirstine.map_to_covariate!(
     c::Dose,
     dp::AbstractVector{<:Real},
     m::EmaxModel,

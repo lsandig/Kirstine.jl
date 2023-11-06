@@ -181,7 +181,7 @@ prior = draw_from_prior(1000)
 
 struct CopyBoth <: CovariateParameterization end
 
-function Kirstine.update_model_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::CopyBoth)
+function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::CopyBoth)
     c.dose = dp[1]
     c.time[1] = dp[2]
     return c

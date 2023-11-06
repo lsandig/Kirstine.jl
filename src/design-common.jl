@@ -21,7 +21,7 @@ function allocate_initialize_covariates(d, m, cp)
     K = numpoints(d)
     cs = [allocate_covariate(m) for _ in 1:K]
     for k in 1:K
-        update_model_covariate!(cs[k], points(d)[k], m, cp)
+        map_to_covariate!(cs[k], points(d)[k], m, cp)
     end
     return cs
 end
@@ -40,7 +40,7 @@ function objective!(
     na::NormalApproximation,
 )
     for k in 1:length(c)
-        update_model_covariate!(c[k], points(d)[k], m, cp)
+        map_to_covariate!(c[k], points(d)[k], m, cp)
         update_model_vcov!(wm.m_x_m[k], c[k], m)
         potrf!('U', wm.m_x_m[k])
     end
@@ -75,7 +75,7 @@ function gateauxderivative!(
     pk::PriorSample,
     na::NormalApproximation,
 )
-    update_model_covariate!(c[1], points(direction)[1], m, cp)
+    map_to_covariate!(c[1], points(direction)[1], m, cp)
     update_model_vcov!(wm.m_x_m[1], c[1], m)
     potrf!('U', wm.m_x_m[1])
     acc = 0

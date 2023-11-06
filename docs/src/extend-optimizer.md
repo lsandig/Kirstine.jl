@@ -510,12 +510,7 @@ end
 
 struct CopyDose <: CovariateParameterization end
 
-function Kirstine.update_model_covariate!(
-    c::SigEmaxCovariate,
-    dp,
-    m::SigEmaxModel,
-    cp::CopyDose,
-)
+function Kirstine.map_to_covariate!(c::SigEmaxCovariate, dp, m::SigEmaxModel, cp::CopyDose)
     c.dose = dp[1]
     return c
 end

@@ -52,7 +52,7 @@ See also the [mathematical background](math.md#Objective-Function).
 function jacobianmatrix! end
 
 """
-    Kirstine.update_model_covariate!(c::C, dp::AbstractVector{<:Real}, m::M, cp::Cp) -> c
+    Kirstine.map_to_covariate!(c::C, dp::AbstractVector{<:Real}, m::M, cp::Cp) -> c
 
 Map a design point to a model covariate.
 
@@ -64,7 +64,7 @@ according to the single design point `dp`. Finally, this method should return `c
 
 See also the [mathematical background](math.md#Design-Problems).
 """
-function update_model_covariate! end
+function map_to_covariate! end
 
 """
     Kirstine.update_model_vcov!(Sigma::Matrix, c::C, m::M)

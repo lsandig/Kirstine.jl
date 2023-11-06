@@ -168,17 +168,12 @@ Here, the design region is simply the interval of possible doses.
 This means that we can just copy the only element of the design point
 into the covariate's `dose` field.
 To do this, we subtype [`CovariateParameterization`](@ref)
-and define a method for `Kirstine.update_model_covariate!`.
+and define a method for `Kirstine.map_to_covariate!`.
 
 ```@example main
 struct CopyDose <: CovariateParameterization end
 
-function Kirstine.update_model_covariate!(
-    c::SigEmaxCovariate,
-    dp,
-    m::SigEmaxModel,
-    cp::CopyDose,
-)
+function Kirstine.map_to_covariate!(c::SigEmaxCovariate, dp, m::SigEmaxModel, cp::CopyDose)
     c.dose = dp[1]
     return c
 end
