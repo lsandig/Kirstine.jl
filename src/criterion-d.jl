@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-## D-optimal design and relative D-efficiency ##
+## D-optimal design ##
 
 # Constants for the Gateaux derivative.
 #
@@ -59,8 +59,16 @@ function gateaux_integrand(c::GCDIdentity, nim_direction, index)
     return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
 end
 
-function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk, tc::TCIdentity, na)
-    A = inverse_information_matrices(d, m, cp, pk, na)
+function gateaux_constants(
+    dc::DOptimality,
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample,
+    tc::TCIdentity,
+    na::NormalApproximation,
+)
+    A = inverse_information_matrices(d, m, cp, pk, na) # only upper triangles
     tr_B = fill(parameter_dimension(pk), length(pk.p))
     return GCDIdentity(A, tr_B)
 end
@@ -71,19 +79,26 @@ function gateaux_integrand(c::GCDDeltaMethod, nim_direction, index)
     return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
 end
 
-#! format: off
-function precalculate_gateaux_constants(dc::DOptimality, d, m, cp, pk::PriorSample, tc::TCDeltaMethod, na)
-#! format: on
-    invM = inverse_information_matrices(d, m, cp, pk, na)
+function gateaux_constants(
+    dc::DOptimality,
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample,
+    tc::TCDeltaMethod,
+    na::NormalApproximation,
+)
     t = codomain_dimension(tc)
-    wm = WorkMatrices(numpoints(d), unit_length(m), parameter_dimension(pk), t)
-    A = map(1:length(pk.p)) do i
-        wm.r_x_r .= invM[i]
-        inv_tnim, _ = apply_transformation!(wm, true, tc, i)
-        J = tc.jm[i]
-        B = J' * (Symmetric(inv_tnim) \ J)
-        sym_invM = Symmetric(invM[i])
-        return sym_invM * B * sym_invM
+    # This computes the upper triangle of M(ζ,θ)^{-1}.
+    inv_M = inverse_information_matrices(d, m, cp, pk, na)
+    # We already know that the result will be inverted.
+    inv_MT, _ = transformed_information_matrices(inv_M, true, pk, tc)
+    # Note that A will be dense.
+    A = map(inv_M, inv_MT, tc.jm) do iM, iMT, DT
+        # Now, iMT contains the upper triangle of (M_T(ζ,θ))^{-1}.
+        # Instead of an explicit inversion, we solve (M_T(ζ,θ))^{-1} X = DT for X.
+        C = DT' * (Symmetric(iMT) \ DT)
+        return Symmetric(iM) * C * Symmetric(iM)
     end
     tr_B = fill(t, length(pk.p))
     return GCDDeltaMethod(A, tr_B)

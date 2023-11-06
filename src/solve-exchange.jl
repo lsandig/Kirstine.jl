@@ -14,15 +14,15 @@ This is a variant of the basic idea in [^YBT13].
 """
 struct Exchange{Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,Any}} <:
        ProblemSolvingStrategy
-    od::Tod
-    ow::Tow
+    optimizer_direction::Tod
+    optimizer_weight::Tow
     steps::Int64
     candidate::DesignMeasure
     simplify_args::Td
     @doc """
         Exchange(;
-            od::Optimizer,
-            ow::Optimizer,
+            optimizer_direction::Optimizer,
+            optimizer_weight::Optimizer,
             steps::Integer,
             candidate::DesignMeasure,
             simplify_args::Dict,
@@ -32,12 +32,12 @@ struct Exchange{Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,Any}} <:
     starting with `r = candidate`:
 
      1. [`simplify`](@ref) the design `r`, passing along `sargs`.
-     2. Use the optimizer `od` to find the direction (one-point design / Dirac measure) `d`
+     2. Use `optimizer_direction` to find the direction (one-point design / Dirac measure) `d`
         of highest [`gateauxderivative`](@ref) at `r`.
-        The vector of `prototypes` that is used for initializing `od`
+        The vector of `prototypes` that is used for initializing `optimizer_direction`
         is constructed from one-point designs at the design points of `r`.
         See the [`Optimizer`](@ref)s for algorithm-specific details.
-     3. Use the optimizer `ow` to re-calculcate optimal weights
+     3. Use `optimizer_weight` to re-calculcate optimal weights
         of a [`mixture`](@ref) of `r` and `d` for the [`DesignCriterion`](@ref).
         This is implemented as a call to [`solve`](@ref)
         with the [`DirectMaximization`](@ref) strategy
@@ -47,21 +47,31 @@ struct Exchange{Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,Any}} <:
     The return value of [`solve`](@ref) for this strategy is an [`ExchangeResult`](@ref).
     """
     function Exchange(;
-        od::Tod,
-        ow::Tow,
+        optimizer_direction::Tod,
+        optimizer_weight::Tow,
         steps::Integer,
         candidate::DesignMeasure,
         simplify_args::Td = Dict{Symbol,Any}(),
     ) where {Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,Any}}
-        new{Tod,Tow,Td}(od, ow, steps, candidate, simplify_args)
+        new{Tod,Tow,Td}(
+            optimizer_direction,
+            optimizer_weight,
+            steps,
+            candidate,
+            simplify_args,
+        )
     end
 end
 
 """
     ExchangeResult <: ProblemSolvingResult
 
-Contains vectors `ord` and `orw` of [`OptimizationResult`](@ref)s,
-one for each direction finding and reweighting step.
+Wraps the [`OptimizationResult`](@ref)s from the individual steps.
+
+See also
+[`solution(::ExchangeResult)`](@ref),
+[`optimization_results_direction`](@ref),
+[`optimization_results_weight`](@ref).
 """
 struct ExchangeResult{
     S<:OptimizerState{DesignMeasure,SignedMeasure},
@@ -71,46 +81,82 @@ struct ExchangeResult{
     orw::Vector{OptimizationResult{DesignMeasure,SignedMeasure,T}}
 end
 
-function maximizer(er::ExchangeResult)
+"""
+    solution(er::ExchangeResult)
+
+Return the best candidate found.
+"""
+function solution(er::ExchangeResult)
     return er.orw[end].maximizer
 end
 
+"""
+    optimization_results_direction(er::ExchangeResult)
+
+Get the vector of [`OptimizationResult`](@ref)s from the direction steps.
+"""
+function optimization_results_direction(er::ExchangeResult)
+    return er.ord
+end
+
+"""
+    optimization_results_weight(er::ExchangeResult)
+
+Get the full [`OptimizationResult`](@ref)s from the re-weighting steps.
+"""
+function optimization_results_weight(er::ExchangeResult)
+    return er.orw
+end
+
 function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
-    (; candidate, ow, od, steps, simplify_args) = strategy
-    check_compatible(candidate, dp.dr)
-    tc = precalculate_trafo_constants(dp.trafo, dp.pk)
+    (; candidate, optimizer_weight, optimizer_direction, steps, simplify_args) = strategy
+    check_compatible(candidate, region(dp))
+    pk = prior_knowledge(dp)
+    cp = covariate_parameterization(dp)
+    m = model(dp)
+    tc = precalculate_trafo_constants(transformation(dp), pk)
     wm = WorkMatrices(
         1, # Dirac design measure corresponds to single covariate
-        unit_length(dp.m),
-        parameter_dimension(dp.pk),
+        unit_length(m),
+        parameter_dimension(pk),
         codomain_dimension(tc),
     )
-    c = allocate_initialize_covariates(one_point_design(points(candidate)[1]), dp.m, dp.cp)
-    constraints = DesignConstraints(dp.dr, [false], [false])
+    c = allocate_initialize_covariates(one_point_design(points(candidate)[1]), m, cp)
+    constraints = DesignConstraints(region(dp), [false], [false])
     res = candidate
     or_pairs = map(1:(steps)) do i
         res = simplify(res, dp; simplify_args...)
         dir_prot = map(one_point_design, points(simplify_drop(res, 0)))
-        gc = precalculate_gateaux_constants(dp.dc, res, dp.m, dp.cp, dp.pk, tc, dp.na)
+        gc = gateaux_constants(criterion(dp), res, m, cp, pk, tc, normal_approximation(dp))
         # find direction of steepest ascent
-        gd(d) = gateauxderivative!(wm, c, gc, d, dp.m, dp.cp, dp.pk, dp.na)
-        or_gd = optimize(od, gd, dir_prot, constraints; trace_state = trace_state)
+        gd(d) = gateauxderivative!(wm, c, gc, d, m, cp, pk, normal_approximation(dp))
+        or_gd = optimize(
+            optimizer_direction,
+            gd,
+            dir_prot,
+            constraints;
+            trace_state = trace_state,
+        )
         d = or_gd.maximizer
         # append the new atom
         K = numpoints(res)
         if points(d)[1] in points(simplify_drop(res, 0))
             # effectivly run the reweighting from the last round for some more iterations
             res = mixture(0, d, res) # make sure new point is at index 1
-            res = simplify_merge(res, dp.dr, 0)
+            res = simplify_merge(res, region(dp), 0)
         else
             K += 1
             res = mixture(1 / K, d, res)
         end
         # optimize weights
-        wstr = DirectMaximization(; optimizer = ow, prototype = res, fixedpoints = 1:K)
+        wstr = DirectMaximization(;
+            optimizer = optimizer_weight,
+            prototype = res,
+            fixedpoints = 1:K,
+        )
         _, rw = solve(dp, wstr; trace_state = trace_state, simplify_args...)
-        res = maximizer(rw)
-        return or_gd, rw.or
+        res = solution(rw)
+        return or_gd, optimization_result(rw)
     end
     ors_d = map(o -> o[1], or_pairs)
     ors_w = map(o -> o[2], or_pairs)

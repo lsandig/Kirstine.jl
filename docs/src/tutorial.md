@@ -18,21 +18,25 @@ between a drug and some clinical outcome.
 A commonly used model for this task is the _sigmoid Emax_ model:
 an s-shaped curve with four parameters.
 Assuming independent measurement errors,
-the corresponding regression model for a total of ``n`` observations
-at ``K`` different dose levels ``x_1,\dots,x_k`` is
+the corresponding regression model for a total of ``\SampleSize`` observations
+at ``\NumDesignPoints`` different dose levels ``\Covariate_1,\dots,\Covariate_{\IndexDesignPoint}`` is
 
 ```math
-y_i \mid θ \overset{\mathrm{iid}}{\sim} \mathrm{Normal}(\mu(x_k, θ), \sigma^2) \quad\text{for all } i \in I_k, k = 1,\dots, K,
+\Unit_{\IndexUnit} \mid \Parameter
+\overset{\mathrm{iid}}{\sim}
+\mathrm{Normal}(\MeanFunction(\Covariate_{\IndexDesignPoint}, \Parameter), \sigma^2)
+\quad
+\text{for all } \IndexUnit \in I_{\IndexDesignPoint}, \IndexDesignPoint = 1, \dots, \NumDesignPoints,
 ```
 
-with expected response at dose ``x``
+with expected response at dose ``\Covariate``
 
 ```math
-\mu(x, θ) = E_0 + E_{\max{}} \frac{x^h}{\mathrm{ED}_{50}^h + x^h}
+\MeanFunction(\Covariate, \Parameter) = E_0 + E_{\max{}} \frac{\Covariate^h}{\mathrm{ED}_{50}^h + \Covariate^h}
 ```
 
 and a four-element parameter vector
-``θ = (E_0, E_{\max{}}, \mathrm{ED}_{50}, h)``.
+``\Parameter = (E_0, E_{\max{}}, \mathrm{ED}_{50}, h)``.
 Here, ``E_0`` is the baseline response,
 ``E_{\max{}}`` is the maximum effect above (or below) baseline,
 ``\mathrm{ED}_{50} > 0`` is the dose at which half of the maximum effect is attained,
@@ -56,7 +60,7 @@ savefig_nothing(pse, "tutorial-sigemax.png") # hide
 In order to find an optimal design,
 we need to know the
 [Jacobian matrix](https://en.wikipedia.org/wiki/Jacobian_matrix_and_determinant)
-of ``\mu(x, θ)`` with respect to ``θ``.
+of ``\MeanFunction(\Covariate, \Parameter)`` with respect to ``\Parameter``.
 Calculating manually,
 or using a computer algebra system such as [Maxima](https://maxima.sourceforge.io/)
 or [WolframAlpha](https://www.wolframalpha.com/input?i=Jacobian+matrix++a+%2B+b+x%5Eh+%2F%28c%5Eh+%2B+x%5Eh%29+w.r.t.+a%2C+b%2C+c%2C+h),
@@ -64,17 +68,17 @@ we find
 
 ```math
 \begin{aligned}
-\partial_{E_0} \mu(x, θ)              &= 1 \\
-\partial_{E_{\max{}}} \mu(x, θ)         &= \frac{x^h}{\mathrm{ED}_{50}^h + x^h}\\
-\partial_{\mathrm{ED}_{50}} \mu(x, θ) &= \frac{h E_{\max{}} x^h\mathrm{ED}_{50}^{h-1}}{(\mathrm{ED}_{50}^h + x^h)^2} \\
-\partial_{h} \mu(x, θ)                &= \frac{E_{\max{}} x^h \mathrm{ED}_{50}^h (\log(x / \mathrm{ED}_{50}))}{(\mathrm{ED}_{50}^h + x^h)^2} \\
+\partial_{E_0} \MeanFunction(\Covariate, \Parameter)              &= 1 \\
+\partial_{E_{\max{}}} \MeanFunction(\Covariate, \Parameter)         &= \frac{\Covariate^h}{\mathrm{ED}_{50}^h + \Covariate^h}\\
+\partial_{\mathrm{ED}_{50}} \MeanFunction(\Covariate, \Parameter) &= \frac{h E_{\max{}} \Covariate^h\mathrm{ED}_{50}^{h-1}}{(\mathrm{ED}_{50}^h + \Covariate^h)^2} \\
+\partial_{h} \MeanFunction(\Covariate, \Parameter)                &= \frac{E_{\max{}} \Covariate^h \mathrm{ED}_{50}^h (\log(\Covariate / \mathrm{ED}_{50}))}{(\mathrm{ED}_{50}^h + \Covariate^h)^2} \\
 \end{aligned}
 ```
 
-for ``x \neq 0``, and the limit
+for ``\Covariate \neq 0``, and the limit
 
 ```math
-\lim_{x\to0} \partial_{h} \mu(x, θ) = 0.
+\lim_{\Covariate\to0} \partial_{h} \MeanFunction(\Covariate, \Parameter) = 0.
 ```
 
 ## Setup
@@ -95,24 +99,24 @@ and [`CovariateParameterization`](@ref),
 and implementing a handful of methods for them.
 
 In the sigmoid Emax model,
-a single unit of observation is just a real number ``y_i``.
+a single unit of observation is just a real number ``\Unit_{\IndexUnit}``.
 For such a case,
-we can use the helper macro [`@define_scalar_unit_model`](@ref)
-to declare a model type named `SigEmax`,
+we can use the helper macro [`@simple_model`](@ref)
+to declare a model type named `SigEmaxModel`,
 and a covariate type named `SigEmaxCovariate` with the single field `dose`.
 
 ```@example main
 using Kirstine
-@define_scalar_unit_model Kirstine SigEmax dose
+@simple_model SigEmax dose
 ```
 
-The model parameter ``θ`` is just a vector with no additional structure,
-which is why we can use the helper macro [`@define_vector_parameter`](@ref)
-to define a parameter type `SigEmaxPar`
+The model parameter ``\Parameter`` is just a vector with no additional structure,
+which is why we can use the helper macro [`@simple_parameter`](@ref)
+to define a parameter type `SigEmaxParameter`
 with the fields fields `e0`, `emax`, `ed50`, and `h`.
 
 ```@example main
-@define_vector_parameter Kirstine SigEmaxPar e0 emax ed50 h
+@simple_parameter SigEmax e0 emax ed50 h
 ```
 
 Next we implement the Jacobian matrix.
@@ -123,7 +127,12 @@ This method will later be called from the package internals with a pre-allocated
 Now our job is to fill in the correct values:
 
 ```@example main
-function Kirstine.jacobianmatrix!(jm, m::SigEmax, c::SigEmaxCovariate, p::SigEmaxPar)
+function Kirstine.jacobianmatrix!(
+    jm,
+    m::SigEmaxModel,
+    c::SigEmaxCovariate,
+    p::SigEmaxParameter,
+)
     dose_pow_h = c.dose^p.h
     ed50_pow_h = p.ed50^p.h
     A = dose_pow_h / (dose_pow_h + ed50_pow_h)
@@ -163,12 +172,12 @@ Here, the design region is simply the interval of possible doses.
 This means that we can just copy the only element of the design point
 into the covariate's `dose` field.
 To do this, we subtype [`CovariateParameterization`](@ref)
-and define a method for `Kirstine.update_model_covariate!`.
+and define a method for `Kirstine.map_to_covariate!`.
 
 ```@example main
 struct CopyDose <: CovariateParameterization end
 
-function Kirstine.update_model_covariate!(c::SigEmaxCovariate, dp, m::SigEmax, cp::CopyDose)
+function Kirstine.map_to_covariate!(c::SigEmaxCovariate, dp, m::SigEmaxModel, cp::CopyDose)
     c.dose = dp[1]
     return c
 end
@@ -176,11 +185,11 @@ end
 
 ### Prior Knowledge
 
-For Bayesian optimal design of experiments we need to specify a prior distribution on ``θ``.
+For Bayesian optimal design of experiments we need to specify a prior distribution on ``\Parameter``.
 `Kirstine.jl` then needs a sample from this distribution.
 
-For this example we use independent normal priors on the elements of ``θ``.
-We first draw a vector of `SigEmaxPar` values
+For this example we use independent normal priors on the elements of ``\Parameter``.
+We first draw a vector of `SigEmaxParameter` values
 which we then wrap into a [`PriorSample`](@ref).
 
 ```@example main
@@ -191,13 +200,13 @@ theta_mean = [1, 2, 0.4, 5]
 theta_sd = [0.5, 0.5, 0.05, 0.5]
 sep_draws = map(1:1000) do i
     rnd = theta_mean .+ theta_sd .* randn(4)
-    return SigEmaxPar(e0 = rnd[1], emax = rnd[2], ed50 = rnd[3], h = rnd[4])
+    return SigEmaxParameter(e0 = rnd[1], emax = rnd[2], ed50 = rnd[3], h = rnd[4])
 end
 prior_sample = PriorSample(sep_draws)
 nothing # hide
 ```
 
-Note that the `SigEmaxPar` constructor takes keyword arguments.
+Note that the `SigEmaxParameter` constructor takes keyword arguments.
 
 ### Design Problem
 
@@ -205,16 +214,16 @@ Now we collect all the parts in a [`DesignProblem`](@ref).
 
 ```@example main
 dp = DesignProblem(
-    design_criterion = DOptimality(),
-    design_region = dr,
-    model = SigEmax(sigma = 1),
+    criterion = DOptimality(),
+    region = dr,
+    model = SigEmaxModel(sigma = 1),
     covariate_parameterization = CopyDose(),
     prior_knowledge = prior_sample,
 )
 nothing # hide
 ```
 
-Note that the `SigEmax` constructor takes the measurement standard deviation ``σ`` as an argument.
+Note that the `SigEmaxModel` constructor takes the measurement standard deviation ``σ`` as an argument.
 For D-optimality, this only scales the objective function and has no influence on the optimal design.
 This is why we simply set it to `1` here.
 
@@ -263,8 +272,8 @@ Looking closely at `s1`,
 we notice that two design points are nearly identical:
 
 ```julia
-[0.35565412479715236] => 0.02494416751531916
-[0.35669823220544034] => 0.12724012991953187
+[0.35590085349128153] => 0.024903749604217627
+[0.3567666844285769] => 0.12742156052917672
 ```
 
 It seems plausible that they would merge to a single one
@@ -274,7 +283,7 @@ This way we remove all design points with negligible weight,
 and merge all design points that are less than some minimum distance apart.
 
 ```@example main
-s2 = sort_designpoints(simplify(s1, dp, minweight = 1e-3, mindist = 2e-2))
+s2 = sort_points(simplify(s1, dp, minweight = 1e-3, mindist = 2e-2))
 ```
 
 Because this issue occurs frequently
@@ -284,7 +293,7 @@ we can directly pass the simplification arguments to `solve`:
 s2, r2 = solve(dp, strategy; minweight = 1e-3, mindist = 2e-2)
 ```
 
-The original, unsimplified solution can still be accessed at `maximizer(r2)`.
+The original, unsimplified solution can still be accessed at `solution(r2)`.
 
 In order to confirm that we have actually found the solution
 we visually check that the [Gateaux derivative](math.md#Gateaux-Derivative) is non-positive over the whole design region.
@@ -310,9 +319,9 @@ ef = plot_expected_function(
     (c, p) -> [mu(c.dose, p)],
     0:0.01:1,
     s2,
-    dp.m,
-    dp.cp,
-    dp.pk;
+    model(dp),
+    covariate_parameterization(dp),
+    prior_knowledge(dp);
     xguide = "dose",
     yguide = "response",
 )
@@ -333,7 +342,7 @@ savefig_nothing(pr1, "tutorial-pr1.png") # hide
 
 ## Relative Efficiency and Apportionment
 
-In order to be able to estimate ``θ`` at all,
+In order to be able to estimate ``\Parameter`` at all,
 we need a design with at least `4` points.
 Let's compare how much better the optimal solution `s2` is
 than a 4-point [`equidistant_design`](@ref).
@@ -346,9 +355,9 @@ Their relative D-[`efficiency`](@ref) means
 that `s2` on average only needs `0.72` as many observations as the equidistant design with `4` points
 in order to achieve the same estimation accuracy.
 
-Suppose we now actually want to run the experiment on ``n=42`` units.
+Suppose we now actually want to run the experiment on ``\SampleSize=42`` units.
 For this we need to convert the weights of `s1` to integers
-that add up to ``n``.
+that add up to ``\SampleSize``.
 This is achieved with the [`apportion`](@ref) function:
 
 ```@example main

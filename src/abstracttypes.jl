@@ -32,7 +32,7 @@ Supertype for user-defined model covariates.
 # Implementation
 
 Subtypes of `Covariate` should be mutable, or have at least a mutable field. This is
-necessary for being able to modify them in [`update_model_covariate!`](@ref).
+necessary for being able to modify them in [`map_to_covariate!`](@ref).
 """
 abstract type Covariate end
 

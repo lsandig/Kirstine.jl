@@ -9,8 +9,8 @@ A [Julia][julia-url] package for Bayesian optimal experimental design with nonli
 
 ## Project Status
 
-Alpha.
-Expect bugs and breaking changes.
+Beta.
+Mostly stable, breaking changes will be mostly cosmetic.
 Documentation is still sparse in some places.
 
 ## Features
@@ -22,6 +22,7 @@ Documentation is still sparse in some places.
 - design criteria: D, A
 - separation of design variables and model covariates
 - particle swarm optimization
+- direct maximization and exchange algorithm
 - modular and extendable
 - minimal dependencies
 
@@ -44,6 +45,26 @@ To get started, read the [tutorial](https://lsandig.srht.site/Kirstine.jl/tutori
 Kirstine.jl is free and open source software.
 The code is licensed under GPL-3.0 or later,
 and the documentation under GFDL-1.3 or later.
+
+## Rationale
+
+Why another package for optimal design?
+Currently, `R` packages for design with nonlinear regression have to make a compromise between flexibility
+(allow arbitrary models written in `R`)
+and execution speed
+(implement only a few models in `C`).
+In Julia, we can write both concise high-level code and efficient low-level code in the same language.
+This way,
+Kirstine.jl attempts to provide applied statisticians with a tool
+for efficiently finding designs for arbitrarily complex nonlinear regression models.
+
+Note that the `Julia` package [ExperimentalDesign.jl][edjl-url]
+and most of the [design packages on CRAN][craned-url]
+are for finding block, factorial, or response-surface designs.
+These are different tasks than what Kirstine.jl attempts to do.
+
+[edjl-url]: https://github.com/phrb/ExperimentalDesign.jl
+[craned-url]: https://cran.r-project.org/view=ExperimentalDesign
 
 ## Contributing
 

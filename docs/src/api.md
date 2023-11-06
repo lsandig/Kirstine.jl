@@ -5,6 +5,13 @@
 ```@docs
 DesignProblem
 DesignProblem()
+criterion
+region
+model
+covariate_parameterization
+prior_knowledge
+transformation
+normal_approximation
 ```
 
 Different high-level strategies are available for trying to solve a `DesignProblem`.
@@ -16,9 +23,14 @@ ProblemSolvingResult
 DirectMaximization
 DirectMaximization()
 DirectMaximizationResult
+solution(::DirectMaximizationResult)
+optimization_result
 Exchange
 Exchange()
 ExchangeResult
+solution(::ExchangeResult)
+optimization_results_direction
+optimization_results_weight
 ```
 
 Particle-based optimizers are operating on a lower level,
@@ -87,7 +99,7 @@ Then methods need to be added for the following package-internal functions:
 ```@docs
 Kirstine.allocate_covariate
 Kirstine.jacobianmatrix!
-Kirstine.update_model_covariate!
+Kirstine.map_to_covariate!
 Kirstine.update_model_vcov!
 Kirstine.unit_length
 dimension
@@ -100,8 +112,8 @@ and for a vector parameter without any additional structure,
 the following helper macros can be used:
 
 ```@docs
-@define_scalar_unit_model
-@define_vector_parameter
+@simple_model
+@simple_parameter
 ```
 
 ## Prior Knowledge
@@ -142,7 +154,7 @@ random_design
 points
 weights
 numpoints
-sort_designpoints
+sort_points
 sort_weights
 mixture
 apportion

@@ -102,7 +102,7 @@ using Kirstine
             d2 = DesignMeasure([[3, 4], [1, 2]], [0.9, 0.1])
 
             @test d1 != d2
-            @test d1 == sort_designpoints(d2)
+            @test d1 == sort_points(d2)
         end
     end
 
@@ -173,9 +173,9 @@ using Kirstine
     end
 
     # sorting
-    @testset "sort_designpoints" begin
+    @testset "sort_points" begin
         let d = DesignMeasure([[3, 4], [2, 1], [1, 1], [2, 3]], [0.4, 0.2, 0.3, 0.1]),
-            d_sorted = sort_designpoints(d),
+            d_sorted = sort_points(d),
             refp = DesignMeasure([[1, 1], [2, 1], [2, 3], [3, 4]], [0.3, 0.2, 0.1, 0.4])
 
             @test d_sorted == refp
@@ -183,9 +183,9 @@ using Kirstine
             points(d_sorted)[1][1] = 42
             @test points(d_sorted)[1] == [42, 1]
             @test points(d)[3] == [1, 1]
-            @test sort_designpoints(refp) !== refp
-            @test weights(sort_designpoints(d; rev = true)) == reverse(weights(refp))
-            @test points(sort_designpoints(d; rev = true)) == reverse(points(refp))
+            @test sort_points(refp) !== refp
+            @test weights(sort_points(d; rev = true)) == reverse(weights(refp))
+            @test points(sort_points(d; rev = true)) == reverse(points(refp))
         end
     end
 

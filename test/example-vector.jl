@@ -17,7 +17,7 @@ end
 
 Kirstine.unit_length(m::VUMod) = m.m
 
-function Kirstine.update_model_vcov!(s, c::VUCovariate, m::VUMod)
+function Kirstine.update_model_vcov!(s, m::VUMod, c::VUCovariate)
     fill!(s, 0.0)
     for j in 1:(m.m)
         s[j, j] = m.sigma_squared * (1 + c.time[j])
@@ -27,9 +27,9 @@ end
 
 Kirstine.allocate_covariate(m::VUMod) = VUCovariate(zeros(m.m))
 
-@define_vector_parameter Kirstine VUPar a e s
+@simple_parameter VU a e s
 
-function Kirstine.jacobianmatrix!(jm, m::VUMod, c::VUCovariate, p::VUPar)
+function Kirstine.jacobianmatrix!(jm, m::VUMod, c::VUCovariate, p::VUParameter)
     for j in 1:length(c.time)
         A = exp(-p.a * c.time[j])
         E = exp(-p.e * c.time[j])
@@ -42,7 +42,7 @@ end
 
 struct EquiTime <: CovariateParameterization end
 
-function Kirstine.update_model_covariate!(c::VUCovariate, dp, m::VUMod, cp::EquiTime)
+function Kirstine.map_to_covariate!(c::VUCovariate, dp, m::VUMod, cp::EquiTime)
     for j in 1:(m.m)
         c.time[j] = (j - 1) * dp[1]
     end

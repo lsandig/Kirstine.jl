@@ -55,17 +55,17 @@ using Kirstine
 
             @test check(d1, dr1)
             @test_throws "length must match" check(d1, dr2)
-            @test_throws "outside design region" check(d2, dr2)
+            @test_throws "outside design region" (@test_warn "dp =" check(d2, dr2))
         end
     end
 
-    @testset "ap_random_point!" begin
+    @testset "ap_rand!(DesignPoint)" begin
         # check that constraints are handled correctly
         let dr = DesignInterval(:a => (0, 5)),
             d = DesignMeasure([[1], [4.2], [3]], [0.1, 0.42, 0.48]),
             dcon = Kirstine.DesignConstraints,
             _ = Random.seed!(7531),
-            arp(dd, c) = Kirstine.ap_random_point!(deepcopy(dd), c),
+            arp(dd, c) = Kirstine.ap_rand!(deepcopy(dd), c),
             # nothng fixed
             c0 = dcon(dr, fill(false, 3), fill(false, 3)),
             r0 = arp(d, c0),
@@ -114,13 +114,13 @@ using Kirstine
         end
     end
 
-    @testset "ap_difference!" begin
+    @testset "ap_diff!" begin
         let d1 = uniform_design([[1], [2], [3]]),
             d2 = DesignMeasure([[6], [5], [4]], [0, 1 / 3, 2 / 3]),
             ref1 = deepcopy(d1),
             ref2 = deepcopy(d2),
             s = Kirstine.SignedMeasure([0 0 0], zeros(3)),
-            r = Kirstine.ap_difference!(s, d1, d2)
+            r = Kirstine.ap_diff!(s, d1, d2)
 
             @test s.weights == [1 / 3, 0, -1 / 3]
             @test s.atoms == [-5 -3 -1]
@@ -159,10 +159,20 @@ using Kirstine
         end
     end
 
-    @testset "ap_random_difference!" begin
+    @testset "ap_dist" begin
+        let p = DesignMeasure([[1], [7], [3]], [0.1, 0.3, 0.6]),
+            q = DesignMeasure([[-2], [5], [8]], [0.2, 0.4, 0.4]),
+            dist = Kirstine.ap_dist(p, q)
+
+            # This should ignore the last weight in p and q (squared diff 0.04)
+            @test dist == sqrt(38.02)
+        end
+    end
+
+    @testset "ap_rand!(SignedMeasure)" begin
         let s = Kirstine.SignedMeasure([4 5 6], [-1, 2, 3]),
             _ = Random.seed!(7531),
-            r = Kirstine.ap_random_difference!(s)
+            r = Kirstine.ap_rand!(s, 0, 1)
 
             @test all(s.weights .<= 1)
             @test all(s.weights .>= 0)
@@ -173,11 +183,11 @@ using Kirstine
         end
     end
 
-    @testset "ap_mul_hadamard!" begin
+    @testset "ap_mul!(SignedMeasure)" begin
         let s1 = Kirstine.SignedMeasure([4 5 6], [0.1, 0.2, 0.3]),
             s2 = Kirstine.SignedMeasure([1e0 1e1 1e2], [1e-2, 1e-3, 1e-4]),
             ref = deepcopy(s2),
-            r = Kirstine.ap_mul_hadamard!(s1, s2)
+            r = Kirstine.ap_mul!(s1, s2)
 
             @test s1.weights == [1e-3, 2e-4, 3e-5]
             @test s1.atoms == [4 50 600]
@@ -189,9 +199,9 @@ using Kirstine
         end
     end
 
-    @testset "ap_mul_scalar!" begin
+    @testset "ap_mul!(Real)" begin
         let s = Kirstine.SignedMeasure([4 5 6], [0.1, 0.2, 0.3]),
-            r = Kirstine.ap_mul_scalar!(s, 42)
+            r = Kirstine.ap_mul!(s, 42)
 
             @test s.weights == [4.2, 8.4, 12.6]
             @test s.atoms == [168 210 252]
@@ -216,7 +226,7 @@ using Kirstine
         end
     end
 
-    @testset "ap_move!" begin
+    @testset "ap_add!" begin
         # only high-level checks, collision detection is tested below
         let d1 = DesignMeasure([[0.5], [0.5], [0.5]], [1 / 4, 1 / 4, 1 / 2]),
             d2 = deepcopy(d1),
@@ -227,9 +237,9 @@ using Kirstine
             v1_copy = deepcopy(v1), #           ignored! ----v
             v2 = Kirstine.SignedMeasure([-1 1 0.6], [1, 0, 1 / 2]),
             # stay inside
-            r1 = Kirstine.ap_move!(d1, v1, c),
+            r1 = Kirstine.ap_add!(d1, v1, c),
             # be stopped at the boundary, both in box and in simplex
-            r2 = Kirstine.ap_move!(d2, v2, c)
+            r2 = Kirstine.ap_add!(d2, v2, c)
 
             # test against expected position
             @test d1 == DesignMeasure([[0.6], [0.7], [0.8]], [3 / 8, 1 / 8, 1 / 2])
@@ -292,57 +302,6 @@ using Kirstine
             @test Kirstine.move_how_far(d, v7, dr) == 1 / 4
             @test Kirstine.move_how_far(d, v8, dr) == 1 / 4
             @test Kirstine.move_how_far(d, v9, dr) == 1 / 4
-        end
-    end
-
-    @testset "how_far_right" begin
-        # Can we move all the way from x to x + tv, or are we stopped at ub?
-        #
-        # 0   1   2   3   4   5   6
-        # |---|---|---|---|---|---|
-        #             x      ub
-        #                            x    t  v ub
-        @test Kirstine.how_far_right(3, 1.5, 1, 5) == 1.5
-        @test Kirstine.how_far_right(3, 1.0, 4, 5) == 0.5
-        @test Kirstine.how_far_right(3, 1.0, 3, 5) == 2 / 3
-    end
-
-    @testset "how_far_left" begin
-        # Can we move all the way from x to x + tv, or are we stopped at lb?
-        #
-        # 0   1   2   3   4   5   6
-        # |---|---|---|---|---|---|
-        #    lb       x
-        #                           x    t   v lb
-        @test Kirstine.how_far_left(3, 1.5, -1, 1) == 1.5
-        @test Kirstine.how_far_left(3, 1.0, -4, 1) == 0.5
-        @test Kirstine.how_far_left(3, 1.0, -3, 1) == 2 / 3
-    end
-
-    @testset "how_far_simplexdiag" begin
-        # Suppose there are three elements, the third being implicit. Can we move from x to
-        # x + tv, or are we stopped at the simplex diagonal face?
-        #
-        #  x_2 direction
-        #  |
-        #  |     x+tv
-        #  |
-        #  |\
-        #  | \
-        #  |  \
-        #  |   \
-        #  |    \
-        #  |     \
-        #  | x    \
-        # 0|_______\_____ x_1 direction
-        #  0
-        let x = [0.25, 0.25], v1 = [1, 2], v2 = [0.1, 0.2]
-
-            # This moves up to the intersection at [5/12, 7/12],
-            # which is 1/6 the length of v1.
-            @test Kirstine.how_far_simplexdiag(sum(x), 1.0, sum(v1)) == 1 / 6
-            # This stays inside.
-            @test Kirstine.how_far_simplexdiag(sum(x), 1.0, sum(v2)) == 1.0
         end
     end
 

@@ -36,24 +36,24 @@ include("example-compartment.jl")
         # assume to be correct when the tests in the let block below work out.
         let dpd = DesignProblem(;
                 transformation = DeltaMethod(p -> diagm([1, 1, 1])),
-                design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(; sigma = 1),
+                region = DesignInterval(:time => [0, 48]),
+                model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = AOptimality(),
+                criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
-                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                    TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
                 ]),
             ),
             dpi = DesignProblem(;
                 transformation = Identity(),
-                design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(; sigma = 1),
+                region = DesignInterval(:time => [0, 48]),
+                model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = AOptimality(),
+                criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
-                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                    TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
                 ]),
             ),
             d1 = DesignMeasure([0.2176] => 0.2337, [1.4343] => 0.3878, [18.297] => 0.3785)
@@ -63,13 +63,13 @@ include("example-compartment.jl")
 
         # DeltaMethod Transformation: Atkinson et al locally optimal Omnibus example
         let dp = DesignProblem(;
-                design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(; sigma = 1),
+                region = DesignInterval(:time => [0, 48]),
+                model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = AOptimality(),
+                criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
-                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                    TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
                 ]),
                 transformation = DeltaMethod(DOmnibus),
             ),
@@ -83,7 +83,7 @@ include("example-compartment.jl")
         end
     end
 
-    @testset "precalculate_gateaux_constants" begin
+    @testset "gateaux_constants" begin
         # Identity transformation
         #
         # The GateauxConstants wrap the square and the trace of the inverse of the
@@ -94,14 +94,14 @@ include("example-compartment.jl")
         let dc = AOptimality(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
-            m = TPCMod(; sigma = 1),
+            m = TPCModel(; sigma = 1),
             cp = CopyTime(),
-            g1 = TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
-            g2 = TPCPar(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
+            g1 = TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
+            g2 = TPCParameter(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
             pk = PriorSample([g1, g2]),
             tc = Kirstine.TCIdentity(3), # the codomain dimension is not used in this test
             na = FisherMatrix(),
-            pgc = Kirstine.precalculate_gateaux_constants,
+            pgc = Kirstine.gateaux_constants,
             # reference information matrices, already wrapped in Symmetric()
             m1 = informationmatrix(a1, m, cp, g1, na),
             m2 = informationmatrix(a1, m, cp, g2, na),
@@ -128,15 +128,15 @@ include("example-compartment.jl")
         let dc = AOptimality(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
-            m = TPCMod(; sigma = 1),
+            m = TPCModel(; sigma = 1),
             cp = CopyTime(),
-            g1 = TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
-            g2 = TPCPar(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
+            g1 = TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
+            g2 = TPCParameter(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
             pk = PriorSample([g1, g2]),
             J = [Dauc(g1), Dauc(g2)],
             tc = Kirstine.TCDeltaMethod(1, J),
             na = FisherMatrix(),
-            pgc = Kirstine.precalculate_gateaux_constants,
+            pgc = Kirstine.gateaux_constants,
             # reference information matrices, already wrapped in Symmetric()
             m1 = informationmatrix(a1, m, cp, g1, na),
             m2 = informationmatrix(a1, m, cp, g2, na),
@@ -193,24 +193,24 @@ include("example-compartment.jl")
         # assumption that the DeltaMethod is correct.
         let dpi = DesignProblem(;
                 transformation = Identity(),
-                design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(; sigma = 1),
+                region = DesignInterval(:time => [0, 48]),
+                model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = AOptimality(),
+                criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
-                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                    TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
                 ]),
             ),
             dpd = DesignProblem(;
                 transformation = DeltaMethod(p -> diagm([1, 1, 1])),
-                design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(; sigma = 1),
+                region = DesignInterval(:time => [0, 48]),
+                model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = AOptimality(),
+                criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
-                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                    TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
                 ]),
             ),
             dir = [one_point_design([t]) for t in range(0, 48; length = 21)],
@@ -227,13 +227,13 @@ include("example-compartment.jl")
         # DeltaMethod Transformation: Atkinson et al. locally optimal Omnibus example
         let dp = DesignProblem(;
                 transformation = DeltaMethod(DOmnibus),
-                design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(; sigma = 1),
+                region = DesignInterval(:time => [0, 48]),
+                model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = AOptimality(),
+                criterion = AOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
-                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                    TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
                 ]),
             ),
             dir = [one_point_design([t]) for t in range(0, 48; length = 21)],

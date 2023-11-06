@@ -21,7 +21,7 @@ function allocate_initialize_covariates(d, m, cp)
     K = numpoints(d)
     cs = [allocate_covariate(m) for _ in 1:K]
     for k in 1:K
-        update_model_covariate!(cs[k], points(d)[k], m, cp)
+        map_to_covariate!(cs[k], points(d)[k], m, cp)
     end
     return cs
 end
@@ -40,8 +40,8 @@ function objective!(
     na::NormalApproximation,
 )
     for k in 1:length(c)
-        update_model_covariate!(c[k], points(d)[k], m, cp)
-        update_model_vcov!(wm.m_x_m[k], c[k], m)
+        map_to_covariate!(c[k], points(d)[k], m, cp)
+        update_model_vcov!(wm.m_x_m[k], m, c[k])
         potrf!('U', wm.m_x_m[k])
     end
     # When the information matrix is singular, the objective function is undefined. Lower
@@ -75,8 +75,8 @@ function gateauxderivative!(
     pk::PriorSample,
     na::NormalApproximation,
 )
-    update_model_covariate!(c[1], points(direction)[1], m, cp)
-    update_model_vcov!(wm.m_x_m[1], c[1], m)
+    map_to_covariate!(c[1], points(direction)[1], m, cp)
+    update_model_vcov!(wm.m_x_m[1], m, c[1])
     potrf!('U', wm.m_x_m[1])
     acc = 0
     for i in 1:length(pk.p)
@@ -150,7 +150,7 @@ function informationmatrix(
     # Note: t = 1 is a dummy value, no trafo will be applied
     wm = WorkMatrices(numpoints(d), unit_length(m), dimension(p), 1)
     for k in 1:length(c)
-        Kirstine.update_model_vcov!(wm.m_x_m[k], c[k], m)
+        Kirstine.update_model_vcov!(wm.m_x_m[k], m, c[k])
         potrf!('U', wm.m_x_m[k])
     end
     informationmatrix!(wm.r_x_r, wm.m_x_r, weights(d), m, wm.m_x_m, c, p, na)
@@ -170,7 +170,7 @@ function inverse_information_matrices(
     # The transformed parameter dimension t = 1 is a dummy argument here.
     wm = WorkMatrices(length(weights(d)), unit_length(m), parameter_dimension(pk), 1)
     for k in 1:length(c)
-        Kirstine.update_model_vcov!(wm.m_x_m[k], c[k], m)
+        Kirstine.update_model_vcov!(wm.m_x_m[k], m, c[k])
         potrf!('U', wm.m_x_m[k])
     end
     # The documentation of `potri!` is not very clear that it expects a Cholesky factor as
@@ -192,7 +192,7 @@ end
 # * `wm.r_x_r` holds the information matrix or its inverse, depending on the `is_inv` flag.
 # * Only the upper triangle of `wm.r_x_r` is used.
 # * `wm.t_x_t` will be overwritten with the transformed information matrix or its inverse.
-# * The return value are `wm.t_x_t` and a flag that indicates whether it is inverted.
+# * The return value are `wm` and a flag that indicates whether `wm.t_x_t` it is inverted.
 # * Only the upper triangle of `wm.t_x_t` is guaranteed to make sense, but specific methods
 #   are free to return a dense matrix.
 # * Whether the returned matrix will be inverted is _not_ controlled by `is_inv`.
@@ -200,7 +200,7 @@ end
 function apply_transformation!(wm::WorkMatrices, is_inv::Bool, tc::TCIdentity, index)
     # For the Identity transformation we just pass through the information matrix.
     wm.t_x_t .= wm.r_x_r
-    return wm.t_x_t, is_inv
+    return wm, is_inv
 end
 
 function apply_transformation!(wm::WorkMatrices, is_inv::Bool, tc::TCDeltaMethod, index)
@@ -242,7 +242,25 @@ function apply_transformation!(wm::WorkMatrices, is_inv::Bool, tc::TCDeltaMethod
     end
     # Note that for this method, the result is not just an upper triangle, but always a
     # dense matrix.
-    return wm.t_x_t, true
+    return wm, true
+end
+
+# helper method to be used when computing gateaux constants
+function transformed_information_matrices(
+    nim::AbstractVector{<:AbstractMatrix},
+    is_inv::Bool,
+    pk::PriorSample,
+    tc::TrafoConstants,
+)
+    # dummies --------v--v
+    wm = WorkMatrices(1, 1, parameter_dimension(pk), codomain_dimension(tc))
+    res_is_inv = missing
+    tnim = map(1:length(pk.p)) do i
+        wm.r_x_r .= nim[i] # will be overwritten by the next call
+        _, res_is_inv = apply_transformation!(wm, is_inv, tc, i)
+        return deepcopy(wm.t_x_t)
+    end
+    return tnim, res_is_inv
 end
 
 ## linear algebra shortcuts ##

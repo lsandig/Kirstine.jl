@@ -5,13 +5,13 @@
 # Atkinson, A. C., Chaloner, K., Herzberg, A. M., & Juritz, J. (1993).
 # Optimum experimental designs for properties of a compartmental model.
 # Biometrics, 49(2), 325–337. http://dx.doi.org/10.2307/2532547
-@define_scalar_unit_model Kirstine TPCMod time
+@simple_model TPC time
 
-@define_vector_parameter Kirstine TPCPar a e s
+@simple_parameter TPC a e s
 
 struct CopyTime <: CovariateParameterization end
 
-function Kirstine.jacobianmatrix!(jm, m::TPCMod, c::TPCModCovariate, p::TPCPar)
+function Kirstine.jacobianmatrix!(jm, m::TPCModel, c::TPCCovariate, p::TPCParameter)
     A = exp(-p.a * c.time)
     E = exp(-p.e * c.time)
     jm[1, 1] = A * p.s * c.time
@@ -20,10 +20,10 @@ function Kirstine.jacobianmatrix!(jm, m::TPCMod, c::TPCModCovariate, p::TPCPar)
     return jm
 end
 
-function Kirstine.update_model_covariate!(
-    c::TPCModCovariate,
+function Kirstine.map_to_covariate!(
+    c::TPCCovariate,
     dp::AbstractVector{<:Real},
-    m::TPCMod,
+    m::TPCModel,
     cp::CopyTime,
 )
     c.time = dp[1]
@@ -34,7 +34,7 @@ end
 mu(c, p) = p.s * (exp(-p.e * c.time) - exp(-p.a * c.time))
 auc(p) = p.s * (1 / p.e - 1 / p.a)
 ttm(p) = log(p.a / p.e) / (p.a - p.e)
-cmax(p) = mu(TPCModCovariate(ttm(p)), p)
+cmax(p) = mu(TPCCovariate(ttm(p)), p)
 
 # jacobian matrices (transposed gradients) from Appendix 1
 function Dauc(p)
@@ -78,5 +78,5 @@ function draw_from_prior(n, se_factor)
     as = mn[1] .+ se_factor .* se[1] .* (2 .* rand(n) .- 1)
     es = mn[2] .+ se_factor .* se[2] .* (2 .* rand(n) .- 1)
     ss = mn[3] .+ se_factor .* se[3] .* (2 .* rand(n) .- 1)
-    return PriorSample(map((a, e, s) -> TPCPar(; a = a, e = e, s = s), as, es, ss))
+    return PriorSample(map((a, e, s) -> TPCParameter(; a = a, e = e, s = s), as, es, ss))
 end

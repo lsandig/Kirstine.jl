@@ -3,10 +3,6 @@
 Terms and notations in the field of experimental design vary between authors.
 This page documents the notation for `Kirstine.jl`.
 
-!!! warning
-    
-    This overview is not yet mathematically rigorous and may contain errors.
-
 ## Preliminaries
 
   - The set of ``a×a`` symmetric non-negative definite matrices is denoted ``\SNNDMatrices{a}``.
@@ -191,7 +187,7 @@ the Gateaux derivative is given by
 \biggl\{
 \Trace\biggl[
 \NIMatrix^{-1}(\DesignMeasure, \Parameter)
- (\TotalDiff \Transformation'(\Parameter))'
+ (\TotalDiff \Transformation(\Parameter))'
   \TNIMatrix(\DesignMeasure, \Parameter)
    \MatDeriv{\DesignCriterion}{\SomeMatrix}{\TNIMatrix(\DesignMeasure, \Parameter)}
   \TNIMatrix(\DesignMeasure, \Parameter)
@@ -260,6 +256,23 @@ but do not depend on the direction ``\DesignMeasureDirection``.
 Since they are constant in ``\DesignMeasureDirection``
 they only need to be computed once.
 
+Note that the function
+
+```math
+\Sensitivity : \AllDesignMeasures × \DesignRegion → \Reals,
+\quad
+\Sensitivity(\DesignMeasure, \DesignPoint)
+=
+\IntD{\ParameterSet}{
+\Trace\bigl[
+A(\DesignMeasure, \Parameter)
+\NIMatrix(\DiracDist(\DesignPoint), \Parameter)
+\bigr]
+}{\PriorDensity(\Parameter)}{\Parameter}
+```
+
+is sometimes known as the _sensitivity function_.
+
 An equivalence theorem states:
 a design measure ``\DesignMeasure^*`` maximizes ``\Objective`` iff
 
@@ -292,7 +305,7 @@ The Gateaux derivative is
 \NIMatrix^{-1}(\DesignMeasure, \Parameter)
 \NIMatrix(\DesignMeasureDirection, \Parameter)
 \bigr]
-}{\PriorDensity(\Parameter)}{\Parameter} - t
+}{\PriorDensity(\Parameter)}{\Parameter} - \DimTransformedParameter
 .
 ```
 
@@ -306,7 +319,7 @@ For ``\Transformation(\Parameter) = \Parameter`` this simplifies to
 \NIMatrix^{-1}(\DesignMeasure, \Parameter)
 \NIMatrix(\DesignMeasureDirection, \Parameter)
 \bigr]
-}{\PriorDensity(\Parameter)}{\Parameter} - r
+}{\PriorDensity(\Parameter)}{\Parameter} - \DimParameter
 .
 ```
 
@@ -368,8 +381,8 @@ The _approximate expected posterior Shannon information_ for an experiment with 
 and a sample size of ``\SampleSize`` is
 
 ```math
-\frac{t}{2}\log(\SampleSize)
-- \frac{t}{2}(1 + \log(2π))
+\frac{\DimTransformedParameter}{2}\log(\SampleSize)
+- \frac{\DimTransformedParameter}{2}(1 + \log(2π))
 + \frac{1}{2} \IntD{\ParameterSet}{
 \log\det(\TNIMatrix(\DesignMeasure, \Parameter))
 }{\PriorDensity(\Parameter)}{\Parameter}
@@ -387,7 +400,7 @@ and solving for the ratio of sample sizes yields
 \frac{n^{(2)}}{n^{(1)}}
 =
 \exp\biggl(
-\frac{1}{t}
+\frac{1}{\DimTransformedParameter}
 \IntD{\ParameterSet}{
 \log\frac{\det \TNIMatrix(\DesignMeasure_1, \Parameter)}{\det \TNIMatrix(\DesignMeasure_2, \Parameter)}
 }{\PriorDensity(\Parameter)}{\Parameter}
@@ -417,7 +430,7 @@ this simplifies to
 =
 \biggl(
 \frac{\det \TNIMatrix(\DesignMeasure_1, \Parameter_0)}{\det \TNIMatrix(\DesignMeasure_2, \Parameter_0)}
-\biggr)^{1/t}
+\biggr)^{1/\DimTransformedParameter}
 .
 ```
 
@@ -452,7 +465,7 @@ In this general case, the two integrals must be calculated separately:
 \RelEff(\DesignMeasure_1, \DesignMeasure_2)
 &=
 \exp\biggl(
-\frac{1}{t}\biggl\{
+\frac{1}{\DimTransformedParameter}\biggl\{
 \IntD{\ParameterSet^{(1)}}{
 \log\det \TNIMatrix^{(1)}(\DesignMeasure_1, \Parameter^{(1)})
 }{\PriorDensity^{(1)}(\Parameter^{(1)})}{\Parameter^{(1)}} \\

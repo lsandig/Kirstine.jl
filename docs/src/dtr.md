@@ -99,7 +99,7 @@ mutable struct DoseTimeCovariate <: Covariate
 end
 
 Kirstine.unit_length(m::DTRMod) = m.m
-function Kirstine.update_model_vcov!(s, c::DoseTimeCovariate, m::DTRMod)
+function Kirstine.update_model_vcov!(s, m::DTRMod, c::DoseTimeCovariate)
     fill!(s, 0.0)
     for j in 1:(m.m)
         s[j, j] = m.sigma^2
@@ -107,9 +107,9 @@ function Kirstine.update_model_vcov!(s, c::DoseTimeCovariate, m::DTRMod)
 end
 Kirstine.allocate_covariate(m::DTRMod) = DoseTimeCovariate(0, zeros(m.m))
 
-@define_vector_parameter Kirstine DTRPar a e e0 emax ec50
+@simple_parameter DTR a e e0 emax ec50
 
-function Kirstine.jacobianmatrix!(jm, m::DTRMod, c::DoseTimeCovariate, p::DTRPar)
+function Kirstine.jacobianmatrix!(jm, m::DTRMod, c::DoseTimeCovariate, p::DTRParameter)
     for j in 1:length(c.time)
         A = exp(-p.a * c.time[j]) # calculate exponentials only once
         B = exp(-p.e * c.time[j])
@@ -146,7 +146,7 @@ function draw_from_prior(n)
         2.0 .+ 0.50 .* randn(n),
         exp.(2.3 .+ 0.6 .* randn(n)),
     ) do a, e, e0, emax, ec50
-        return DTRPar(a = a, e = e, e0 = e0, emax = emax, ec50 = ec50)
+        return DTRParameter(a = a, e = e, e0 = e0, emax = emax, ec50 = ec50)
     end
     return PriorSample(pars)
 end
@@ -171,7 +171,8 @@ function plot_expected_response(d::DesignMeasure, dp::DesignProblem)
     g(c) = c.time
     h(c, p) = [response(c.dose, t, p) for t in c.time]
     xrange = range(0, 24; length = 101)
-    plt = plot_expected_function(f, g, h, xrange, d, dp.m, dp.cp, dp.pk)
+    cp = covariate_parameterization(dp)
+    plt = plot_expected_function(f, g, h, xrange, d, model(dp), cp, prior_knowledge(dp))
     plot!(plt; xguide = "time", yguide = "response", xticks = 0:4:24)
     return plt
 end
@@ -199,7 +200,7 @@ i.e. the design region is identical to the covariate set.
 ```@example main
 struct CopyBoth <: CovariateParameterization end
 
-function Kirstine.update_model_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::CopyBoth)
+function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::CopyBoth)
     c.dose = dp[1]
     c.time[1] = dp[2]
     return c
@@ -255,10 +256,15 @@ end
 The next steps are as in the [tutorial](tutorial.md):
 set up the design problem and solve it with direct maximization.
 
+!!! note
+    
+    Iteration numbers and swarm sizes in this vignette are hand-tuned to the lowest values that work.
+    This is in order to reduce the documentation's compilation time.
+
 ```@example main
 dp1 = DesignProblem(
-    design_criterion = DOptimality(),
-    design_region = DesignInterval(:dose => (0, 100), :time => (0, 24)),
+    criterion = DOptimality(),
+    region = DesignInterval(:dose => (0, 100), :time => (0, 24)),
     model = DTRMod(sigma = 1, m = 1),
     covariate_parameterization = CopyBoth(),
     prior_knowledge = prior,
@@ -266,12 +272,12 @@ dp1 = DesignProblem(
 
 Random.seed!(1357)
 st1 = DirectMaximization(
-    optimizer = Pso(swarmsize = 50, iterations = 100),
-    prototype = random_design(dp1.dr, 5),
+    optimizer = Pso(swarmsize = 30, iterations = 100),
+    prototype = random_design(region(dp1), 7),
 )
 
 Random.seed!(2468)
-s1, r1 = solve(dp1, st1; minpostime = 1e-3, minposdose = 1e-3)
+s1, r1 = solve(dp1, st1; minpostime = 1e-3, minposdose = 1e-3, mindist = 1e-2)
 s1
 ```
 
@@ -317,20 +323,15 @@ struct FixedDose <: CovariateParameterization
     dose::Float64
 end
 
-function Kirstine.update_model_covariate!(
-    c::DoseTimeCovariate,
-    dp,
-    m::DTRMod,
-    cp::FixedDose,
-)
+function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::FixedDose)
     c.dose = cp.dose
     c.time[1] = dp[1]
     return c
 end
 
 dp2 = DesignProblem(
-    design_criterion = DOptimality(),
-    design_region = DesignInterval(:time => (0, 24)),
+    criterion = DOptimality(),
+    region = DesignInterval(:time => (0, 24)),
     model = DTRMod(1, 1),
     covariate_parameterization = FixedDose(100),
     prior_knowledge = prior,
@@ -338,8 +339,8 @@ dp2 = DesignProblem(
 
 Random.seed!(111317)
 st2 = DirectMaximization(
-    optimizer = Pso(swarmsize = 50, iterations = 100),
-    prototype = random_design(dp2.dr, 5),
+    optimizer = Pso(swarmsize = 30, iterations = 50),
+    prototype = random_design(region(dp2), 5),
 )
 
 Random.seed!(14916)
@@ -380,20 +381,15 @@ struct FixedTimes <: CovariateParameterization
     time::Vector{Float64}
 end
 
-function Kirstine.update_model_covariate!(
-    c::DoseTimeCovariate,
-    dp,
-    m::DTRMod,
-    cp::FixedTimes,
-)
+function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::FixedTimes)
     c.dose = dp[1]
     c.time .= cp.time
     return c
 end
 
 dp3 = DesignProblem(
-    design_criterion = DOptimality(),
-    design_region = DesignInterval(:dose => (0, 100)),
+    criterion = DOptimality(),
+    region = DesignInterval(:dose => (0, 100)),
     model = DTRMod(1, 13), # measurements every two hours
     covariate_parameterization = FixedTimes(0:2:24),
     prior_knowledge = prior,
@@ -401,12 +397,12 @@ dp3 = DesignProblem(
 
 Random.seed!(9630)
 st3 = DirectMaximization(
-    optimizer = Pso(swarmsize = 50, iterations = 100),
-    prototype = random_design(dp3.dr, 5),
+    optimizer = Pso(swarmsize = 25, iterations = 20),
+    prototype = equidistant_design(region(dp3), 5),
 )
 
 Random.seed!(1827)
-s3, r3 = solve(dp3, st3)
+s3, r3 = solve(dp3, st3; minweight = 1e-4)
 s3
 ```
 
@@ -456,7 +452,7 @@ For this setup we need to think about uniqueness again.
 ```@example main
 struct EquidistantTimes <: CovariateParameterization end
 
-function Kirstine.update_model_covariate!(
+function Kirstine.map_to_covariate!(
     c::DoseTimeCovariate,
     dp,
     m::DTRMod,
@@ -498,8 +494,8 @@ function Kirstine.simplify_unique(
 end
 
 dp4 = DesignProblem(
-    design_criterion = DOptimality(),
-    design_region = DesignInterval(:dose => (0, 100), :Δt => (0, 2)),
+    criterion = DOptimality(),
+    region = DesignInterval(:dose => (0, 100), :Δt => (0, 2)),
     model = DTRMod(1, 13),
     covariate_parameterization = EquidistantTimes(),
     prior_knowledge = prior,
@@ -507,12 +503,12 @@ dp4 = DesignProblem(
 
 Random.seed!(124816)
 st4a = DirectMaximization(
-    optimizer = Pso(swarmsize = 50, iterations = 100),
-    prototype = random_design(dp4.dr, 5),
+    optimizer = Pso(swarmsize = 25, iterations = 75),
+    prototype = random_design(region(dp4), 5),
 )
 
 Random.seed!(112358)
-s4a, r4a = solve(dp4, st4a)
+s4a, r4a = solve(dp4, st4a; minposdose = 1e-3)
 gd4a = plot_gateauxderivative(s4a, dp4; legend = :bottomleft)
 savefig_nothing(gd4a, "dtr-gd4a.png") # hide
 ```
@@ -554,13 +550,13 @@ we can hope that it gives us the solution after a few steps.
 ```@example main
 st4b = Exchange(
     candidate = s4a,
-    steps = 5,
-    od = Pso(swarmsize = 50, iterations = 20),
-    ow = Pso(swarmsize = 50, iterations = 20),
+    steps = 8,
+    optimizer_direction = Pso(swarmsize = 25, iterations = 10),
+    optimizer_weight = Pso(swarmsize = 25, iterations = 10),
 )
 
 Random.seed!(314)
-s4b, r4b = solve(dp4, st4b; minweight = 1e-3, mindist = 1e-2)
+s4b, r4b = solve(dp4, st4b; minposdose = 1e-3, mindist = 2e-2)
 pr4b = plot(r4b)
 savefig_nothing(pr4b, "dtr-pr4b.png") # hide
 ```
@@ -611,7 +607,7 @@ struct LogEquidistantTimes <: CovariateParameterization
     b::Float64
 end
 
-function Kirstine.update_model_covariate!(
+function Kirstine.map_to_covariate!(
     c::DoseTimeCovariate,
     dp,
     m::DTRMod,
@@ -654,21 +650,21 @@ function Kirstine.simplify_unique(
 end
 
 dp5 = DesignProblem(
-    design_criterion = DOptimality(),
+    criterion = DOptimality(),
     model = DTRMod(1, 13),
     covariate_parameterization = LogEquidistantTimes(sqrt(2)),
-    design_region = DesignInterval(:dose => (0, 100), :Δt => (0, 24 / sqrt(2)^11)),
+    region = DesignInterval(:dose => (0, 100), :Δt => (0, 24 / sqrt(2)^11)),
     prior_knowledge = prior,
 )
 
 Random.seed!(132435)
 st5 = DirectMaximization(
-    optimizer = Pso(swarmsize = 50, iterations = 100),
-    prototype = random_design(dp5.dr, 5),
+    optimizer = Pso(swarmsize = 40, iterations = 80),
+    prototype = random_design(region(dp5), 5),
 )
 
 Random.seed!(6283)
-s5, r5 = solve(dp5, st5; mindist = 1e-3, minweight = 1e-3)
+s5, r5 = solve(dp5, st5; mindist = 1e-3, minweight = 1e-3, minposdelta = 1e-3)
 s5
 ```
 

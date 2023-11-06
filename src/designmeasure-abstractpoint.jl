@@ -17,6 +17,9 @@ struct SignedMeasure <: AbstractPointDifference
     end
 end
 
+# analogous accessor to points(d::DesignMeasure)
+atoms(s::SignedMeasure) = eachcol(s.atoms)
+
 struct DesignConstraints{N,T<:DesignRegion{N}} <: AbstractConstraints
     dr::T
     fixw::Vector{Bool}
@@ -54,37 +57,25 @@ function DesignConstraints(
     return DesignConstraints(dr, fixw, fixp)
 end
 
-function check_compatible(d::DesignMeasure, dr::DesignInterval)
-    lb = dr.lowerbound
-    ub = dr.upperbound
+function check_compatible(d::DesignMeasure, dr::DesignRegion{N}) where N
     for dp in points(d)
-        if length(dp) != length(lb)
+        if length(dp) != N
             error("design point length must match design region dimension")
         end
-        if any(dp .< lb) || any(dp .> ub)
-            sandwich = hcat([:lb, :dp, :ub], permutedims([[lb...] dp [ub...]]))
-            # error() does not pretty print matrices, so we manually format it
-            b = IOBuffer()
-            show(b, "text/plain", sandwich)
-            sstr = String(take!(b))
-            error("design point is outside design region\n $sstr")
+        if !isinside(dp, dr)
+            @error "" dp dr
+            error("design point is outside design region")
         end
     end
     return true
 end
 
-function ap_random_point!(
-    d::DesignMeasure,
-    c::DesignConstraints{N,DesignInterval{N}},
-) where N
+function ap_rand!(d::DesignMeasure, c::DesignConstraints)
     K = numpoints(d)
-    scl = c.dr.upperbound .- c.dr.lowerbound
     pts = points(d)
     for k in 1:K
         if !c.fixp[k]
-            rand!(pts[k])
-            pts[k] .*= scl
-            pts[k] .+= c.dr.lowerbound
+            random_designpoint!(pts[k], c.dr)
         end
     end
     if !all(c.fixw)
@@ -115,7 +106,7 @@ function ap_random_point!(
     return d
 end
 
-function ap_difference!(v::SignedMeasure, p::DesignMeasure, q::DesignMeasure)
+function ap_diff!(v::SignedMeasure, p::DesignMeasure, q::DesignMeasure)
     v.weights .= p.weights .- q.weights
     v.atoms .= p.points .- q.points
     return v
@@ -131,19 +122,34 @@ function ap_as_difference(p::DesignMeasure)
     return SignedMeasure(deepcopy(p.points), deepcopy(p.weights))
 end
 
-function ap_random_difference!(v::SignedMeasure)
+function ap_dist(p::DesignMeasure, q::DesignMeasure)
+    acc = 0.0
+    for i in 1:length(p.points)
+        acc += (p.points[i] - q.points[i])^2
+    end
+    for k in 1:(length(p.weights) - 1)
+        acc += (p.weights[k] - q.weights[k])^2
+    end
+    return sqrt(acc)
+end
+
+function ap_rand!(v::SignedMeasure, lb::Real, ub::Real)
     rand!(v.weights)
+    v.weights .*= (ub - lb)
+    v.weights .+= lb
     rand!(v.atoms)
+    v.atoms .*= (ub - lb)
+    v.atoms .+= lb
     return v
 end
 
-function ap_mul_hadamard!(v1::SignedMeasure, v2::SignedMeasure)
+function ap_mul!(v1::SignedMeasure, v2::SignedMeasure)
     v1.weights .*= v2.weights
     v1.atoms .*= v2.atoms
     return v1
 end
 
-function ap_mul_scalar!(v::SignedMeasure, a::Real)
+function ap_mul!(v::SignedMeasure, a::Real)
     v.weights .*= a
     v.atoms .*= a
     return v
@@ -155,16 +161,20 @@ function ap_add!(v1::SignedMeasure, v2::SignedMeasure)
     return v1
 end
 
-function ap_move!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
+function ap_add!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
     # ignore velocity components in directions that correspond to fixed weights or points
     move_handle_fixed!(v, c.fixw, c.fixp)
     # handle intersections: find maximal 0<=t<=1 such that p+tv remains in the search volume
     t = move_how_far(p, v, c.dr)
+    # treat a very small t as zero to reduce numerical inaccuracies in the next step
+    if t < 1e-8
+        t = 0.0
+    end
     # Then, set p to p + tv
     move_add_v!(p, t, v, c.dr, c.fixw)
     # Stop the particle if the boundary was hit.
     if t != 1.0
-        ap_mul_scalar!(v, 0)
+        ap_mul!(v, 0)
     end
     # check that we have not accidentally moved outside
     check_compatible(p, c.dr)
@@ -212,59 +222,45 @@ function move_handle_fixed!(v::SignedMeasure, fixw, fixp)
     return v
 end
 
-function move_how_far(p::DesignMeasure, v::SignedMeasure, dr::DesignInterval{N}) where N
+function move_how_far(p::DesignMeasure, v::SignedMeasure, dr::DesignRegion{N}) where N
     t = 1.0
+    # design region constraints
     K = numpoints(p)
-    # box constraints
+    pts = points(p)
+    ats = atoms(v)
+    # For each designpoint figure out how far we can go along v.
+    # The minimum of these lengths is how far we can go overall.
     for k in 1:K
-        for j in 1:N
-            t = how_far_left(p.points[j, k], t, v.atoms[j, k], dr.lowerbound[j])
-            t = how_far_right(p.points[j, k], t, v.atoms[j, k], dr.upperbound[j])
-        end
+        t = min(t, move_designpoint_how_far(pts[k], ats[k], dr))
     end
     # simplex constraints
+    #  * lower bounds are zero
     for k in 1:(K - 1) # ingore implicit last weight
-        t = how_far_left(p.weights[k], t, v.weights[k], 0.0)
+        s = p.weights[k] + t * v.weights[k] < 0 ? -p.weights[k] / v.weights[k] : t
+        t = min(s, t)
     end
+    #  * upper bound for sum of first K-1 elements is one
     sum_x = 1.0 - p.weights[K]
     sum_v = @views sum(v.weights[1:(K - 1)])
-    t = how_far_simplexdiag(sum_x, t, sum_v)
+    s = sum_x + t * sum_v > 1 ? (1 - sum_x) / sum_v : t
+    t = min(s, t)
     return t
-end
-
-# How far can we go from x in the direction of x + tv, without landing right of ub?
-# if x + tv <= ub, return `t`; else return `s` such that x + sv == ub
-function how_far_right(x, t, v, ub)
-    return x + t * v > ub ? (ub - x) / v : t
-end
-
-# How far can we go from x in the direction of x + tv, without landing left of lb?
-# if x + tv >= lb, return `t`; else return `s` such that x + sv == lb
-function how_far_left(x, t, v, lb)
-    return x + t * v < lb ? (lb - x) / v : t
-end
-
-# How far can we go from x in the direction of x + tv, without crossing the
-# diagonal face of the simplex?
-# Note that the simplex here is {(x_1,...,x_{K-1}) : 0 <= x_k, sum_{k=1}{K-1} x_k <= 1}.
-# if sum_x + t * sum_v <= 1, return `t`; else return `s` such that sum_x + s*sum_v == 1
-function how_far_simplexdiag(sum_x, t, sum_v)
-    return sum_x + t * sum_v > one(sum_x) ? (one(sum_x) - sum_x) / sum_v : t
 end
 
 function move_add_v!(
     p::DesignMeasure,
     t,
     v::SignedMeasure,
-    dr::DesignInterval{N},
+    dr::DesignRegion{N},
     fixw,
 ) where N
     K = numpoints(p)
     # first for the design points ...
-    p.points .+= t .* v.atoms
-    # Due to rounding errors, design points can be just slightly outside the design
-    # interval. We fix this here.
-    p.points .= min.(max.(p.points, dr.lowerbound), dr.upperbound)
+    pts = points(p)
+    ats = atoms(v)
+    for k in 1:K
+        move_designpoint!(pts[k], t, ats[k], dr)
+    end
     # ... then for the weights.
     p.weights .+= t .* v.weights
     weight_K = 1.0

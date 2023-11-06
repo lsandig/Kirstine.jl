@@ -13,8 +13,8 @@ include("example-compartment.jl")
     @testset "solve" begin
         # check that solution is sorted and simplified
         let dp = DesignProblem(;
-                design_criterion = DOptimality(),
-                design_region = DesignInterval(:dose => (0, 10)),
+                criterion = DOptimality(),
+                region = DesignInterval(:dose => (0, 10)),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
                 prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
@@ -30,8 +30,8 @@ include("example-compartment.jl")
             @test issorted(reduce(vcat, points(d)))
             # ... and simplified
             @test numpoints(d) == 3
-            # states should be traced (initial + 20 iterations)
-            @test length(r.or.trace_state) == 21
+            # states should be traced (20 iterations)
+            @test length(optimization_result(r).trace_state) == 20
 
             # `minposdist` doesn't exist, the correct argument name is `mindist`. Because we
             # have not implemented `simplify_unique()` for EmaxModel, the generic method
@@ -58,16 +58,16 @@ include("example-compartment.jl")
         # Atkinson et al. example
         let _ = seed!(4711),
             # prior guess for locally optimal design
-            g0 = PriorSample([TPCPar(; a = 4.298, e = 0.05884, s = 21.80)]),
+            g0 = PriorSample([TPCParameter(; a = 4.298, e = 0.05884, s = 21.80)]),
             # a draw from the strongly informative prior
             g1 = draw_from_prior(1000, 2),
             t_id = Identity(),
             t_auc = DeltaMethod(Dauc),
             dp_for(pk, trafo) = DesignProblem(;
-                design_criterion = DOptimality(),
+                criterion = DOptimality(),
                 # not used in efficiency calculation!
-                design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(; sigma = 1),
+                region = DesignInterval(:time => [0, 48]),
+                model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
                 prior_knowledge = pk,
                 transformation = trafo,
@@ -84,11 +84,11 @@ include("example-compartment.jl")
             dp7 = dp_for(g1, t_auc),
             # swap out criterion
             dp6a = DesignProblem(;
-                design_region = dp6.dr,
-                model = dp6.m,
-                covariate_parameterization = dp6.cp,
-                design_criterion = AOptimality(),
-                prior_knowledge = dp6.pk,
+                region = region(dp6),
+                model = model(dp6),
+                covariate_parameterization = covariate_parameterization(dp6),
+                criterion = AOptimality(),
+                prior_knowledge = prior_knowledge(dp6),
             )
 
             # Compare with published efficiencies in Table 5. Due to Monte-Carlo uncertainty
@@ -117,22 +117,22 @@ include("example-compartment.jl")
     @testset "shannon_information" begin
         # Atkinson et al. locally optimal example
         let dp = DesignProblem(;
-                design_region = DesignInterval(:time => [0, 48]),
-                model = TPCMod(; sigma = 1),
+                region = DesignInterval(:time => [0, 48]),
+                model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                design_criterion = DOptimality(),
+                criterion = DOptimality(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
-                    TPCPar(; a = 4.298, e = 0.05884, s = 21.80),
+                    TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
                 ]),
                 transformation = Identity(),
             ),
             dpa = DesignProblem(;
-                design_region = dp.dr,
-                model = dp.m,
-                covariate_parameterization = dp.cp,
-                design_criterion = AOptimality(),
-                prior_knowledge = dp.pk,
+                region = region(dp),
+                model = model(dp),
+                covariate_parameterization = covariate_parameterization(dp),
+                criterion = AOptimality(),
+                prior_knowledge = prior_knowledge(dp),
             ),
             d1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             c = 3 / 2 * (log(2 * pi) - 1),

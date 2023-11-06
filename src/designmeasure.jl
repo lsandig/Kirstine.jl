@@ -243,7 +243,7 @@ function Base.show(io::IO, ::MIME"text/plain", d::DesignMeasure)
 end
 
 """
-    sort_designpoints(d::DesignMeasure; rev::Bool = false)
+    sort_points(d::DesignMeasure; rev::Bool = false)
 
 Return a representation of `d` where the design points are sorted lexicographically.
 
@@ -252,7 +252,7 @@ See also [`sort_weights`](@ref).
 # Examples
 
 ```jldoctest
-julia> sort_designpoints(uniform_design([[3, 4], [2, 1], [1, 1], [2, 3]]))
+julia> sort_points(uniform_design([[3, 4], [2, 1], [1, 1], [2, 3]]))
 DesignMeasure(
  [1.0, 1.0] => 0.25,
  [2.0, 1.0] => 0.25,
@@ -261,7 +261,7 @@ DesignMeasure(
 )
 ```
 """
-function sort_designpoints(d::DesignMeasure; rev::Bool = false)
+function sort_points(d::DesignMeasure; rev::Bool = false)
     # note: no (deep)copies needed because indexing with `p` generates a copy
     dp = points(d)
     w = weights(d)
@@ -279,7 +279,7 @@ end
 Return a representation of `d` where the design points are sorted by their
 corresponding weights.
 
-See also [`sort_designpoints`](@ref).
+See also [`sort_points`](@ref).
 
 # Examples
 
@@ -421,28 +421,30 @@ function simplify_unique(
 end
 
 """
-    simplify_merge(d::DesignMeasure, dr::DesignInterval, mindist::Real)
+    simplify_merge(d::DesignMeasure, dr::DesignRegion, mindist::Real)
 
 Merge designpoints with a normalized distance smaller or equal to `mindist`.
 
-The design points are first transformed into the unit (hyper)cube.
+The design points are first transformed into the unit (hyper)cube
+by shifting and scaling them according to the bounding box of the design region.
 The argument `mindist` is intepreted relative to this unit cube,
-i.e. only `0 < mindist < sqrt(N)` make sense for a design interval of dimension `N`.
+i.e. only `0 < mindist < sqrt(N)` make sense for a design region of dimension `N`.
 
 The following two steps are repeated until all points are more than `mindist` apart:
 
  1. All pairwise euclidean distances are calculated.
  2. The two points closest to each other are averaged with their relative weights
 
-Finally the design points are scaled back into the original design interval.
+Finally the design points are scaled and shifted back into the original design region.
 """
-function simplify_merge(d::DesignMeasure, dr::DesignInterval, mindist::Real)
+function simplify_merge(d::DesignMeasure, dr::DesignRegion, mindist::Real)
     if numpoints(d) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
-    # scale design interval into unit cube
-    width = collect(upperbound(dr) .- lowerbound(dr))
-    dps = [(dp .- lowerbound(dr)) ./ width for dp in points(d)]
+    # scale bounding box of design region into unit cube
+    lb, ub = bounding_box(dr)
+    width = collect(lb .- ub)
+    dps = [(dp .- lb) ./ width for dp in points(d)]
     ws = weights(d)
     cur_min_dist = 0
     while cur_min_dist <= mindist
@@ -461,6 +463,6 @@ function simplify_merge(d::DesignMeasure, dr::DesignInterval, mindist::Real)
         end
     end
     # scale back
-    dps = [(dp .* width) .+ lowerbound(dr) for dp in dps]
+    dps = [(dp .* width) .+ lb for dp in dps]
     return DesignMeasure(dps, ws)
 end
