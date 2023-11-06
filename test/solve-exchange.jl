@@ -20,8 +20,8 @@ include("example-emax.jl")
             od = Pso(; iterations = 20, swarmsize = 10),
             ow = Pso(; iterations = 20, swarmsize = 10),
             str1 = Exchange(;
-                ow = ow,
-                od = od,
+                optimizer_weight = ow,
+                optimizer_direction = od,
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 3,
             ),
@@ -33,8 +33,8 @@ include("example-emax.jl")
             # design points. We check this here by starting with a candidate that has the
             # correct design points, but unequal weights.
             str2 = Exchange(;
-                ow = ow,
-                od = od,
+                optimizer_weight = ow,
+                optimizer_direction = od,
                 candidate = DesignMeasure([[0], [2.5], [10]], [0.6, 0.3, 0.1]),
                 steps = 1,
             ),
@@ -42,14 +42,14 @@ include("example-emax.jl")
             r2 = Kirstine.solve_with(dp, str2, false),
             # prototypes incompatible with design region
             str3 = Exchange(;
-                ow = ow,
-                od = od,
+                optimizer_weight = ow,
+                optimizer_direction = od,
                 candidate = uniform_design([[0], [20]]),
                 steps = 1,
             ),
             str4 = Exchange(;
-                ow = ow,
-                od = od,
+                optimizer_weight = ow,
+                optimizer_direction = od,
                 candidate = uniform_design([[0, 1], [1, 0]]),
                 steps = 1,
             )

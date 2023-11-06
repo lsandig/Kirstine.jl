@@ -14,15 +14,15 @@ This is a variant of the basic idea in [^YBT13].
 """
 struct Exchange{Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,Any}} <:
        ProblemSolvingStrategy
-    od::Tod
-    ow::Tow
+    optimizer_direction::Tod
+    optimizer_weight::Tow
     steps::Int64
     candidate::DesignMeasure
     simplify_args::Td
     @doc """
         Exchange(;
-            od::Optimizer,
-            ow::Optimizer,
+            optimizer_direction::Optimizer,
+            optimizer_weight::Optimizer,
             steps::Integer,
             candidate::DesignMeasure,
             simplify_args::Dict,
@@ -32,12 +32,12 @@ struct Exchange{Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,Any}} <:
     starting with `r = candidate`:
 
      1. [`simplify`](@ref) the design `r`, passing along `sargs`.
-     2. Use the optimizer `od` to find the direction (one-point design / Dirac measure) `d`
+     2. Use `optimizer_direction` to find the direction (one-point design / Dirac measure) `d`
         of highest [`gateauxderivative`](@ref) at `r`.
-        The vector of `prototypes` that is used for initializing `od`
+        The vector of `prototypes` that is used for initializing `optimizer_direction`
         is constructed from one-point designs at the design points of `r`.
         See the [`Optimizer`](@ref)s for algorithm-specific details.
-     3. Use the optimizer `ow` to re-calculcate optimal weights
+     3. Use `optimizer_weight` to re-calculcate optimal weights
         of a [`mixture`](@ref) of `r` and `d` for the [`DesignCriterion`](@ref).
         This is implemented as a call to [`solve`](@ref)
         with the [`DirectMaximization`](@ref) strategy
@@ -47,13 +47,19 @@ struct Exchange{Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,Any}} <:
     The return value of [`solve`](@ref) for this strategy is an [`ExchangeResult`](@ref).
     """
     function Exchange(;
-        od::Tod,
-        ow::Tow,
+        optimizer_direction::Tod,
+        optimizer_weight::Tow,
         steps::Integer,
         candidate::DesignMeasure,
         simplify_args::Td = Dict{Symbol,Any}(),
     ) where {Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,Any}}
-        new{Tod,Tow,Td}(od, ow, steps, candidate, simplify_args)
+        new{Tod,Tow,Td}(
+            optimizer_direction,
+            optimizer_weight,
+            steps,
+            candidate,
+            simplify_args,
+        )
     end
 end
 
@@ -103,7 +109,7 @@ function optimization_results_weight(er::ExchangeResult)
 end
 
 function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
-    (; candidate, ow, od, steps, simplify_args) = strategy
+    (; candidate, optimizer_weight, optimizer_direction, steps, simplify_args) = strategy
     check_compatible(candidate, region(dp))
     pk = prior_knowledge(dp)
     cp = covariate_parameterization(dp)
@@ -124,7 +130,13 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
         gc = gateaux_constants(criterion(dp), res, m, cp, pk, tc, normal_approximation(dp))
         # find direction of steepest ascent
         gd(d) = gateauxderivative!(wm, c, gc, d, m, cp, pk, normal_approximation(dp))
-        or_gd = optimize(od, gd, dir_prot, constraints; trace_state = trace_state)
+        or_gd = optimize(
+            optimizer_direction,
+            gd,
+            dir_prot,
+            constraints;
+            trace_state = trace_state,
+        )
         d = or_gd.maximizer
         # append the new atom
         K = numpoints(res)
@@ -137,7 +149,11 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
             res = mixture(1 / K, d, res)
         end
         # optimize weights
-        wstr = DirectMaximization(; optimizer = ow, prototype = res, fixedpoints = 1:K)
+        wstr = DirectMaximization(;
+            optimizer = optimizer_weight,
+            prototype = res,
+            fixedpoints = 1:K,
+        )
         _, rw = solve(dp, wstr; trace_state = trace_state, simplify_args...)
         res = solution(rw)
         return or_gd, optimization_result(rw)

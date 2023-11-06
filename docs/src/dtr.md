@@ -561,8 +561,8 @@ we can hope that it gives us the solution after a few steps.
 st4b = Exchange(
     candidate = s4a,
     steps = 8,
-    od = Pso(swarmsize = 25, iterations = 10),
-    ow = Pso(swarmsize = 25, iterations = 10),
+    optimizer_direction = Pso(swarmsize = 25, iterations = 10),
+    optimizer_weight = Pso(swarmsize = 25, iterations = 10),
 )
 
 Random.seed!(314)
