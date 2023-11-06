@@ -28,8 +28,8 @@ using Kirstine
             dref = :(
                 function Kirstine.update_model_vcov!(
                     s::Matrix{Float64},
-                    c::FooCovariate,
                     m::FooModel,
+                    c::FooCovariate,
                 )
                     s[1, 1] = m.sigma^2
                     return s

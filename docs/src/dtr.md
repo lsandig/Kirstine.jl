@@ -99,7 +99,7 @@ mutable struct DoseTimeCovariate <: Covariate
 end
 
 Kirstine.unit_length(m::DTRMod) = m.m
-function Kirstine.update_model_vcov!(s, c::DoseTimeCovariate, m::DTRMod)
+function Kirstine.update_model_vcov!(s, m::DTRMod, c::DoseTimeCovariate)
     fill!(s, 0.0)
     for j in 1:(m.m)
         s[j, j] = m.sigma^2

@@ -41,7 +41,7 @@ function objective!(
 )
     for k in 1:length(c)
         map_to_covariate!(c[k], points(d)[k], m, cp)
-        update_model_vcov!(wm.m_x_m[k], c[k], m)
+        update_model_vcov!(wm.m_x_m[k], m, c[k])
         potrf!('U', wm.m_x_m[k])
     end
     # When the information matrix is singular, the objective function is undefined. Lower
@@ -76,7 +76,7 @@ function gateauxderivative!(
     na::NormalApproximation,
 )
     map_to_covariate!(c[1], points(direction)[1], m, cp)
-    update_model_vcov!(wm.m_x_m[1], c[1], m)
+    update_model_vcov!(wm.m_x_m[1], m, c[1])
     potrf!('U', wm.m_x_m[1])
     acc = 0
     for i in 1:length(pk.p)
@@ -150,7 +150,7 @@ function informationmatrix(
     # Note: t = 1 is a dummy value, no trafo will be applied
     wm = WorkMatrices(numpoints(d), unit_length(m), dimension(p), 1)
     for k in 1:length(c)
-        Kirstine.update_model_vcov!(wm.m_x_m[k], c[k], m)
+        Kirstine.update_model_vcov!(wm.m_x_m[k], m, c[k])
         potrf!('U', wm.m_x_m[k])
     end
     informationmatrix!(wm.r_x_r, wm.m_x_r, weights(d), m, wm.m_x_m, c, p, na)
@@ -170,7 +170,7 @@ function inverse_information_matrices(
     # The transformed parameter dimension t = 1 is a dummy argument here.
     wm = WorkMatrices(length(weights(d)), unit_length(m), parameter_dimension(pk), 1)
     for k in 1:length(c)
-        Kirstine.update_model_vcov!(wm.m_x_m[k], c[k], m)
+        Kirstine.update_model_vcov!(wm.m_x_m[k], m, c[k])
         potrf!('U', wm.m_x_m[k])
     end
     # The documentation of `potri!` is not very clear that it expects a Cholesky factor as
