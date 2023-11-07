@@ -105,11 +105,11 @@ end
         <:Transformation,
         <:NormalApproximation,
     };
-    subdivisions = 101,
+    n_grid = 101,
 )
     (; d, dp) = dplot
     lb, ub = bounding_box(region(dp))
-    range_x = range(lb[1], ub[1]; length = subdivisions[1])
+    range_x = range(lb[1], ub[1]; length = n_grid[1])
     dsgpts = collect(Iterators.flatten(points(d)))
     x_grid = sort(vcat(range_x, dsgpts))
     dp_grid = [[x] for x in x_grid]
@@ -140,18 +140,18 @@ end
         <:Transformation,
         <:NormalApproximation,
     };
-    subdivisions = (51, 51),
+    n_grid = (51, 51),
 )
     (; d, dp) = dplot
     # Calculate Gateaux derivative on a grid over the bounding box of region(dp).
     # Evaluate it only on those points that are inside and fill the rest with NaN,
     # which renders transparently in the heatmap.
     lb, ub = bounding_box(region(dp))
-    range_x = range(lb[1], ub[1]; length = subdivisions[1])
-    range_y = range(lb[2], ub[2]; length = subdivisions[2])
+    range_x = range(lb[1], ub[1]; length = n_grid[1])
+    range_y = range(lb[2], ub[2]; length = n_grid[2])
     xy_grid = collect.(Iterators.product(range_x, range_y))
     inside_dr = isinside.(xy_grid, Ref(region(dp)))
-    gd_grid = fill(NaN, subdivisions[1], subdivisions[2])
+    gd_grid = fill(NaN, n_grid[1], n_grid[2])
     # note: indexing produces a vector
     directions = [one_point_design([d...]) for d in xy_grid[inside_dr]]
     gd = gateauxderivative(d, directions, dp)
@@ -187,7 +187,7 @@ By default, `markersize` indicates the design weights.
 
 # Additional Keyword Arguments
 
-  - `subdivisions::Union{Integer, Tuple{Integer, Integer}}`: number of points in the grid.
+  - `n_grid::Union{Integer, Tuple{Integer, Integer}}`: number of points in the grid.
     Must match the dimension of the design region.
   - `label_formatter::Function`: a function for mapping a triple `(k, pt, w)`
     of an index, design point, and weight to a string for use as a label in the legend.
