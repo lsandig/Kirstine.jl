@@ -1,6 +1,7 @@
 # A Dose-Time-Response Model
 
 ```@setup main
+check_results = true
 # we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
 function savefig_nothing(plot, filename)
 	savefig(plot, filename)
@@ -281,6 +282,17 @@ s1, r1 = solve(dp1, st1; minpostime = 1e-3, minposdose = 1e-3, mindist = 1e-2)
 s1
 ```
 
+```@setup main
+s1 == DesignMeasure(
+ [0.0, 0.0] => 0.20053030795126028,
+ [14.310132703488692, 7.955127492395492] => 0.1981120909448802,
+ [61.493484624092964, 24.0] => 0.07683680630261552,
+ [99.99929278721804, 4.078314741840501] => 0.19747192713878975,
+ [100.0, 0.1730851666925906] => 0.1989417430614362,
+ [100.0, 23.998585546217786] => 0.12810712460101795,
+) || !check_results || error("not the expected result", s1)
+```
+
 For a two-dimensional design region,
 the gateaux derivative is plotted as a heatmap.
 
@@ -348,6 +360,16 @@ s2, r2 = solve(dp2, st2)
 s2
 ```
 
+```@setup main
+s2 == DesignMeasure(
+ [0.0] => 0.19963478041237373,
+ [0.15441476713296678] => 0.20006662802108233,
+ [2.2462632650730114] => 0.20067467321750979,
+ [13.338793671645664] => 0.19962045785683458,
+ [24.0] => 0.20000346049219964,
+) || !check_results || error("not the expected result", s2)
+```
+
 ```@example main
 gd2 = plot_gateauxderivative(s2, dp2)
 savefig_nothing(gd2, "dtr-gd2.png") # hide
@@ -404,6 +426,14 @@ st3 = DirectMaximization(
 Random.seed!(1827)
 s3, r3 = solve(dp3, st3; minweight = 1e-4)
 s3
+```
+
+```@setup main
+s3 == DesignMeasure(
+ [0.0] => 0.1051865637147946,
+ [15.949800420851398] => 0.4847347290784628,
+ [100.0] => 0.41007870720674255,
+) || !check_results || error("not the expected result", s3)
 ```
 
 ```@example main
@@ -513,6 +543,16 @@ gd4a = plot_gateauxderivative(s4a, dp4; legend = :bottomleft)
 savefig_nothing(gd4a, "dtr-gd4a.png") # hide
 ```
 
+```@setup main
+s4a == DesignMeasure(
+ [0.0, 2.0] => 0.11399148304475745,
+ [12.258680316012303, 0.9158234222042569] => 0.1538689805572158,
+ [18.960755545027716, 2.0] => 0.13167810034529936,
+ [99.99958420409529, 0.030724171006199445] => 0.2040522096868161,
+ [100.0, 2.0] => 0.39640922636591136,
+) || !check_results || error("not the expected result", s4a)
+```
+
 ![](dtr-gd4a.png)
 
 This does not look like the solution yet.
@@ -570,6 +610,17 @@ Let's look at the solution.
 
 ```@example main
 s4b
+```
+
+```@setup main
+s4b == DesignMeasure(
+ [0.0, 2.0] => 0.11595421077160159,
+ [12.095246532862653, 0.9020051699201544] => 0.1465380263694356,
+ [20.27545062157572, 2.0] => 0.14925799193530562,
+ [99.99945513048783, 0.02754160044996558] => 0.19042478359460396,
+ [100.0, 0.44096635340299606] => 0.061613664271518286,
+ [100.0, 2.0] => 0.33621132305753515,
+) || !check_results || error("not the expected result", s4b)
 ```
 
 ```@example main
@@ -668,6 +719,15 @@ s5, r5 = solve(dp5, st5; mindist = 1e-3, minweight = 1e-3, minposdelta = 1e-3)
 s5
 ```
 
+```@setup main
+s5 == DesignMeasure(
+ [0.0, 0.5303300858899102] => 0.10958860244868718,
+ [17.56761395230221, 0.5303275816838874] => 0.39920417186700025,
+ [99.99726947723131, 0.011673829992532737] => 0.05224177785883234,
+ [100.0, 0.5303300122682958] => 0.43896544782548036,
+) || !check_results || error("not the expected result", s5)
+```
+
 ```@example main
 gd5 = plot_gateauxderivative(s5, dp5; legend = :bottomleft)
 savefig_nothing(gd5, "dtr-gd5.png") # hide
@@ -690,6 +750,16 @@ under their respective design problems:
 ```@example main
 sol_prob = Iterators.zip([s1, s2, s3, s4b, s5], [dp1, dp2, dp3, dp4, dp5])
 eff = [efficiency(d1, d2, p1, p2) for (d1, p1) in sol_prob, (d2, p2) in sol_prob]
+```
+
+```@setup main
+eff == [
+1.0 1.4850650859043615 0.12650911830389935 0.0929991128162769 0.1016413811354574;
+0.6733711602889304 1.0 0.0851875917794263 0.06262292050293754 0.06844237474855235;
+7.904568567127365 11.738798798177912 1.0 0.7351178639382739 0.8034312664427488;
+10.752790749472375 15.96859411807681 1.3603260770220755 1.0 1.0929285028369422;
+9.838512511624579 14.610831428246891 1.2446615432675079 0.9149729350129259 1.0
+] || !check_results || error("not the expected result", eff)
 ```
 
 In this matrix, `d1` varies over rows and `d2` varies over columns.

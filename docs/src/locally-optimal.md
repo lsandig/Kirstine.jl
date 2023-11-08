@@ -1,6 +1,7 @@
 # Locally Optimal Design
 
 ```@setup main
+check_results = true
 # we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
 function savefig_nothing(plot, filename)
 	savefig(plot, filename)
@@ -88,6 +89,15 @@ s1, r1 = solve(dp, str1)
 s1
 ```
 
+```@setup main
+s1 == DesignMeasure(
+ [3.135435548592502e-5] => 0.25000767275725305,
+ [0.3207541465365837] => 0.25003991892306177,
+ [0.48364781547861957] => 0.24999249447251276,
+ [1.0] => 0.24995991384717237,
+) || !check_results || error("not the expected result", s1)
+```
+
 ```@example main
 gd = plot_gateauxderivative(s1, dp)
 savefig_nothing(gd, "locally-optimal-gd.png") # hide
@@ -125,6 +135,15 @@ str2 = DirectMaximization(
 Random.seed!(31415)
 s2, r2 = solve(dp, str2)
 s2
+```
+
+```@setup main
+s2 == DesignMeasure(
+ [0.0] => 0.25,
+ [0.32036023546981274] => 0.25,
+ [0.48370009596035385] => 0.25,
+ [1.0] => 0.25,
+) || !check_results || error("not the expected result", s2)
 ```
 
 [^LM07]: Gang Li and Dibyen Majumdar (2008). D-optimal designs for logistic models with three and four parameters. Journal of Statistical Planning and Inference, 138(7), 1950–1959. [doi:10.1016/j.jspi.2007.07.010](http://dx.doi.org/10.1016/j.jspi.2007.07.010)

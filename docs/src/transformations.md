@@ -21,6 +21,7 @@ and a scaling factor ``s``.
 The covariate ``\Covariate`` denotes the time in hours.
 
 ```@setup main
+check_results = true
 # we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
 function savefig_nothing(plot, filename)
 	savefig(plot, filename)
@@ -163,6 +164,14 @@ nothing # hide
 s_id
 ```
 
+```@setup main
+s_id == DesignMeasure(
+ [0.22886325049872897] => 0.3333144478760726,
+ [1.4181500168247514] => 0.33329978174892977,
+ [18.520007438612772] => 0.33338577037499756,
+) || !check_results || error("not the expected result", s_id)
+```
+
 ```@example main
 gd_id = plot_gateauxderivative(s_id, dp_id)
 savefig_nothing(gd_id, "transformations-gd-id.png") # hide
@@ -215,6 +224,14 @@ dp_auc = dp_for_trafo(DeltaMethod(Dauc))
 Random.seed!(1357)
 s_auc, r_auc = solve(dp_auc, dms)
 s_auc
+```
+
+```@setup main
+s_auc == DesignMeasure(
+ [0.24531677720907374] => 0.013165898968091254,
+ [1.499218615533174] => 0.038534397924271095,
+ [18.227704273038025] => 0.9482997031076377,
+) || !check_results || error("not the expected result", s_auc)
 ```
 
 ```@example main
@@ -279,6 +296,14 @@ s_ttm, r_ttm = solve(dp_ttm, dms)
 s_ttm
 ```
 
+```@setup main
+s_ttm == DesignMeasure(
+ [0.1785277717204147] => 0.6022152518991615,
+ [2.4347788334799083] => 0.2985274392389716,
+ [8.778030603264321] => 0.09925730886186684,
+) || !check_results || error("not the expected result", s_ttm)
+```
+
 ```@example main
 gd_ttm = plot_gateauxderivative(s_ttm, dp_ttm)
 savefig_nothing(gd_ttm, "transformations-gd-ttm.png") # hide
@@ -324,6 +349,14 @@ s_cmax, r_cmax = solve(dp_cmax, dms)
 s_cmax
 ```
 
+```@setup main
+s_cmax == DesignMeasure(
+ [0.3634701770982941] => 0.07255932607971026,
+ [1.14355863427162] => 0.9102152568783713,
+ [20.797213533057352] => 0.01722541704191838,
+) || !check_results || error("not the expected result", s_cmax)
+```
+
 ```@example main
 gd_cmax = plot_gateauxderivative(s_cmax, dp_cmax)
 savefig_nothing(gd_cmax, "transformations-gd-cmax.png") # hide
@@ -343,7 +376,11 @@ The location of this point makes intuitive sense,
 considering the prior expected time to maximum concentration:
 
 ```@example main
-mean(ttm, dp_cmax.pk.p)
+prior_expected_ttm = mean(ttm, dp_cmax.pk.p)
+```
+
+```@setup main
+prior_expected_ttm == 1.0272684144529458 || !check_results || error("not the expected result", prior_expected_ttm)
 ```
 
 ## Multivariate Functions
@@ -359,6 +396,14 @@ dp_both = dp_for_trafo(DeltaMethod(Dboth))
 Random.seed!(1357)
 s_both, r_both = solve(dp_both, dms)
 s_both
+```
+
+```@setup main
+s_both == DesignMeasure(
+ [0.23663824657919236] => 0.4173416078008837,
+ [1.3894258771295565] => 0.4978247422912806,
+ [18.91391407149987] => 0.0848336499078357,
+) || !check_results || error("not the expected result", s_both)
 ```
 
 ```@example main

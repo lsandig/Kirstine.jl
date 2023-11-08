@@ -1,6 +1,7 @@
 # New Design Criterion
 
 ```@setup main
+check_results = true
 # we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
 function savefig_nothing(plot, filename)
 	savefig(plot, filename)
@@ -303,6 +304,48 @@ gd1 = plot(
     plot_gateauxderivative(s2b, dp2b; title = "2b"),
 )
 savefig_nothing(gd1, "extend-criterion-gd1.png") # hide
+```
+
+```@setup main
+s1a == DesignMeasure(
+ [0.0] => 0.17605313466824343,
+ [0.03498798414860223] => 0.08344304160813153,
+ [0.2616383032984309] => 0.2456988438742072,
+ [0.49666377406537887] => 0.2450846449152469,
+ [0.9999998119304254] => 0.2497203349341709,
+) || error("not the expected result", s1a)
+
+s2a
+```
+
+```@setup main
+s2a == DesignMeasure(
+ [0.0] => 0.14765387506515715,
+ [0.029776312843391325] => 0.06478852276124816,
+ [0.27329979413971395] => 0.2954574699564493,
+ [0.4814631852647288] => 0.29703046484641177,
+ [1.0] => 0.19506966737073375,
+) || !check_results || error("not the expected result", s2a)
+```
+
+```@setup main
+s1b == DesignMeasure(
+ [0.0] => 0.17962034176078864,
+ [0.04461948295716912] => 0.0934736269518622,
+ [0.25627704567921966] => 0.23934177101306972,
+ [0.4958739526513957] => 0.23846947150228448,
+ [1.0] => 0.24909478877199498,
+) || !check_results || error("not the expected result", s1b)
+```
+
+```@setup main
+s2b == DesignMeasure(
+ [0.0] => 0.14264494461744706,
+ [0.046773454616330874] => 0.08797635657487007,
+ [0.2635807148765203] => 0.2901562502852753,
+ [0.47936857346476985] => 0.2848706752086476,
+ [1.0] => 0.19435177331375986,
+) || !check_results || error("not the expected result", s2b)
 ```
 
 ![](extend-criterion-gd1.png)

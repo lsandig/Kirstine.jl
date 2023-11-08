@@ -1,6 +1,7 @@
 # New Optimizer
 
 ```@setup main
+check_results = true
 # we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
 function savefig_nothing(plot, filename)
 	savefig(plot, filename)
@@ -548,6 +549,16 @@ Random.seed!(31415)
 s, r = solve(dp, strategy, minweight = 1e-3, mindist = 1e-2, trace_state = true)
 gd = plot_gateauxderivative(s, dp)
 savefig_nothing(gd, "extend-optimizer-gd.png") # hide
+```
+
+```@setup main
+s == DesignMeasure(
+ [0.0] => 0.1766174833331303,
+ [0.04349194595268831] => 0.09539535847442634,
+ [0.25624564723703674] => 0.24020288117533006,
+ [0.4955021418865948] => 0.23921125661155682,
+ [1.0] => 0.24857302040555654,
+) || !check_results || error("not the expected result", s)
 ```
 
 ![](extend-optimizer-gd.png)

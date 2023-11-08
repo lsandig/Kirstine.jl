@@ -1,6 +1,7 @@
 # New Design Regions
 
 ```@setup main
+check_results = true
 # we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
 function savefig_nothing(plot, filename)
 	savefig(plot, filename)
@@ -205,6 +206,16 @@ Random.seed!(2468)
 s1, r1 = solve(dp1, st1)
 gd1 = plot_gateauxderivative(s1, dp1)
 savefig_nothing(gd1, "extend-region-gd1.png") # hide
+```
+
+```@setup main
+s1 == DesignMeasure(
+ [0.001029620608683921, 11.929318957679424] => 0.2,
+ [13.533902355555727, 7.93358898138691] => 0.2,
+ [53.87418701936434, 0.30538124532231437] => 0.2,
+ [57.35717914215323, 23.869286781670308] => 0.2,
+ [90.6240950631477, 5.004163019530869] => 0.2,
+) || !check_results || error("not the expected result", s1)
 ```
 
 ![](extend-region-gd1.png)

@@ -1,6 +1,7 @@
 # A Simple Dose-Response Model
 
 ```@setup main
+check_results = true
 # we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
 function savefig_nothing(plot, filename)
 	savefig(plot, filename)
@@ -268,6 +269,18 @@ At the REPL, the solution is displayed as `designpoint => weight` pairs.
 s1
 ```
 
+```@setup main
+s1 == DesignMeasure(
+ [0.0] => 0.13404889547477042,
+ [0.010691842729708925] => 0.1077006446024656,
+ [0.28680117509990044] => 0.1385323232912528,
+ [0.35590085349128153] => 0.024903749604217627,
+ [0.3567666844285769] => 0.12742156052917672,
+ [0.49982025315652223] => 0.22264826193961815,
+ [1.0] => 0.24474456455849863,
+) || !check_results || error("not the expected result", s1)
+```
+
 Looking closely at `s1`,
 we notice that two design points are nearly identical:
 
@@ -284,6 +297,16 @@ and merge all design points that are less than some minimum distance apart.
 
 ```@example main
 s2 = sort_points(simplify(s1, dp, minweight = 1e-3, mindist = 2e-2))
+```
+
+```@setup main
+s2 == DesignMeasure(
+ [0.004763270091889071] => 0.24174954007723604,
+ [0.28680117509990044] => 0.1385323232912528,
+ [0.3566251292474773] => 0.15232531013339434,
+ [0.49982025315652223] => 0.22264826193961815,
+ [1.0] => 0.24474456455849863,
+) || !check_results || error("not the expected result", s2)
 ```
 
 Because this issue occurs frequently
@@ -361,7 +384,11 @@ that add up to ``\SampleSize``.
 This is achieved with the [`apportion`](@ref) function:
 
 ```@example main
-apportion(s2, 42)
+app = apportion(s2, 42)
+```
+
+```@setup main
+app == [10, 6, 7, 9, 10] || !check_results || error("not the expected result", app)
 ```
 
 This tells us to take `10` measurements at the first design point,

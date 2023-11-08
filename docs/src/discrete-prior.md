@@ -1,6 +1,7 @@
 # Discrete Priors With Non-Uniform Weights
 
 ```@setup main
+check_results = true
 # we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
 function savefig_nothing(plot, filename)
 	savefig(plot, filename)
@@ -94,6 +95,16 @@ strategy = DirectMaximization(
 Random.seed!(31415)
 s1, r1 = solve(dp, strategy, minweight = 1e-3, mindist = 1e-2)
 s1
+```
+
+```@setup main
+s1 == DesignMeasure(
+ [0.0] => 0.17962034176078864,
+ [0.04461948295716912] => 0.0934736269518622,
+ [0.25627704567921966] => 0.23934177101306972,
+ [0.4958739526513957] => 0.23846947150228448,
+ [1.0] => 0.24909478877199498,
+) || !check_results || error("not the expected result", s1)
 ```
 
 ```@example main
