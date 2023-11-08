@@ -54,6 +54,24 @@ include("example-compartment.jl")
             )
         end
     end
+
+    @testset "simplify" begin
+        let dp = DesignProblem(;
+                criterion = DOptimality(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            d = DesignMeasure([0 2.495 2.505 10], [0.492, 0.008, 0.008, 0.492]),
+            s = sort_points(simplify(d, dp; minweight = 1e-2, mindist = 1e-2))
+
+            @test objective(s, dp) > -Inf
+            @test points(s) == [[0], [2.5], [10]]
+            @test weights(s) == [0.492, 0.016, 0.492]
+        end
+    end
+
     @testset "efficiency" begin
         # Atkinson et al. example
         let _ = seed!(4711),

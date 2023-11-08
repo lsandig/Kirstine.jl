@@ -168,14 +168,14 @@ end
     simplify(d::DesignMeasure, dp::DesignProblem; minweight = 0, mindist = 0, uargs...)
 
 A wrapper that calls
-[`simplify_drop`](@ref),
 [`simplify_unique`](@ref),
-and [`simplify_merge`](@ref).
+[`simplify_merge`](@ref),
+and [`simplify_drop`](@ref) in that order.
 """
 function simplify(d::DesignMeasure, dp::DesignProblem; minweight = 0, mindist = 0, uargs...)
-    d = simplify_drop(d, minweight)
     d = simplify_unique(d, region(dp), model(dp), covariate_parameterization(dp); uargs...)
     d = simplify_merge(d, region(dp), mindist)
+    d = simplify_drop(d, minweight)
     return d
 end
 
