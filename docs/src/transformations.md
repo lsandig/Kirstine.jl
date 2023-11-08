@@ -169,7 +169,7 @@ s_id == DesignMeasure(
  [0.22886325049872897] => 0.3333144478760726,
  [1.4181500168247514] => 0.33329978174892977,
  [18.520007438612772] => 0.33338577037499756,
-) || !check_results || error("not the expected result", s_id)
+) || !check_results || error("not the expected result\n", s_id)
 ```
 
 ```@example main
@@ -231,7 +231,7 @@ s_auc == DesignMeasure(
  [0.24531677720907374] => 0.013165898968091254,
  [1.499218615533174] => 0.038534397924271095,
  [18.227704273038025] => 0.9482997031076377,
-) || !check_results || error("not the expected result", s_auc)
+) || !check_results || error("not the expected result\n", s_auc)
 ```
 
 ```@example main
@@ -301,7 +301,7 @@ s_ttm == DesignMeasure(
  [0.1785277717204147] => 0.6022152518991615,
  [2.4347788334799083] => 0.2985274392389716,
  [8.778030603264321] => 0.09925730886186684,
-) || !check_results || error("not the expected result", s_ttm)
+) || !check_results || error("not the expected result\n", s_ttm)
 ```
 
 ```@example main
@@ -354,7 +354,7 @@ s_cmax == DesignMeasure(
  [0.3634701770982941] => 0.07255932607971026,
  [1.14355863427162] => 0.9102152568783713,
  [20.797213533057352] => 0.01722541704191838,
-) || !check_results || error("not the expected result", s_cmax)
+) || !check_results || error("not the expected result\n", s_cmax)
 ```
 
 ```@example main
@@ -380,7 +380,7 @@ prior_expected_ttm = mean(ttm, dp_cmax.pk.p)
 ```
 
 ```@setup main
-prior_expected_ttm == 1.0272684144529458 || !check_results || error("not the expected result", prior_expected_ttm)
+prior_expected_ttm == 1.0272684144529458 || !check_results || error("not the expected result\n", prior_expected_ttm)
 ```
 
 ## Multivariate Functions
@@ -403,7 +403,7 @@ s_both == DesignMeasure(
  [0.23663824657919236] => 0.4173416078008837,
  [1.3894258771295565] => 0.4978247422912806,
  [18.91391407149987] => 0.0848336499078357,
-) || !check_results || error("not the expected result", s_both)
+) || !check_results || error("not the expected result\n", s_both)
 ```
 
 ```@example main

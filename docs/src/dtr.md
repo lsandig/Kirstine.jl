@@ -290,7 +290,7 @@ s1 == DesignMeasure(
  [99.99929278721804, 4.0783147418405] => 0.19747192713878975,
  [100.0, 0.1730851666925906] => 0.1989417430614362,
  [100.0, 23.998585546217786] => 0.12810712460101795,
-) || !check_results || error("not the expected result", s1)
+) || !check_results || error("not the expected result\n", s1)
 ```
 
 For a two-dimensional design region,
@@ -367,7 +367,7 @@ s2 == DesignMeasure(
  [2.2462632650730114] => 0.20067467321750979,
  [13.338793671645664] => 0.19962045785683458,
  [24.0] => 0.20000346049219964,
-) || !check_results || error("not the expected result", s2)
+) || !check_results || error("not the expected result\n", s2)
 ```
 
 ```@example main
@@ -433,7 +433,7 @@ s3 == DesignMeasure(
  [0.0] => 0.1051865637147946,
  [15.949800420851398] => 0.4847347290784628,
  [100.0] => 0.41007870720674255,
-) || !check_results || error("not the expected result", s3)
+) || !check_results || error("not the expected result\n", s3)
 ```
 
 ```@example main
@@ -550,7 +550,7 @@ s4a == DesignMeasure(
  [18.960755545027716, 2.0] => 0.13167810034529936,
  [99.99958420409529, 0.030724171006199445] => 0.2040522096868161,
  [100.0, 2.0] => 0.39640922636591136,
-) || !check_results || error("not the expected result", s4a)
+) || !check_results || error("not the expected result\n", s4a)
 ```
 
 ![](dtr-gd4a.png)
@@ -620,7 +620,7 @@ s4b == DesignMeasure(
  [99.99945513048785, 0.027541600449965585] => 0.1904247835946039,
  [100.0, 0.440966353402996] => 0.06161366427151828,
  [100.0, 2.0] => 0.3362113230575351,
-) || !check_results || error("not the expected result", s4b)
+) || !check_results || error("not the expected result\n", s4b)
 ```
 
 ```@example main
@@ -725,7 +725,7 @@ s5 == DesignMeasure(
  [17.56761395230221, 0.5303275816838873] => 0.3992041718670002,
  [99.99726947723131, 0.011673829992532737] => 0.05224177785883233,
  [100.0, 0.5303300122682958] => 0.43896544782548025,
-) || !check_results || error("not the expected result", s5)
+) || !check_results || error("not the expected result\n", s5)
 ```
 
 ```@example main
@@ -759,7 +759,7 @@ eff == [
 7.904568567127365 11.738798798177912 1.0 0.735117863938274 0.8034312664427489;
 10.752790749472375 15.96859411807681 1.360326077022075 1.0 1.0929285028369422;
 9.838512511624579 14.610831428246891 1.2446615432675077 0.914972935012926 1.0
-] || !check_results || error("not the expected result", eff)
+] || !check_results || error("not the expected result\n", eff)
 ```
 
 In this matrix, `d1` varies over rows and `d2` varies over columns.

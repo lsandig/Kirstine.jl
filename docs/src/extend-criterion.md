@@ -313,7 +313,7 @@ s1a == DesignMeasure(
  [0.2616383032984309] => 0.2456988438742072,
  [0.49666377406537887] => 0.2450846449152469,
  [0.9999998119304254] => 0.2497203349341709,
-) || error("not the expected result", s1a)
+) || error("not the expected result\n", s1a)
 
 s2a
 ```
@@ -325,7 +325,7 @@ s2a == DesignMeasure(
  [0.27329979413971395] => 0.2954574699564492,
  [0.4814631852647288] => 0.2970304648464117,
  [1.0] => 0.1950696673707337,
-) || !check_results || error("not the expected result", s2a)
+) || !check_results || error("not the expected result\n", s2a)
 ```
 
 ```@setup main
@@ -335,7 +335,7 @@ s1b == DesignMeasure(
  [0.25627704567921966] => 0.23934177101306972,
  [0.4958739526513957] => 0.23846947150228448,
  [1.0] => 0.24909478877199498,
-) || !check_results || error("not the expected result", s1b)
+) || !check_results || error("not the expected result\n", s1b)
 ```
 
 ```@setup main
@@ -345,7 +345,7 @@ s2b == DesignMeasure(
  [0.2635807148765203] => 0.29015625028527536,
  [0.47936857346476985] => 0.2848706752086477,
  [1.0] => 0.1943517733137599,
-) || !check_results || error("not the expected result", s2b)
+) || !check_results || error("not the expected result\n", s2b)
 ```
 
 ![](extend-criterion-gd1.png)

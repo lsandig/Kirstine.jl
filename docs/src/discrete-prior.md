@@ -104,7 +104,7 @@ s1 == DesignMeasure(
  [0.25627704567921966] => 0.23934177101306972,
  [0.4958739526513957] => 0.23846947150228448,
  [1.0] => 0.24909478877199498,
-) || !check_results || error("not the expected result", s1)
+) || !check_results || error("not the expected result\n", s1)
 ```
 
 ```@example main

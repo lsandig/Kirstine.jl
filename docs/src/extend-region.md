@@ -215,7 +215,7 @@ s1 == DesignMeasure(
  [53.87418701936434, 0.30538124532231437] => 0.2,
  [57.35717914215323, 23.869286781670308] => 0.2,
  [90.6240950631477, 5.004163019530869] => 0.2,
-) || !check_results || error("not the expected result", s1)
+) || !check_results || error("not the expected result\n", s1)
 ```
 
 ![](extend-region-gd1.png)

@@ -278,7 +278,7 @@ s1 == DesignMeasure(
  [0.3567666844285769] => 0.12742156052917672,
  [0.49982025315652223] => 0.22264826193961815,
  [1.0] => 0.24474456455849863,
-) || !check_results || error("not the expected result", s1)
+) || !check_results || error("not the expected result\n", s1)
 ```
 
 Looking closely at `s1`,
@@ -306,7 +306,7 @@ s2 == DesignMeasure(
  [0.3566251292474773] => 0.15232531013339434,
  [0.49982025315652223] => 0.22264826193961815,
  [1.0] => 0.24474456455849863,
-) || !check_results || error("not the expected result", s2)
+) || !check_results || error("not the expected result\n", s2)
 ```
 
 Because this issue occurs frequently
@@ -388,7 +388,7 @@ app = apportion(s2, 42)
 ```
 
 ```@setup main
-app == [10, 6, 7, 9, 10] || !check_results || error("not the expected result", app)
+app == [10, 6, 7, 9, 10] || !check_results || error("not the expected result\n", app)
 ```
 
 This tells us to take `10` measurements at the first design point,

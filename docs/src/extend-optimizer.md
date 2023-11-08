@@ -558,7 +558,7 @@ s == DesignMeasure(
  [0.25624564723703674] => 0.24020288117533006,
  [0.49550214188659486] => 0.23921125661155682,
  [1.0] => 0.24857302040555657,
-) || !check_results || error("not the expected result", s)
+) || !check_results || error("not the expected result\n", s)
 ```
 
 ![](extend-optimizer-gd.png)

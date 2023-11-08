@@ -95,7 +95,7 @@ s1 == DesignMeasure(
  [0.3207541465365837] => 0.25003991892306177,
  [0.48364781547861957] => 0.24999249447251276,
  [1.0] => 0.24995991384717237,
-) || !check_results || error("not the expected result", s1)
+) || !check_results || error("not the expected result\n", s1)
 ```
 
 ```@example main
@@ -143,7 +143,7 @@ s2 == DesignMeasure(
  [0.32036023546981274] => 0.25,
  [0.48370009596035385] => 0.25,
  [1.0] => 0.25,
-) || !check_results || error("not the expected result", s2)
+) || !check_results || error("not the expected result\n", s2)
 ```
 
 [^LM07]: Gang Li and Dibyen Majumdar (2008). D-optimal designs for logistic models with three and four parameters. Journal of Statistical Planning and Inference, 138(7), 1950–1959. [doi:10.1016/j.jspi.2007.07.010](http://dx.doi.org/10.1016/j.jspi.2007.07.010)
