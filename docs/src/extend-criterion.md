@@ -84,7 +84,7 @@ which wraps precomputed values for all expressions
 that do not depend on the direction of the Gateaux derivative.
 Additionally, the following methods must be implemented.
 
-  - `criterion_integrand(c::T, nim_direction, index)`:
+  - `criterion_integrand(tnim, is_inv::Bool, dc::T)`:
     The function ``\DesignCriterion`` in the mathematical notation.
     This function should be fast.
     Ideally, it should not allocate new memory.
