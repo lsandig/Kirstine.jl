@@ -337,10 +337,10 @@ we can use [`plot_expected_function`](@ref).
 ```@example main
 mu(dose, p) = p.e0 + p.emax * dose^p.h / (p.ed50^p.h + dose^p.h)
 ef = plot_expected_function(
-    (x, c, p) -> mu(x, p),
-    c -> [c.dose],
-    (c, p) -> [mu(c.dose, p)],
-    0:0.01:1,
+    (x, c, p) -> mu(x, p),     # response for fixed covariate (ignored here) and parameter
+    c -> [c.dose],             # x-coordinate(s) for a point
+    (c, p) -> [mu(c.dose, p)], # y-coordinate(s) for a point
+    0:0.01:1,                  # x-axis grid
     s2,
     model(dp),
     covariate_parameterization(dp),
