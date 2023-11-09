@@ -53,6 +53,9 @@ Familiarity with the following topics is required:
     and adding [methods](https://docs.julialang.org/en/v1/manual/methods/)
     for user-defined types.
 
+For a change log,
+see the list of [annotated tags](https://git.sr.ht/%7Elsandig/Kirstine.jl/refs).
+
 ## License
 
 Kirstine.jl is free and open source software.
