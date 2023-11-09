@@ -5,6 +5,8 @@ module UserUsingTests
 using Test
 using Kirstine
 
+include("example-testmod.jl")
+
 @testset "user.jl (import)" begin
     @testset "simple_model" begin
         @test_throws "no covariate field names" @macroexpand(@simple_model(Foo))
@@ -62,6 +64,34 @@ using Kirstine
 
             @test a == Base.remove_linenums!(aref)
             @test b == Base.remove_linenums!(bref)
+        end
+    end
+
+    @testset "map_to_covariate!(JustCopy)" begin
+        let mtc! = Kirstine.map_to_covariate!,
+            c1 = TestCovar2(0, 0),
+            c2 = TestCovarNonFloat(0, [0.1, 0.2, 0.3]),
+            dp = [42.0, 3.14],
+            m = TestMod(), # any model would do
+            jc1 = JustCopy(:a, :b),
+            jc2 = JustCopy(:a, :b, :c),
+            jc3 = JustCopy(:a, :x),
+            ret = mtc!(c1, dp, m, jc1)
+
+            # a reference is returned
+            @test ret === c1
+            # the fields are set correctly
+            @test c1.a == 42
+            @test c1.b == 3.14
+            # design point is not modified
+            @test dp == [42.0, 3.14]
+            # covariate parameterization is not modified
+            @test jc1.field_names == [:a, :b]
+
+            @test_throws "dimension of design point" mtc!(c1, [1.0], m, jc1)
+            @test_throws "field names of covariate" mtc!(c1, dp, m, jc2)
+            @test_throws "field names of covariate" mtc!(c1, dp, m, jc3)
+            @test_throws TypeError mtc!(c2, dp, m, jc1)
         end
     end
 end

@@ -105,7 +105,7 @@ Kirstine.unit_length
 dimension
 ```
 
-### Helper Macros
+### Helpers
 
 To reduce boilerplate code in the common cases of a one-dimensional unit of observation,
 and for a vector parameter without any additional structure,
@@ -114,6 +114,14 @@ the following helper macros can be used:
 ```@docs
 @simple_model
 @simple_parameter
+```
+
+In problems where the design variables coincide with the model covariates,
+the following `CovariateParameterization` can be used:
+
+```@docs
+JustCopy
+JustCopy()
 ```
 
 ## Prior Knowledge

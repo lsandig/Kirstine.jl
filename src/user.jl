@@ -96,6 +96,124 @@ See also the [mathematical background](math.md#Design-Problems).
 """
 function dimension end
 
+## generic identity covariate parameterization ##
+
+"""
+    JustCopy <: CovariateParameterization
+
+A convenience type to use when design variables and model covariates are identical.
+"""
+struct JustCopy <: CovariateParameterization
+    field_names::Vector{Symbol}
+end
+
+"""
+    JustCopy(names::Symbol...)
+
+Construct a [`CovariateParameterization`](@ref) that copies the elements of a design point
+to the fields of a [`Covariate`](@ref) with the given `names`.
+
+This parameterization can be used with any [`Covariate`](@ref)
+that has only `Float64` fields.
+Note that the order of the `names`
+should match the the order of `dimnames(region(prob))` for the [`DesignProblem`](@ref)
+in which `JustCopy` is used.
+No new method for [`map_to_covariate!`](@ref) needs to be implemented for user types
+since the package supplies a generic one that works with any [`Model`](@ref)
+and any [`Covariate`](@ref).
+
+See also the [tutorial](tutorial.md) for another usage example.
+
+# Examples
+
+When we have
+
+```jldoctest justcopy
+julia> @simple_model Foo a b
+
+julia> @simple_parameter Foo θ
+
+```
+
+we can define
+
+```jldoctest justcopy
+julia> cp = JustCopy(:a, :b)
+JustCopy([:a, :b])
+```
+
+and then solve
+
+```jldoctest justcopy
+julia> dp = DesignProblem(;
+           region = DesignInterval(:a => (0, 1), :b => (-2, 5)),
+           covariate_parameterization = cp,
+           criterion = DOptimality(),
+           model = FooModel(; sigma = 1),
+           prior_knowledge = PriorSample([FooParameter(; θ = 42)]),
+       );
+
+```
+
+whithout first having to add a method to `map_to_covariate!`
+for the `FooModel` and `FooCovariate` types.
+
+Note however that the equivalent manual version
+
+```jldoctest justcopy
+julia> struct CopyBoth <: CovariateParameterization end
+
+julia> function Kirstine.map_to_covariate!(c::FooCovariate, dp, m::FooModel, cp::CopyBoth)
+           c.a = dp[1]
+           c.b = dp[2]
+           return c
+       end
+
+```
+
+would be slightly more efficient
+since it knows the types and field names at compile time.
+
+Also note that since the design points are assigned in the order of the names given,
+`cp = JustCopy(:b, :a)` would be equivalent to setting `c.b = dp[1]` and `c.a = dp[2]`.
+"""
+function JustCopy(names::Symbol...)
+    return JustCopy(collect(names))
+end
+
+function map_to_covariate!(c::Covariate, dp::AbstractVector{<:Real}, m::Model, cp::JustCopy)
+    dimc = length(cp.field_names)
+    cnames = fieldnames(typeof(c))
+    err = ArgumentError(
+        "field names of covariate must match names of JustCopy parameterization",
+    )
+    if length(cnames) != dimc
+        throw(err)
+    end
+    for fn in cp.field_names
+        if !(fn in cnames)
+            throw(err)
+        end
+    end
+    if dimc != length(dp)
+        throw(DimensionMismatch("dimension of design point must match that of covariate"))
+    end
+    for i in 1:dimc
+        fn = cp.field_names[i]
+        # The next call allocates memory
+        # since the field names and their types are not know at compile time.
+        # As a consequence, `map_to_covariate` is slowed down by a factor of 10
+        # compared to a manually written version with hardcoded field names.
+        #
+        # This is, however, acceptable since we only need to do this once per design measue,
+        # and the performance penalty that we incur is dwarfed by the operations
+        # that need to be done for each parameter in a prior sample.
+        # Moreover, the amount of memory allocated is only 16 bytes.
+        setfield!(c, fn, dp[i])
+    end
+    return c
+end
+
 ## helper macros ##
 
 function _kirstine_known_as(calling_mod)
