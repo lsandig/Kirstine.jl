@@ -2,11 +2,6 @@
 
 ```@setup main
 check_results = true
-# we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
-function savefig_nothing(plot, filename)
-	savefig(plot, filename)
-	return nothing
-end
 ```
 
 Sometimes prior knowledge is not described by a continuous distribution,
@@ -102,7 +97,8 @@ s1 == DesignMeasure(
 
 ```@example main
 gd = plot_gateauxderivative(s1, dp)
-savefig_nothing(gd, "discrete-prior-gd.png") # hide
+savefig(gd, "discrete-prior-gd.png") # hide
+nothing # hide
 ```
 
 ![](discrete-prior-gd.png)

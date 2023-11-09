@@ -2,11 +2,6 @@
 
 ```@setup main
 check_results = true
-# we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
-function savefig_nothing(plot, filename)
-	savefig(plot, filename)
-	return nothing
-end
 ```
 
 In this vignette, we will implement a different variant of the D-criterion.
@@ -296,7 +291,8 @@ gd1 = plot(
     plot_gateauxderivative(s1b, dp1b; title = "1b"),
     plot_gateauxderivative(s2b, dp2b; title = "2b"),
 )
-savefig_nothing(gd1, "extend-criterion-gd1.png") # hide
+savefig(gd1, "extend-criterion-gd1.png") # hide
+nothing # hide
 ```
 
 ```@setup main
@@ -362,7 +358,8 @@ gd2 = plot(
     plot_gateauxderivative(s1b, dp1a; title = "s1b for dp1a", legend = nothing),
     plot_gateauxderivative(s2b, dp2a; title = "s2b for dp2a", legend = nothing),
 )
-savefig_nothing(gd2, "extend-criterion-gd2.png") # hide
+savefig(gd2, "extend-criterion-gd2.png") # hide
+nothing # hide
 ```
 
 ![](extend-criterion-gd2.png)

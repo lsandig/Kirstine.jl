@@ -2,11 +2,6 @@
 
 ```@setup main
 check_results = true
-# we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
-function savefig_nothing(plot, filename)
-	savefig(plot, filename)
-	return nothing
-end
 ```
 
 Kirstine.jl comes with a simple particle swarm optimizer.
@@ -541,7 +536,8 @@ strategy = DirectMaximization(
 Random.seed!(31415)
 s, r = solve(dp, strategy, minweight = 1e-3, mindist = 1e-2, trace_state = true)
 gd = plot_gateauxderivative(s, dp)
-savefig_nothing(gd, "extend-optimizer-gd.png") # hide
+savefig(gd, "extend-optimizer-gd.png") # hide
+nothing # hide
 ```
 
 ```@setup main
@@ -563,7 +559,8 @@ dia = plot(
     plot(n_emp; xguide = "iteration", yguide = "no. of empires", legend = nothing),
     layout = (2, 1),
 )
-savefig_nothing(dia, "extend-optimizer-dia.png") # hide
+savefig(dia, "extend-optimizer-dia.png") # hide
+nothing # hide
 ```
 
 ![](extend-optimizer-dia.png)

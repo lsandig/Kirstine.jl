@@ -2,11 +2,6 @@
 
 ```@setup main
 check_results = true
-# we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
-function savefig_nothing(plot, filename)
-	savefig(plot, filename)
-	return nothing
-end
 ```
 
 This vignette describes how to set up a simple non-linear regression model
@@ -53,7 +48,8 @@ pse = plot(
     yguide = "response",
     label = "μ(dose, θ)",
 )
-savefig_nothing(pse, "tutorial-sigemax.png") # hide
+savefig(pse, "tutorial-sigemax.png") # hide
+nothing # hide
 ```
 
 ![](tutorial-sigemax.png)
@@ -320,7 +316,8 @@ the design points of the solution are indicated together with their weights.
 
 ```@example main
 gd = plot_gateauxderivative(s2, dp)
-savefig_nothing(gd, "tutorial-gd.png") # hide
+savefig(gd, "tutorial-gd.png") # hide
+nothing # hide
 ```
 
 ![](tutorial-gd.png)
@@ -342,7 +339,8 @@ ef = plot_expected_function(
     xguide = "dose",
     yguide = "response",
 )
-savefig_nothing(ef, "tutorial-ef.png") # hide
+savefig(ef, "tutorial-ef.png") # hide
+nothing # hide
 ```
 
 ![](tutorial-ef.png)
@@ -352,7 +350,8 @@ and see that the particle swarm has converged already after about `20` iteration
 
 ```@example main
 pr1 = plot(r1)
-savefig_nothing(pr1, "tutorial-pr1.png") # hide
+savefig(pr1, "tutorial-pr1.png") # hide
+nothing # hide
 ```
 
 ![](tutorial-pr1.png)

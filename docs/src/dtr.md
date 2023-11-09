@@ -2,11 +2,6 @@
 
 ```@setup main
 check_results = true
-# we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
-function savefig_nothing(plot, filename)
-	savefig(plot, filename)
-	return nothing
-end
 ```
 
 This vignette covers four advanced topics:
@@ -298,7 +293,8 @@ the gateaux derivative is plotted as a heatmap.
 
 ```@example main
 gd1 = plot_gateauxderivative(s1, dp1)
-savefig_nothing(gd1, "dtr-gd1.png") # hide
+savefig(gd1, "dtr-gd1.png") # hide
+nothing # hide
 ```
 
 ![](dtr-gd1.png)
@@ -308,7 +304,8 @@ Additionally the measurement times themselves are indicated on their respective 
 
 ```@example main
 er1 = plot_expected_response(s1, dp1)
-savefig_nothing(er1, "dtr-er1.png") # hide
+savefig(er1, "dtr-er1.png") # hide
+nothing # hide
 ```
 
 ![](dtr-er1.png)
@@ -372,14 +369,16 @@ s2 == DesignMeasure(
 
 ```@example main
 gd2 = plot_gateauxderivative(s2, dp2)
-savefig_nothing(gd2, "dtr-gd2.png") # hide
+savefig(gd2, "dtr-gd2.png") # hide
+nothing # hide
 ```
 
 ![](dtr-gd2.png)
 
 ```@example main
 er2 = plot_expected_response(s2, dp2)
-savefig_nothing(er2, "dtr-er2.png") # hide
+savefig(er2, "dtr-er2.png") # hide
+nothing # hide
 ```
 
 ![](dtr-er2.png)
@@ -438,7 +437,8 @@ s3 == DesignMeasure(
 
 ```@example main
 gd3 = plot_gateauxderivative(s3, dp3)
-savefig_nothing(gd3, "dtr-gd3.png") # hide
+savefig(gd3, "dtr-gd3.png") # hide
+nothing # hide
 ```
 
 ![](dtr-gd3.png)
@@ -447,7 +447,8 @@ Each design point now corresponds to 13 individual measurements.
 
 ```@example main
 er3 = plot_expected_response(s3, dp3)
-savefig_nothing(er3, "dtr-er3.png") # hide
+savefig(er3, "dtr-er3.png") # hide
+nothing # hide
 ```
 
 ![](dtr-er3.png)
@@ -540,7 +541,8 @@ st4a = DirectMaximization(
 Random.seed!(112358)
 s4a, r4a = solve(dp4, st4a; minposdose = 1e-3)
 gd4a = plot_gateauxderivative(s4a, dp4; legend = :bottomleft)
-savefig_nothing(gd4a, "dtr-gd4a.png") # hide
+savefig(gd4a, "dtr-gd4a.png") # hide
+nothing # hide
 ```
 
 ```@setup main
@@ -565,7 +567,8 @@ There are several things that could have happened.
 
 ```@example main
 pr4a = plot(r4a)
-savefig_nothing(pr4a, "dtr-pr4a.png") # hide
+savefig(pr4a, "dtr-pr4a.png") # hide
+nothing # hide
 ```
 
 ![](dtr-pr4a.png)
@@ -598,7 +601,8 @@ st4b = Exchange(
 Random.seed!(314)
 s4b, r4b = solve(dp4, st4b; minposdose = 1e-3, mindist = 2e-2)
 pr4b = plot(r4b)
-savefig_nothing(pr4b, "dtr-pr4b.png") # hide
+savefig(pr4b, "dtr-pr4b.png") # hide
+nothing # hide
 ```
 
 ![](dtr-pr4b.png)
@@ -625,14 +629,16 @@ s4b == DesignMeasure(
 
 ```@example main
 gd4b = plot_gateauxderivative(s4b, dp4; legend = :bottomleft)
-savefig_nothing(gd4b, "dtr-gd4b.png") # hide
+savefig(gd4b, "dtr-gd4b.png") # hide
+nothing # hide
 ```
 
 ![](dtr-gd4b.png)
 
 ```@example main
 er4 = plot_expected_response(s4b, dp4)
-savefig_nothing(er4, "dtr-er4.png") # hide
+savefig(er4, "dtr-er4.png") # hide
+nothing # hide
 ```
 
 ![](dtr-er4.png)
@@ -730,14 +736,16 @@ s5 == DesignMeasure(
 
 ```@example main
 gd5 = plot_gateauxderivative(s5, dp5; legend = :bottomleft)
-savefig_nothing(gd5, "dtr-gd5.png") # hide
+savefig(gd5, "dtr-gd5.png") # hide
+nothing # hide
 ```
 
 ![](dtr-gd5.png)
 
 ```@example main
 er5 = plot_expected_response(s5, dp5)
-savefig_nothing(er5, "dtr-er5.png") # hide
+savefig(er5, "dtr-er5.png") # hide
+nothing # hide
 ```
 
 ![](dtr-er5.png)

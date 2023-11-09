@@ -2,11 +2,6 @@
 
 ```@setup main
 check_results = true
-# we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
-function savefig_nothing(plot, filename)
-	savefig(plot, filename)
-	return nothing
-end
 ```
 
 A design region is a compact subset of ``\Reals^{\DimDesignRegion}``.
@@ -205,7 +200,8 @@ st1 = DirectMaximization(
 Random.seed!(2468)
 s1, r1 = solve(dp1, st1)
 gd1 = plot_gateauxderivative(s1, dp1)
-savefig_nothing(gd1, "extend-region-gd1.png") # hide
+savefig(gd1, "extend-region-gd1.png") # hide
+nothing # hide
 ```
 
 ```@setup main

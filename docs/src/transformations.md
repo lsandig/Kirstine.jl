@@ -22,11 +22,6 @@ The covariate ``\Covariate`` denotes the time in hours.
 
 ```@setup main
 check_results = true
-# we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
-function savefig_nothing(plot, filename)
-	savefig(plot, filename)
-	return nothing
-end
 ```
 
 ```@example main
@@ -39,7 +34,8 @@ tpc = plot(
     yguide = "response",
     label = "μ(time , θ)",
 )
-savefig_nothing(tpc, "transformations-tpc.png") # hide
+savefig(tpc, "transformations-tpc.png") # hide
+nothing # hide
 ```
 
 ![](transformations-tpc.png)
@@ -168,14 +164,16 @@ s_id == DesignMeasure(
 
 ```@example main
 gd_id = plot_gateauxderivative(s_id, dp_id)
-savefig_nothing(gd_id, "transformations-gd-id.png") # hide
+savefig(gd_id, "transformations-gd-id.png") # hide
+nothing # hide
 ```
 
 ![](transformations-gd-id.png)
 
 ```@example main
 ef_id = plot_expected_response(s_id, dp_id)
-savefig_nothing(ef_id, "transformations-ef-id.png") # hide
+savefig(ef_id, "transformations-ef-id.png") # hide
+nothing # hide
 ```
 
 ![](transformations-ef-id.png)
@@ -230,14 +228,16 @@ s_auc == DesignMeasure(
 
 ```@example main
 gd_auc = plot_gateauxderivative(s_auc, dp_auc)
-savefig_nothing(gd_auc, "transformations-gd-auc.png") # hide
+savefig(gd_auc, "transformations-gd-auc.png") # hide
+nothing # hide
 ```
 
 ![](transformations-gd-auc.png)
 
 ```@example main
 ef_auc = plot_expected_response(s_auc, dp_auc)
-savefig_nothing(ef_auc, "transformations-ef-auc.png") # hide
+savefig(ef_auc, "transformations-ef-auc.png") # hide
+nothing # hide
 ```
 
 ![](transformations-ef-auc.png)
@@ -300,14 +300,16 @@ s_ttm == DesignMeasure(
 
 ```@example main
 gd_ttm = plot_gateauxderivative(s_ttm, dp_ttm)
-savefig_nothing(gd_ttm, "transformations-gd-ttm.png") # hide
+savefig(gd_ttm, "transformations-gd-ttm.png") # hide
+nothing # hide
 ```
 
 ![](transformations-gd-ttm.png)
 
 ```@example main
 ef_ttm = plot_expected_response(s_ttm, dp_ttm)
-savefig_nothing(ef_ttm, "transformations-ef-ttm.png") # hide
+savefig(ef_ttm, "transformations-ef-ttm.png") # hide
+nothing # hide
 ```
 
 ![](transformations-ef-ttm.png)
@@ -353,14 +355,16 @@ s_cmax == DesignMeasure(
 
 ```@example main
 gd_cmax = plot_gateauxderivative(s_cmax, dp_cmax)
-savefig_nothing(gd_cmax, "transformations-gd-cmax.png") # hide
+savefig(gd_cmax, "transformations-gd-cmax.png") # hide
+nothing # hide
 ```
 
 ![](transformations-gd-cmax.png)
 
 ```@example main
 ef_cmax = plot_expected_response(s_cmax, dp_cmax)
-savefig_nothing(ef_cmax, "transformations-ef-cmax.png") # hide
+savefig(ef_cmax, "transformations-ef-cmax.png") # hide
+nothing # hide
 ```
 
 ![](transformations-ef-cmax.png)
@@ -402,14 +406,16 @@ s_both == DesignMeasure(
 
 ```@example main
 gd_both = plot_gateauxderivative(s_both, dp_both)
-savefig_nothing(gd_both, "transformations-gd-both.png") # hide
+savefig(gd_both, "transformations-gd-both.png") # hide
+nothing # hide
 ```
 
 ![](transformations-gd-both.png)
 
 ```@example main
 ef_both = plot_expected_response(s_both, dp_both)
-savefig_nothing(ef_both, "transformations-ef-both.png") # hide
+savefig(ef_both, "transformations-ef-both.png") # hide
+nothing # hide
 ```
 
 ![](transformations-ef-both.png)
