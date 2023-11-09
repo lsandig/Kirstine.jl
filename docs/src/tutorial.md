@@ -162,8 +162,6 @@ dr = DesignInterval(:dose => (0, 1))
 nothing # hide
 ```
 
-(Note that the name `:dose` does not necessarily have to match the field name of the `SigEmaxCovariate`.)
-
 A design will then be a discrete probability measure with atoms (design points) from `dr`,
 and a design point is represented by a `Vector{Float64}`.
 In our simple model, these vector have length `1`.
@@ -172,16 +170,12 @@ Finally, we need to specify how a design point maps to a `SigEmaxCovariate`.
 Here, the design region is simply the interval of possible doses.
 This means that we can just copy the only element of the design point
 into the covariate's `dose` field.
-To do this, we subtype [`CovariateParameterization`](@ref)
-and define a method for `Kirstine.map_to_covariate!`.
+For this we can use [`JustCopy`](@ref),
+which is a subtype of [`CovariateParameterization`](@ref).
 
 ```@example main
-struct CopyDose <: CovariateParameterization end
-
-function Kirstine.map_to_covariate!(c::SigEmaxCovariate, dp, m::SigEmaxModel, cp::CopyDose)
-    c.dose = dp[1]
-    return c
-end
+cp = JustCopy(:dose)
+nothing # hide
 ```
 
 ### Prior Knowledge
@@ -218,7 +212,7 @@ dp = DesignProblem(
     criterion = DOptimality(),
     region = dr,
     model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = CopyDose(),
+    covariate_parameterization = cp,
     prior_knowledge = prior_sample,
 )
 nothing # hide

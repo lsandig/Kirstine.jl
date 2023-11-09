@@ -41,13 +41,6 @@ function Kirstine.jacobianmatrix!(
     jm[1, 4] = c.dose == 0 ? 0.0 : A * B * log(c.dose / p.ed50)
     return jm
 end
-
-struct CopyDose <: CovariateParameterization end
-
-function Kirstine.map_to_covariate!(c::SigEmaxCovariate, dp, m::SigEmaxModel, cp::CopyDose)
-    c.dose = dp[1]
-    return c
-end
 nothing # hide
 ```
 
@@ -77,7 +70,7 @@ dp = DesignProblem(
     criterion = DOptimality(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = CopyDose(),
+    covariate_parameterization = JustCopy(:dose),
     prior_knowledge = prior,
 )
 nothing # hide

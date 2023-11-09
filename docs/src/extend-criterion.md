@@ -230,13 +230,6 @@ function Kirstine.jacobianmatrix!(
     return jm
 end
 
-struct CopyDose <: CovariateParameterization end
-
-function Kirstine.map_to_covariate!(c::SigEmaxCovariate, dp, m::SigEmaxModel, cp::CopyDose)
-    c.dose = dp[1]
-    return c
-end
-
 prior = PriorSample(
     [SigEmaxParameter(e0 = 1, emax = 2, ed50 = 0.4, h = h) for h in 1:4],
     [0.1, 0.3, 0.4, 0.2],
@@ -253,7 +246,7 @@ dp1a = DesignProblem(
     criterion = DexpOptimality(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = CopyDose(),
+    covariate_parameterization = JustCopy(:dose),
     prior_knowledge = prior,
 )
 
@@ -261,7 +254,7 @@ dp1b = DesignProblem(
     criterion = DOptimality(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = CopyDose(),
+    covariate_parameterization = JustCopy(:dose),
     prior_knowledge = prior,
 )
 
@@ -269,7 +262,7 @@ dp2a = DesignProblem(
     criterion = DexpOptimality(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = CopyDose(),
+    covariate_parameterization = JustCopy(:dose),
     prior_knowledge = prior,
     transformation = DeltaMethod(p -> [0 0 1 0; 0 0 0 1]),
 )
@@ -278,7 +271,7 @@ dp2b = DesignProblem(
     criterion = DOptimality(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = CopyDose(),
+    covariate_parameterization = JustCopy(:dose),
     prior_knowledge = prior,
     transformation = DeltaMethod(p -> [0 0 1 0; 0 0 0 1]),
 )

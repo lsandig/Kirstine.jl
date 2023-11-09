@@ -16,13 +16,6 @@ using Kirstine, Random, Plots, ForwardDiff
 using BenchmarkTools: @benchmark
 
 @simple_model SigEmax dose
-
-struct CopyDose <: CovariateParameterization end
-
-function Kirstine.map_to_covariate!(c::SigEmaxCovariate, dp, m::SigEmaxModel, cp::CopyDose)
-    c.dose = dp[1]
-    return c
-end
 ```
 
 Since ForwardDiff can only compute the derivative with respect to a `Vector` argument,
@@ -83,7 +76,7 @@ dp = DesignProblem(
     criterion = DOptimality(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = CopyDose(),
+    covariate_parameterization = JustCopy(:dose),
     prior_knowledge = prior_sample,
 )
 nothing # hide
@@ -186,16 +179,6 @@ function Kirstine.update_model_vcov!(Sigma, m::HackySigEmaxModel, c::SigEmaxCova
     return Sigma
 end
 
-function Kirstine.map_to_covariate!(
-    c::SigEmaxCovariate,
-    dp,
-    m::HackySigEmaxModel,
-    cp::CopyDose,
-)
-    c.dose = dp[1]
-    return c
-end
-
 function Kirstine.jacobianmatrix!(
     jm,
     m::HackySigEmaxModel,
@@ -214,7 +197,7 @@ dph = DesignProblem(
         pardim = 4,
         mu = (c, θ) -> c.dose == 0 ? θ[1] : θ[1] + θ[2] / ((c.dose / θ[3])^(-θ[4]) + 1),
     ),
-    covariate_parameterization = CopyDose(),
+    covariate_parameterization = JustCopy(:dose),
     prior_knowledge = prior_sample,
 )
 

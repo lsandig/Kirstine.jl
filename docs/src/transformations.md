@@ -56,7 +56,6 @@ using Kirstine, Plots, Random, Statistics
 
 @simple_model TPC time
 @simple_parameter TPC a e s
-struct Copy <: CovariateParameterization end
 
 function Kirstine.jacobianmatrix!(jm, m::TPCModel, c::TPCCovariate, p::TPCParameter)
     A = exp(-p.a * c.time)
@@ -65,11 +64,6 @@ function Kirstine.jacobianmatrix!(jm, m::TPCModel, c::TPCCovariate, p::TPCParame
     jm[1, 2] = -E * p.s * c.time
     jm[1, 3] = E - A
     return m
-end
-
-function Kirstine.map_to_covariate!(c::TPCCovariate, dp, m::TPCModel, cp::Copy)
-    c.time = dp[1]
-    return c
 end
 ```
 
@@ -111,7 +105,7 @@ function dp_for_trafo(trafo)
     DesignProblem(
         region = DesignInterval(:time => [0, 48]),
         criterion = DOptimality(),
-        covariate_parameterization = Copy(),
+        covariate_parameterization = JustCopy(:time),
         model = TPCModel(sigma = 1),
         prior_knowledge = draw_from_prior(1000, 2),
         transformation = trafo,
