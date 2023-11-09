@@ -72,7 +72,7 @@ sep_draws = map(1:1000) do i
 end
 prior_sample = PriorSample(sep_draws)
 
-dp = DesignProblem(
+dp1 = DesignProblem(
     criterion = DOptimality(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
@@ -87,11 +87,11 @@ Let's first compare the time it takes to evaluate the Jacobian matrices once.
 ```@example main
 jm = zeros(1, 4)
 co = SigEmaxCovariate(0.5)
-bm1 = @benchmark jacobianmatrix_auto!($jm, $model(dp), $co, $sep_draws[1])
+bm1 = @benchmark jacobianmatrix_auto!($jm, $model(dp1), $co, $sep_draws[1])
 ```
 
 ```@example main
-bm2 = @benchmark jacobianmatrix_manual!($jm, $model(dp), $co, $sep_draws[1])
+bm2 = @benchmark jacobianmatrix_manual!($jm, $model(dp1), $co, $sep_draws[1])
 ```
 
 We clearly see that the automatic gradient is about three times slower,
@@ -107,26 +107,26 @@ this is no obstacle for timing comparisons.
 # force compilation before time measurement
 dummy = DirectMaximization(
     optimizer = Pso(iterations = 2, swarmsize = 2),
-    prototype = equidistant_design(region(dp), 6),
+    prototype = equidistant_design(region(dp1), 6),
 )
 
 strategy = DirectMaximization(
     optimizer = Pso(iterations = 20, swarmsize = 50),
-    prototype = equidistant_design(region(dp), 6),
+    prototype = equidistant_design(region(dp1), 6),
 )
 
 Kirstine.jacobianmatrix!(jm, m, c, p) = jacobianmatrix_auto!(jm, m, c, p)
-solve(dp, dummy; minweight = 1e-3, mindist = 1e-2)
+solve(dp1, dummy; minweight = 1e-3, mindist = 1e-2)
 Random.seed!(54321)
-@time s1, r1 = solve(dp, strategy; minweight = 1e-3, mindist = 1e-2)
+@time s1, r1 = solve(dp1, strategy; minweight = 1e-3, mindist = 1e-2)
 nothing # hide (force inserting stdout from @time)
 ```
 
 ```@example main
 Kirstine.jacobianmatrix!(jm, m, c, p) = jacobianmatrix_manual!(jm, m, c, p)
-solve(dp, dummy; minweight = 1e-3, mindist = 1e-2)
+solve(dp1, dummy; minweight = 1e-3, mindist = 1e-2)
 Random.seed!(54321)
-@time s2, r2 = solve(dp, strategy; minweight = 1e-3, mindist = 1e-2)
+@time s2, r2 = solve(dp1, strategy; minweight = 1e-3, mindist = 1e-2)
 nothing # hide
 ```
 
@@ -221,4 +221,91 @@ The candidate solution is still the same.
 
 ```@example main
 s3 == s1
+```
+
+## Transformations
+
+A place where autodiff does not incur a noticeable performance hit
+is the computation of a [`Transformation`](@ref)s Jacobian matrix
+at the parameter values in the prior sample,
+since these are computed only once for a design problem.
+
+To illustrate this,
+lets try to find a design that is optimal for estimating
+``\mathrm{ED}_{ρ}`` with some fixed ``0 < ρ < 100``,
+i.e. the concentration such that
+
+```math
+\MeanFunction(\mathrm{ED}_{ρ},\Parameter) = E_0 + \frac{ρ}{100} E_{\max}.
+```
+
+While it is relatively easy to find that
+
+```math
+\mathrm{ED}_{ρ} =
+\Transformation(\Parameter) :=
+\frac{\mathrm{ED}_{50}}{(100/ρ - 1)^{1/h}},
+```
+
+figuring out the partial derivatives of ``\Transformation`` is somewhat tedious.
+The automatic version, in contrast, only takes on line of code.
+
+```@example main
+# switch back to faster manual jacobian matrix of the mean function
+Kirstine.jacobianmatrix!(jm, m, c, p) = jacobianmatrix_manual!(jm, m, c, p)
+
+ED(θ, rho) = [θ[3] / (100 / rho - 1)^(1 / θ[4])]
+
+function DED_manual(p, rho)
+    del_e0 = 0
+    del_emax = 0
+    a = (100 / rho - 1)^(1 / p.θ[4])
+    del_ed50 = 1 / a
+    del_h = p.θ[3] * log(100 / rho - 1) / (p.θ[4]^2 * a)
+    return [del_e0 del_emax del_ed50 del_h]
+end
+
+function DED_auto(p, rho)
+    return ForwardDiff.jacobian(θ -> ED(θ, rho), p.θ)
+end
+
+# quickly check for implementation error
+DED_manual(prior_sample.p[1], 10) .- DED_auto(prior_sample.p[1], 10)
+```
+
+```@example main
+dp2 = DesignProblem(
+    criterion = DOptimality(),
+    region = DesignInterval(:dose => (0, 1)),
+    model = SigEmaxModel(sigma = 1),
+    covariate_parameterization = JustCopy(:dose),
+    prior_knowledge = prior_sample,
+    transformation = DeltaMethod(p -> DED_auto(p, 90)), # optimal for ED_{90}
+)
+
+solve(dp2, dummy; minweight = 1e-3, mindist = 1e-2)
+Random.seed!(54321)
+@time s3, r3 = solve(dp2, strategy; minweight = 1e-3, mindist = 1e-2)
+nothing # hide
+```
+
+```@example main
+dp3 = DesignProblem(
+    criterion = DOptimality(),
+    region = DesignInterval(:dose => (0, 1)),
+    model = SigEmaxModel(sigma = 1),
+    covariate_parameterization = JustCopy(:dose),
+    prior_knowledge = prior_sample,
+    transformation = DeltaMethod(p -> DED_manual(p, 90)),  # optimal for ED_{90}
+)
+solve(dp3, dummy; minweight = 1e-3, mindist = 1e-2)
+Random.seed!(54321)
+@time s4, r4 = solve(dp3, strategy; minweight = 1e-3, mindist = 1e-2)
+nothing # hide
+```
+
+As we see, both versions take practically the same amount of time.
+
+```@example main
+s3 == s4
 ```
