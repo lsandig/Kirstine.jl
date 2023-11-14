@@ -226,6 +226,33 @@ include("example-vector.jl")
         end
     end
 
+    @testset "update_covariates!" begin
+        let d1 = DesignMeasure([[0], [1], [2]], [0.2, 0.3, 0.5]),
+            d2 = DesignMeasure([[3], [4], [5]], [0.4, 0.4, 0.2]),
+            m = EmaxModel(1),
+            cp = CopyDose(),
+            c = Kirstine.allocate_initialize_covariates(d1, m, cp),
+            res = Kirstine.update_covariates!(c, d2, m, cp)
+
+            @test res === c
+            @test c[1].dose == points(d2)[1][1]
+            @test c[2].dose == points(d2)[2][1]
+            @test c[3].dose == points(d2)[3][1]
+        end
+    end
+
+    @testset "update_work_matrices!" begin
+        let wm = Kirstine.WorkMatrices(2, 1, 3, 3),
+            m = EmaxModel(36), # note: this is `sigma_squared`!
+            c = [Dose(1), Dose(2)],
+            res = Kirstine.update_work_matrices!(wm, m, c)
+
+            # cholesky factors of 1-dimensional matrices contain the sqrt
+            @test wm.m_x_m[1] == [6.0;;]
+            @test wm.m_x_m[2] == [6.0;;]
+        end
+    end
+
     @testset "inverse_information_matrices" begin
         let d = DesignMeasure([[1], [5], [9]], [0.1, 0.2, 0.7]),
             m = EmaxModel(1),

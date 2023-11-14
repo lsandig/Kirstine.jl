@@ -20,13 +20,39 @@ end
 function allocate_initialize_covariates(d, m, cp)
     K = numpoints(d)
     cs = [allocate_covariate(m) for _ in 1:K]
-    for k in 1:K
-        map_to_covariate!(cs[k], points(d)[k], m, cp)
-    end
+    update_covariates!(cs, d, m, cp)
     return cs
 end
 
 ## model and criterion agnostic objective and gateaux derivative ##
+
+function update_covariates!(
+    c::AbstractVector{<:Covariate},
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+)
+    for k in 1:length(c)
+        map_to_covariate!(c[k], points(d)[k], m, cp)
+    end
+    return c
+end
+
+# For a nonlinear regression model,
+# this sets up `wm.m_x_m` as the (upper triangle of) the cholsky factor
+# of the unit covariance matrix Σ.
+# This is the setup that `informationmatrix!` expects.
+function update_work_matrices!(
+    wm::WorkMatrices,
+    m::NonlinearRegression,
+    c::AbstractVector{<:Covariate},
+)
+    for k in 1:length(c)
+        update_model_vcov!(wm.m_x_m[k], m, c[k])
+        potrf!('U', wm.m_x_m[k])
+    end
+    return wm
+end
 
 function objective!(
     wm::WorkMatrices,
@@ -39,11 +65,8 @@ function objective!(
     tc::TrafoConstants,
     na::NormalApproximation,
 )
-    for k in 1:length(c)
-        map_to_covariate!(c[k], points(d)[k], m, cp)
-        update_model_vcov!(wm.m_x_m[k], m, c[k])
-        potrf!('U', wm.m_x_m[k])
-    end
+    update_covariates!(c, d, m, cp)
+    update_work_matrices!(wm, m, c)
     # When the information matrix is singular, the objective function is undefined. Lower
     # level calls may throw a PosDefException or a SingularException. This also means that
     # `d` can not be a solution to the maximization problem, hence we return negative
@@ -75,9 +98,8 @@ function gateauxderivative!(
     pk::PriorSample,
     na::NormalApproximation,
 )
-    map_to_covariate!(c[1], points(direction)[1], m, cp)
-    update_model_vcov!(wm.m_x_m[1], m, c[1])
-    potrf!('U', wm.m_x_m[1])
+    update_covariates!(c, direction, m, cp)
+    update_work_matrices!(wm, m, c)
     acc = 0
     for i in 1:length(pk.p)
         informationmatrix!(
@@ -149,10 +171,7 @@ function informationmatrix(
     c = Kirstine.allocate_initialize_covariates(d, m, cp)
     # Note: t = 1 is a dummy value, no trafo will be applied
     wm = WorkMatrices(numpoints(d), unit_length(m), dimension(p), 1)
-    for k in 1:length(c)
-        Kirstine.update_model_vcov!(wm.m_x_m[k], m, c[k])
-        potrf!('U', wm.m_x_m[k])
-    end
+    update_work_matrices!(wm, m, c)
     informationmatrix!(wm.r_x_r, wm.m_x_r, weights(d), m, wm.m_x_m, c, p, na)
     return Symmetric(wm.r_x_r)
 end
@@ -169,10 +188,7 @@ function inverse_information_matrices(
     c = allocate_initialize_covariates(d, m, cp)
     # The transformed parameter dimension t = 1 is a dummy argument here.
     wm = WorkMatrices(length(weights(d)), unit_length(m), parameter_dimension(pk), 1)
-    for k in 1:length(c)
-        Kirstine.update_model_vcov!(wm.m_x_m[k], m, c[k])
-        potrf!('U', wm.m_x_m[k])
-    end
+    update_work_matrices!(wm, m, c)
     # The documentation of `potri!` is not very clear that it expects a Cholesky factor as
     # input, and does _not_ call `potrf!` itself.
     # See also https://netlib.org/lapack/explore-html/d1/d7a/group__double_p_ocomputational_ga9dfc04beae56a3b1c1f75eebc838c14c.html
