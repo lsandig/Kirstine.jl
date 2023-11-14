@@ -99,7 +99,7 @@ end
         1,
         <:DesignCriterion,
         <:DesignRegion{1},
-        <:NonlinearRegression,
+        <:Model,
         <:CovariateParameterization,
         <:PriorKnowledge,
         <:Transformation,

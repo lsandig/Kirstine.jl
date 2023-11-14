@@ -41,7 +41,7 @@ end
 # For a nonlinear regression model,
 # this sets up `wm.m_x_m` as the (upper triangle of) the cholsky factor
 # of the unit covariance matrix Σ.
-# This is the setup that `informationmatrix!` expects.
+# This is the setup that `average_fishermatrix!` expects.
 function update_work_matrices!(
     wm::WorkMatrices,
     m::NonlinearRegression,
@@ -59,7 +59,7 @@ function objective!(
     c::AbstractVector{<:Covariate},
     dc::DesignCriterion,
     d::DesignMeasure,
-    m::NonlinearRegression,
+    m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
     tc::TrafoConstants,
@@ -74,7 +74,7 @@ function objective!(
     try
         acc = 0
         for i in 1:length(pk.p)
-            informationmatrix!(wm.r_x_r, wm.m_x_r, weights(d), m, wm.m_x_m, c, pk.p[i], na)
+            informationmatrix!(wm, weights(d), m, c, pk.p[i], na)
             _, is_inv = apply_transformation!(wm, false, tc, i)
             acc += pk.weight[i] * criterion_integrand!(wm.t_x_t, is_inv, dc)
         end
@@ -93,7 +93,7 @@ function gateauxderivative!(
     c::AbstractVector{<:Covariate}, # only one element, but passed to `informationmatrix!`
     gconst::GateauxConstants,
     direction::DesignMeasure,
-    m::NonlinearRegression,
+    m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
     na::NormalApproximation,
@@ -102,16 +102,7 @@ function gateauxderivative!(
     update_work_matrices!(wm, m, c)
     acc = 0
     for i in 1:length(pk.p)
-        informationmatrix!(
-            wm.r_x_r,
-            wm.m_x_r,
-            weights(direction),
-            m,
-            wm.m_x_m,
-            c,
-            pk.p[i],
-            na,
-        )
+        informationmatrix!(wm, weights(direction), m, c, pk.p[i], na)
         acc += pk.weight[i] * gateaux_integrand(gconst, wm.r_x_r, i)
     end
     return acc
@@ -119,29 +110,59 @@ end
 
 ## normalized information matrix for θ ##
 
+# In the simplest case, the normalized information is just the Fisher information matrix
+# averaged wrt the design measure.
+#
+# Calling conventions:
+#  * wm.m_x_m may contain model-specific matrices
+#  * wm.r_x_r will be overwritten with the upper triangle of the information matrix M.
+#
+# Returns: a reference to wm
 function informationmatrix!(
-    nim::AbstractMatrix,
-    jm::AbstractMatrix,
-    w::AbstractVector,
-    m::NonlinearRegression,
-    chol_vcov::AbstractVector{<:AbstractMatrix{<:Real}},
+    wm::WorkMatrices,
+    w::AbstractVector{<:Real},
+    m::Model,
     c::AbstractVector{<:Covariate},
     p::Parameter,
     na::FisherMatrix,
 )
-    fill!(nim, 0.0)
+    return average_fishermatrix!(wm, w, m, c, p)
+end
+
+# Normalized information matrix for nonlinear regression with vector units.
+#
+# See also docs/src/math.md and `update_work_matrices`.
+#
+# Calling conventions:
+#  * wm.m_x_m must contain the Cholesky factors of Σ(c_k), k = 1,…, K
+#  * wm.r_x_r will be overwritten with the upper triangle of the information matrix M.
+#
+# Returns: a reference to wm
+function average_fishermatrix!(
+    wm::WorkMatrices,
+    w::AbstractVector{<:Real},
+    m::NonlinearRegression,
+    c::AbstractVector{<:Covariate},
+    p::Parameter,
+)
+    fill!(wm.r_x_r, 0.0)
     for k in 1:length(w)
-        jacobianmatrix!(jm, m, c[k], p)
-        # set jm = solution to `chol_vcov[k]' * X = 1 * jm`
-        # i.e. triangular matrix is the 'L'eft factor, with data in 'U'pper triangle and
-        # 'T'ransposed, but 'N'o unit diagonal
-        trsm!('L', 'U', 'T', 'N', 1.0, chol_vcov[k], jm)
-        # update nim = w[k] jm' * jm + 1 * nim
+        # Fill in the jacobian matrix of the mean function
+        jacobianmatrix!(wm.m_x_r, m, c[k], p)
+        # multiply with inverse Cholesky factor of Σ from the left,
+        # i.e. set m_x_r = solution to `chol_vcov[k]' * X = 1 * m_x_r`
+        # i.e. triangular matrix is the
+        #  * 'L'eft factor,
+        #  * with data in 'U'pper triangle,
+        #  * and 'T'ransposed,
+        #  * but 'N'o unit diagonal.
+        trsm!('L', 'U', 'T', 'N', 1.0, wm.m_x_m[k], wm.m_x_r)
+        # update r_x_r = w[k] * m_x_r' * m_x_r + 1 * r_x_r
         # i.e. data in 'U'pper triangle and 'T'ransposed first
-        syrk!('U', 'T', w[k], jm, 1.0, nim)
+        syrk!('U', 'T', w[k], wm.m_x_r, 1.0, wm.r_x_r)
     end
     # Note: nim is implicitly symmetric, only the upper triangle contains data.
-    return nim
+    return wm
 end
 
 # For debugging purposes, one will typically want to look at an information matrix
@@ -172,13 +193,13 @@ function informationmatrix(
     # Note: t = 1 is a dummy value, no trafo will be applied
     wm = WorkMatrices(numpoints(d), unit_length(m), dimension(p), 1)
     update_work_matrices!(wm, m, c)
-    informationmatrix!(wm.r_x_r, wm.m_x_r, weights(d), m, wm.m_x_m, c, p, na)
+    informationmatrix!(wm, weights(d), m, c, p, na)
     return Symmetric(wm.r_x_r)
 end
 
 function inverse_information_matrices(
     d::DesignMeasure,
-    m::NonlinearRegression,
+    m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
     na::NormalApproximation,
@@ -193,7 +214,7 @@ function inverse_information_matrices(
     # input, and does _not_ call `potrf!` itself.
     # See also https://netlib.org/lapack/explore-html/d1/d7a/group__double_p_ocomputational_ga9dfc04beae56a3b1c1f75eebc838c14c.html
     inv_nims = map(pk.p) do p
-        informationmatrix!(wm.r_x_r, wm.m_x_r, weights(d), m, wm.m_x_m, c, p, na)
+        informationmatrix!(wm, weights(d), m, c, p, na)
         potrf!('U', wm.r_x_r)
         potri!('U', wm.r_x_r)
         return deepcopy(wm.r_x_r)

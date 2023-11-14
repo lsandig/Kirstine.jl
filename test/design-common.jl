@@ -38,30 +38,52 @@ include("example-vector.jl")
         end
     end
 
-    @testset "informationmatrix!" begin
+    @testset "average_fishermatrix!" begin
         let nim = zeros(3, 3),
             jm = zeros(1, 3),
             w = [0.25, 0.75],
+            # dummy --------------------------------------------------------v
+            wm = Kirstine.WorkMatrices(length(w), size(jm, 1), size(jm, 2), 3),
             m = EmaxModel(1),
             # cholesky factor of the one-element 1.0 matrix is 1.0.
-            cvc = [[1.0;;] for _ in 1:length(w)],
+            # workaround since we can't assign to fields in let blocks
+            _ = setindex!(wm.m_x_m[1], 1.0, 1),
+            _ = setindex!(wm.m_x_m[2], 1.0, 1),
             c = [Dose(0), Dose(5)],
             p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            na = FisherMatrix(),
-            res = Kirstine.informationmatrix!(nim, jm, w, m, cvc, c, p, na),
+            res = Kirstine.average_fishermatrix!(wm, w, m, c, p),
             ref = mapreduce(+, enumerate(c)) do (k, dose)
                 Kirstine.jacobianmatrix!(jm, m, dose, p)
                 return w[k] * jm' * inv([1.0;;]) * jm
             end
 
-            # returns first argument?
-            @test res === nim
+            # returns work matrices?
+            @test res === wm
             # same result as non-BLAS computation?
-            @test Symmetric(res) == ref
+            @test Symmetric(wm.r_x_r) == ref
             # complement of upper triangle not used?
-            @test res[2, 1] == 0
-            @test res[3, 1] == 0
-            @test res[3, 2] == 0
+            @test wm.r_x_r[2, 1] == 0
+            @test wm.r_x_r[3, 1] == 0
+            @test wm.r_x_r[3, 2] == 0
+        end
+    end
+
+    @testset "informationmatrix!" begin
+        # The `FisherMatrix` normal approximation should just give the average Fisher
+        # information matrix as NIM.
+        let wm1 = Kirstine.WorkMatrices(1, 1, 3, 3),
+            wm2 = Kirstine.WorkMatrices(1, 1, 3, 3),
+            _ = setindex!(wm1.m_x_m[1], 1.0, 1),
+            _ = setindex!(wm2.m_x_m[1], 1.0, 1),
+            w = [1.0],
+            m = EmaxModel(1),
+            c = [Dose(1)],
+            p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
+            na = FisherMatrix(),
+            res1 = Kirstine.informationmatrix!(wm1, w, m, c, p, na),
+            res2 = Kirstine.average_fishermatrix!(wm2, w, m, c, p)
+
+            @test wm1.r_x_r == wm2.r_x_r
         end
     end
 
