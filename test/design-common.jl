@@ -189,18 +189,24 @@ include("example-vector.jl")
             _ = broadcast!(identity, nw2.r_x_r, inv_nim),
             _ = broadcast!(identity, nw3.r_x_r, nim),
             _ = broadcast!(identity, nw4.r_x_r, inv_nim),
-            (r1, i1) = Kirstine.apply_transformation!(nw1, false, ctid, 1),
-            (r2, i2) = Kirstine.apply_transformation!(nw2, true, ctid, 1),
+            _ = setfield!(nw1, :r_is_inv, false),
+            r1 = Kirstine.apply_transformation!(nw1, ctid, 1),
+            _ = setfield!(nw2, :r_is_inv, true),
+            r2 = Kirstine.apply_transformation!(nw2, ctid, 1),
             # scaling parameters should be able to be pulled out
-            (r3, _) = Kirstine.apply_transformation!(nw3, false, ctsc, 1),
-            (r4, _) = Kirstine.apply_transformation!(nw4, true, ctsc, 1)
+            _ = setfield!(nw3, :r_is_inv, false),
+            r3 = Kirstine.apply_transformation!(nw3, ctsc, 1),
+            _ = setfield!(nw4, :r_is_inv, true),
+            r4 = Kirstine.apply_transformation!(nw4, ctsc, 1)
 
             @test Symmetric(nw1.t_x_t) ≈ Symmetric(inv_nim)
             @test r1 === nw1
-            @test i1 = true
+            @test r1.t_is_inv
+            @test r1.r_is_inv == false # should not touch input matrix flag
             @test Symmetric(nw2.t_x_t) ≈ Symmetric(inv_nim)
             @test r2 === nw2
-            @test i1 == true
+            @test r2.t_is_inv
+            @test r2.r_is_inv
             @test Symmetric(nw3.t_x_t) ≈ Symmetric(nw4.t_x_t)
             @test r3 === nw3
             @test r4 === nw4
@@ -223,15 +229,19 @@ include("example-vector.jl")
             # workaround for `.=` not being valid let statement syntax
             _ = broadcast!(identity, nw1.r_x_r, nim),
             _ = broadcast!(identity, nw2.r_x_r, inv_nim),
-            (r1, i1) = Kirstine.apply_transformation!(nw1, false, tc, 1),
-            (r2, i2) = Kirstine.apply_transformation!(nw2, true, tc, 1)
+            _ = setfield!(nw1, :r_is_inv, false),
+            _ = setfield!(nw2, :r_is_inv, true),
+            r1 = Kirstine.apply_transformation!(nw1, tc, 1),
+            r2 = Kirstine.apply_transformation!(nw2, tc, 1)
 
             @test Symmetric(nw1.t_x_t) ≈ Symmetric(nim)
             @test r1 === nw1
-            @test i1 == false
+            @test r1.t_is_inv == false
+            @test r1.r_is_inv == false
             @test Symmetric(nw2.t_x_t) ≈ Symmetric(inv_nim)
             @test r2 === nw2
-            @test i2 == true
+            @test r2.t_is_inv == true
+            @test r2.r_is_inv == true
         end
     end
 

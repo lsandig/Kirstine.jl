@@ -105,6 +105,13 @@ Kirstine.unit_length
 dimension
 ```
 
+!!! note
+    
+    Some of these methods only require `M <: Model` and not `M <: NonlinearRegression`.
+    This is intentional.
+    These methods can in principle also be implemented for `M <: Ma`
+    where `abstract type Ma <: Model end` is also user-defined.
+
 ### Helpers
 
 To reduce boilerplate code in the common cases of a one-dimensional unit of observation,

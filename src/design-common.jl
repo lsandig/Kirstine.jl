@@ -3,18 +3,20 @@
 
 ## preallocating objects for less memory overhead ##
 
-struct NIMWorkspace
+mutable struct NIMWorkspace
     r_x_r::Matrix{Float64}
     r_x_t::Matrix{Float64}
     t_x_r::Matrix{Float64}
     t_x_t::Matrix{Float64}
+    r_is_inv::Bool # r_x_r should be considered as inverted NIM
+    t_is_inv::Bool # t_x_t should be considered as inverted tranformed NIM
     function NIMWorkspace(r::Integer, t::Integer)
         if r < 1 || t < 1
             throw(
                 ArgumentError("matrix dimensions must be positive, got (r, t) = ($r, $t)"),
             )
         end
-        new(zeros(r, r), zeros(r, t), zeros(t, r), zeros(t, t))
+        new(zeros(r, r), zeros(r, t), zeros(t, r), zeros(t, t), false, false)
     end
 end
 
@@ -99,8 +101,9 @@ function objective!(
         acc = 0
         for i in 1:length(pk.p)
             informationmatrix!(nw.r_x_r, mw, weights(d), m, c, pk.p[i], na)
-            _, is_inv = apply_transformation!(nw, false, tc, i)
-            acc += pk.weight[i] * criterion_integrand!(nw.t_x_t, is_inv, dc)
+            nw.r_is_inv = false
+            apply_transformation!(nw, tc, i)
+            acc += pk.weight[i] * criterion_integrand!(nw.t_x_t, nw.t_is_inv, dc)
         end
         return acc
     catch e
@@ -256,21 +259,23 @@ end
 
 # Calling conventions for `apply_transformation!`
 #
-# * `nw.r_x_r` holds the information matrix or its inverse, depending on the `is_inv` flag.
+# * `nw.r_x_r` holds the information matrix or its inverse, depending on the `nw.r_is_inv` flag.
 # * Only the upper triangle of `nw.r_x_r` is used.
 # * `nw.t_x_t` will be overwritten with the transformed information matrix or its inverse.
-# * The return value are `nw` and a flag that indicates whether `nw.t_x_t` it is inverted.
+# * `nw.t_is_inv` will be set to true if `nw.t_x_t` is inverted.
+# * The return value is `nw`.
 # * Only the upper triangle of `nw.t_x_t` is guaranteed to make sense, but specific methods
 #   are free to return a dense matrix.
-# * Whether the returned matrix will be inverted is _not_ controlled by `is_inv`.
+# * Whether the returned matrix will be inverted is _not_ controlled by `nw.t_is_inv`.
 
-function apply_transformation!(nw::NIMWorkspace, is_inv::Bool, tc::TCIdentity, index)
+function apply_transformation!(nw::NIMWorkspace, tc::TCIdentity, index)
     # For the Identity transformation we just pass through the information matrix.
     nw.t_x_t .= nw.r_x_r
-    return nw, is_inv
+    nw.t_is_inv = nw.r_is_inv
+    return nw
 end
 
-function apply_transformation!(nw::NIMWorkspace, is_inv::Bool, tc::TCDeltaMethod, index)
+function apply_transformation!(nw::NIMWorkspace, tc::TCDeltaMethod, index)
     # Denote the Jacobian matrix of T by J and the normalized information matrix by M. We
     # want to efficiently calculate J * inv(M) * J'.
     #
@@ -278,7 +283,7 @@ function apply_transformation!(nw::NIMWorkspace, is_inv::Bool, tc::TCDeltaMethod
     #
     # Depending on whether nw.r_x_r contains (the upper triangle of) M or inv(M) we use
     # different BLAS routines and a different order of multiplication.
-    if is_inv
+    if nw.r_is_inv
         # Denote the given inverse of M by invM.
         # We first calculate A := (J * invM) and store it in nw.t_x_r.
         #
@@ -307,9 +312,10 @@ function apply_transformation!(nw::NIMWorkspace, is_inv::Bool, tc::TCDeltaMethod
         # Next, we calculate the result J * B and store it in nw.t_x_t.
         mul!(nw.t_x_t, tc.jm[index], nw.r_x_t)
     end
+    nw.t_is_inv = true
     # Note that for this method, the result is not just an upper triangle, but always a
     # dense matrix.
-    return nw, true
+    return nw
 end
 
 # helper method to be used when computing gateaux constants
@@ -320,13 +326,13 @@ function transformed_information_matrices(
     tc::TrafoConstants,
 )
     nw = NIMWorkspace(parameter_dimension(pk), codomain_dimension(tc))
-    res_is_inv = missing
     tnim = map(1:length(pk.p)) do i
+        nw.r_is_inv = is_inv
         nw.r_x_r .= nim[i] # will be overwritten by the next call
-        _, res_is_inv = apply_transformation!(nw, is_inv, tc, i)
+        apply_transformation!(nw, tc, i)
         return deepcopy(nw.t_x_t)
     end
-    return tnim, res_is_inv
+    return tnim, nw.t_is_inv
 end
 
 ## linear algebra shortcuts ##
