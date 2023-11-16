@@ -129,3 +129,6 @@ abstract type ProblemSolvingStrategy end
 Supertype for results of a [`ProblemSolvingStrategy`](@ref).
 """
 abstract type ProblemSolvingResult end
+
+## abstract model specific preallocated objects ##
+abstract type ModelWorkspace end

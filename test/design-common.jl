@@ -26,6 +26,44 @@ include("example-vector.jl")
         end
     end
 
+    @testset "NIMWorkspace" begin
+        let r = 4, t = 3, nw = Kirstine.NIMWorkspace(r, t)
+            @test_throws "must be positive" Kirstine.NIMWorkspace(0, 2)
+            @test_throws "must be positive" Kirstine.NIMWorkspace(1, -1)
+            @test size(nw.r_x_r) == (r, r)
+            @test size(nw.t_x_t) == (t, t)
+            @test size(nw.r_x_t) == (r, t)
+            @test size(nw.t_x_r) == (t, r)
+        end
+    end
+
+    @testset "NRWorkspace" begin
+        let K = 5, m = 10, r = 3, mw = Kirstine.NRWorkspace(K, m, r)
+            @test_throws "at least one design point" Kirstine.NRWorkspace(0, m, r)
+            @test_throws "must be positive" Kirstine.NRWorkspace(K, m, 0)
+            @test size(mw.m_x_r) == (10, 3)
+            @test length(mw.m_x_m) == K
+            for k in 1:K
+                @test size(mw.m_x_m[k]) == (10, 10)
+            end
+        end
+    end
+
+    @testset "allocate_model_workspace(NonlinearRegression)" begin
+        let K = 5,
+            m = VUMod(1, 10),
+            pk = PriorSample([VUParameter(; a = 1, e = 1, s = 1)]),
+            mw = Kirstine.allocate_model_workspace(K, m, pk)
+
+            @test isa(mw, Kirstine.NRWorkspace)
+            @test size(mw.m_x_r) == (10, 3)
+            @test length(mw.m_x_m) == K
+            for k in 1:K
+                @test size(mw.m_x_m[k]) == (10, 10)
+            end
+        end
+    end
+
     @testset "tr_prod" begin
         let A = reshape(collect(1:9), 3, 3),
             B = reshape(collect(11:19), 3, 3),

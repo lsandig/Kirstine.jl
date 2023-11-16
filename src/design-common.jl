@@ -17,6 +17,40 @@ struct WorkMatrices
     end
 end
 
+struct NIMWorkspace
+    r_x_r::Matrix{Float64}
+    r_x_t::Matrix{Float64}
+    t_x_r::Matrix{Float64}
+    t_x_t::Matrix{Float64}
+    function NIMWorkspace(r::Integer, t::Integer)
+        if r < 1 || t < 1
+            throw(
+                ArgumentError("matrix dimensions must be positive, got (r, t) = ($r, $t)"),
+            )
+        end
+        new(zeros(r, r), zeros(r, t), zeros(t, r), zeros(t, t))
+    end
+end
+
+struct NRWorkspace <: ModelWorkspace
+    m_x_r::Matrix{Float64}
+    m_x_m::Vector{Matrix{Float64}}
+    function NRWorkspace(K::Integer, m::Integer, r::Integer)
+        if r < 1
+            throw(ArgumentError("matrix dimension must be positive, got r = $r"))
+        end
+        if K < 1
+            throw(ArgumentError("need at least one design point, got K = $K"))
+        end
+        mxm = [zeros(m, m) for _ in 1:K]
+        new(zeros(m, r), mxm)
+    end
+end
+
+function allocate_model_workspace(K::Integer, m::NonlinearRegression, pk::PriorSample)
+    return NRWorkspace(K, unit_length(m), dimension(pk.p[1]))
+end
+
 function allocate_initialize_covariates(d, m, cp)
     K = numpoints(d)
     cs = [allocate_covariate(m) for _ in 1:K]
