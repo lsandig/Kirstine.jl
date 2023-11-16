@@ -12,20 +12,6 @@ include("example-emax.jl")
 include("example-vector.jl")
 
 @testset "design-common.jl" begin
-    @testset "WorkMatrices" begin
-        let K = 5, m = 2, r = 4, t = 3, wm = Kirstine.WorkMatrices(K, m, r, t)
-            @test size(wm.r_x_r) == (r, r)
-            @test size(wm.t_x_t) == (t, t)
-            @test size(wm.r_x_t) == (r, t)
-            @test size(wm.t_x_r) == (t, r)
-            @test size(wm.m_x_r) == (m, r)
-            @test length(wm.m_x_m) == K
-            for k in 1:K
-                @test size(wm.m_x_m[k]) == (m, m)
-            end
-        end
-    end
-
     @testset "NIMWorkspace" begin
         let r = 4, t = 3, nw = Kirstine.NIMWorkspace(r, t)
             @test_throws "must be positive" Kirstine.NIMWorkspace(0, 2)
@@ -80,48 +66,53 @@ include("example-vector.jl")
         let nim = zeros(3, 3),
             jm = zeros(1, 3),
             w = [0.25, 0.75],
-            # dummy --------------------------------------------------------v
-            wm = Kirstine.WorkMatrices(length(w), size(jm, 1), size(jm, 2), 3),
             m = EmaxModel(1),
+            p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
+            pk = PriorSample([p]),
+            # dummy -----------------------v
+            nw = Kirstine.NIMWorkspace(size(jm, 2), 1),
+            mw = Kirstine.allocate_model_workspace(length(w), m, pk),
             # cholesky factor of the one-element 1.0 matrix is 1.0.
             # workaround since we can't assign to fields in let blocks
-            _ = setindex!(wm.m_x_m[1], 1.0, 1),
-            _ = setindex!(wm.m_x_m[2], 1.0, 1),
+            _ = setindex!(mw.m_x_m[1], 1.0, 1),
+            _ = setindex!(mw.m_x_m[2], 1.0, 1),
             c = [Dose(0), Dose(5)],
-            p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            res = Kirstine.average_fishermatrix!(wm, w, m, c, p),
+            res = Kirstine.average_fishermatrix!(nw.r_x_r, mw, w, m, c, p),
             ref = mapreduce(+, enumerate(c)) do (k, dose)
                 Kirstine.jacobianmatrix!(jm, m, dose, p)
                 return w[k] * jm' * inv([1.0;;]) * jm
             end
 
-            # returns work matrices?
-            @test res === wm
+            # returns workspace matrix?
+            @test res === nw.r_x_r
             # same result as non-BLAS computation?
-            @test Symmetric(wm.r_x_r) == ref
+            @test Symmetric(nw.r_x_r) == ref
             # complement of upper triangle not used?
-            @test wm.r_x_r[2, 1] == 0
-            @test wm.r_x_r[3, 1] == 0
-            @test wm.r_x_r[3, 2] == 0
+            @test nw.r_x_r[2, 1] == 0
+            @test nw.r_x_r[3, 1] == 0
+            @test nw.r_x_r[3, 2] == 0
         end
     end
 
     @testset "informationmatrix!" begin
         # The `FisherMatrix` normal approximation should just give the average Fisher
         # information matrix as NIM.
-        let wm1 = Kirstine.WorkMatrices(1, 1, 3, 3),
-            wm2 = Kirstine.WorkMatrices(1, 1, 3, 3),
-            _ = setindex!(wm1.m_x_m[1], 1.0, 1),
-            _ = setindex!(wm2.m_x_m[1], 1.0, 1),
+        let m = EmaxModel(1),
             w = [1.0],
-            m = EmaxModel(1),
             c = [Dose(1)],
             p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
+            pk = PriorSample([p]),
+            mw1 = Kirstine.allocate_model_workspace(1, m, pk),
+            mw2 = Kirstine.allocate_model_workspace(1, m, pk),
+            nim1 = zeros(3, 3),
+            nim2 = zeros(3, 3),
+            _ = setindex!(mw1.m_x_m[1], 1.0, 1),
+            _ = setindex!(mw2.m_x_m[1], 1.0, 1),
             na = FisherMatrix(),
-            res1 = Kirstine.informationmatrix!(wm1, w, m, c, p, na),
-            res2 = Kirstine.average_fishermatrix!(wm2, w, m, c, p)
+            res1 = Kirstine.informationmatrix!(nim1, mw1, w, m, c, p, na),
+            res2 = Kirstine.average_fishermatrix!(nim2, mw2, w, m, c, p)
 
-            @test wm1.r_x_r == wm2.r_x_r
+            @test nim1 == nim2
         end
     end
 
@@ -187,35 +178,33 @@ include("example-vector.jl")
             A = reshape(rand(9), 3, 3),
             nim = collect(UpperTriangular(A' * A)),
             inv_nim = collect(UpperTriangular(inv(A' * A))),
-            m = 1,
             r = 3,
             t = 3,
-            K = 1, # dummy, we already have the informationmatrix
-            wm1 = Kirstine.WorkMatrices(K, m, r, t),
-            wm2 = Kirstine.WorkMatrices(K, m, r, t),
-            wm3 = Kirstine.WorkMatrices(K, m, r, t),
-            wm4 = Kirstine.WorkMatrices(K, m, r, t),
+            nw1 = Kirstine.NIMWorkspace(r, t),
+            nw2 = Kirstine.NIMWorkspace(r, t),
+            nw3 = Kirstine.NIMWorkspace(r, t),
+            nw4 = Kirstine.NIMWorkspace(r, t),
             # workaround for `.=` not being valid let statement syntax
-            _ = broadcast!(identity, wm1.r_x_r, nim),
-            _ = broadcast!(identity, wm2.r_x_r, inv_nim),
-            _ = broadcast!(identity, wm3.r_x_r, nim),
-            _ = broadcast!(identity, wm4.r_x_r, inv_nim),
-            (r1, i1) = Kirstine.apply_transformation!(wm1, false, ctid, 1),
-            (r2, i2) = Kirstine.apply_transformation!(wm2, true, ctid, 1),
+            _ = broadcast!(identity, nw1.r_x_r, nim),
+            _ = broadcast!(identity, nw2.r_x_r, inv_nim),
+            _ = broadcast!(identity, nw3.r_x_r, nim),
+            _ = broadcast!(identity, nw4.r_x_r, inv_nim),
+            (r1, i1) = Kirstine.apply_transformation!(nw1, false, ctid, 1),
+            (r2, i2) = Kirstine.apply_transformation!(nw2, true, ctid, 1),
             # scaling parameters should be able to be pulled out
-            (r3, _) = Kirstine.apply_transformation!(wm3, false, ctsc, 1),
-            (r4, _) = Kirstine.apply_transformation!(wm4, true, ctsc, 1)
+            (r3, _) = Kirstine.apply_transformation!(nw3, false, ctsc, 1),
+            (r4, _) = Kirstine.apply_transformation!(nw4, true, ctsc, 1)
 
-            @test Symmetric(wm1.t_x_t) ≈ Symmetric(inv_nim)
-            @test r1 === wm1
+            @test Symmetric(nw1.t_x_t) ≈ Symmetric(inv_nim)
+            @test r1 === nw1
             @test i1 = true
-            @test Symmetric(wm2.t_x_t) ≈ Symmetric(inv_nim)
-            @test r2 === wm2
+            @test Symmetric(nw2.t_x_t) ≈ Symmetric(inv_nim)
+            @test r2 === nw2
             @test i1 == true
-            @test Symmetric(wm3.t_x_t) ≈ Symmetric(wm4.t_x_t)
-            @test r3 === wm3
-            @test r4 === wm4
-            @test det(Symmetric(wm3.t_x_t)) ≈ 4^2 * det(Symmetric(inv_nim))
+            @test Symmetric(nw3.t_x_t) ≈ Symmetric(nw4.t_x_t)
+            @test r3 === nw3
+            @test r4 === nw4
+            @test det(Symmetric(nw3.t_x_t)) ≈ 4^2 * det(Symmetric(inv_nim))
         end
 
         # The Identity transformation simply passes through the input matrix and its
@@ -227,23 +216,21 @@ include("example-vector.jl")
             A = reshape(rand(9), 3, 3),
             nim = collect(UpperTriangular(A' * A)),
             inv_nim = collect(UpperTriangular(inv(A' * A))),
-            m = 1,
             r = 3,
             t = 3,
-            K = 1, # dummy, we already have the informationmatrix
-            wm1 = Kirstine.WorkMatrices(K, m, r, t),
-            wm2 = Kirstine.WorkMatrices(K, m, r, t),
+            nw1 = Kirstine.NIMWorkspace(r, t),
+            nw2 = Kirstine.NIMWorkspace(r, t),
             # workaround for `.=` not being valid let statement syntax
-            _ = broadcast!(identity, wm1.r_x_r, nim),
-            _ = broadcast!(identity, wm2.r_x_r, inv_nim),
-            (r1, i1) = Kirstine.apply_transformation!(wm1, false, tc, 1),
-            (r2, i2) = Kirstine.apply_transformation!(wm2, true, tc, 1)
+            _ = broadcast!(identity, nw1.r_x_r, nim),
+            _ = broadcast!(identity, nw2.r_x_r, inv_nim),
+            (r1, i1) = Kirstine.apply_transformation!(nw1, false, tc, 1),
+            (r2, i2) = Kirstine.apply_transformation!(nw2, true, tc, 1)
 
-            @test Symmetric(wm1.t_x_t) ≈ Symmetric(nim)
-            @test r1 === wm1
+            @test Symmetric(nw1.t_x_t) ≈ Symmetric(nim)
+            @test r1 === nw1
             @test i1 == false
-            @test Symmetric(wm2.t_x_t) ≈ Symmetric(inv_nim)
-            @test r2 === wm2
+            @test Symmetric(nw2.t_x_t) ≈ Symmetric(inv_nim)
+            @test r2 === nw2
             @test i2 == true
         end
     end
@@ -301,15 +288,16 @@ include("example-vector.jl")
         end
     end
 
-    @testset "update_work_matrices!" begin
-        let wm = Kirstine.WorkMatrices(2, 1, 3, 3),
-            m = EmaxModel(36), # note: this is `sigma_squared`!
+    @testset "update_model_workspace!(NonlinearRegression)" begin
+        let m = EmaxModel(36), # note: this is `sigma_squared`!,
+            pk = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 2)]),
+            mw = Kirstine.allocate_model_workspace(2, m, pk),
             c = [Dose(1), Dose(2)],
-            res = Kirstine.update_work_matrices!(wm, m, c)
+            res = Kirstine.update_model_workspace!(mw, m, c)
 
             # cholesky factors of 1-dimensional matrices contain the sqrt
-            @test wm.m_x_m[1] == [6.0;;]
-            @test wm.m_x_m[2] == [6.0;;]
+            @test mw.m_x_m[1] == [6.0;;]
+            @test mw.m_x_m[2] == [6.0;;]
         end
     end
 

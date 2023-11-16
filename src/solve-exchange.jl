@@ -114,22 +114,20 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
     pk = prior_knowledge(dp)
     cp = covariate_parameterization(dp)
     m = model(dp)
+    na = normal_approximation(dp)
     tc = precalculate_trafo_constants(transformation(dp), pk)
-    wm = WorkMatrices(
-        1, # Dirac design measure corresponds to single covariate
-        unit_length(m),
-        parameter_dimension(pk),
-        codomain_dimension(tc),
-    )
+    nw = NIMWorkspace(parameter_dimension(pk), codomain_dimension(tc))
+    # Dirac design measure corresponds to single covariate
+    mw = allocate_model_workspace(1, m, pk)
     c = allocate_initialize_covariates(one_point_design(points(candidate)[1]), m, cp)
     constraints = DesignConstraints(region(dp), [false], [false])
     res = candidate
     or_pairs = map(1:(steps)) do i
         res = simplify(res, dp; simplify_args...)
         dir_prot = map(one_point_design, points(simplify_drop(res, 0)))
-        gc = gateaux_constants(criterion(dp), res, m, cp, pk, tc, normal_approximation(dp))
+        gc = gateaux_constants(criterion(dp), res, m, cp, pk, tc, na)
         # find direction of steepest ascent
-        gd(d) = gateauxderivative!(wm, c, gc, d, m, cp, pk, normal_approximation(dp))
+        gd(d) = gateauxderivative!(nw, mw, c, gc, d, m, cp, pk, na)
         or_gd = optimize(
             optimizer_direction,
             gd,

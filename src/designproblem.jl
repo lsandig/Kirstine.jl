@@ -191,14 +191,10 @@ function objective(d::DesignMeasure, dp::DesignProblem)
     cp = covariate_parameterization(dp)
     m = model(dp)
     tc = precalculate_trafo_constants(transformation(dp), pk)
-    wm = WorkMatrices(
-        length(weights(d)),
-        unit_length(m),
-        parameter_dimension(pk),
-        codomain_dimension(tc),
-    )
+    nw = NIMWorkspace(parameter_dimension(pk), codomain_dimension(tc))
+    mw = allocate_model_workspace(numpoints(d), m, pk)
     c = allocate_initialize_covariates(d, m, cp)
-    return objective!(wm, c, criterion(dp), d, m, cp, pk, tc, normal_approximation(dp))
+    return objective!(nw, mw, c, criterion(dp), d, m, cp, pk, tc, normal_approximation(dp))
 end
 
 """
@@ -227,12 +223,8 @@ function gateauxderivative(
     pk = prior_knowledge(dp)
     m = model(dp)
     tc = precalculate_trafo_constants(transformation(dp), pk)
-    wm = WorkMatrices(
-        length(weights(at)),
-        unit_length(m),
-        parameter_dimension(pk),
-        codomain_dimension(tc),
-    )
+    nw = NIMWorkspace(parameter_dimension(pk), codomain_dimension(tc))
+    mw = allocate_model_workspace(numpoints(at), m, pk)
     gconst = try
         gateaux_constants(criterion(dp), at, m, cp, pk, tc, na)
     catch e
@@ -245,7 +237,7 @@ function gateauxderivative(
     end
     cs = allocate_initialize_covariates(directions[1], m, cp)
     gd = map(directions) do d
-        gateauxderivative!(wm, cs, gconst, d, m, cp, pk, na)
+        gateauxderivative!(nw, mw, cs, gconst, d, m, cp, pk, na)
     end
     return gd
 end
