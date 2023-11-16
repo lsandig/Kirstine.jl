@@ -13,6 +13,7 @@ using Test
     include("user-import.jl")
     include("user-using.jl")
     include("design-common.jl")
+    include("model-nonlinear-regression.jl")
     include("criterion-d.jl")
     include("criterion-a.jl")
     include("designproblem.jl")

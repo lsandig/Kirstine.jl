@@ -134,7 +134,7 @@ end
         2,
         <:DesignCriterion,
         <:DesignRegion{2},
-        <:NonlinearRegression,
+        <:Model,
         <:CovariateParameterization,
         <:PriorKnowledge,
         <:Transformation,

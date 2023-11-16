@@ -10,7 +10,7 @@ Return the length of one unit of observation.
 
 # Implementation
 
-For a user type `M <: NonlinearRegression` this should return the length ``\\DimUnit``
+For a user type `M <: Model` this should return the length ``\\DimUnit``
 of one unit of observation ``\\Unit``.
 
 See also the [mathematical background](math.md#Design-Problems).
@@ -24,7 +24,7 @@ Construct a single `Covariate` for the model.
 
 # Implementation
 
-For user types `M <: NonlinearRegression` and a corresponding `C <: Covariate`,
+For user types `M <: Model` and a corresponding `C <: Covariate`,
 this should construct a single instance `c` of `C`
 with some (model-specific) sensible initial value.
 
@@ -58,7 +58,7 @@ Map a design point to a model covariate.
 
 # Implementation
 
-For user types `C <: Covariate`, `M <: NonlinearRegression`, and
+For user types `C <: Covariate`, `M <: Model`, and
 `Cp <: CovariateParameterization` this should set the fields of the single covariate `c`
 according to the single design point `dp`. Finally, this method should return `c`.
 

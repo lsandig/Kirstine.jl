@@ -11,13 +11,6 @@ Supertype for statistical models.
 abstract type Model end
 
 """
-    NonlinearRegression
-
-Supertype for user-defined nonlinear regression models.
-"""
-abstract type NonlinearRegression <: Model end
-
-"""
     Parameter
 
 Supertype for [`Model`](@ref) parameters.
