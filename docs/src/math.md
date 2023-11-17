@@ -105,8 +105,10 @@ with the following elements:
     This is because the precision matrix of the underlying posterior normal approximation
     can be obtained in different ways
     (see e.g. p. 224 in Berger[^B85]).
-    However, `Kirstine.jl` currently only supports using the likelihood-based
+    However, `Kirstine.jl` officially only supports the likelihood-based
     Fisher information matrix.
+    If your problem requires ad-hoc matrix regularization,
+    you need to [implement it yourself](extend-approximation.md).
 
 [^B85]: James O. Berger (1985). Statistical decision theory and Bayesian analysis. Springer.
 ## Design Measures

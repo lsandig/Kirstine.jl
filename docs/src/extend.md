@@ -11,7 +11,7 @@ The following pages show how to implement custom versions of the following objec
   - [design region](extend-region.md)
   - model
   - transformation
-  - normal approximation
+  - [normal approximation](extend-approximation.md)
   - [optimizer](extend-optimizer.md)
   - problem solving strategy
 

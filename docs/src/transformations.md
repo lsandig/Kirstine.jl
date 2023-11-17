@@ -69,8 +69,7 @@ due to their information matrices becoming singular.
 
 !!! note
     
-    Workarounds like generalized inverses or matrix regularization
-    are currently not supported by `Kirstine.jl`.
+    Workarounds like generalized inverses are not officially supported by `Kirstine.jl`.
 
 For the prior we will use “distribution I” from[^ACHJ93],
 which is constructed from two independent uniform distributions around estimates for ``a`` and ``e``,
