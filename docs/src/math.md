@@ -8,6 +8,7 @@ This page documents the notation for `Kirstine.jl`.
   - The set of ``a×a`` symmetric non-negative definite matrices is denoted ``\SNNDMatrices{a}``.
 
   - The total derivative / Jacobian matrix operator is denoted ``\TotalDiff``.
+  - The Hessian matrix operator is denoted ``\Hessian``.
   - The prime symbol ``(·)'`` denotes the transpose of a matrix, not a first derivative.
   - The matrix-valued derivative
     ``\MatDeriv{φ}{A}{·}``
@@ -25,6 +26,11 @@ This page documents the notation for `Kirstine.jl`.
     
     For information on finding ``\MatDeriv{φ}{A}{·}`` for certain ``φ``,
     see the book by Magnus and Neudecker[^MN99].
+  - The log-likelihood of a statistical model with
+    observation ``\Unit``,
+    covariate ``\Covariate``,
+    and parameter ``\Parameter``
+    is denoted ``\LogLikelihood(\Unit, \Covariate, \Parameter)``.
 
 [^MN99]: Jan R. Magnus and Heinz Neudecker (1999). Matrix differential calculus with applications in statistics and econometrics. Wiley. [doi:10.1002/9781119541219](https://doi.org/10.1002/9781119541219)
 ## Design Problems
@@ -150,12 +156,32 @@ is given by the average
 ```math
 \NIMatrix(\DesignMeasure, \Parameter)
 =
+\AverageFisherMatrix(\DesignMeasure, \Parameter)
+=
 \IntM{\DesignRegion}{
  \FisherMatrix(\CovariateParameterization(\DesignPoint), \Parameter)
 }{\DesignMeasure}{\DesignPoint},
 ```
 
 over the model's Fisher information matrix
+
+```math
+\FisherMatrix(\Covariate, \Parameter)
+=
+- \Expectation[\Hessian\LogLikelihood(\Unit,\Covariate,\Parameter)\mid\Parameter]
+```
+
+where ``\Hessian`` is the Hessian matrix with respect to ``\Parameter``,
+and the expectation is taken with respect to ``\Unit``.
+With the log-likelihood for nonlinear regression
+
+```math
+\LogLikelihood(\Unit,\Covariate,\Parameter)
+=
+\log\MvNormDist(\Unit\mid\MeanFunction(\Covariate,\Parameter), \UnitCovariance(\Covariate))
+```
+
+the Fisher information matrix turns out to be
 
 ```math
 \FisherMatrix(\Covariate, \Parameter)

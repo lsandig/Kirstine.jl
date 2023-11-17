@@ -63,10 +63,12 @@ math_macros = Dict(
     raw"\SomeMatrix" => raw"M",
     raw"\Unit" => raw"y",
     # Functions
+    raw"\AverageFisherMatrix" => raw"\operatorname{\bar{F}}",
     raw"\CovariateParameterization" => raw"C",
     raw"\DesignCriterion" => raw"Ψ",
     raw"\FisherMatrix" => raw"\operatorname{F}",
     raw"\GateauxDerivative" => raw"ψ",
+    raw"\LogLikelihood" => raw"\ell",
     raw"\MeanFunction" => raw"μ",
     raw"\NIMatrix" => raw"\operatorname{M}",
     raw"\Objective" => raw"f",
@@ -80,6 +82,8 @@ math_macros = Dict(
     raw"\DiracDist" => raw"\operatorname{Dirac}",
     raw"\MvNormDist" => raw"\operatorname{MvNorm}",
     # Miscellaneous
+    raw"\Expectation" => raw"𝔼",
+    raw"\Hessian" => raw"\operatorname{H\!}",
     raw"\Int" => raw"∫_{#1}#2\operatorname{d}\!#3",
     raw"\IntD" => raw"∫_{#1}#2\,#3\operatorname{d}\!#4",
     raw"\IntM" => raw"∫_{#1}#2\,#3(\operatorname{d}\!#4)",
