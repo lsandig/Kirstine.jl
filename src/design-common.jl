@@ -62,7 +62,8 @@ function objective!(
     try
         acc = 0
         for i in 1:length(pk.p)
-            informationmatrix!(nw.r_x_r, mw, weights(d), m, c, pk.p[i], na)
+            average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, pk.p[i])
+            informationmatrix!(nw.r_x_r, na)
             nw.r_is_inv = false
             apply_transformation!(nw, tc, i)
             acc += pk.weight[i] * criterion_integrand!(nw.t_x_t, nw.t_is_inv, dc)
@@ -92,7 +93,8 @@ function gateauxderivative!(
     update_model_workspace!(mw, m, c)
     acc = 0
     for i in 1:length(pk.p)
-        informationmatrix!(nw.r_x_r, mw, weights(direction), m, c, pk.p[i], na)
+        average_fishermatrix!(nw.r_x_r, mw, weights(direction), m, c, pk.p[i])
+        informationmatrix!(nw.r_x_r, na)
         acc += pk.weight[i] * gateaux_integrand(gconst, nw.r_x_r, i)
     end
     return acc
@@ -102,22 +104,8 @@ end
 
 # In the simplest case, the normalized information is just the Fisher information matrix
 # averaged wrt the design measure.
-#
-# Calling conventions:
-#  * `nim` will be overwritten with the upper triangle of the information matrix
-#  * `mw` must be initialized with what `average_fishermatrix!` for `typeof(m)` expects to find.
-#
-# Returns: a reference to `nim`
-function informationmatrix!(
-    nim::AbstractMatrix{<:Real},
-    mw::ModelWorkspace,
-    w::AbstractVector{<:Real},
-    m::Model,
-    c::AbstractVector{<:Covariate},
-    p::Parameter,
-    na::FisherMatrix,
-)
-    return average_fishermatrix!(nim, mw, w, m, c, p)
+function informationmatrix!(afm::AbstractMatrix{<:Real}, na::FisherMatrix)
+    return afm
 end
 
 # For debugging purposes, one will typically want to look at an information matrix
@@ -150,7 +138,8 @@ function informationmatrix(
     # wrapping `p` is a bit ugly here
     mw = allocate_model_workspace(numpoints(d), m, PriorSample([p]))
     update_model_workspace!(mw, m, c)
-    informationmatrix!(nw.r_x_r, mw, weights(d), m, c, p, na)
+    average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, p)
+    informationmatrix!(nw.r_x_r, na)
     return Symmetric(nw.r_x_r)
 end
 
@@ -172,7 +161,8 @@ function inverse_information_matrices(
     # input, and does _not_ call `potrf!` itself.
     # See also https://netlib.org/lapack/explore-html/d1/d7a/group__double_p_ocomputational_ga9dfc04beae56a3b1c1f75eebc838c14c.html
     inv_nims = map(pk.p) do p
-        informationmatrix!(nw.r_x_r, mw, weights(d), m, c, p, na)
+        average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, p)
+        informationmatrix!(nw.r_x_r, na)
         potrf!('U', nw.r_x_r)
         potri!('U', nw.r_x_r)
         return deepcopy(nw.r_x_r)

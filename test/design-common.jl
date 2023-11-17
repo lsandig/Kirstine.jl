@@ -38,22 +38,14 @@ include("example-vector.jl")
     @testset "informationmatrix!" begin
         # The `FisherMatrix` normal approximation should just give the average Fisher
         # information matrix as NIM.
-        let m = EmaxModel(1),
-            w = [1.0],
-            c = [Dose(1)],
-            p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            pk = PriorSample([p]),
-            mw1 = Kirstine.allocate_model_workspace(1, m, pk),
-            mw2 = Kirstine.allocate_model_workspace(1, m, pk),
-            nim1 = zeros(3, 3),
-            nim2 = zeros(3, 3),
-            _ = setindex!(mw1.m_x_m[1], 1.0, 1),
-            _ = setindex!(mw2.m_x_m[1], 1.0, 1),
+        let _ = seed!(1234),
+            afm = rand(3, 3),
+            afm_copy = deepcopy(afm),
             na = FisherMatrix(),
-            res1 = Kirstine.informationmatrix!(nim1, mw1, w, m, c, p, na),
-            res2 = Kirstine.average_fishermatrix!(nim2, mw2, w, m, c, p)
+            res = Kirstine.informationmatrix!(afm, na)
 
-            @test nim1 == nim2
+            @test res === afm
+            @test res == afm_copy
         end
     end
 
