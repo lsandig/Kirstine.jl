@@ -9,7 +9,7 @@ The following pages show how to implement custom versions of the following objec
 
   - [design criterion](extend-criterion.md)
   - [design region](extend-region.md)
-  - model
+  - [model supertype](extend-model.md)
   - transformation
   - [normal approximation](extend-approximation.md)
   - [optimizer](extend-optimizer.md)
