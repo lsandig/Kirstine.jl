@@ -68,11 +68,11 @@ struct TCDeltaMethod <: TrafoConstants
     jm::Vector{Matrix{Float64}}
 end
 
-function precalculate_trafo_constants(trafo::Identity, pk::PriorSample)
+function trafo_constants(trafo::Identity, pk::PriorSample)
     return TCIdentity(parameter_dimension(pk))
 end
 
-function precalculate_trafo_constants(trafo::DeltaMethod, pk::PriorSample)
+function trafo_constants(trafo::DeltaMethod, pk::PriorSample)
     jm = [trafo.jacobian_matrix(p) for p in pk.p]
     r = parameter_dimension(pk)
     if any(j -> size(j) != size(jm[1]), jm)

@@ -224,7 +224,7 @@ Evaluate the objective function.
 See also the [mathematical background](math.md#Objective-Function).
 """
 function objective(d::DesignMeasure, dp::DesignProblem)
-    tc = precalculate_trafo_constants(transformation(dp), prior_knowledge(dp))
+    tc = trafo_constants(transformation(dp), prior_knowledge(dp))
     w = allocate_workspaces(d, dp, tc)
     return objective!(w, d, dp, tc)
 end
@@ -269,7 +269,7 @@ function gateauxderivative(
     if any(d -> numpoints(d) != 1, directions)
         error("Gateaux derivatives are only implemented for one-point design directions")
     end
-    tc = precalculate_trafo_constants(transformation(dp), prior_knowledge(dp))
+    tc = trafo_constants(transformation(dp), prior_knowledge(dp))
     w = allocate_workspaces(directions[1], dp, tc)
     gconst = try
         gateaux_constants(
@@ -336,8 +336,8 @@ function efficiency(
     dp2::DesignProblem,
 )
     # check that minimal requirements are met for efficiency to make sense
-    tc1 = precalculate_trafo_constants(dp1.trafo, dp1.pk)
-    tc2 = precalculate_trafo_constants(dp2.trafo, dp2.pk)
+    tc1 = trafo_constants(dp1.trafo, dp1.pk)
+    tc2 = trafo_constants(dp2.trafo, dp2.pk)
     if codomain_dimension(tc1) != codomain_dimension(tc2)
         throw(DimensionMismatch("dimensions of transformed parameters must match"))
     end
@@ -367,8 +367,6 @@ See also the [mathematical background](math.md#Shannon-Information).
 function shannon_information(d::DesignMeasure, dp::DesignProblem, n::Integer)
     dpd = as_doptimality_problem(dp)
     # this is somewhat ugly, computing all constants is a bit unnecessary
-    t = codomain_dimension(
-        precalculate_trafo_constants(transformation(dp), prior_knowledge(dp)),
-    )
+    t = codomain_dimension(trafo_constants(transformation(dp), prior_knowledge(dp)))
     return (t / 2) * (log(n) - 1 + log(2 * pi)) + 0.5 * objective(d, dpd)
 end

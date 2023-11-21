@@ -84,7 +84,7 @@ function solve_with(dp::DesignProblem, strategy::DirectMaximization, trace_state
         strategy.fixedweights,
         strategy.fixedpoints,
     )
-    tc = precalculate_trafo_constants(transformation(dp), prior_knowledge(dp))
+    tc = trafo_constants(transformation(dp), prior_knowledge(dp))
     w = allocate_workspaces(strategy.prototype, dp, tc)
     or = optimize(
         strategy.optimizer,

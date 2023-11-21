@@ -104,9 +104,9 @@ include("example-vector.jl")
         # must use deepcopys, and Symmetric wrappers where necessary.
         let pk = PriorSample([TestPar3(1, 2, 3)]),
             tid = DeltaMethod(p -> diagm(ones(3))),
-            ctid = Kirstine.precalculate_trafo_constants(tid, pk),
+            ctid = Kirstine.trafo_constants(tid, pk),
             tsc = DeltaMethod(p -> diagm([0.5, 2.0, 4.0])),
-            ctsc = Kirstine.precalculate_trafo_constants(tsc, pk),
+            ctsc = Kirstine.trafo_constants(tsc, pk),
             _ = seed!(4321),
             A = reshape(rand(9), 3, 3),
             nim = collect(UpperTriangular(A' * A)),
@@ -150,7 +150,7 @@ include("example-vector.jl")
         # inversion flag unchanged.
         let pk = PriorSample([TestPar3(1, 2, 3)]),
             t = Identity(),
-            tc = Kirstine.precalculate_trafo_constants(t, pk),
+            tc = Kirstine.trafo_constants(t, pk),
             _ = seed!(4321),
             A = reshape(rand(9), 3, 3),
             nim = collect(UpperTriangular(A' * A)),
@@ -187,7 +187,7 @@ include("example-vector.jl")
             nim_bkp = deepcopy(nim),
             pk = PriorSample([TestPar3(1, 2, 3), TestPar3(4, 5, 6)]), # dummy values
             t = DeltaMethod(p -> diagm([0.5, 2.0, 4.0])),
-            tc = Kirstine.precalculate_trafo_constants(t, pk),
+            tc = Kirstine.trafo_constants(t, pk),
             (tnim, is_inv) = Kirstine.transformed_information_matrices(nim, false, pk, tc)
 
             @test length(tnim) == 2

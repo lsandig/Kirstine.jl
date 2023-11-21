@@ -8,7 +8,7 @@ using Kirstine
 include("example-testpar.jl")
 
 @testset "transformation.jl" begin
-    @testset "precalculate_trafo_constants" begin
+    @testset "trafo_constants" begin
         # DeltaMethod
         let pk = PriorSample([TestPar2(1, 2), TestPar2(-1, -2)]),
             dt1 = p -> [p.a; p.b], # too few columns
@@ -17,10 +17,10 @@ include("example-testpar.jl")
             D2 = DeltaMethod(dt2),
             dt3 = p -> [3 * p.a -p.b^2],
             D3 = DeltaMethod(dt3),
-            tc = Kirstine.precalculate_trafo_constants(D3, pk)
+            tc = Kirstine.trafo_constants(D3, pk)
 
-            @test_throws "2 columns" Kirstine.precalculate_trafo_constants(D1, pk)
-            @test_throws "identical" Kirstine.precalculate_trafo_constants(D2, pk)
+            @test_throws "2 columns" Kirstine.trafo_constants(D1, pk)
+            @test_throws "identical" Kirstine.trafo_constants(D2, pk)
             @test isa(tc, Kirstine.TCDeltaMethod)
             @test Kirstine.codomain_dimension(tc) == 1
             @test tc.jm == [[3 -4], [-3 -4]]
@@ -29,7 +29,7 @@ include("example-testpar.jl")
         # Identity
         let pk = PriorSample([TestPar2(1, 2), TestPar2(-1, -2)]),
             id = Identity(),
-            tc = Kirstine.precalculate_trafo_constants(id, pk)
+            tc = Kirstine.trafo_constants(id, pk)
 
             @test isa(tc, Kirstine.TCIdentity)
             @test Kirstine.codomain_dimension(tc) == 2

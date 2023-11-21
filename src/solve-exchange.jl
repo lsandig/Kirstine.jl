@@ -111,7 +111,7 @@ end
 function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
     (; candidate, optimizer_weight, optimizer_direction, steps, simplify_args) = strategy
     check_compatible(candidate, region(dp))
-    tc = precalculate_trafo_constants(transformation(dp), prior_knowledge(dp))
+    tc = trafo_constants(transformation(dp), prior_knowledge(dp))
     w = allocate_workspaces(one_point_design(points(candidate)[1]), dp, tc)
     constraints = DesignConstraints(region(dp), [false], [false])
     res = candidate
