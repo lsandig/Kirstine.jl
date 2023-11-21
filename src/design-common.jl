@@ -20,6 +20,12 @@ mutable struct NIMWorkspace
     end
 end
 
+struct Workspaces
+    nw::NIMWorkspace
+    mw::ModelWorkspace
+    c::Vector{<:Covariate}
+end
+
 function allocate_initialize_covariates(d, m, cp)
     K = numpoints(d)
     cs = [allocate_covariate(m) for _ in 1:K]
@@ -39,65 +45,6 @@ function update_covariates!(
         map_to_covariate!(c[k], points(d)[k], m, cp)
     end
     return c
-end
-
-function objective!(
-    nw::NIMWorkspace,
-    mw::ModelWorkspace,
-    c::AbstractVector{<:Covariate},
-    dc::DesignCriterion,
-    d::DesignMeasure,
-    m::Model,
-    cp::CovariateParameterization,
-    pk::PriorSample,
-    tc::TrafoConstants,
-    na::NormalApproximation,
-)
-    update_covariates!(c, d, m, cp)
-    update_model_workspace!(mw, m, c)
-    # When the information matrix is singular, the objective function is undefined. Lower
-    # level calls may throw a PosDefException or a SingularException. This also means that
-    # `d` can not be a solution to the maximization problem, hence we return negative
-    # infinity in these cases.
-    try
-        acc = 0
-        for i in 1:length(pk.p)
-            average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, pk.p[i])
-            informationmatrix!(nw.r_x_r, na)
-            nw.r_is_inv = false
-            apply_transformation!(nw, tc, i)
-            acc += pk.weight[i] * criterion_integrand!(nw.t_x_t, nw.t_is_inv, dc)
-        end
-        return acc
-    catch e
-        if isa(e, PosDefException) || isa(e, SingularException)
-            return (-Inf)
-        else
-            rethrow(e)
-        end
-    end
-end
-
-function gateauxderivative!(
-    nw::NIMWorkspace,
-    mw::ModelWorkspace,
-    c::AbstractVector{<:Covariate}, # only one element, but passed to `informationmatrix!`
-    gconst::GateauxConstants,
-    direction::DesignMeasure,
-    m::Model,
-    cp::CovariateParameterization,
-    pk::PriorSample,
-    na::NormalApproximation,
-)
-    update_covariates!(c, direction, m, cp)
-    update_model_workspace!(mw, m, c)
-    acc = 0
-    for i in 1:length(pk.p)
-        average_fishermatrix!(nw.r_x_r, mw, weights(direction), m, c, pk.p[i])
-        informationmatrix!(nw.r_x_r, na)
-        acc += pk.weight[i] * gateaux_integrand(gconst, nw.r_x_r, i)
-    end
-    return acc
 end
 
 ## normalized information matrix for θ ##

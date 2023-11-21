@@ -127,6 +127,13 @@ Get the [`NormalApproximation`](@ref) of `dp`.
 """
 normal_approximation(dp::DesignProblem) = dp.na
 
+function allocate_workspaces(d::DesignMeasure, dp::DesignProblem, tc::TrafoConstants)
+    nw = NIMWorkspace(parameter_dimension(prior_knowledge(dp)), codomain_dimension(tc))
+    mw = allocate_model_workspace(numpoints(d), model(dp), prior_knowledge(dp))
+    c = allocate_initialize_covariates(d, model(dp), covariate_parameterization(dp))
+    return Workspaces(nw, mw, c)
+end
+
 """
     solve(
         dp::DesignProblem,
@@ -179,6 +186,36 @@ function simplify(d::DesignMeasure, dp::DesignProblem; minweight = 0, mindist = 
     return d
 end
 
+function objective!(w::Workspaces, d::DesignMeasure, dp::DesignProblem, tc::TrafoConstants)
+    m = model(dp)
+    update_covariates!(w.c, d, m, covariate_parameterization(dp))
+    update_model_workspace!(w.mw, m, w.c)
+    # When the information matrix is singular, the objective function is undefined. Lower
+    # level calls may throw a PosDefException or a SingularException. This also means that
+    # `d` can not be a solution to the maximization problem, hence we return negative
+    # infinity in these cases.
+    pk = prior_knowledge(dp)
+    try
+        acc = 0
+        for i in 1:length(pk.p)
+            average_fishermatrix!(w.nw.r_x_r, w.mw, weights(d), m, w.c, pk.p[i])
+            informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
+            w.nw.r_is_inv = false
+            apply_transformation!(w.nw, tc, i)
+            acc +=
+                pk.weight[i] *
+                criterion_integrand!(w.nw.t_x_t, w.nw.t_is_inv, criterion(dp))
+        end
+        return acc
+    catch e
+        if isa(e, PosDefException) || isa(e, SingularException)
+            return (-Inf)
+        else
+            rethrow(e)
+        end
+    end
+end
+
 """
     objective(d::DesignMeasure, dp::DesignProblem)
 
@@ -187,14 +224,28 @@ Evaluate the objective function.
 See also the [mathematical background](math.md#Objective-Function).
 """
 function objective(d::DesignMeasure, dp::DesignProblem)
-    pk = prior_knowledge(dp)
-    cp = covariate_parameterization(dp)
+    tc = precalculate_trafo_constants(transformation(dp), prior_knowledge(dp))
+    w = allocate_workspaces(d, dp, tc)
+    return objective!(w, d, dp, tc)
+end
+
+function gateauxderivative!(
+    w::Workspaces,
+    direction::DesignMeasure,
+    dp::DesignProblem,
+    gconst::GateauxConstants,
+)
     m = model(dp)
-    tc = precalculate_trafo_constants(transformation(dp), pk)
-    nw = NIMWorkspace(parameter_dimension(pk), codomain_dimension(tc))
-    mw = allocate_model_workspace(numpoints(d), m, pk)
-    c = allocate_initialize_covariates(d, m, cp)
-    return objective!(nw, mw, c, criterion(dp), d, m, cp, pk, tc, normal_approximation(dp))
+    update_covariates!(w.c, direction, m, covariate_parameterization(dp))
+    update_model_workspace!(w.mw, m, w.c)
+    pk = prior_knowledge(dp)
+    acc = 0
+    for i in 1:length(pk.p)
+        average_fishermatrix!(w.nw.r_x_r, w.mw, weights(direction), m, w.c, pk.p[i])
+        informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
+        acc += pk.weight[i] * gateaux_integrand(gconst, w.nw.r_x_r, i)
+    end
+    return acc
 end
 
 """
@@ -218,15 +269,18 @@ function gateauxderivative(
     if any(d -> numpoints(d) != 1, directions)
         error("Gateaux derivatives are only implemented for one-point design directions")
     end
-    cp = covariate_parameterization(dp)
-    na = normal_approximation(dp)
-    pk = prior_knowledge(dp)
-    m = model(dp)
-    tc = precalculate_trafo_constants(transformation(dp), pk)
-    nw = NIMWorkspace(parameter_dimension(pk), codomain_dimension(tc))
-    mw = allocate_model_workspace(numpoints(at), m, pk)
+    tc = precalculate_trafo_constants(transformation(dp), prior_knowledge(dp))
+    w = allocate_workspaces(directions[1], dp, tc)
     gconst = try
-        gateaux_constants(criterion(dp), at, m, cp, pk, tc, na)
+        gateaux_constants(
+            criterion(dp),
+            at,
+            model(dp),
+            covariate_parameterization(dp),
+            prior_knowledge(dp),
+            tc,
+            normal_approximation(dp),
+        )
     catch e
         if isa(e, SingularException)
             # undefined objective implies no well-defined derivative
@@ -235,9 +289,8 @@ function gateauxderivative(
             rethrow(e)
         end
     end
-    cs = allocate_initialize_covariates(directions[1], m, cp)
     gd = map(directions) do d
-        gateauxderivative!(nw, mw, cs, gconst, d, m, cp, pk, na)
+        gateauxderivative!(w, d, dp, gconst)
     end
     return gd
 end

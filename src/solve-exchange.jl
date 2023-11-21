@@ -111,26 +111,26 @@ end
 function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
     (; candidate, optimizer_weight, optimizer_direction, steps, simplify_args) = strategy
     check_compatible(candidate, region(dp))
-    pk = prior_knowledge(dp)
-    cp = covariate_parameterization(dp)
-    m = model(dp)
-    na = normal_approximation(dp)
-    tc = precalculate_trafo_constants(transformation(dp), pk)
-    nw = NIMWorkspace(parameter_dimension(pk), codomain_dimension(tc))
-    # Dirac design measure corresponds to single covariate
-    mw = allocate_model_workspace(1, m, pk)
-    c = allocate_initialize_covariates(one_point_design(points(candidate)[1]), m, cp)
+    tc = precalculate_trafo_constants(transformation(dp), prior_knowledge(dp))
+    w = allocate_workspaces(one_point_design(points(candidate)[1]), dp, tc)
     constraints = DesignConstraints(region(dp), [false], [false])
     res = candidate
     or_pairs = map(1:(steps)) do i
         res = simplify(res, dp; simplify_args...)
         dir_prot = map(one_point_design, points(simplify_drop(res, 0)))
-        gc = gateaux_constants(criterion(dp), res, m, cp, pk, tc, na)
+        gc = gateaux_constants(
+            criterion(dp),
+            res,
+            model(dp),
+            covariate_parameterization(dp),
+            prior_knowledge(dp),
+            tc,
+            normal_approximation(dp),
+        )
         # find direction of steepest ascent
-        gd(d) = gateauxderivative!(nw, mw, c, gc, d, m, cp, pk, na)
         or_gd = optimize(
             optimizer_direction,
-            gd,
+            d -> gateauxderivative!(w, d, dp, gc),
             dir_prot,
             constraints;
             trace_state = trace_state,
