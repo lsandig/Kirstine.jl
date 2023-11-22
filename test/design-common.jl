@@ -230,24 +230,5 @@ include("example-vector.jl")
             @test c[3].dose == points(d2)[3][1]
         end
     end
-
-    @testset "inverse_information_matrices" begin
-        let d = DesignMeasure([[1], [5], [9]], [0.1, 0.2, 0.7]),
-            m = EmaxModel(1),
-            cp = CopyDose(),
-            pk = PriorSample([
-                EmaxPar(; e0 = 1, emax = 10, ec50 = 2),
-                EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            ]),
-            na = FisherMatrix(),
-            iim = Kirstine.inverse_information_matrices(d, m, cp, pk, na)
-
-            # test that working matrices were deepcopied
-            @test iim[1] !== iim[2]
-            # compare potrf/potri result to higher-level inv call
-            @test Symmetric(iim[1]) ≈ inv(informationmatrix(d, m, cp, pk.p[1], na))
-            @test Symmetric(iim[2]) ≈ inv(informationmatrix(d, m, cp, pk.p[2], na))
-        end
-    end
 end
 end

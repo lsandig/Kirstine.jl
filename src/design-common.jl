@@ -90,33 +90,6 @@ function informationmatrix(
     return Symmetric(nw.r_x_r)
 end
 
-function inverse_information_matrices(
-    d::DesignMeasure,
-    m::Model,
-    cp::CovariateParameterization,
-    pk::PriorSample,
-    na::NormalApproximation,
-)
-    # Calculate inverse of normalized information matrix for each parameter value.
-    # Only the upper triangle of the (symmetric) information matrix is relevant.
-    c = allocate_initialize_covariates(d, m, cp)
-    # The transformed parameter dimension t = 1 is a dummy argument here.
-    nw = NIMWorkspace(dimension(pk.p[1]), 1)
-    mw = allocate_model_workspace(numpoints(d), m, pk)
-    update_model_workspace!(mw, m, c)
-    # The documentation of `potri!` is not very clear that it expects a Cholesky factor as
-    # input, and does _not_ call `potrf!` itself.
-    # See also https://netlib.org/lapack/explore-html/d1/d7a/group__double_p_ocomputational_ga9dfc04beae56a3b1c1f75eebc838c14c.html
-    inv_nims = map(pk.p) do p
-        average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, p)
-        informationmatrix!(nw.r_x_r, na)
-        potrf!('U', nw.r_x_r)
-        potri!('U', nw.r_x_r)
-        return deepcopy(nw.r_x_r)
-    end
-    return inv_nims
-end
-
 ## normalized information matrix for T(θ) ##
 
 # Calling conventions for `apply_transformation!`
