@@ -61,17 +61,15 @@ struct DeltaMethod{T<:Function} <: Transformation
 end
 
 struct TCIdentity <: TrafoConstants
-    codomain_dimension::Int64
     idmat::Matrix{Float64}
 end
+
 struct TCDeltaMethod <: TrafoConstants
-    codomain_dimension::Int64
     jm::Vector{Matrix{Float64}}
 end
 
 function trafo_constants(trafo::Identity, pk::PriorSample)
-    r = parameter_dimension(pk)
-    return TCIdentity(r, diagm(ones(r)))
+    return TCIdentity(diagm(ones(parameter_dimension(pk))))
 end
 
 function trafo_constants(trafo::DeltaMethod, pk::PriorSample)
@@ -85,7 +83,7 @@ function trafo_constants(trafo::DeltaMethod, pk::PriorSample)
     if ncol != r
         throw(DimensionMismatch("trafo jacobian must have $(r) columns, got $(ncol)"))
     end
-    return TCDeltaMethod(size(jm[1], 1), jm)
+    return TCDeltaMethod(jm)
 end
 
 function codomain_dimension(trafo::Identity, pk::PriorSample)

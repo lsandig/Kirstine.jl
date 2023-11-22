@@ -22,7 +22,6 @@ include("example-testpar.jl")
             @test_throws "2 columns" Kirstine.trafo_constants(D1, pk)
             @test_throws "identical" Kirstine.trafo_constants(D2, pk)
             @test isa(tc, Kirstine.TCDeltaMethod)
-            @test tc.codomain_dimension == 1
             @test tc.jm == [[3 -4], [-3 -4]]
         end
 
@@ -32,7 +31,6 @@ include("example-testpar.jl")
             tc = Kirstine.trafo_constants(id, pk)
 
             @test isa(tc, Kirstine.TCIdentity)
-            @test tc.codomain_dimension == 2
             @test tc.idmat == [1 0; 0 1]
         end
     end
