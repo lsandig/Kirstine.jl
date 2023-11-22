@@ -128,7 +128,10 @@ Get the [`NormalApproximation`](@ref) of `dp`.
 normal_approximation(dp::DesignProblem) = dp.na
 
 function allocate_workspaces(d::DesignMeasure, dp::DesignProblem, tc::TrafoConstants)
-    nw = NIMWorkspace(parameter_dimension(prior_knowledge(dp)), codomain_dimension(tc))
+    nw = NIMWorkspace(
+        parameter_dimension(prior_knowledge(dp)),
+        codomain_dimension(transformation(dp), prior_knowledge(dp)),
+    )
     mw = allocate_model_workspace(numpoints(d), model(dp), prior_knowledge(dp))
     c = allocate_initialize_covariates(d, model(dp), covariate_parameterization(dp))
     return Workspaces(nw, mw, c)
@@ -335,10 +338,10 @@ function efficiency(
     # check that minimal requirements are met for efficiency to make sense
     tc1 = trafo_constants(dp1.trafo, dp1.pk)
     tc2 = trafo_constants(dp2.trafo, dp2.pk)
-    if codomain_dimension(tc1) != codomain_dimension(tc2)
+    t = codomain_dimension(transformation(dp1), prior_knowledge(dp1))
+    if t != codomain_dimension(transformation(dp2), prior_knowledge(dp2))
         throw(DimensionMismatch("dimensions of transformed parameters must match"))
     end
-    t = codomain_dimension(tc1)
     # Take a shortcut via D criterion objective, which already gives the average
     # log-determinant of the transformed information matrices, and handles exceptions.
     # Note that the design region is irrelevant for relative efficiency.
@@ -363,7 +366,6 @@ See also the [mathematical background](math.md#Shannon-Information).
 """
 function shannon_information(d::DesignMeasure, dp::DesignProblem, n::Integer)
     dpd = as_doptimality_problem(dp)
-    # this is somewhat ugly, computing all constants is a bit unnecessary
-    t = codomain_dimension(trafo_constants(transformation(dp), prior_knowledge(dp)))
+    t = codomain_dimension(transformation(dp), prior_knowledge(dp))
     return (t / 2) * (log(n) - 1 + log(2 * pi)) + 0.5 * objective(d, dpd)
 end

@@ -91,7 +91,7 @@ function gateaux_constants(
     # This computes Symmetric versions of of M(ζ,θ)^{-1}.
     iim = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
     tc = trafo_constants(trafo, pk)
-    nw = NIMWorkspace(parameter_dimension(pk), codomain_dimension(tc))
+    nw = NIMWorkspace(parameter_dimension(pk), codomain_dimension(trafo, pk))
 
     # Note that A will be dense.
     A = map(iim, tc.jm) do iM, DT
@@ -105,6 +105,6 @@ function gateaux_constants(
         C = DT' * (Symmetric(nw.t_x_t) \ DT)
         return iM * C * iM
     end
-    tr_B = fill(codomain_dimension(tc), length(pk.p))
+    tr_B = fill(codomain_dimension(trafo, pk), length(pk.p))
     return GCDDeltaMethod(A, tr_B)
 end

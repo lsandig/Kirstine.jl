@@ -88,12 +88,12 @@ function trafo_constants(trafo::DeltaMethod, pk::PriorSample)
     return TCDeltaMethod(size(jm[1], 1), jm)
 end
 
-function codomain_dimension(tc::TCIdentity)
-    return tc.codomain_dimension
+function codomain_dimension(trafo::Identity, pk::PriorSample)
+    return parameter_dimension(pk)
 end
 
-function codomain_dimension(tc::TCDeltaMethod)
-    return tc.codomain_dimension
+function codomain_dimension(trafo::DeltaMethod, pk::PriorSample)
+    return size(trafo.jacobian_matrix(pk.p[1]), 1)
 end
 
 function trafo_jacobian_matrix_for_index(tc::TCIdentity, i::Integer)

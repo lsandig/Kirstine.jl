@@ -146,7 +146,7 @@ function Kirstine.gateaux_constants(
     # For M(ζ,θ) ∈ S_+^r we need
     # A     = (1/r) det(M(ζ,θ))^{1/r} M(ζ,θ)^{-1}
     # tr(B) = det(M(ζ,θ))^{1/r}
-    r = Kirstine.codomain_dimension(tc)
+    r = Kirstine.codomain_dimension(trafo, pk)
     # Compute M^{-1} as Symmetric matrices.
     inv_M = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
     # Since we already have M(ζ,θ)^{-1}, we compute tr(B) more numerically stable as
@@ -178,7 +178,7 @@ function Kirstine.gateaux_constants(
     # A     = (1/t) det(M(ζ,θ))^{1/t} M(ζ,θ)^{-1} DT' M_T(ζ,θ) DT M(ζ,θ)^{-1}
     # tr(B) = det(M(ζ,θ))^{1/t}
     tc = Kirstine.trafo_constants(trafo, pk)
-    t = Kirstine.codomain_dimension(tc)
+    t = Kirstine.codomain_dimension(trafo, pk)
     # This computes M^{-1} as Symmetric matrices.
     inv_M = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
     tr_B = map(iM -> exp(-log(det(iM)) / t), inv_M)
