@@ -288,9 +288,7 @@ function gateauxderivative(
         transformation(dp),
         normal_approximation(dp),
     )
-    gd = map(directions) do d
-        gateauxderivative!(w, d, dp, gconst)
-    end
+    gd = map(d -> gateauxderivative!(w, d, dp, gconst), directions)
     return gd
 end
 
