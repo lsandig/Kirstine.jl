@@ -123,14 +123,14 @@ include("example-vector.jl")
             _ = broadcast!(identity, nw3.r_x_r, nim),
             _ = broadcast!(identity, nw4.r_x_r, inv_nim),
             _ = setfield!(nw1, :r_is_inv, false),
-            r1 = Kirstine.apply_transformation!(nw1, ctid, 1),
+            r1 = Kirstine.apply_transformation!(nw1, tid, ctid.jm[1]),
             _ = setfield!(nw2, :r_is_inv, true),
-            r2 = Kirstine.apply_transformation!(nw2, ctid, 1),
+            r2 = Kirstine.apply_transformation!(nw2, tid, ctid.jm[1]),
             # scaling parameters should be able to be pulled out
             _ = setfield!(nw3, :r_is_inv, false),
-            r3 = Kirstine.apply_transformation!(nw3, ctsc, 1),
+            r3 = Kirstine.apply_transformation!(nw3, tsc, ctsc.jm[1]),
             _ = setfield!(nw4, :r_is_inv, true),
-            r4 = Kirstine.apply_transformation!(nw4, ctsc, 1)
+            r4 = Kirstine.apply_transformation!(nw4, tsc, ctsc.jm[1])
 
             @test Symmetric(nw1.t_x_t) ≈ Symmetric(inv_nim)
             @test r1 === nw1
@@ -149,8 +149,8 @@ include("example-vector.jl")
         # The Identity transformation simply passes through the input matrix and its
         # inversion flag unchanged.
         let pk = PriorSample([TestPar3(1, 2, 3)]),
-            t = Identity(),
-            tc = Kirstine.trafo_constants(t, pk),
+            trafo = Identity(),
+            tc = Kirstine.trafo_constants(trafo, pk),
             _ = seed!(4321),
             A = reshape(rand(9), 3, 3),
             nim = collect(UpperTriangular(A' * A)),
@@ -164,8 +164,8 @@ include("example-vector.jl")
             _ = broadcast!(identity, nw2.r_x_r, inv_nim),
             _ = setfield!(nw1, :r_is_inv, false),
             _ = setfield!(nw2, :r_is_inv, true),
-            r1 = Kirstine.apply_transformation!(nw1, tc, 1),
-            r2 = Kirstine.apply_transformation!(nw2, tc, 1)
+            r1 = Kirstine.apply_transformation!(nw1, trafo, diagm(ones(3))),
+            r2 = Kirstine.apply_transformation!(nw2, trafo, diagm(ones(3)))
 
             @test Symmetric(nw1.t_x_t) ≈ Symmetric(nim)
             @test r1 === nw1
@@ -188,7 +188,7 @@ include("example-vector.jl")
             pk = PriorSample([TestPar3(1, 2, 3), TestPar3(4, 5, 6)]), # dummy values
             t = DeltaMethod(p -> diagm([0.5, 2.0, 4.0])),
             tc = Kirstine.trafo_constants(t, pk),
-            (tnim, is_inv) = Kirstine.transformed_information_matrices(nim, false, pk, tc)
+            (tnim, is_inv) = Kirstine.transformed_information_matrices(nim, false, pk, t)
 
             @test length(tnim) == 2
             # with the DeltaMethod, the output is always inverted

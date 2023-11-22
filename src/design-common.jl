@@ -130,18 +130,18 @@ end
 #   are free to return a dense matrix.
 # * Whether the returned matrix will be inverted is _not_ controlled by `nw.t_is_inv`.
 
-function apply_transformation!(nw::NIMWorkspace, tc::TCIdentity, index)
+function apply_transformation!(nw::NIMWorkspace, trafo::Identity, _)
     # For the Identity transformation we just pass through the information matrix.
     nw.t_x_t .= nw.r_x_r
     nw.t_is_inv = nw.r_is_inv
     return nw
 end
 
-function apply_transformation!(nw::NIMWorkspace, tc::TCDeltaMethod, index)
+function apply_transformation!(nw::NIMWorkspace, trafo::DeltaMethod, jm::Matrix{Float64})
     # Denote the Jacobian matrix of T by J and the normalized information matrix by M. We
     # want to efficiently calculate J * inv(M) * J'.
     #
-    # A precalculated J is given in tc.jm[index].
+    # A precalculated J is given in jm.
     #
     # Depending on whether nw.r_x_r contains (the upper triangle of) M or inv(M) we use
     # different BLAS routines and a different order of multiplication.
@@ -151,20 +151,20 @@ function apply_transformation!(nw::NIMWorkspace, tc::TCDeltaMethod, index)
         #
         # The `symm!` call performes the following in-place update:
         #
-        #   nw.t_x_r = 1 * tc.jm[index] * Symmetric(nw.r_x_r) + 0 * nw.t_x_r
+        #   nw.t_x_r = 1 * jm * Symmetric(nw.r_x_r) + 0 * nw.t_x_r
         #
         # That is,
         #  * the symmetric matrix nw.r_x_r is the factor on the 'R'ight, and
         #  * the data is contained in the 'U'pper triangle.
-        symm!('R', 'U', 1.0, nw.r_x_r, tc.jm[index], 0.0, nw.t_x_r)
+        symm!('R', 'U', 1.0, nw.r_x_r, jm, 0.0, nw.t_x_r)
         # Next we calculate the result A * J' and store it in nw.t_x_t.
-        mul!(nw.t_x_t, nw.t_x_r, tc.jm[index]')
+        mul!(nw.t_x_t, nw.t_x_r, jm')
     else
         # When the input is not yet inverted, we don't want to calculate inv(M) explicitly.
         # As a first step we calculate B := inv(M) * J and store it in nw.r_x_t.
         # We do this by solving the linear system M * B == J in place.
         # As we do not want to overwrite J, we copy J' into a work matrix.
-        nw.r_x_t .= tc.jm[index]'
+        nw.r_x_t .= jm'
         # The `posv!` call performs the following in-place update:
         #
         #  * Overwrite nw.r_x_r with its Cholesky factor `potrf!(nw.r_x_r)`, using the data
@@ -172,7 +172,7 @@ function apply_transformation!(nw::NIMWorkspace, tc::TCDeltaMethod, index)
         #  * Overwrite nw.r_x_t by the solution of the linear system.
         posv!('U', nw.r_x_r, nw.r_x_t)
         # Next, we calculate the result J * B and store it in nw.t_x_t.
-        mul!(nw.t_x_t, tc.jm[index], nw.r_x_t)
+        mul!(nw.t_x_t, jm, nw.r_x_t)
     end
     nw.t_is_inv = true
     # Note that for this method, the result is not just an upper triangle, but always a
@@ -192,7 +192,7 @@ function transformed_information_matrices(
     tnim = map(1:length(pk.p)) do i
         nw.r_is_inv = is_inv
         nw.r_x_r .= nim[i] # will be overwritten by the next call
-        apply_transformation!(nw, tc, i)
+        apply_transformation!(nw, trafo, trafo_jacobian_matrix_for_index(tc, i))
         return deepcopy(nw.t_x_t)
     end
     return tnim, nw.t_is_inv

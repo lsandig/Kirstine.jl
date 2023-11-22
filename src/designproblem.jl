@@ -201,7 +201,11 @@ function objective!(w::Workspaces, d::DesignMeasure, dp::DesignProblem, tc::Traf
             average_fishermatrix!(w.nw.r_x_r, w.mw, weights(d), m, w.c, pk.p[i])
             informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
             w.nw.r_is_inv = false
-            apply_transformation!(w.nw, tc, i)
+            apply_transformation!(
+                w.nw,
+                transformation(dp),
+                trafo_jacobian_matrix_for_index(tc, i),
+            )
             acc +=
                 pk.weight[i] *
                 criterion_integrand!(w.nw.t_x_t, w.nw.t_is_inv, criterion(dp))

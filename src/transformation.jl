@@ -95,3 +95,11 @@ end
 function codomain_dimension(tc::TCDeltaMethod)
     return tc.codomain_dimension
 end
+
+function trafo_jacobian_matrix_for_index(tc::TCIdentity, i::Integer)
+    return tc.idmat
+end
+
+function trafo_jacobian_matrix_for_index(tc::TCDeltaMethod, i::Integer)
+    return tc.jm[i]
+end
