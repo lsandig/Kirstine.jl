@@ -62,6 +62,7 @@ end
 
 struct TCIdentity <: TrafoConstants
     codomain_dimension::Int64
+    idmat::Matrix{Float64}
 end
 struct TCDeltaMethod <: TrafoConstants
     codomain_dimension::Int64
@@ -69,7 +70,8 @@ struct TCDeltaMethod <: TrafoConstants
 end
 
 function trafo_constants(trafo::Identity, pk::PriorSample)
-    return TCIdentity(parameter_dimension(pk))
+    r = parameter_dimension(pk)
+    return TCIdentity(r, diagm(ones(r)))
 end
 
 function trafo_constants(trafo::DeltaMethod, pk::PriorSample)

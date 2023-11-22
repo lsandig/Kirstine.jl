@@ -33,6 +33,7 @@ include("example-testpar.jl")
 
             @test isa(tc, Kirstine.TCIdentity)
             @test Kirstine.codomain_dimension(tc) == 2
+            @test tc.idmat == [1 0; 0 1]
         end
     end
 end

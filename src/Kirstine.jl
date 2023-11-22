@@ -14,6 +14,7 @@ using LinearAlgebra:
     SingularException,
     Symmetric,
     diagind,
+    diagm,
     mul!,
     norm,
     tr
