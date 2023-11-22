@@ -88,19 +88,23 @@ function gateaux_constants(
     trafo::DeltaMethod,
     na::NormalApproximation,
 )
+    # This computes Symmetric versions of of M(ζ,θ)^{-1}.
+    iim = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
     tc = trafo_constants(trafo, pk)
-    t = codomain_dimension(tc)
-    # This computes the upper triangle of M(ζ,θ)^{-1}.
-    inv_M = inverse_information_matrices(d, m, cp, pk, na)
-    # We already know that the result will be inverted.
-    inv_MT, _ = transformed_information_matrices(inv_M, true, pk, trafo)
+    nw = NIMWorkspace(parameter_dimension(pk), codomain_dimension(tc))
+
     # Note that A will be dense.
-    A = map(inv_M, inv_MT, tc.jm) do iM, iMT, DT
-        # Now, iMT contains the upper triangle of (M_T(ζ,θ))^{-1}.
+    A = map(iim, tc.jm) do iM, DT
+        # compute (M_T(ζ,θ))^{-1} from M(ζ,θ)^{-1}.
+        # since typeof(trafo) == DeltaMethod, we know that the result will be inverted
+        nw.r_x_r .= iM
+        nw.r_is_inv = true
+        apply_transformation!(nw, trafo, DT)
+        # Now, nw.t_x_t contains the upper triangle of (M_T(ζ,θ))^{-1}.
         # Instead of an explicit inversion, we solve (M_T(ζ,θ))^{-1} X = DT for X.
-        C = DT' * (Symmetric(iMT) \ DT)
-        return Symmetric(iM) * C * Symmetric(iM)
+        C = DT' * (Symmetric(nw.t_x_t) \ DT)
+        return iM * C * iM
     end
-    tr_B = fill(t, length(pk.p))
+    tr_B = fill(codomain_dimension(tc), length(pk.p))
     return GCDDeltaMethod(A, tr_B)
 end
