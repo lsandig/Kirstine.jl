@@ -68,7 +68,7 @@ function gateaux_constants(
     trafo::Identity,
     na::NormalApproximation,
 )
-    A = inverse_information_matrices(d, m, cp, pk, na) # only upper triangles
+    A = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
     tr_B = fill(parameter_dimension(pk), length(pk.p))
     return GCDIdentity(A, tr_B)
 end

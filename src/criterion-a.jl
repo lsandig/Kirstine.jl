@@ -70,7 +70,7 @@ function gateaux_constants(
     trafo::Identity,
     na::NormalApproximation,
 )
-    invM = inverse_information_matrices(d, m, cp, pk, na)
+    invM = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
     tr_B = map(tr, invM)
     A = map(m -> Symmetric(m)^2, invM)
     return GCAIdentity(A, tr_B)
@@ -90,7 +90,7 @@ function gateaux_constants(
     na::NormalApproximation,
 )
     tc = trafo_constants(trafo, pk)
-    invM = inverse_information_matrices(d, m, cp, pk, na)
+    invM = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
     JpJ = map(J -> J' * J, tc.jm)
     tr_B = map((J, iM) -> tr(J * Symmetric(iM)), JpJ, invM)
     A = map((J, iM) -> Symmetric(iM) * J * Symmetric(iM), JpJ, invM)
