@@ -147,12 +147,12 @@ function Kirstine.gateaux_constants(
     # A     = (1/r) det(M(ζ,θ))^{1/r} M(ζ,θ)^{-1}
     # tr(B) = det(M(ζ,θ))^{1/r}
     r = Kirstine.codomain_dimension(tc)
-    # Compute the upper triangles of M^{-1}.
-    inv_M = Kirstine.inverse_information_matrices(d, m, cp, pk, na)
+    # Compute M^{-1} as Symmetric matrices.
+    inv_M = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
     # Since we already have M(ζ,θ)^{-1}, we compute tr(B) more numerically stable as
     # exp(-log(det(M(ζ,θ)^{-1}) / r)).
-    # We don't use log_det since we don't want to modify inv_M.
-    tr_B = map(iM -> exp(-log(det(Symmetric(iM))) / r), inv_M)
+    # We don't use log_det!() since we don't want to modify inv_M.
+    tr_B = map(iM -> exp(-log(det(iM)) / r), inv_M)
     A = map((iM, trB) -> iM * trB / r, inv_M, tr_B)
     return GCDeIdentity(A, tr_B)
 end
@@ -170,7 +170,6 @@ function Kirstine.gateaux_constants(
     trafo::DeltaMethod,
     na::NormalApproximation,
 )
-    tc = Kirstine.trafo_constants(trafo, pk)
     # For the
     #  * original NIM M(ζ,θ) ∈ S_+^r,
     #  * transformed NIM M_T(ζ,θ) ∈ S_+^t,
@@ -178,19 +177,18 @@ function Kirstine.gateaux_constants(
     # we need
     # A     = (1/t) det(M(ζ,θ))^{1/t} M(ζ,θ)^{-1} DT' M_T(ζ,θ) DT M(ζ,θ)^{-1}
     # tr(B) = det(M(ζ,θ))^{1/t}
+    tc = Kirstine.trafo_constants(trafo, pk)
     t = Kirstine.codomain_dimension(tc)
-    r = Kirstine.parameter_dimension(pk)
-    # This computes the upper triangle of M^{-1}.
-    inv_M = Kirstine.inverse_information_matrices(d, m, cp, pk, na)
-    # We already know that the result will be inverted.
-    inv_MT, _ = Kirstine.transformed_information_matrices(inv_M, true, pk, trafo)
-    tr_B = map(iM -> exp(-log(det(Symmetric(iM))) / t), inv_M)
+    # This computes M^{-1} as Symmetric matrices.
+    inv_M = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
+    tr_B = map(iM -> exp(-log(det(iM)) / t), inv_M)
     # Note that these A will be dense.
-    A = map(inv_M, inv_MT, tc.jm, tr_B) do iM, iMT, DT, trB
-        # Now, iMT contains the upper triangle of (M_T(ζ,θ))^{-1}.
+    A = map(inv_M, tc.jm, tr_B) do iM, DT, trB
+        # compute (M_T(ζ,θ))^{-1} from M(ζ,θ)^{-1}.
+        iMT = DT * iM * DT'
         # Instead of an explicit inversion, we solve (M_T(ζ,θ))^{-1} X = DT for X.
-        C = DT' * (Symmetric(iMT) \ DT)
-        return Symmetric(iM) * C * Symmetric(iM) * trB / t
+        C = DT' * (iMT \ DT)
+        return iM * C * iM * trB / t
     end
     return GCDeDeltaMethod(A, tr_B)
 end
