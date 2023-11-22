@@ -127,7 +127,7 @@ Get the [`NormalApproximation`](@ref) of `dp`.
 """
 normal_approximation(dp::DesignProblem) = dp.na
 
-function allocate_workspaces(d::DesignMeasure, dp::DesignProblem, tc::TrafoConstants)
+function allocate_workspaces(d::DesignMeasure, dp::DesignProblem)
     nw = NIMWorkspace(
         parameter_dimension(prior_knowledge(dp)),
         codomain_dimension(transformation(dp), prior_knowledge(dp)),
@@ -232,7 +232,7 @@ See also the [mathematical background](math.md#Objective-Function).
 """
 function objective(d::DesignMeasure, dp::DesignProblem)
     tc = trafo_constants(transformation(dp), prior_knowledge(dp))
-    w = allocate_workspaces(d, dp, tc)
+    w = allocate_workspaces(d, dp)
     return objective!(w, d, dp, tc)
 end
 
@@ -280,8 +280,7 @@ function gateauxderivative(
         # undefined objective implies no well-defined derivative
         return fill(NaN, size(directions))
     end
-    tc = trafo_constants(transformation(dp), prior_knowledge(dp))
-    w = allocate_workspaces(directions[1], dp, tc)
+    w = allocate_workspaces(directions[1], dp)
     gconst = gateaux_constants(
         criterion(dp),
         at,
@@ -336,8 +335,6 @@ function efficiency(
     dp2::DesignProblem,
 )
     # check that minimal requirements are met for efficiency to make sense
-    tc1 = trafo_constants(dp1.trafo, dp1.pk)
-    tc2 = trafo_constants(dp2.trafo, dp2.pk)
     t = codomain_dimension(transformation(dp1), prior_knowledge(dp1))
     if t != codomain_dimension(transformation(dp2), prior_knowledge(dp2))
         throw(DimensionMismatch("dimensions of transformed parameters must match"))
