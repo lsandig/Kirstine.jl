@@ -273,26 +273,21 @@ function gateauxderivative(
     if any(d -> numpoints(d) != 1, directions)
         error("Gateaux derivatives are only implemented for one-point design directions")
     end
+    if isinf(objective(at, dp))
+        # undefined objective implies no well-defined derivative
+        return fill(NaN, size(directions))
+    end
     tc = trafo_constants(transformation(dp), prior_knowledge(dp))
     w = allocate_workspaces(directions[1], dp, tc)
-    gconst = try
-        gateaux_constants(
-            criterion(dp),
-            at,
-            model(dp),
-            covariate_parameterization(dp),
-            prior_knowledge(dp),
-            transformation(dp),
-            normal_approximation(dp),
-        )
-    catch e
-        if isa(e, SingularException)
-            # undefined objective implies no well-defined derivative
-            return fill(NaN, size(directions))
-        else
-            rethrow(e)
-        end
-    end
+    gconst = gateaux_constants(
+        criterion(dp),
+        at,
+        model(dp),
+        covariate_parameterization(dp),
+        prior_knowledge(dp),
+        transformation(dp),
+        normal_approximation(dp),
+    )
     gd = map(directions) do d
         gateauxderivative!(w, d, dp, gconst)
     end
