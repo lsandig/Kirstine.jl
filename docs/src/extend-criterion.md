@@ -183,7 +183,7 @@ function Kirstine.gateaux_constants(
     # This computes the upper triangle of M^{-1}.
     inv_M = Kirstine.inverse_information_matrices(d, m, cp, pk, na)
     # We already know that the result will be inverted.
-    inv_MT, _ = Kirstine.transformed_information_matrices(inv_M, true, pk, tc)
+    inv_MT, _ = Kirstine.transformed_information_matrices(inv_M, true, pk, trafo)
     tr_B = map(iM -> exp(-log(det(Symmetric(iM))) / t), inv_M)
     # Note that these A will be dense.
     A = map(inv_M, inv_MT, tc.jm, tr_B) do iM, iMT, DT, trB

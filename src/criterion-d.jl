@@ -93,7 +93,7 @@ function gateaux_constants(
     # This computes the upper triangle of M(ζ,θ)^{-1}.
     inv_M = inverse_information_matrices(d, m, cp, pk, na)
     # We already know that the result will be inverted.
-    inv_MT, _ = transformed_information_matrices(inv_M, true, pk, tc)
+    inv_MT, _ = transformed_information_matrices(inv_M, true, pk, trafo)
     # Note that A will be dense.
     A = map(inv_M, inv_MT, tc.jm) do iM, iMT, DT
         # Now, iMT contains the upper triangle of (M_T(ζ,θ))^{-1}.

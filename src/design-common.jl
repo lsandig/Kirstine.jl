@@ -185,8 +185,9 @@ function transformed_information_matrices(
     nim::AbstractVector{<:AbstractMatrix},
     is_inv::Bool,
     pk::PriorSample,
-    tc::TrafoConstants,
+    trafo::Transformation,
 )
+    tc = trafo_constants(trafo, pk)
     nw = NIMWorkspace(parameter_dimension(pk), codomain_dimension(tc))
     tnim = map(1:length(pk.p)) do i
         nw.r_is_inv = is_inv
