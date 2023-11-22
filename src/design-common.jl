@@ -153,24 +153,6 @@ function apply_transformation!(nw::NIMWorkspace, trafo::DeltaMethod, jm::Matrix{
     return nw
 end
 
-# helper method to be used when computing gateaux constants
-function transformed_information_matrices(
-    nim::AbstractVector{<:AbstractMatrix},
-    is_inv::Bool,
-    pk::PriorSample,
-    trafo::Transformation,
-)
-    tc = trafo_constants(trafo, pk)
-    nw = NIMWorkspace(parameter_dimension(pk), codomain_dimension(tc))
-    tnim = map(1:length(pk.p)) do i
-        nw.r_is_inv = is_inv
-        nw.r_x_r .= nim[i] # will be overwritten by the next call
-        apply_transformation!(nw, trafo, trafo_jacobian_matrix_for_index(tc, i))
-        return deepcopy(nw.t_x_t)
-    end
-    return tnim, nw.t_is_inv
-end
-
 ## linear algebra shortcuts ##
 
 # Calculate `log(det(A))`. `A` is implicitly treated as symmetric, i.e. only the upper
