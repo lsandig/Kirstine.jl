@@ -124,7 +124,7 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
             model(dp),
             covariate_parameterization(dp),
             prior_knowledge(dp),
-            tc,
+            transformation(dp),
             normal_approximation(dp),
         )
         # find direction of steepest ascent

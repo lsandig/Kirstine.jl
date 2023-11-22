@@ -74,8 +74,8 @@ for the special case ``\Transformation(\Parameter)=\Parameter``.
 
 ## Implementation
 
-When a new `T <: DesignCriterion` is going to be used with a `U <: TrafoConstants`,
-it needs a corresponding `V <: GateauxConstants`
+When a new `T <: DesignCriterion` is going to be used,
+it needs a corresponding `U <: GateauxConstants`
 which wraps precomputed values for all expressions
 that do not depend on the direction of the Gateaux derivative.
 Additionally, the following methods must be implemented.
@@ -84,11 +84,11 @@ Additionally, the following methods must be implemented.
     The function ``\DesignCriterion`` in the mathematical notation.
     This function should be fast.
     Ideally, it should not allocate new memory.
-  - `gateaux_integrand(c::V, nim_direction, index)`:
+  - `gateaux_integrand(c::U, nim_direction, index)`:
     The integrand of the Gateaux derivative.
     This function should be fast.
     Ideally, it should not allocate new memory.
-  - `gateaux_constants(dc::T, d::DesignMeasure, m::Model, cp::CovariateParameterization, pk::PriorSample, tc::U, na::NormalApproximation)`:
+  - `gateaux_constants(dc::T, d::DesignMeasure, m::Model, cp::CovariateParameterization, pk::PriorSample, trafo::Transformation, na::NormalApproximation)`:
     Compute the value of all expensive expressions in the Gateaux derivative
     that do not depend on ``\NIMatrix(\DesignMeasureDirection,\Parameter)``
     for every parameter value in the Monte-Carlo sample.
@@ -139,9 +139,10 @@ function Kirstine.gateaux_constants(
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
-    tc::Kirstine.TCIdentity,
+    trafo::Identity,
     na::NormalApproximation,
 )
+    tc = Kirstine.trafo_constants(trafo, pk)
     # For M(ζ,θ) ∈ S_+^r we need
     # A     = (1/r) det(M(ζ,θ))^{1/r} M(ζ,θ)^{-1}
     # tr(B) = det(M(ζ,θ))^{1/r}
@@ -166,9 +167,10 @@ function Kirstine.gateaux_constants(
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
-    tc::Kirstine.TCDeltaMethod,
+    trafo::DeltaMethod,
     na::NormalApproximation,
 )
+    tc = Kirstine.trafo_constants(trafo, pk)
     # For the
     #  * original NIM M(ζ,θ) ∈ S_+^r,
     #  * transformed NIM M_T(ζ,θ) ∈ S_+^t,

@@ -93,13 +93,13 @@ include("example-compartment.jl")
             g1 = TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
             g2 = TPCParameter(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
             pk = PriorSample([g1, g2]),
-            tc = Kirstine.TCIdentity(3), # the codomain dimension is not used in this test
+            trafo = Identity(), # the codomain dimension is not used in this test
             na = FisherMatrix(),
             pgc = Kirstine.gateaux_constants,
-            gc = pgc(dc, a1, m, cp, pk, tc, na)
+            gc = pgc(dc, a1, m, cp, pk, trafo, na)
 
             # Singular designs should raise an exception. It will be caught by the caller.
-            @test_throws "SingularException" pgc(dc, a4, m, cp, pk, tc, na)
+            @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
             @test isa(gc, Kirstine.GCDIdentity)
             @test length(gc.A) == 2
             @test length(gc.tr_B) == 2
@@ -129,10 +129,10 @@ include("example-compartment.jl")
             g2 = TPCParameter(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
             pk = PriorSample([g1, g2]),
             J = [Dauc(g1), Dauc(g2)],
-            tc = Kirstine.TCDeltaMethod(1, J),
+            trafo = DeltaMethod(Dauc),
             na = FisherMatrix(),
             pgc = Kirstine.gateaux_constants,
-            gc = pgc(dc, a1, m, cp, pk, tc, na),
+            gc = pgc(dc, a1, m, cp, pk, trafo, na),
             # Note: the informationmatrix return value is already wrapped in Symmetric()
             M1 = informationmatrix(a1, m, cp, g1, na),
             M2 = informationmatrix(a1, m, cp, g2, na),
@@ -140,7 +140,7 @@ include("example-compartment.jl")
             B2 = J[2]' * inv(J[2] * inv(M2) * J[2]') * J[2]
 
             # Singular designs should raise an exception. It will be caught by the caller.
-            @test_throws "SingularException" pgc(dc, a4, m, cp, pk, tc, na)
+            @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
             @test isa(gc, Kirstine.GCDDeltaMethod)
             @test length(gc.A) == 2
             @test length(gc.tr_B) == 2

@@ -278,7 +278,7 @@ function gateauxderivative(
             model(dp),
             covariate_parameterization(dp),
             prior_knowledge(dp),
-            tc,
+            transformation(dp),
             normal_approximation(dp),
         )
     catch e

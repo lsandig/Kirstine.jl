@@ -67,7 +67,7 @@ function gateaux_constants(
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
-    tc::TCIdentity,
+    trafo::Identity,
     na::NormalApproximation,
 )
     invM = inverse_information_matrices(d, m, cp, pk, na)
@@ -86,9 +86,10 @@ function gateaux_constants(
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
-    tc::TCDeltaMethod,
+    trafo::DeltaMethod,
     na::NormalApproximation,
 )
+    tc = trafo_constants(trafo, pk)
     invM = inverse_information_matrices(d, m, cp, pk, na)
     JpJ = map(J -> J' * J, tc.jm)
     tr_B = map((J, iM) -> tr(J * Symmetric(iM)), JpJ, invM)

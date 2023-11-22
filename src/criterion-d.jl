@@ -65,7 +65,7 @@ function gateaux_constants(
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
-    tc::TCIdentity,
+    trafo::Identity,
     na::NormalApproximation,
 )
     A = inverse_information_matrices(d, m, cp, pk, na) # only upper triangles
@@ -85,9 +85,10 @@ function gateaux_constants(
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
-    tc::TCDeltaMethod,
+    trafo::DeltaMethod,
     na::NormalApproximation,
 )
+    tc = trafo_constants(trafo, pk)
     t = codomain_dimension(tc)
     # This computes the upper triangle of M(ζ,θ)^{-1}.
     inv_M = inverse_information_matrices(d, m, cp, pk, na)
