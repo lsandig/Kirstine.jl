@@ -17,18 +17,6 @@
 #       A(ζ,θ) = M(ζ,θ)^{-1} DT'(θ) M_T(ζ,θ) DT(θ) M(ζ,θ)^{-1}
 #   tr[B(ζ,θ)] = t
 
-# Although tr_B is constant in both cases we store it redundantly in a vector
-# in order to keep the structure consistent with the GCA* types.
-struct GCDIdentity <: GateauxConstants
-    A::Vector{Matrix{Float64}}
-    tr_B::Vector{Float64}
-end
-
-struct GCDDeltaMethod <: GateauxConstants
-    A::Vector{Matrix{Float64}}
-    tr_B::Vector{Float64}
-end
-
 @doc raw"""
     DOptimality
 
@@ -52,13 +40,6 @@ end
 
 ## Gateaux derivative: Identity ##
 
-# Note: only the upper triangle of the symmetric matrix A needs to be filled out,
-# since `gateaux_integrand` uses `tr_prod` for the multiplication.
-# But producing a dense matrix does not hurt either.
-function gateaux_integrand(c::GCDIdentity, nim_direction, index)
-    return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
-end
-
 function gateaux_constants(
     dc::DOptimality,
     d::DesignMeasure,
@@ -70,14 +51,10 @@ function gateaux_constants(
 )
     A = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
     tr_B = fill(parameter_dimension(pk), length(pk.p))
-    return GCDIdentity(A, tr_B)
+    return GCPriorSample(A, tr_B)
 end
 
 ## Gateaux derivative: DeltaMethod ##
-
-function gateaux_integrand(c::GCDDeltaMethod, nim_direction, index)
-    return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
-end
 
 function gateaux_constants(
     dc::DOptimality,
@@ -106,5 +83,5 @@ function gateaux_constants(
         return iM * C * iM
     end
     tr_B = fill(codomain_dimension(trafo, pk), length(pk.p))
-    return GCDDeltaMethod(A, tr_B)
+    return GCPriorSample(A, tr_B)
 end

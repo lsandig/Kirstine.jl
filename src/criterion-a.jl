@@ -17,16 +17,6 @@
 #       A(ζ,θ) = M(ζ,θ)^{-1} DT'(θ) DT(θ) M(ζ,θ)^{-1}
 #   tr[B(ζ,θ)] = tr[DT'(θ) DT(θ) M(ζ,θ)^{-1}].
 
-struct GCAIdentity <: GateauxConstants
-    A::Vector{Matrix{Float64}}
-    tr_B::Vector{Float64}
-end
-
-struct GCADeltaMethod <: GateauxConstants
-    A::Vector{Matrix{Float64}}
-    tr_B::Vector{Float64}
-end
-
 """
     AOptimality <: DesignCriterion
 
@@ -54,13 +44,6 @@ function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::AOptimalit
     end
 end
 
-# Note: only the upper triangle of the symmetric matrix A needs to be filled out,
-# since `gateaux_integrand` uses `tr_prod` for the multiplication.
-# But producing a dense matrix does not hurt either.
-function gateaux_integrand(c::GCAIdentity, nim_direction, index)
-    return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
-end
-
 function gateaux_constants(
     dc::AOptimality,
     d::DesignMeasure,
@@ -73,11 +56,7 @@ function gateaux_constants(
     invM = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
     tr_B = map(tr, invM)
     A = map(m -> Symmetric(m)^2, invM)
-    return GCAIdentity(A, tr_B)
-end
-
-function gateaux_integrand(c::GCADeltaMethod, nim_direction, index)
-    return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
+    return GCPriorSample(A, tr_B)
 end
 
 function gateaux_constants(
@@ -94,5 +73,5 @@ function gateaux_constants(
     JpJ = map(J -> J' * J, tc.jm)
     tr_B = map((J, iM) -> tr(J * Symmetric(iM)), JpJ, invM)
     A = map((J, iM) -> Symmetric(iM) * J * Symmetric(iM), JpJ, invM)
-    return GCADeltaMethod(A, tr_B)
+    return GCPriorSample(A, tr_B)
 end

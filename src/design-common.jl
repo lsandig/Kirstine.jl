@@ -26,6 +26,11 @@ struct Workspaces
     c::Vector{<:Covariate}
 end
 
+struct GCPriorSample <: GateauxConstants
+    A::Vector{Matrix{Float64}}
+    tr_B::Vector{Float64}
+end
+
 function allocate_initialize_covariates(d, m, cp)
     K = numpoints(d)
     cs = [allocate_covariate(m) for _ in 1:K]
@@ -45,6 +50,13 @@ function update_covariates!(
         map_to_covariate!(c[k], points(d)[k], m, cp)
     end
     return c
+end
+
+# Note: only the upper triangle of the symmetric matrix A needs to be filled out,
+# since `gateaux_integrand` uses `tr_prod` for the multiplication.
+# But producing a dense matrix does not hurt either.
+function gateaux_integrand(c::GCPriorSample, nim_direction, index)
+    return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
 end
 
 ## normalized information matrix for θ ##

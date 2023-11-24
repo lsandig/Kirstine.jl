@@ -205,5 +205,21 @@ include("example-vector.jl")
             @test c[3].dose == points(d2)[3][1]
         end
     end
+
+    @testset "gateaux_integrand" begin
+        # This should compute tr(A * B) - d, using only upper triangles from
+        # A and B. A is taken from the GateauxConstants, B is the normalized information
+        # matrix corresponding to the direction. Both matrices have size (r, r). Here we
+        # test an example with r = 2.
+        let A = [2.0 3.0; 0.0 7.0],
+            c = Kirstine.GCPriorSample([A], [1.8]),
+            B = [0.4 1.0; 0.0 0.5],
+            gi = Kirstine.gateaux_integrand
+
+            @test gi(c, B, 1) == tr(Symmetric(A) * Symmetric(B)) - 1.8
+            # rule out unintentionally symmetric input
+            @test gi(c, B, 1) != tr(A * B) - 1.8
+        end
+    end
 end
 end

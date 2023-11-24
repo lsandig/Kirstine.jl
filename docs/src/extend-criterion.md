@@ -84,10 +84,6 @@ Additionally, the following methods must be implemented.
     The function ``\DesignCriterion`` in the mathematical notation.
     This function should be fast.
     Ideally, it should not allocate new memory.
-  - `gateaux_integrand(c::U, nim_direction, index)`:
-    The integrand of the Gateaux derivative.
-    This function should be fast.
-    Ideally, it should not allocate new memory.
   - `gateaux_constants(dc::T, d::DesignMeasure, m::Model, cp::CovariateParameterization, pk::PriorSample, trafo::Transformation, na::NormalApproximation)`:
     Compute the value of all expensive expressions in the Gateaux derivative
     that do not depend on ``\NIMatrix(\DesignMeasureDirection,\Parameter)``
@@ -123,16 +119,6 @@ function Kirstine.criterion_integrand!(
     return exp(cv / t)
 end
 
-struct GCDeIdentity <: Kirstine.GateauxConstants
-    A::Vector{Matrix{Float64}}
-    tr_B::Vector{Float64}
-end
-
-struct GCDeDeltaMethod <: Kirstine.GateauxConstants
-    A::Vector{Matrix{Float64}}
-    tr_B::Vector{Float64}
-end
-
 function Kirstine.gateaux_constants(
     dc::DexpOptimality,
     d::DesignMeasure,
@@ -154,11 +140,7 @@ function Kirstine.gateaux_constants(
     # We don't use log_det!() since we don't want to modify inv_M.
     tr_B = map(iM -> exp(-log(det(iM)) / r), inv_M)
     A = map((iM, trB) -> iM * trB / r, inv_M, tr_B)
-    return GCDeIdentity(A, tr_B)
-end
-
-function Kirstine.gateaux_integrand(c::GCDeIdentity, nim_direction, index)
-    return Kirstine.tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
+    return Kirstine.GCPriorSample(A, tr_B)
 end
 
 function Kirstine.gateaux_constants(
@@ -190,11 +172,7 @@ function Kirstine.gateaux_constants(
         C = DT' * (iMT \ DT)
         return iM * C * iM * trB / t
     end
-    return GCDeDeltaMethod(A, tr_B)
-end
-
-function Kirstine.gateaux_integrand(c::GCDeDeltaMethod, nim_direction, index)
-    return Kirstine.tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
+    return Kirstine.GCPriorSample(A, tr_B)
 end
 ```
 

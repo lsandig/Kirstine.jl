@@ -109,7 +109,7 @@ include("example-compartment.jl")
 
             # Singular designs should raise an exception. It will be caught by the caller.
             @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
-            @test isa(gc, Kirstine.GCAIdentity)
+            @test isa(gc, Kirstine.GCPriorSample)
             @test length(gc.A) == 2
             @test length(gc.tr_B) == 2
             @test Symmetric(gc.A[1]) ≈ inv(m1)^2
@@ -144,47 +144,13 @@ include("example-compartment.jl")
 
             # Singular designs should raise an exception. It will be caught by the caller.
             @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
-            @test isa(gc, Kirstine.GCADeltaMethod)
+            @test isa(gc, Kirstine.GCPriorSample)
             @test length(gc.A) == 2
             @test length(gc.tr_B) == 2
             @test Symmetric(gc.A[1]) ≈ inv(m1) * J[1]' * J[1] * inv(m1)
             @test Symmetric(gc.A[2]) ≈ inv(m2) * J[2]' * J[2] * inv(m2)
             @test gc.tr_B[1] ≈ tr(J[1] * inv(m1) * J[1]')
             @test gc.tr_B[2] ≈ tr(J[2] * inv(m2) * J[2]')
-        end
-    end
-
-    @testset "gateaux_integrand" begin
-        # Identity transformation
-        #
-        # This should compute tr(A * B) - d, using only upper triangles from
-        # A and B. A is taken from the GateauxConstants, B is the normalized information
-        # matrix corresponding to the direction. Both matrices have size (r, r). Here we
-        # test an example with r = 2.
-        let A = [2.0 3.0; 0.0 7.0],
-            c = Kirstine.GCAIdentity([A], [1.8]),
-            B = [0.4 1.0; 0.0 0.5],
-            gi = Kirstine.gateaux_integrand
-
-            @test gi(c, B, 1) == tr(Symmetric(A) * Symmetric(B)) - 1.8
-            # rule out unintentionally symmetric input
-            @test gi(c, B, 1) != tr(A * B) - 1.8
-        end
-
-        # DeltaMethod transformation
-        #
-        # This should compute tr(A * B) - d, using only upper triangles from
-        # A and B. A is taken from the GateauxConstants, B is the normalized information
-        # matrix corresponding to the direction. Both matrices have size (r, r). Here we
-        # test an example with r = 2.
-        let A = [2.0 3.0; 0.0 7.0],
-            c = Kirstine.GCADeltaMethod([A], [1.8]),
-            B = [0.4 1.0; 0.0 0.5],
-            gi = Kirstine.gateaux_integrand
-
-            @test gi(c, B, 1) == tr(Symmetric(A) * Symmetric(B)) - 1.8
-            # rule out unintentionally symmetric input
-            @test gi(c, B, 1) != tr(A * B) - 1.8
         end
     end
 
