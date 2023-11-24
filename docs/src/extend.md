@@ -13,7 +13,7 @@ The following pages show how to implement custom versions of the following objec
   - transformation
   - [normal approximation](extend-approximation.md)
   - [optimizer](extend-optimizer.md)
-  - problem solving strategy
+  - [problem solving strategy](extend-strategy.md)
 
 !!! warning
     

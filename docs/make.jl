@@ -130,6 +130,7 @@ makedocs(modules = [Kirstine],
                  "Model Supertype" => "extend-model.md",
                  "Normal Approximation" => "extend-approximation.md",
                  "Optimizer" => "extend-optimizer.md",
+                 "Strategy" => "extend-strategy.md",
              ],
          ],
          )
