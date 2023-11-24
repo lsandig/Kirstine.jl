@@ -212,13 +212,13 @@ include("example-vector.jl")
         # matrix corresponding to the direction. Both matrices have size (r, r). Here we
         # test an example with r = 2.
         let A = [2.0 3.0; 0.0 7.0],
-            c = Kirstine.GCPriorSample([A], [1.8]),
+            d = 1.8,
             B = [0.4 1.0; 0.0 0.5],
             gi = Kirstine.gateaux_integrand
 
-            @test gi(c, B, 1) == tr(Symmetric(A) * Symmetric(B)) - 1.8
+            @test gi(A, B, d) == tr(Symmetric(A) * Symmetric(B)) - d
             # rule out unintentionally symmetric input
-            @test gi(c, B, 1) != tr(A * B) - 1.8
+            @test gi(A, B, d) != tr(A * B) - d
         end
     end
 end

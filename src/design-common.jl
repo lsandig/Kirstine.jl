@@ -55,8 +55,8 @@ end
 # Note: only the upper triangle of the symmetric matrix A needs to be filled out,
 # since `gateaux_integrand` uses `tr_prod` for the multiplication.
 # But producing a dense matrix does not hurt either.
-function gateaux_integrand(c::GCPriorSample, nim_direction, index)
-    return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
+function gateaux_integrand(A::AbstractMatrix, nim_direction::AbstractMatrix, tr_B::Real)
+    return tr_prod(A, nim_direction, :U) - tr_B
 end
 
 ## normalized information matrix for θ ##

@@ -250,7 +250,7 @@ function gateauxderivative!(
     for i in 1:length(pk.p)
         average_fishermatrix!(w.nw.r_x_r, w.mw, weights(direction), m, w.c, pk.p[i])
         informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
-        acc += pk.weight[i] * gateaux_integrand(gconst, w.nw.r_x_r, i)
+        acc += pk.weight[i] * gateaux_integrand(gconst.A[i], w.nw.r_x_r, gconst.tr_B[i])
     end
     return acc
 end
