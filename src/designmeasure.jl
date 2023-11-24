@@ -160,6 +160,9 @@ DesignMeasure(
 ```
 """
 function equidistant_design(dr::DesignInterval{1}, K::Integer)
+    if K <= 1
+        throw(ArgumentError("equidistant design needs at least K = 2, got $K"))
+    end
     val = range(lowerbound(dr)[1], upperbound(dr)[1]; length = K)
     designpoints = [[dp] for dp in val]
     return uniform_design(designpoints)

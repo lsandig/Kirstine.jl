@@ -45,9 +45,11 @@ using Kirstine
     end
 
     @testset "equidistant_design" begin
-        let d = equidistant_design(DesignInterval(:a => (1, 4)), 4),
+        let dr = DesignInterval(:a => (1, 4)),
+            d = equidistant_design(dr, 4),
             ref = DesignMeasure([[i] for i in 1:4], fill(0.25, 4))
 
+            @test_throws "at least K = 2" equidistant_design(dr, 1)
             @test d == ref
         end
     end
