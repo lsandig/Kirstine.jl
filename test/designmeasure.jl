@@ -3,6 +3,7 @@
 
 module DesignmeasureTests
 using Test
+using Random: seed!
 using Kirstine
 
 @testset "designmeasure.jl" begin
@@ -55,7 +56,10 @@ using Kirstine
     end
 
     @testset "random_design" begin
-        let dr = DesignInterval(:a => (2, 4), :b => (-1, 3)), d = random_design(dr, 4)
+        let dr = DesignInterval(:a => (2, 4), :b => (-1, 3)),
+            _ = seed!(7531),
+            d = random_design(dr, 4)
+
             for k in 1:4
                 @test all(points(d)[k] .<= upperbound(dr))
                 @test all(points(d)[k] .>= lowerbound(dr))
