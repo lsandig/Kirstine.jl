@@ -74,8 +74,8 @@ function Kirstine.solve_with(dp::DesignProblem, strategy::MultipleRuns, trace_st
     tc = Kirstine.trafo_constants(transformation(dp), prior_knowledge(dp))
     w = Kirstine.allocate_workspaces(strategy.prototype, dp)
     optimization_helper(prototype) = Kirstine.optimize(
-        strategy.optimizer,
         d -> Kirstine.objective!(w, d, dp, tc),
+        strategy.optimizer,
         [prototype],
         constraints;
         trace_state = trace_state,

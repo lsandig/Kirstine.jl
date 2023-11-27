@@ -128,8 +128,8 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
         )
         # find direction of steepest ascent
         or_gd = optimize(
-            optimizer_direction,
             d -> gateauxderivative!(w, d, dp, gc),
+            optimizer_direction,
             dir_prot,
             constraints;
             trace_state = trace_state,

@@ -40,8 +40,8 @@ struct OptimizationResult{
 end
 
 function optimize(
-    optimizer::Optimizer,
     f, # x<:AbstractPoint -> Float64
+    optimizer::Optimizer,
     prototypes::AbstractVector{<:AbstractPoint},
     constraints::AbstractConstraints;
     trace_state = false,
