@@ -253,7 +253,15 @@ The [`solve`](@ref) function returns two objects:
   - `r1`: a [`DirectMaximizationResult`](@ref)
     that contains diagnostic information about the optimization run.
 
-At the REPL, the solution is displayed as `designpoint => weight` pairs.
+We can access the lower-level [`OptimizationResult`](@ref)
+by calling [`optimization_result`](@ref) on `r1`,
+which will show some statistics when printed:
+
+```@example main
+optimization_result(r1)
+```
+
+The solution `s1` is displayed as `designpoint => weight` pairs.
 
 ```@example main
 s1
