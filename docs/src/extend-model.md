@@ -120,63 +120,159 @@ only the upper triangle of `afm` is filled.
 
 ### Linear Predictor
 
+We start with a linear predictor and a ``c``-dimensional covariate
+
 ```math
-ν(\Covariate, \Parameter) = β₀ + β₁x₁ + β₂x₂
+ν(\Covariate, \Parameter) = β₀ + \sum_{j=1}^c β_j x_j
 ```
 
-where ``\Covariate = (x₁, x₂)`` and ``\Parameter = (β₀, β₁, β₂)``.
+where ``\Parameter = (β_0, β_1, …, β_c)``.
 
-Say we are looking for a design that is optimal for estimating the odds ratios
+```@example main
+struct LinLogReg <: LogisticRegression
+    dim_covariate::Int64
+end
+
+mutable struct LLRCovariate <: Covariate
+    x::Vector{Float64}
+end
+
+Kirstine.allocate_covariate(m::LinLogReg) = LLRCovariate(zeros(m.dim_covariate))
+
+struct LLRParameter <: Parameter
+    beta_0::Float64
+    beta_rest::Vector{Float64}
+end
+
+Kirstine.dimension(p::LLRParameter) = length(p.beta_rest) + 1
+
+struct CopyVector <: CovariateParameterization end
+
+function Kirstine.map_to_covariate!(c::LLRCovariate, dp, m::LinLogReg, cp::CopyVector)
+    if length(dp) != length(c.x)
+        error("dimension of covariate and design point don't match")
+    end
+    c.x .= dp
+    return c
+end
+
+function nonlinear_predictor(m::LinLogReg, c::LLRCovariate, p::LLRParameter)
+    dim_c = length(c.x)
+    if length(p.beta_rest) != dim_c
+        error("dimensions of covariate and parameter don't match")
+    end
+    np = p.beta_0
+    for j in 1:dim_c
+        np += p.beta_rest[j] * c.x[j]
+    end
+    return np
+end
+
+function predictor_jacobianmatrix!(jm, m::LinLogReg, c::LLRCovariate, p::LLRParameter)
+    dim_c = length(c.x)
+    if length(p.beta_rest) != dim_c
+        error("dimensions of covariate and parameter don't match")
+    end
+    jm[1, 1] = 1
+    for j in 1:dim_c
+        jm[1, j + 1] = c.x[j]
+    end
+    return jm
+end
+nothing # hide
+```
+
+### 1-Dimensional Covariate
+
+First, let's look at a locally optimal, 1-dimensional example from Section 6.2, p. 154 of [^FL13],
+where
+
+```math
+\begin{align*}
+\DesignRegion &= \CovariateSet = [0, 4] \\
+\Parameter &= (-3, 1.81)
+\end{align*}
+```
+
+[^FL13]: Valerii V. Fedorov and Sergei L. Leonov (2013). Optimal design for nonlinear response models. CRC Press. [doi:10.1201/b15054](https://dx.doi.org/10.1201/b15054)
+```@example main
+dp0 = DesignProblem(
+    criterion = DOptimality(),
+    region = DesignInterval(:x1 => (0, 4)),
+    covariate_parameterization = CopyVector(),
+    prior_knowledge = PriorSample([LLRParameter(-3, [1.81])]),
+    model = LinLogReg(1),
+)
+
+Random.seed!(12345)
+str0 = DirectMaximization(
+    optimizer = Pso(swarmsize = 100, iterations = 50),
+    prototype = random_design(region(dp0), 4),
+)
+
+Random.seed!(12345)
+s0, r0 = solve(dp0, str0; mindist = 1e-3)
+s0
+```
+
+```@setup main
+s0 == DesignMeasure(
+ [0.8047475621673699] => 0.49999389060536853,
+ [2.5101732141323296] => 0.5000061093946315,
+) || !check_results || error("not the expected result\n", s0)
+```
+
+```@example main
+gd0 = plot_gateauxderivative(s0, dp0)
+savefig(gd0, "extend-model-gd0.png") # hide
+nothing # hide
+```
+
+![](extend-model-gd0.png)
+
+```@example main
+er0 = plot_expected_function(
+    (x, c, p) -> expit(p.beta_0 + p.beta_rest[1] * x),
+    c -> [c.x[1]],
+    (c, p) -> [expit(p.beta_0 + p.beta_rest[1] * c.x[1])],
+    range(lowerbound(region(dp0))[1], upperbound(region(dp0))[1]; length = 101),
+    s0,
+    model(dp0),
+    covariate_parameterization(dp0),
+    prior_knowledge(dp0);
+    xguide = "x",
+)
+savefig(er0, "extend-model-er0.png") # hide
+nothing # hide
+```
+
+![](extend-model-er0.png)
+
+### 2-Dimensional Covariate
+
+Next, we are looking at a 2-dimensional design that is locally optimal for estimating the odds ratios
 
 ```math
 \Transformation(\Parameter) = (\exp(β₁), \exp(β₂))'.
 ```
 
+when
+
+```math
+\begin{align*}
+\DesignRegion &= \CovariateSet = [0, 1]^2 \\
+\Parameter &= (-4, 6, -3)
+\end{align*}
+```
+
 ```@example main
-struct LinLogReg <: LogisticRegression end
-
-mutable struct LLRCovariate <: Covariate
-    x1::Float64
-    x2::Float64
-end
-
-Kirstine.allocate_covariate(m::LinLogReg) = LLRCovariate(0, 0)
-
-@simple_parameter LLR β0 β1 β2
-
-function nonlinear_predictor(m::LinLogReg, c::LLRCovariate, p::LLRParameter)
-    return p.β0 + p.β1 * c.x1 + p.β2 * c.x2
-end
-
-function predictor_jacobianmatrix!(jm, m::LinLogReg, c::LLRCovariate, p::LLRParameter)
-    jm[1, 1] = 1
-    jm[1, 2] = c.x1
-    jm[1, 3] = c.x2
-    return jm
-end
-
-function erplot1(d, dp)
-    f1(x, c, p) = expit(p.β0 + p.β1 * x + p.β2 * c.x2)
-    f2(x, c, p) = expit(p.β0 + p.β1 * c.x1 + p.β2 * x)
-    g1(c) = [c.x1]
-    g2(c) = [c.x2]
-    h(c, p) = [expit(p.β0 + p.β1 * c.x1 + p.β2 * c.x2)]
-    xrange = range(lowerbound(region(dp))[1], upperbound(region(dp))[1]; length = 101)
-    cp = covariate_parameterization(dp)
-    pk = prior_knowledge(dp)
-    m = model(dp)
-    p1 = plot_expected_function(f1, g1, h, xrange, d, m, cp, pk; xguide = "x1")
-    p2 = plot_expected_function(f2, g2, h, xrange, d, m, cp, pk; xguide = "x2")
-    return plot(p1, p2)
-end
-
 dp1 = DesignProblem(
     criterion = DOptimality(),
     region = DesignInterval(:x1 => (0, 1), :x2 => (0, 1)),
-    covariate_parameterization = JustCopy(:x1, :x2),
-    prior_knowledge = PriorSample([LLRParameter(β0 = -4, β1 = 6, β2 = -3)]),
-    model = LinLogReg(),
-    transformation = DeltaMethod(p -> [0 exp(p.β1) 0; 0 0 exp(p.β2)]),
+    covariate_parameterization = CopyVector(),
+    prior_knowledge = PriorSample([LLRParameter(-4, [6, -3])]),
+    model = LinLogReg(2),
+    transformation = DeltaMethod(p -> [0 exp(p.beta_rest[1]) 0; 0 0 exp(p.beta_rest[2])]),
 )
 
 Random.seed!(12345)
@@ -189,7 +285,7 @@ Random.seed!(12345)
 s1, r1 = solve(dp1, str1; mindist = 5e-2, minweight = 1e-3)
 gd1 = plot_gateauxderivative(s1, dp1)
 savefig(gd1, "extend-model-gd1.png") # hide
-nothing
+nothing # hide
 ```
 
 ```@setup main
@@ -203,6 +299,21 @@ s1 == DesignMeasure(
 ![](extend-model-gd1.png)
 
 ```@example main
+function erplot1(d, dp)
+    f1(x, c, p) = expit(p.beta_0 + p.beta_rest[1] * x + p.beta_rest[2] * c.x[2])
+    f2(x, c, p) = expit(p.beta_0 + p.beta_rest[1] * c.x[1] + p.beta_rest[2] * x)
+    g1(c) = [c.x[1]]
+    g2(c) = [c.x[2]]
+    h(c, p) = [expit(p.beta_0 + p.beta_rest[1] * c.x[1] + p.beta_rest[2] * c.x[2])]
+    xrange = range(lowerbound(region(dp))[1], upperbound(region(dp))[1]; length = 101)
+    cp = covariate_parameterization(dp)
+    pk = prior_knowledge(dp)
+    m = model(dp)
+    p1 = plot_expected_function(f1, g1, h, xrange, d, m, cp, pk; xguide = "x1")
+    p2 = plot_expected_function(f2, g2, h, xrange, d, m, cp, pk; xguide = "x2")
+    return plot(p1, p2)
+end
+
 er1 = erplot1(s1, dp1)
 savefig(er1, "extend-model-er1.png") # hide
 nothing # hide
