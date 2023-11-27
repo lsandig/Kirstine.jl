@@ -28,10 +28,11 @@ Documentation is still sparse in some places.
 
 ## Installation
 
-Kirstine.jl will be registered once it is stable.
-Until then, you can install it with
+Kirstine.jl is in the [General](https://github.com/JuliaRegistries/General) Julia package registry.
+You can install it with
+
 ```julia
-Pkg.add(url = "https://git.sr.ht/~lsandig/Kirstine.jl")
+Pkg.add("Kirstine")
 ```
 
 ## Documentation
