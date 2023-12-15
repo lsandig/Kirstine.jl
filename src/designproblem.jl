@@ -175,17 +175,17 @@ function solve(
 end
 
 """
-    simplify(d::DesignMeasure, dp::DesignProblem; minweight = 0, mindist = 0, uargs...)
+    simplify(d::DesignMeasure, dp::DesignProblem; maxweight = 0, maxdist = 0, uargs...)
 
 A wrapper that calls
 [`simplify_unique`](@ref),
 [`simplify_merge`](@ref),
 and [`simplify_drop`](@ref) in that order.
 """
-function simplify(d::DesignMeasure, dp::DesignProblem; minweight = 0, mindist = 0, uargs...)
+function simplify(d::DesignMeasure, dp::DesignProblem; maxweight = 0, maxdist = 0, uargs...)
     d = simplify_unique(d, region(dp), model(dp), covariate_parameterization(dp); uargs...)
-    d = simplify_merge(d, region(dp), mindist)
-    d = simplify_drop(d, minweight)
+    d = simplify_merge(d, region(dp), maxdist)
+    d = simplify_drop(d, maxweight)
     return d
 end
 

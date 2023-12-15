@@ -81,7 +81,7 @@ strategy = DirectMaximization(
 )
 
 Random.seed!(31415)
-s1, r1 = solve(dp, strategy, minweight = 1e-3, mindist = 1e-2)
+s1, r1 = solve(dp, strategy, maxweight = 1e-3, maxdist = 1e-2)
 s1
 ```
 

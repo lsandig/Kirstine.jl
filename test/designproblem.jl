@@ -24,7 +24,7 @@ include("example-compartment.jl")
                 prototype = uniform_design([[0], [2.45], [2.55], [10]]),
             ),
             _ = seed!(1234),
-            (d, r) = solve(dp, str; trace_state = true, mindist = 1e-1)
+            (d, r) = solve(dp, str; trace_state = true, maxdist = 1e-1)
 
             # design points should be sorted...
             @test issorted(reduce(vcat, points(d)))
@@ -33,9 +33,9 @@ include("example-compartment.jl")
             # states should be traced (20 iterations)
             @test length(optimization_result(r).trace_state) == 20
 
-            # `minposdist` doesn't exist, the correct argument name is `mindist`. Because we
+            # `maxposdist` doesn't exist, the correct argument name is `maxdist`. Because we
             # have not implemented `simplify_unique()` for EmaxModel, the generic method
-            # should complain about gobbling up `minposdist` in its varargs. (We can't test
+            # should complain about gobbling up `maxposdist` in its varargs. (We can't test
             # this in designmeasure.jl because we need a Model and a
             # CovariateParameterization in order to call `simplify()`.)
             @test_logs(
@@ -43,14 +43,14 @@ include("example-compartment.jl")
                     :warn,
                     "unused keyword arguments given to generic `simplify_unique` method",
                 ),
-                solve(dp, str, minposdist = 1e-2)
+                solve(dp, str, maxposdist = 1e-2)
             )
 
             # Warn on too strong simplification. An example with finite objective afterwards
             # would be nicer, but is difficult to construct with this model and prior.
             @test_logs(
                 (:warn, "simplification may have been too eager"),
-                solve(dp, str; mindist = 5)
+                solve(dp, str; maxdist = 5)
             )
         end
     end
@@ -64,7 +64,7 @@ include("example-compartment.jl")
                 prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
             ),
             d = DesignMeasure([0 2.495 2.505 10], [0.492, 0.008, 0.008, 0.492]),
-            s = sort_points(simplify(d, dp; minweight = 1e-2, mindist = 1e-2))
+            s = sort_points(simplify(d, dp; maxweight = 1e-2, maxdist = 1e-2))
 
             @test objective(s, dp) > -Inf
             @test points(s) == [[0], [2.5], [10]]

@@ -139,7 +139,7 @@ problems = [dp_ir, dp_i, dp_tr]
 
 (s_ir, r_ir), (s_i, r_i), (s_tr, r_tr) = map(problems) do dp
     Random.seed!(1357)
-    solve(dp, strategy; minweight = 1e-3, mindist = 1e-2)
+    solve(dp, strategy; maxweight = 1e-3, maxdist = 1e-2)
 end
 
 gds = map([s_ir, s_i, s_tr], problems, ["id reg", "id unreg", "ttm reg"]) do s, dp, title

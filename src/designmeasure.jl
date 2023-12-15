@@ -362,18 +362,18 @@ function apportion(d::DesignMeasure, n::Integer)
 end
 
 """
-    simplify_drop(d::DesignMeasure, minweight::Real)
+    simplify_drop(d::DesignMeasure, maxweight::Real)
 
-Construct a new `DesignMeasure` where only design points with weights strictly larger than
-`minweight` are kept.
+Construct a new `DesignMeasure` where all design points with weights smaller than or equal to
+`maxweight` are removed.
 
 The vector of remaining weights is re-normalized.
 """
-function simplify_drop(d::DesignMeasure, minweight::Real)
+function simplify_drop(d::DesignMeasure, maxweight::Real)
     if numpoints(d) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
-    enough_weight = weights(d) .> minweight
+    enough_weight = weights(d) .> maxweight
     dps = points(d)[enough_weight]
     ws = weights(d)[enough_weight]
     ws ./= sum(ws)
@@ -424,23 +424,23 @@ function simplify_unique(
 end
 
 """
-    simplify_merge(d::DesignMeasure, dr::DesignRegion, mindist::Real)
+    simplify_merge(d::DesignMeasure, dr::DesignRegion, maxdist::Real)
 
-Merge designpoints with a normalized distance smaller or equal to `mindist`.
+Merge designpoints with a normalized distance smaller or equal to `maxdist`.
 
 The design points are first transformed into the unit (hyper)cube
 by shifting and scaling them according to the bounding box of the design region.
-The argument `mindist` is intepreted relative to this unit cube,
-i.e. only `0 < mindist < sqrt(N)` make sense for a design region of dimension `N`.
+The argument `maxdist` is intepreted relative to this unit cube,
+i.e. only `0 < maxdist < sqrt(N)` make sense for a design region of dimension `N`.
 
-The following two steps are repeated until all points are more than `mindist` apart:
+The following two steps are repeated until all points are more than `maxdist` apart:
 
  1. All pairwise euclidean distances are calculated.
  2. The two points closest to each other are averaged with their relative weights
 
 Finally the design points are scaled and shifted back into the original design region.
 """
-function simplify_merge(d::DesignMeasure, dr::DesignRegion, mindist::Real)
+function simplify_merge(d::DesignMeasure, dr::DesignRegion, maxdist::Real)
     if numpoints(d) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
@@ -450,14 +450,14 @@ function simplify_merge(d::DesignMeasure, dr::DesignRegion, mindist::Real)
     dps = [(dp .- lb) ./ width for dp in points(d)]
     ws = weights(d)
     cur_min_dist = 0
-    while cur_min_dist <= mindist
+    while cur_min_dist <= maxdist
         # compute pairwise L2-distances, merge the two designpoints nearest to each other
         dist = map(p -> norm(p[1] .- p[2]), Iterators.product(dps, dps))
         dist[diagind(dist)] .= Inf
         cur_min_dist, idx = findmin(dist) # i > j because rows vary fastest
         i = idx[1]
         j = idx[2]
-        if cur_min_dist <= mindist
+        if cur_min_dist <= maxdist
             w_new = ws[i] + ws[j]
             dp_new = (ws[i] .* dps[i] .+ ws[j] .* dps[j]) ./ w_new
             to_keep = (1:length(dps) .!= i) .&& (1:length(dps) .!= j)

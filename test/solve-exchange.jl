@@ -24,7 +24,7 @@ include("example-emax.jl")
                 optimizer_direction = od,
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 3,
-                simplify_args = Dict(:minweight => 1e-3),
+                simplify_args = Dict(:maxweight => 1e-3),
             ),
             _ = seed!(54321),
             r1 = Kirstine.solve_with(dp, str1, true),

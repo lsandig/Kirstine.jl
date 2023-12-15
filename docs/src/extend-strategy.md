@@ -145,7 +145,7 @@ strategy = MultipleRuns(
 )
 
 Random.seed!(31415)
-s, r = solve(dp, strategy, minweight = 1e-3, mindist = 1e-2)
+s, r = solve(dp, strategy, maxweight = 1e-3, maxdist = 1e-2)
 gd = plot_gateauxderivative(s, dp)
 savefig(gd, "extend-strategy-gd.png") # hide
 nothing # hide

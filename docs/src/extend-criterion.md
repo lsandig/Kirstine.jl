@@ -255,13 +255,13 @@ strategy = DirectMaximization(
 )
 
 Random.seed!(31415)
-s1a, r1a = solve(dp1a, strategy, minweight = 1e-3, mindist = 1e-2)
+s1a, r1a = solve(dp1a, strategy, maxweight = 1e-3, maxdist = 1e-2)
 Random.seed!(31415)
-s1b, r1b = solve(dp1b, strategy, minweight = 1e-3, mindist = 1e-2)
+s1b, r1b = solve(dp1b, strategy, maxweight = 1e-3, maxdist = 1e-2)
 Random.seed!(31415)
-s2a, r2a = solve(dp2a, strategy, minweight = 1e-3, mindist = 1e-2)
+s2a, r2a = solve(dp2a, strategy, maxweight = 1e-3, maxdist = 1e-2)
 Random.seed!(31415)
-s2b, r2b = solve(dp2b, strategy, minweight = 1e-3, mindist = 1e-2)
+s2b, r2b = solve(dp2b, strategy, maxweight = 1e-3, maxdist = 1e-2)
 
 gd1 = plot(
     plot_gateauxderivative(s1a, dp1a; title = "1a"),

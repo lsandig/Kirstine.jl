@@ -211,7 +211,7 @@ str0 = DirectMaximization(
 )
 
 Random.seed!(12345)
-s0, r0 = solve(dp0, str0; mindist = 1e-3)
+s0, r0 = solve(dp0, str0; maxdist = 1e-3)
 s0
 ```
 
@@ -282,7 +282,7 @@ str1 = DirectMaximization(
 )
 
 Random.seed!(12345)
-s1, r1 = solve(dp1, str1; mindist = 5e-2, minweight = 1e-3)
+s1, r1 = solve(dp1, str1; maxdist = 5e-2, maxweight = 1e-3)
 gd1 = plot_gateauxderivative(s1, dp1)
 savefig(gd1, "extend-model-gd1.png") # hide
 nothing # hide
@@ -383,7 +383,7 @@ str2 = DirectMaximization(
 )
 
 Random.seed!(12345)
-s2, r2 = solve(dp2, str2; mindist = 5e-2, minweight = 1e-3)
+s2, r2 = solve(dp2, str2; maxdist = 5e-2, maxweight = 1e-3)
 gd2 = plot_gateauxderivative(s2, dp2)
 savefig(gd2, "extend-model-gd2.png") # hide
 nothing # hide

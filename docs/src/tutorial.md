@@ -294,7 +294,7 @@ This way we merge all design points that are less than some minimum distance apa
 and remove all design points with negligible weight.
 
 ```@example main
-s2 = sort_points(simplify(s1, dp, minweight = 1e-3, mindist = 2e-2))
+s2 = sort_points(simplify(s1, dp, maxweight = 1e-3, maxdist = 2e-2))
 ```
 
 ```@setup main
@@ -311,7 +311,7 @@ Because this issue occurs frequently
 we can directly pass the simplification arguments to `solve`:
 
 ```julia
-s2, r2 = solve(dp, strategy; minweight = 1e-3, mindist = 2e-2)
+s2, r2 = solve(dp, strategy; maxweight = 1e-3, maxdist = 2e-2)
 ```
 
 The original, unsimplified solution can still be accessed at `solution(r2)`.

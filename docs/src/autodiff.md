@@ -116,17 +116,17 @@ strategy = DirectMaximization(
 )
 
 Kirstine.jacobianmatrix!(jm, m, c, p) = jacobianmatrix_auto!(jm, m, c, p)
-solve(dp1, dummy; minweight = 1e-3, mindist = 1e-2)
+solve(dp1, dummy; maxweight = 1e-3, maxdist = 1e-2)
 Random.seed!(54321)
-@time s1, r1 = solve(dp1, strategy; minweight = 1e-3, mindist = 1e-2)
+@time s1, r1 = solve(dp1, strategy; maxweight = 1e-3, maxdist = 1e-2)
 nothing # hide (force inserting stdout from @time)
 ```
 
 ```@example main
 Kirstine.jacobianmatrix!(jm, m, c, p) = jacobianmatrix_manual!(jm, m, c, p)
-solve(dp1, dummy; minweight = 1e-3, mindist = 1e-2)
+solve(dp1, dummy; maxweight = 1e-3, maxdist = 1e-2)
 Random.seed!(54321)
-@time s2, r2 = solve(dp1, strategy; minweight = 1e-3, mindist = 1e-2)
+@time s2, r2 = solve(dp1, strategy; maxweight = 1e-3, maxdist = 1e-2)
 nothing # hide
 ```
 
@@ -207,9 +207,9 @@ bm3 = @benchmark Kirstine.jacobianmatrix!($jm, $model(dph), $co, $sep_draws[1])
 This time, the automatic gradient is only slower than the manual one by a factor of two.
 
 ```@example main
-solve(dph, dummy; minweight = 1e-3, mindist = 1e-2)
+solve(dph, dummy; maxweight = 1e-3, maxdist = 1e-2)
 Random.seed!(54321)
-@time s3, r3 = solve(dph, strategy; minweight = 1e-3, mindist = 1e-2)
+@time s3, r3 = solve(dph, strategy; maxweight = 1e-3, maxdist = 1e-2)
 nothing # hide
 ```
 
@@ -283,9 +283,9 @@ dp2 = DesignProblem(
     transformation = DeltaMethod(p -> DED_auto(p, 90)), # optimal for ED_{90}
 )
 
-solve(dp2, dummy; minweight = 1e-3, mindist = 1e-2)
+solve(dp2, dummy; maxweight = 1e-3, maxdist = 1e-2)
 Random.seed!(54321)
-@time s3, r3 = solve(dp2, strategy; minweight = 1e-3, mindist = 1e-2)
+@time s3, r3 = solve(dp2, strategy; maxweight = 1e-3, maxdist = 1e-2)
 nothing # hide
 ```
 
@@ -298,9 +298,9 @@ dp3 = DesignProblem(
     prior_knowledge = prior_sample,
     transformation = DeltaMethod(p -> DED_manual(p, 90)),  # optimal for ED_{90}
 )
-solve(dp3, dummy; minweight = 1e-3, mindist = 1e-2)
+solve(dp3, dummy; maxweight = 1e-3, maxdist = 1e-2)
 Random.seed!(54321)
-@time s4, r4 = solve(dp3, strategy; minweight = 1e-3, mindist = 1e-2)
+@time s4, r4 = solve(dp3, strategy; maxweight = 1e-3, maxdist = 1e-2)
 nothing # hide
 ```
 

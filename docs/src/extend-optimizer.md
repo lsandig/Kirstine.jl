@@ -534,7 +534,7 @@ strategy = DirectMaximization(
 )
 
 Random.seed!(31415)
-s, r = solve(dp, strategy, minweight = 1e-3, mindist = 1e-2, trace_state = true)
+s, r = solve(dp, strategy, maxweight = 1e-3, maxdist = 1e-2, trace_state = true)
 gd = plot_gateauxderivative(s, dp)
 savefig(gd, "extend-optimizer-gd.png") # hide
 nothing # hide

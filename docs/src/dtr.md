@@ -273,7 +273,7 @@ st1 = DirectMaximization(
 )
 
 Random.seed!(2468)
-s1, r1 = solve(dp1, st1; minpostime = 1e-3, minposdose = 1e-3, mindist = 1e-2)
+s1, r1 = solve(dp1, st1; minpostime = 1e-3, minposdose = 1e-3, maxdist = 1e-2)
 s1
 ```
 
@@ -423,7 +423,7 @@ st3 = DirectMaximization(
 )
 
 Random.seed!(1827)
-s3, r3 = solve(dp3, st3; minweight = 1e-4)
+s3, r3 = solve(dp3, st3; maxweight = 1e-4)
 s3
 ```
 
@@ -599,7 +599,7 @@ st4b = Exchange(
 )
 
 Random.seed!(314)
-s4b, r4b = solve(dp4, st4b; minposdose = 1e-3, mindist = 2e-2)
+s4b, r4b = solve(dp4, st4b; minposdose = 1e-3, maxdist = 2e-2)
 pr4b = plot(r4b)
 savefig(pr4b, "dtr-pr4b.png") # hide
 nothing # hide
@@ -721,7 +721,7 @@ st5 = DirectMaximization(
 )
 
 Random.seed!(6283)
-s5, r5 = solve(dp5, st5; mindist = 1e-3, minweight = 1e-3, minposdelta = 1e-3)
+s5, r5 = solve(dp5, st5; maxdist = 1e-3, maxweight = 1e-3, minposdelta = 1e-3)
 s5
 ```
 
