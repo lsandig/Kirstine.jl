@@ -197,7 +197,7 @@ where
 [^FL13]: Valerii V. Fedorov and Sergei L. Leonov (2013). Optimal design for nonlinear response models. CRC Press. [doi:10.1201/b15054](https://dx.doi.org/10.1201/b15054)
 ```@example main
 dp0 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:x1 => (0, 4)),
     covariate_parameterization = CopyVector(),
     prior_knowledge = PriorSample([LLRParameter(-3, [1.81])]),
@@ -267,7 +267,7 @@ when
 
 ```@example main
 dp1 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:x1 => (0, 1), :x2 => (0, 1)),
     covariate_parameterization = CopyVector(),
     prior_knowledge = PriorSample([LLRParameter(-4, [6, -3])]),
@@ -369,7 +369,7 @@ function erplot2(d, dp)
 end
 
 dp2 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:t => (0, 1)),
     covariate_parameterization = JustCopy(:t),
     prior_knowledge = PriorSample([SLRParameter(a = 1, b = 1.5, c = 0.125)]),

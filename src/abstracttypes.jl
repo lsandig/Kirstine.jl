@@ -80,7 +80,7 @@ abstract type Transformation end
 
 Supertype for optimal experimental design criteria.
 
-See also [`DOptimality`](@ref), [`AOptimality`](@ref).
+See also [`DCriterion`](@ref), [`ACriterion`](@ref).
 """
 abstract type DesignCriterion end
 

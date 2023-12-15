@@ -99,7 +99,7 @@ function dp_for_trafo(trafo)
     Random.seed!(4711)
     DesignProblem(
         region = DesignInterval(:time => [0, 48]),
-        criterion = DOptimality(),
+        criterion = DCriterion(),
         covariate_parameterization = JustCopy(:time),
         model = TPCModel(sigma = 1),
         prior_knowledge = draw_from_prior(1000, 2),

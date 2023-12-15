@@ -15,7 +15,7 @@ include("example-compartment.jl")
         # is passed as already inverted. For singular matrices it should always return -Inf.
         let mreg = [1.0 0.5; 0.5 2.0],
             msng = [1.0 0.5; 0.5 0.25],
-            dc = DOptimality(),
+            dc = DCriterion(),
             ci! = Kirstine.criterion_integrand!
 
             # interpret m as not inverted
@@ -37,7 +37,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -60,7 +60,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = draw_from_prior(1000, 2),
                 transformation = DeltaMethod(Dauc),
@@ -85,7 +85,7 @@ include("example-compartment.jl")
         # matrix for each prior parameter value.
         #
         # We use an example model from Atkinson et al. with a two-point prior.
-        let dc = DOptimality(),
+        let dc = DCriterion(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
             m = TPCModel(; sigma = 1),
@@ -120,7 +120,7 @@ include("example-compartment.jl")
         #
         # We use an example model from Atkinson et al. with a two-point prior
         # and transformation to a 1-dimensional quantity.
-        let dc = DOptimality(),
+        let dc = DCriterion(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
             m = TPCModel(; sigma = 1),
@@ -161,7 +161,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -172,7 +172,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),

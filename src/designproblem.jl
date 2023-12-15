@@ -314,10 +314,10 @@ function efficiency(d1::DesignMeasure, d2::DesignMeasure, dp::DesignProblem)
     return efficiency(d1, d2, dp, dp)
 end
 
-# same design problem as `dp`, but with criterion replaced by `DOptimality()`.
+# same design problem as `dp`, but with criterion replaced by `DCriterion()`.
 function as_doptimality_problem(dp::DesignProblem)
     dpd = DesignProblem(;
-        criterion = DOptimality(),
+        criterion = DCriterion(),
         model = model(dp),
         region = region(dp),
         covariate_parameterization = covariate_parameterization(dp),

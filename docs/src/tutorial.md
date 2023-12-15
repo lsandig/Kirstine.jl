@@ -205,7 +205,7 @@ Now we collect all the parts in a [`DesignProblem`](@ref).
 
 ```@example main
 dp = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = dr,
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = cp,

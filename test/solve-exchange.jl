@@ -11,7 +11,7 @@ include("example-emax.jl")
 @testset "solve-exchange.jl" begin
     @testset "solve_with" begin
         let dp = DesignProblem(;
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
                 prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),

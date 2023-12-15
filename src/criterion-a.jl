@@ -18,7 +18,7 @@
 #   tr[B(ζ,θ)] = tr[DT'(θ) DT(θ) M(ζ,θ)^{-1}].
 
 """
-    AOptimality <: DesignCriterion
+    ACriterion <: DesignCriterion
 
 Criterion for A-optimal experimental design.
 
@@ -26,9 +26,9 @@ Trace of the inverted normalized information matrix.
 
 See also the [mathematical background](math.md#A-Criterion).
 """
-struct AOptimality <: DesignCriterion end
+struct ACriterion <: DesignCriterion end
 
-function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::AOptimality)
+function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::ACriterion)
     if is_inv
         # Note: In this branch there won't be an exception if `tnim` is singular. But as this
         # branch is called with the DeltaMethod transformation, an exception will already
@@ -45,7 +45,7 @@ function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::AOptimalit
 end
 
 function gateaux_constants(
-    dc::AOptimality,
+    dc::ACriterion,
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,
@@ -60,7 +60,7 @@ function gateaux_constants(
 end
 
 function gateaux_constants(
-    dc::AOptimality,
+    dc::ACriterion,
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,

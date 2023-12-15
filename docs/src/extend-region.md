@@ -184,7 +184,7 @@ function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::Cop
 end
 
 dp1 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignEllipsoid((:dose, :time), (50.0, 12.0), (50.0, 12.0)),
     model = DTRMod(sigma = 1, m = 1),
     covariate_parameterization = CopyBoth(),

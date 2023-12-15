@@ -18,7 +18,7 @@
 #   tr[B(ζ,θ)] = t
 
 @doc raw"""
-    DOptimality
+    DCriterion
 
 Criterion for D-optimal experimental design.
 
@@ -26,9 +26,9 @@ Log-determinant of the normalized information matrix.
 
 See also the [mathematical background](math.md#D-Criterion).
 """
-struct DOptimality <: DesignCriterion end
+struct DCriterion <: DesignCriterion end
 
-function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::DOptimality)
+function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::DCriterion)
     sgn = is_inv ? -1 : 1
     ld = log_det!(tnim)
     # With the DeltaMethod, `tnim` can be singular without having raised an exception up to
@@ -41,7 +41,7 @@ end
 ## Gateaux derivative: Identity ##
 
 function gateaux_constants(
-    dc::DOptimality,
+    dc::DCriterion,
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,
@@ -57,7 +57,7 @@ end
 ## Gateaux derivative: DeltaMethod ##
 
 function gateaux_constants(
-    dc::DOptimality,
+    dc::DCriterion,
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,

@@ -131,7 +131,7 @@ prior = PriorSample(
 )
 
 dp = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = JustCopy(:dose),

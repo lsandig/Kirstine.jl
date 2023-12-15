@@ -148,7 +148,7 @@ and then solve
 julia> dp = DesignProblem(;
            region = DesignInterval(:a => (0, 1), :b => (-2, 5)),
            covariate_parameterization = cp,
-           criterion = DOptimality(),
+           criterion = DCriterion(),
            model = FooModel(; sigma = 1),
            prior_knowledge = PriorSample([FooParameter(; θ = 42)]),
        );

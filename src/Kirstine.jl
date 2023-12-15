@@ -23,10 +23,10 @@ using RecipesBase
 
 export @simple_model,
     @simple_parameter,
-    AOptimality,
+    ACriterion,
     Covariate,
     CovariateParameterization,
-    DOptimality,
+    DCriterion,
     DeltaMethod,
     DesignCriterion,
     DesignInterval,

@@ -23,7 +23,7 @@ using Kirstine
         end
 
         # outer constructor
-        let dc = DOptimality(),
+        let dc = DCriterion(),
             dr = DesignInterval(:dose => (0, 10)),
             d = equidistant_design(dr, 3),
             dcon = Kirstine.DesignConstraints,

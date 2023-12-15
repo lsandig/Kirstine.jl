@@ -55,7 +55,7 @@ we here only use its mean vector as the single guess for ``\Parameter``.
 ```@example main
 guess = PriorSample([SigEmaxParameter(e0 = 1, emax = 2, ed50 = 0.4, h = 5)])
 dp = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = JustCopy(:dose),

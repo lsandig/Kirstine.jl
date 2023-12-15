@@ -73,7 +73,7 @@ end
 prior_sample = PriorSample(sep_draws)
 
 dp1 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = JustCopy(:dose),
@@ -190,7 +190,7 @@ function Kirstine.jacobianmatrix!(
 end
 
 dph = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = HackySigEmaxModel(
         sigma = 1,
@@ -275,7 +275,7 @@ DED_manual(prior_sample.p[1], 10) .- DED_auto(prior_sample.p[1], 10)
 
 ```@example main
 dp2 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = JustCopy(:dose),
@@ -291,7 +291,7 @@ nothing # hide
 
 ```@example main
 dp3 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = JustCopy(:dose),

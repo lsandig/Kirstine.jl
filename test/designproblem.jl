@@ -13,7 +13,7 @@ include("example-compartment.jl")
     @testset "solve" begin
         # check that solution is sorted and simplified
         let dp = DesignProblem(;
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 region = DesignInterval(:dose => (0, 10)),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
@@ -57,7 +57,7 @@ include("example-compartment.jl")
 
     @testset "simplify" begin
         let dp = DesignProblem(;
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 region = DesignInterval(:dose => (0, 10)),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
@@ -82,7 +82,7 @@ include("example-compartment.jl")
             t_id = Identity(),
             t_auc = DeltaMethod(Dauc),
             dp_for(pk, trafo) = DesignProblem(;
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 # not used in efficiency calculation!
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
@@ -105,7 +105,7 @@ include("example-compartment.jl")
                 region = region(dp6),
                 model = model(dp6),
                 covariate_parameterization = covariate_parameterization(dp6),
-                criterion = AOptimality(),
+                criterion = ACriterion(),
                 prior_knowledge = prior_knowledge(dp6),
             )
 
@@ -138,7 +138,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -149,7 +149,7 @@ include("example-compartment.jl")
                 region = region(dp),
                 model = model(dp),
                 covariate_parameterization = covariate_parameterization(dp),
-                criterion = AOptimality(),
+                criterion = ACriterion(),
                 prior_knowledge = prior_knowledge(dp),
             ),
             d1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),

@@ -259,7 +259,7 @@ set up the design problem and solve it with direct maximization.
 
 ```@example main
 dp1 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 100), :time => (0, 24)),
     model = DTRMod(sigma = 1, m = 1),
     covariate_parameterization = CopyBoth(),
@@ -339,7 +339,7 @@ function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::Fix
 end
 
 dp2 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:time => (0, 24)),
     model = DTRMod(1, 1),
     covariate_parameterization = FixedDose(100),
@@ -409,7 +409,7 @@ function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::Fix
 end
 
 dp3 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 100)),
     model = DTRMod(1, 13), # measurements every two hours
     covariate_parameterization = FixedTimes(0:2:24),
@@ -525,7 +525,7 @@ function Kirstine.simplify_unique(
 end
 
 dp4 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 100), :Δt => (0, 2)),
     model = DTRMod(1, 13),
     covariate_parameterization = EquidistantTimes(),
@@ -707,7 +707,7 @@ function Kirstine.simplify_unique(
 end
 
 dp5 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     model = DTRMod(1, 13),
     covariate_parameterization = LogEquidistantTimes(sqrt(2)),
     region = DesignInterval(:dose => (0, 100), :Δt => (0, 24 / sqrt(2)^11)),

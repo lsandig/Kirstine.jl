@@ -91,13 +91,13 @@ Additionally, the following methods must be implemented.
 
 Next, we will implement the alternative D-criterion for [`Identity`](@ref) and [`DeltaMethod`](@ref) transformations.
 Since it is in some way the exponential of the predefined version,
-we will call it `DexpOptimality`.
+we will call it `DexpCriterion`.
 
 ```@example main
 using Kirstine
 using LinearAlgebra: Symmetric, det
 
-struct DexpOptimality <: Kirstine.DesignCriterion end
+struct DexpCriterion <: Kirstine.DesignCriterion end
 
 # `tnim` is the transformed normalized information matrix.
 # It is implicitly symmetric, i.e. only the upper triangle contains sensible values.
@@ -108,7 +108,7 @@ struct DexpOptimality <: Kirstine.DesignCriterion end
 function Kirstine.criterion_integrand!(
     tnim::AbstractMatrix,
     is_inv::Bool,
-    dc::DexpOptimality,
+    dc::DexpCriterion,
 )
     sgn = is_inv ? -1 : 1
     ld = Kirstine.log_det!(tnim)
@@ -120,7 +120,7 @@ function Kirstine.criterion_integrand!(
 end
 
 function Kirstine.gateaux_constants(
-    dc::DexpOptimality,
+    dc::DexpCriterion,
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,
@@ -144,7 +144,7 @@ function Kirstine.gateaux_constants(
 end
 
 function Kirstine.gateaux_constants(
-    dc::DexpOptimality,
+    dc::DexpCriterion,
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,
@@ -216,7 +216,7 @@ and once for only estimating `ed50` and `h`.
 
 ```@example main
 dp1a = DesignProblem(
-    criterion = DexpOptimality(),
+    criterion = DexpCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = JustCopy(:dose),
@@ -224,7 +224,7 @@ dp1a = DesignProblem(
 )
 
 dp1b = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = JustCopy(:dose),
@@ -232,7 +232,7 @@ dp1b = DesignProblem(
 )
 
 dp2a = DesignProblem(
-    criterion = DexpOptimality(),
+    criterion = DexpCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = JustCopy(:dose),
@@ -241,7 +241,7 @@ dp2a = DesignProblem(
 )
 
 dp2b = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
     covariate_parameterization = JustCopy(:dose),

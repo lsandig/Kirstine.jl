@@ -14,7 +14,7 @@ include("example-compartment.jl")
         # is passed as already inverted. For singular matrices it should return 0 or -Inf.
         let mreg = [1.0 0.5; 0.5 2.0],
             msng = [1.0 0.5; 0.5 0.25],
-            dc = AOptimality(),
+            dc = ACriterion(),
             ci! = Kirstine.criterion_integrand!
 
             # interpret m as not inverted
@@ -39,7 +39,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = AOptimality(),
+                criterion = ACriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -50,7 +50,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = AOptimality(),
+                criterion = ACriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -66,7 +66,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = AOptimality(),
+                criterion = ACriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -91,7 +91,7 @@ include("example-compartment.jl")
         # is stored. There is one matrix and trace for each prior parameter value.
         #
         # We use an example model from Atkinson et al. with a two-point prior.
-        let dc = AOptimality(),
+        let dc = ACriterion(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
             m = TPCModel(; sigma = 1),
@@ -125,7 +125,7 @@ include("example-compartment.jl")
         #
         # We use an example model from Atkinson et al. with a two-point prior
         # and transformation to a 1-dimensional quantity
-        let dc = AOptimality(),
+        let dc = ACriterion(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
             m = TPCModel(; sigma = 1),
@@ -162,7 +162,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = AOptimality(),
+                criterion = ACriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -173,7 +173,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = AOptimality(),
+                criterion = ACriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -196,7 +196,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = AOptimality(),
+                criterion = ACriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
