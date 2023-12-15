@@ -94,10 +94,10 @@ function codomain_dimension(trafo::DeltaMethod, pk::PriorSample)
     return size(trafo.jacobian_matrix(pk.p[1]), 1)
 end
 
-function trafo_jacobian_matrix_for_index(tc::TCIdentity, i::Integer)
+function trafo_jacobianmatrix_for_index(tc::TCIdentity, i::Integer)
     return tc.idmat
 end
 
-function trafo_jacobian_matrix_for_index(tc::TCDeltaMethod, i::Integer)
+function trafo_jacobianmatrix_for_index(tc::TCDeltaMethod, i::Integer)
     return tc.jm[i]
 end

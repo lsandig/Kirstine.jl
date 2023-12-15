@@ -207,7 +207,7 @@ function objective!(w::Workspaces, d::DesignMeasure, dp::DesignProblem, tc::Traf
             apply_transformation!(
                 w.nw,
                 transformation(dp),
-                trafo_jacobian_matrix_for_index(tc, i),
+                trafo_jacobianmatrix_for_index(tc, i),
             )
             acc +=
                 pk.weight[i] *
