@@ -21,7 +21,7 @@ and a suitable coordinate transformation in the [`CovariateParameterization`](@r
 
 Apart from the subtype of `DesignRegion{N}`, the following methods must be implemented:
 
-  - `bounding_box` is used in several places.
+  - `boundingbox` is used in several places.
   - `isinside` is used in several places.
   - `dimnames` is used for plotting.
   - `random_designpoint!` is used in the initialization step of a particle-based optimizer.
@@ -38,7 +38,7 @@ struct DesignEllipsoid{N} <: Kirstine.DesignRegion{N}
 end
 
 # return the lower bound and upper bound of a box enclosing dr
-function Kirstine.bounding_box(dr::DesignEllipsoid)
+function Kirstine.boundingbox(dr::DesignEllipsoid)
     return dr.center .- dr.semiaxis, dr.center .+ dr.semiaxis
 end
 

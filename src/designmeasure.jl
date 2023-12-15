@@ -445,7 +445,7 @@ function simplify_merge(d::DesignMeasure, dr::DesignRegion, maxdist::Real)
         return deepcopy(d) # return a copy for consistency
     end
     # scale bounding box of design region into unit cube
-    lb, ub = bounding_box(dr)
+    lb, ub = boundingbox(dr)
     width = collect(lb .- ub)
     dps = [(dp .- lb) ./ width for dp in points(d)]
     ws = weights(d)

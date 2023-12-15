@@ -134,6 +134,6 @@ function move_designpoint!(dp, t, v, dr::DesignInterval{N}) where N
     return dp
 end
 
-function bounding_box(dr::DesignInterval)
+function boundingbox(dr::DesignInterval)
     return lowerbound(dr), upperbound(dr)
 end

@@ -63,7 +63,7 @@ end
 end
 
 @recipe function f(d::DesignMeasure, dr::DesignRegion{2})
-    lb, ub = bounding_box(dr)
+    lb, ub = boundingbox(dr)
     xguide --> dimnames(dr)[1]
     yguide --> dimnames(dr)[2]
     xlims --> (lb[1], ub[1])
@@ -73,7 +73,7 @@ end
 end
 
 @recipe function f(d::DesignMeasure, dr::DesignRegion{1})
-    lb, ub = bounding_box(dr)
+    lb, ub = boundingbox(dr)
     xguide --> dimnames(dr)[1]
     xlims --> (lb[1], ub[1])
     widen --> true
@@ -108,7 +108,7 @@ end
     n_grid = 101,
 )
     (; d, dp) = dplot
-    lb, ub = bounding_box(region(dp))
+    lb, ub = boundingbox(region(dp))
     range_x = range(lb[1], ub[1]; length = n_grid[1])
     dsgpts = collect(Iterators.flatten(points(d)))
     x_grid = sort(vcat(range_x, dsgpts))
@@ -146,7 +146,7 @@ end
     # Calculate Gateaux derivative on a grid over the bounding box of region(dp).
     # Evaluate it only on those points that are inside and fill the rest with NaN,
     # which renders transparently in the heatmap.
-    lb, ub = bounding_box(region(dp))
+    lb, ub = boundingbox(region(dp))
     range_x = range(lb[1], ub[1]; length = n_grid[1])
     range_y = range(lb[2], ub[2]; length = n_grid[2])
     xy_grid = collect.(Iterators.product(range_x, range_y))
