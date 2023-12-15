@@ -5,7 +5,12 @@
 
 A [Julia][julia-url] package for Bayesian optimal experimental design with nonlinear regression models.
 
+[repo][repo-url] | [docs][docs-url] | [change log][change-url]
+
 [julia-url]: https://julialang.org
+[repo-url]: https://sr.ht/~lsandig/Kirstine.jl/
+[docs-url]: https://lsandig.srht.site/Kirstine.jl/index.html
+[change-url]: https://git.sr.ht/~lsandig/Kirstine.jl/refs
 
 ## Project Status
 
@@ -37,12 +42,12 @@ Pkg.add("Kirstine")
 
 ## Documentation
 
-[Markdown](docs/src/), [HTML](https://lsandig.srht.site/Kirstine.jl/index.html)
+[Markdown](docs/src/), [HTML][docs-url]
 
 To get started, read the [tutorial](https://lsandig.srht.site/Kirstine.jl/tutorial.html).
 
 For a change log,
-see the list of [annotated tags](https://git.sr.ht/~lsandig/Kirstine.jl/refs).
+see the list of [annotated tags][change-url].
 
 ## License
 
@@ -72,7 +77,7 @@ These are different tasks than what Kirstine.jl attempts to do.
 
 ## Contributing
 
-There is a [git repository and issue tracker at sourcehut](https://sr.ht/~lsandig/Kirstine.jl/).
+There is a [git repository and issue tracker at sourcehut][repo-url].
 
 If you have already solved design problems with other software packages,
 you can try to replicate your solutions with Kirstine.jl.
