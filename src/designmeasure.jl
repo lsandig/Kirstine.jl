@@ -444,15 +444,15 @@ function simplify_merge(d::DesignMeasure, dr::DesignRegion, maxdist::Real)
     if numpoints(d) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
-    # scale bounding box of design region into unit cube
     lb, ub = boundingbox(dr)
     width = collect(lb .- ub)
-    dps = [(dp .- lb) ./ width for dp in points(d)]
+    dps = deepcopy(points(d))
     ws = weights(d)
     cur_min_dist = 0
     while cur_min_dist <= maxdist
-        # compute pairwise L2-distances, merge the two designpoints nearest to each other
-        dist = map(p -> norm(p[1] .- p[2]), Iterators.product(dps, dps))
+        # compute pairwise L2-distances relative to bounding box,
+        # merge the two designpoints nearest to each other
+        dist = map(p -> norm((p[1] .- p[2]) ./ width), Iterators.product(dps, dps))
         dist[diagind(dist)] .= Inf
         cur_min_dist, idx = findmin(dist) # i > j because rows vary fastest
         i = idx[1]
@@ -465,7 +465,5 @@ function simplify_merge(d::DesignMeasure, dr::DesignRegion, maxdist::Real)
             ws = [w_new; ws[to_keep]]
         end
     end
-    # scale back
-    dps = [(dp .* width) .+ lb for dp in dps]
     return DesignMeasure(dps, ws)
 end

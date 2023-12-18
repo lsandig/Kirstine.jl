@@ -176,6 +176,16 @@ using Kirstine
             @test o !== o_simp
             @test o == o_simp
         end
+
+        # Unmerged points should stay the same.
+        let dr = DesignInterval(:a => (0, 0.95)),
+            d = uniform_design([[0.1], [0.5], [0.8], [0.81]])
+
+            # We don't want to scale [0.5] into the unit cube and back,
+            # since 0.5 / 0.95 * 0.95 != 0.5 numerically.
+            @test d == simplify_merge(d, dr, 0)
+            @test points(d)[1:2] == points(simplify_merge(d, dr, 0.1))[2:3]
+        end
     end
 
     # sorting
