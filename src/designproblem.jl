@@ -211,7 +211,7 @@ function objective!(w::Workspaces, d::DesignMeasure, dp::DesignProblem, tc::Traf
             )
             acc +=
                 pk.weight[i] *
-                criterion_integrand!(w.nw.t_x_t, w.nw.t_is_inv, criterion(dp))
+                criterion_functional!(w.nw.t_x_t, w.nw.t_is_inv, criterion(dp))
         end
         return acc
     catch e

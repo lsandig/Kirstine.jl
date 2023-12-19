@@ -28,7 +28,7 @@ See also the [mathematical background](math.md#A-Criterion).
 """
 struct ACriterion <: DesignCriterion end
 
-function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::ACriterion)
+function criterion_functional!(tnim::AbstractMatrix, is_inv::Bool, dc::ACriterion)
     if is_inv
         # Note: In this branch there won't be an exception if `tnim` is singular. But as this
         # branch is called with the DeltaMethod transformation, an exception will already

@@ -9,13 +9,13 @@ using LinearAlgebra: SingularException, Symmetric, tr, diagm
 include("example-compartment.jl")
 
 @testset "criterion-a.jl" begin
-    @testset "criterion_integrand!" begin
+    @testset "criterion_functional!" begin
         # The functional should be -tr(m) or -tr(inv_m), depending on whether m
         # is passed as already inverted. For singular matrices it should return 0 or -Inf.
         let mreg = [1.0 0.5; 0.5 2.0],
             msng = [1.0 0.5; 0.5 0.25],
             dc = ACriterion(),
-            ci! = Kirstine.criterion_integrand!
+            ci! = Kirstine.criterion_functional!
 
             # interpret m as not inverted
             @test ci!(deepcopy(mreg), false, dc) ≈ -12 / 7

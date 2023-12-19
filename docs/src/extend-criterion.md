@@ -105,7 +105,7 @@ struct DexpCriterion <: Kirstine.DesignCriterion end
 # The information about this is passed in the `is_inv` flag.
 # `log_det!` computes `log(det())` of its argument, treating it as implicitly symmetric
 # and overwriting it in the process.
-function Kirstine.criterion_integrand!(
+function Kirstine.criterion_functional!(
     tnim::AbstractMatrix,
     is_inv::Bool,
     dc::DexpCriterion,

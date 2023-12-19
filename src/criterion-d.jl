@@ -28,7 +28,7 @@ See also the [mathematical background](math.md#D-Criterion).
 """
 struct DCriterion <: DesignCriterion end
 
-function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::DCriterion)
+function criterion_functional!(tnim::AbstractMatrix, is_inv::Bool, dc::DCriterion)
     sgn = is_inv ? -1 : 1
     ld = log_det!(tnim)
     # With the DeltaMethod, `tnim` can be singular without having raised an exception up to

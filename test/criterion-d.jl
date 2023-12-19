@@ -10,13 +10,13 @@ using LinearAlgebra: Symmetric, diagm, tr
 include("example-compartment.jl")
 
 @testset "criterion-d.jl" begin
-    @testset "criterion_integrand!" begin
+    @testset "criterion_functional!" begin
         # The functional should be log(det(m)) or -(log(det(inv_m))), depending on whether m
         # is passed as already inverted. For singular matrices it should always return -Inf.
         let mreg = [1.0 0.5; 0.5 2.0],
             msng = [1.0 0.5; 0.5 0.25],
             dc = DCriterion(),
-            ci! = Kirstine.criterion_integrand!
+            ci! = Kirstine.criterion_functional!
 
             # interpret m as not inverted
             @test ci!(deepcopy(mreg), false, dc) ≈ log(1.75)
