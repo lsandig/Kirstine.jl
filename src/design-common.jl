@@ -82,7 +82,8 @@ Compute the normalized information matrix for a single `Parameter` value `p`.
 
 This function is useful for debugging.
 
-See also the [mathematical background](math.md#Objective-Function).
+See also [`apply_transformation`](@ref)
+and the [mathematical background](math.md#Objective-Function).
 """
 function informationmatrix(
     d::DesignMeasure,
@@ -100,6 +101,36 @@ function informationmatrix(
     average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, p)
     informationmatrix!(nw.r_x_r, na)
     return Symmetric(nw.r_x_r)
+end
+
+"""
+    apply_transformation(nim::AbstractMatrix{<:Real}, p::Parameter, trafo::Transformation)
+
+Compute the information matrix for the transformed `Parameter`.
+
+This function is useful for debugging.
+
+See also [`informationmatrix`](@ref)
+and the [mathematical background](math.md#Objective-Function).
+"""
+function apply_transformation(
+    M::AbstractMatrix{<:Real},
+    p::Parameter,
+    trafo::Transformation,
+)
+    pk_wrap = PriorSample([p])
+    tc = trafo_constants(trafo, pk_wrap)
+    r = size(M, 1)
+    t = codomain_dimension(trafo, pk_wrap)
+    nw = NIMWorkspace(r, t)
+    nw.r_x_r .= M
+    nw.r_is_inv = false
+    apply_transformation!(nw, trafo, trafo_jacobianmatrix_for_index(tc, 1))
+    if nw.t_is_inv
+        return inv(Symmetric(nw.t_x_t))
+    else
+        return Symmetric(deepcopy(nw.t_x_t))
+    end
 end
 
 ## normalized information matrix for T(θ) ##

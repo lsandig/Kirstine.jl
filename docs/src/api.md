@@ -178,6 +178,7 @@ simplify_drop
 simplify_unique
 simplify_merge
 informationmatrix
+apply_transformation
 ```
 
 ## Plotting

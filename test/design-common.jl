@@ -81,6 +81,30 @@ include("example-vector.jl")
         end
     end
 
+    @testset "apply_transformation" begin
+        # This example is chosen to have nice values in the inverted matrices:
+        # M = [2 1; 1 3]
+        # inv(M) = [0.6 -0.2; -0.2, 0.4]
+        # DT3' * inv(M) * DT3 = [2.4 -1.6; -1.6 1.4]
+        # inv(DT3' * inv(M) * DT3) = [1.75 2.0; 2.0 3.0]
+        let M = [2 1; 1 3],
+            p = TestPar2(1, 0),
+            t1 = Identity(),
+            t2 = DeltaMethod(p -> [0 1]), # p -> p.b
+            t3 = DeltaMethod(p -> [2*p.a 0; -1 1]), # p -> [p.a^2, p[2] - p[1]]
+            MT1 = apply_transformation(M, p, t1),
+            MT2 = apply_transformation(M, p, t2),
+            MT3 = apply_transformation(M, p, t3)
+
+            @test MT1 isa Symmetric
+            @test MT1 == M
+            @test MT2 isa Symmetric
+            @test MT2 == [2.5;;]
+            @test MT3 isa Symmetric
+            @test MT3 ≈ [1.75 2; 2 3.0]
+        end
+    end
+
     @testset "log_det!" begin
         let _ = seed!(2468), A = rand(Float64, 3, 3), B = A * A'
 
