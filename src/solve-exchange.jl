@@ -111,51 +111,64 @@ end
 function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
     (; candidate, optimizer_weight, optimizer_direction, steps, simplify_args) = strategy
     check_compatible(candidate, region(dp))
-    w = allocate_workspaces(one_point_design(points(candidate)[1]), dp)
-    constraints = DesignConstraints(region(dp), [false], [false])
-    res = candidate
-    or_pairs = map(1:(steps)) do i
-        res = simplify(res, dp; simplify_args...)
-        dir_prot = map(one_point_design, points(simplify_drop(res, 0)))
-        gc = gateaux_constants(
+    # The workspaces and the constraints are independent of the current candidate.
+    workspaces_direction = allocate_workspaces(one_point_design(points(candidate)[1]), dp)
+    constraints_direction = DesignConstraints(region(dp), [false], [false])
+    ORType = OptimizationResult{
+        DesignMeasure,
+        SignedMeasure,
+        PsoState{DesignMeasure,SignedMeasure},
+    }
+    ors_d = ORType[]
+    ors_w = ORType[]
+    for i in 1:steps
+        # Simplify the result of the previous iteration.
+        candidate = simplify(candidate, dp; simplify_args...)
+        # Find the direction in which the Gateaux derivative is largest.
+        prototypes_direction = map(one_point_design, points(candidate))
+        gc_direction = gateaux_constants(
             criterion(dp),
-            res,
+            candidate,
             model(dp),
             covariate_parameterization(dp),
             prior_knowledge(dp),
             transformation(dp),
             normal_approximation(dp),
         )
-        # find direction of steepest ascent
         or_gd = optimize(
-            d -> gateauxderivative!(w, d, dp, gc),
+            d -> gateauxderivative!(workspaces_direction, d, dp, gc_direction),
             optimizer_direction,
-            dir_prot,
-            constraints;
+            prototypes_direction,
+            constraints_direction;
             trace_state = trace_state,
         )
-        d = or_gd.maximizer
-        # append the new atom
-        K = numpoints(res)
-        if points(d)[1] in points(simplify_drop(res, 0))
-            # effectivly run the reweighting from the last round for some more iterations
-            res = mixture(0, d, res) # make sure new point is at index 1
-            res = simplify_merge(res, region(dp), 0)
+        # Append this point to the candidate.
+        direction = or_gd.maximizer
+        if points(direction)[1] in points(candidate)
+            # The direction is alrady in the candidate support.
+            # This means we will effectivly run the reweighting from the last round for some more iterations.
+            # For consistency with the case where the direction is _not_ already in the support,
+            # we want the point corresponding to `direction` to move to the front.
+            # We achieve this by prepending it in a mixture (the weight does not matter)
+            # and then relying on `simplify_merge` to delete the later occurrence.
+            candidate = mixture(0, direction, candidate)
+            candidate = simplify_merge(candidate, region(dp), 0)
         else
-            K += 1
-            res = mixture(1 / K, d, res)
+            # The direction is actually a new point, prepend it.
+            candidate = mixture(1 / (1 + numpoints(candidate)), direction, candidate)
         end
-        # optimize weights
+        # Re-optimize the weights.
         wstr = DirectMaximization(;
             optimizer = optimizer_weight,
-            prototype = res,
-            fixedpoints = 1:K,
+            prototype = candidate,
+            fixedpoints = 1:numpoints(candidate),
         )
-        _, rw = solve(dp, wstr; trace_state = trace_state, simplify_args...)
-        res = solution(rw)
-        return or_gd, optimization_result(rw)
+        # We discard the first return value and simplify manually at the top of the loop
+        # since solve() sorts the points, and we don't want this.
+        _, rw = solve(dp, wstr; trace_state = trace_state)
+        candidate = solution(rw)
+        push!(ors_d, or_gd)
+        push!(ors_w, optimization_result(rw))
     end
-    ors_d = map(o -> o[1], or_pairs)
-    ors_w = map(o -> o[2], or_pairs)
     return ExchangeResult(ors_d, ors_w)
 end
