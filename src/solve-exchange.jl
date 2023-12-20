@@ -53,6 +53,9 @@ struct Exchange{Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,<:Any}} <:
         candidate::DesignMeasure,
         simplify_args::Td = Dict{Symbol,Any}(),
     ) where {Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,<:Any}}
+        if steps < 1
+            throw(ArgumentError("steps must be >= 1"))
+        end
         new{Tod,Tow,Td}(
             optimizer_direction,
             optimizer_weight,
