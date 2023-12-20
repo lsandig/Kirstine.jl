@@ -28,21 +28,23 @@ struct Exchange{Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,<:Any}} <:
             simplify_args = Dict{Symbol,Any}(),
         )
 
-    Improve the `candidate` design by repeating the following `steps` times,
-    starting with `r = candidate`:
+    Improve the initial `candidate` design by repeating the following loop `steps` times:
 
-     1. [`simplify`](@ref) the design `r`, passing along `sargs`.
-     2. Use `optimizer_direction` to find the direction (one-point design / Dirac measure) `d`
-        of highest [`gateauxderivative`](@ref) at `r`.
-        The vector of `prototypes` that is used for initializing `optimizer_direction`
-        is constructed from one-point designs at the design points of `r`.
-        See the [`Optimizer`](@ref)s for algorithm-specific details.
-     3. Use `optimizer_weight` to re-calculcate optimal weights
-        of a [`mixture`](@ref) of `r` and `d` for the [`DesignCriterion`](@ref).
+     1. [`simplify`](@ref) the current `candidate`,
+        passing along `simplify_args`.
+     2. Find the direction (one-point design) `d`
+        in which the [`gateauxderivative`](@ref) at the current `candidate` is highest.
+        This uses `optimizer_direction`,
+        initialized with one-point prototypes at the [`points`](@ref) of the current `candidate`.
+        See the low-level [`Optimizer`](@ref)s for algorithm-specific details.
+     3. Append the single point of `d` to the current `candidate`.
+     4. Recompute optimal weights for the current candidate.
         This is implemented as a call to [`solve`](@ref)
         with the [`DirectMaximization`](@ref) strategy
-        and with all of the design points of `r` kept fixed.
-     4. Set `r` to the result of step 3.
+        where all of the points of the current `candidate` are kept fixed.
+
+    Note that this strategy can produce intermediate designs with a _lower_ value of the objective function
+    than the `candidate` you started with.
 
     The return value of [`solve`](@ref) for this strategy is an [`ExchangeResult`](@ref).
     """
