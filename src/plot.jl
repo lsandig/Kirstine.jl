@@ -107,6 +107,12 @@ end
     };
     n_grid = 101,
 )
+    if length(n_grid) != 1
+        throw(ArgumentError("n_grid must be a single integer"))
+    end
+    if n_grid < 2
+        throw(ArgumentError("n_grid must be >= 2"))
+    end
     (; d, dp) = dplot
     lb, ub = boundingbox(region(dp))
     range_x = range(lb[1], ub[1]; length = n_grid[1])
@@ -142,6 +148,12 @@ end
     };
     n_grid = (51, 51),
 )
+    if length(n_grid) != 2
+        throw(ArgumentError("n_grid must be a 2-tuple"))
+    end
+    if any(n_grid .< 2)
+        throw(ArgumentError("all elements of n_grid must be >= 2"))
+    end
     (; d, dp) = dplot
     # Calculate Gateaux derivative on a grid over the bounding box of region(dp).
     # Evaluate it only on those points that are inside and fill the rest with NaN,
