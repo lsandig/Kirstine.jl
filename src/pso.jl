@@ -115,6 +115,12 @@ function optimizer_state(
     state.fp .= -Inf # make sure these get updated
     state.fg = -Inf
     pso_update_best!(state)
+    # check for broken initial state
+    if state.fg == Inf
+        throw(ErrorException("infinite objective value at best initial point $(state.g)"))
+    elseif all(isnan.(state.fx))
+        throw(ErrorException("objective evaluates to NaN on all initial points"))
+    end
     return state
 end
 

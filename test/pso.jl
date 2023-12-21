@@ -107,6 +107,14 @@ end
             @test length(r1.trace_fx) == 100
             @test length(r1.trace_x) == 100
             @test length(r2.trace_state) == 100
+
+            @test_throws "infinite objective" Kirstine.optimize(
+                p -> p.x[1] < 0 ? Inf : sum(p.x),
+                pso,
+                [Pnt([-1, 0, 1, 2])],
+                constr1,
+            )
+            @test_throws "NaN on all" Kirstine.optimize(p -> NaN, pso, [prototype], constr1)
         end
     end
 end
