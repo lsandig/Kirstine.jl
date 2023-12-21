@@ -115,6 +115,14 @@ end
                 constr1,
             )
             @test_throws "NaN on all" Kirstine.optimize(p -> NaN, pso, [prototype], constr1)
+
+            seed!(4711)
+            @test_warn "maximum is not finite" Kirstine.optimize(
+                p -> sum((p.x .- xstar) .^ 2) < 0.1 ? Inf : f(p),
+                pso,
+                [Pnt([-1, 0, 1, 2])],
+                constr1,
+            )
         end
     end
 end
