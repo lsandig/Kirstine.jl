@@ -41,12 +41,17 @@ end
 @recipe function f(
     d::DesignMeasure;
     label_formatter = (k, dp, w) -> "$(round(100 * w; sigdigits=3))%",
+    minpointarea = 4,
+    maxpointarea = 100,
 )
     N = length(points(d)[1])
     if N != 1 && N != 2
         throw(ArgumentError("only implemented for 1- or 2-dimensional design points"))
     end
-    markersize --> permutedims(max.(2, sqrt.(100 .* weights(d))))
+    if minpointarea > maxpointarea
+        throw(ArgumentError("minpointarea must be <= maxpointarea"))
+    end
+    markersize --> permutedims(sqrt.(max.(minpointarea, maxpointarea .* weights(d))))
     # scatter each design point explicitly in its own series because grouping can't be used
     # in a recipe: https://github.com/JuliaPlots/Plots.jl/issues/1167
     pt = reduce(hcat, points(d))
