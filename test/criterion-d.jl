@@ -185,7 +185,7 @@ include("example-compartment.jl")
             d1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             d1dir = one_point_design.(points(d1))
 
-            @test_throws "one-point design" gateauxderivative(d1, [d1], dpi)
+            @test_throws "one-point directions" gateauxderivative(d1, [d1], dpi)
             @test all(isnan.(gateauxderivative(d0, dir, dpi)))
             @test all(isnan.(gateauxderivative(d0, dir, dpd)))
             @test maximum(gateauxderivative(d1, dir, dpi)) <= 0

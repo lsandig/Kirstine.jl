@@ -32,10 +32,10 @@ struct DesignMeasure <: AbstractPoint
     """
     function DesignMeasure(points::AbstractMatrix{<:Real}, weights::AbstractVector{<:Real})
         if length(weights) != size(points, 2)
-            error("number of weights and design points must be equal")
+            throw(ArgumentError("number of weights and design points must be equal"))
         end
         if any(weights .< 0) || !(sum(weights) ≈ 1)
-            error("weights must be non-negative and sum to one")
+            throw(ArgumentError("weights must be non-negative and sum to one"))
         end
         new(points, weights)
     end
@@ -68,7 +68,7 @@ function DesignMeasure(
     weights::AbstractVector{<:Real},
 )
     if !allequal(map(length, points))
-        error("design points must have identical lengths")
+        throw(ArgumentError("design points must have identical lengths"))
     end
     return DesignMeasure(reduce(hcat, points), weights)
 end
@@ -311,10 +311,10 @@ The result is not simplified, hence its design points might not be unique.
 """
 function mixture(alpha::Real, d1::DesignMeasure, d2::DesignMeasure)
     if length(points(d1)[1]) != length(points(d2)[1])
-        error("design points must have identical lengths")
+        throw(ArgumentError("design points must have identical lengths"))
     end
     if alpha < 0 || alpha > 1
-        error("mixture weight must be between 0 and 1")
+        throw(ArgumentError("mixture weight must be between 0 and 1"))
     end
     w = vcat(alpha .* weights(d1), (1 - alpha) .* weights(d2))
     dp = vcat(points(d1), points(d2))

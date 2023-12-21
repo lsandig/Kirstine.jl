@@ -33,13 +33,13 @@ struct Pso <: Optimizer
     c2::Float64
     function Pso(iterations, swarmsize, c1, c2)
         if iterations <= 0
-            error("number of iterations must be positive")
+            throw(ArgumentError("number of iterations must be positive"))
         end
         if swarmsize <= 1
-            error("swarmsize must be at least 2")
+            throw(ArgumentError("swarmsize must be at least 2"))
         end
         if c1 < 0 || c2 < 0 || c1 + c2 <= 4
-            error("c1 and c2 must be non-negative and, c1 + c2 > 4")
+            throw(ArgumentError("c1 and c2 must be non-negative and, c1 + c2 > 4"))
         end
         return new(iterations, swarmsize, c1, c2)
     end
@@ -87,7 +87,7 @@ function optimizer_state(
     constraints::AbstractConstraints,
 )
     if o.swarmsize < length(prototypes)
-        error("swarmsize must be a least as large as number of prototype particles")
+        throw(ArgumentError("swarmsize must be >= number of prototype particles"))
     end
     x_given = deepcopy(prototypes)
     n_random = o.swarmsize - length(prototypes)

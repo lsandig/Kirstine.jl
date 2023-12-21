@@ -274,7 +274,7 @@ function gateauxderivative(
     dp::DesignProblem,
 )
     if any(d -> numpoints(d) != 1, directions)
-        error("Gateaux derivatives are only implemented for one-point design directions")
+        throw(ErrorException("derivative only implemented for one-point directions"))
     end
     if isinf(objective(at, dp))
         # undefined objective implies no well-defined derivative

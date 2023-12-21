@@ -23,10 +23,10 @@ If no `weights` are given, a uniform distribution on the elements of `p` is assu
         weights::AbstractVector{<:Real} = fill(1 / length(parameters), length(parameters)),
     ) where T<:Parameter
         if length(weights) != length(parameters)
-            error("number of weights and parameter values must be equal")
+            throw(ArgumentError("number of weights and parameter values must be equal"))
         end
         if any(weights .< 0) || !(sum(weights) ≈ 1)
-            error("weights must be non-negative and sum to one")
+            throw(ArgumentError("weights must be non-negative and sum to one"))
         end
         return new{T}(weights, parameters)
     end

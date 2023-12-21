@@ -37,10 +37,10 @@ struct DesignInterval{N} <: DesignRegion{N}
     function DesignInterval(name, lowerbound, upperbound)
         n = length(name)
         if !(n == length(lowerbound) == length(upperbound))
-            error("lengths of name, upper and lower bounds must be identical")
+            throw(ArgumentError("lengths of name and bounds must be identical"))
         end
         if any(upperbound .<= lowerbound)
-            error("upper bounds must be strictly larger than lower bounds")
+            throw(ArgumentError("upper bounds must be strictly larger than lower bounds"))
         end
         new{n}(
             tuple(name...),

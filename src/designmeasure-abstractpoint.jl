@@ -11,7 +11,7 @@ struct SignedMeasure <: AbstractPointDifference
     weights::Vector{Float64}
     function SignedMeasure(atoms, weights)
         if length(weights) != size(atoms, 2)
-            error("number of weights and atoms must be equal")
+            throw(ArgumentError("number of weights and atoms must be equal"))
         end
         new(atoms, weights)
     end
@@ -41,10 +41,10 @@ function DesignConstraints(
     check_compatible(d, dr)
     K = numpoints(d)
     if any(fixedweights .< 1) || any(fixedweights .> K)
-        error("indices for fixed weights must be between 1 and $K")
+        throw(ArgumentError("indices for fixed weights must be between 1 and $K"))
     end
     if any(fixedpoints .< 1) || any(fixedpoints .> K)
-        error("indices for fixed points must be between 1 and $K")
+        throw(ArgumentError("indices for fixed points must be between 1 and $K"))
     end
     fixw = [k in fixedweights for k in 1:K]
     fixp = [k in fixedpoints for k in 1:K]
@@ -60,11 +60,11 @@ end
 function check_compatible(d::DesignMeasure, dr::DesignRegion{N}) where N
     for dp in points(d)
         if length(dp) != N
-            error("design point length must match design region dimension")
+            throw(ArgumentError("design point length must match design region dimension"))
         end
         if !isinside(dp, dr)
             @error "" dp dr
-            error("design point is outside design region")
+            throw(ArgumentError("design point is outside design region"))
         end
     end
     return true
