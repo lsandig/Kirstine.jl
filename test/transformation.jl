@@ -17,10 +17,14 @@ include("example-testpar.jl")
             D2 = DeltaMethod(dt2),
             dt3 = p -> [3 * p.a -p.b^2],
             D3 = DeltaMethod(dt3),
-            tc = Kirstine.trafo_constants(D3, pk)
+            tc = Kirstine.trafo_constants(D3, pk),
+            D4 = DeltaMethod(p -> [1 2; 3 4; 5 6]),
+            D5 = DeltaMethod(p -> [p.a 2*p.b; 3*p.a 6*p.b])
 
             @test_throws "2 columns" Kirstine.trafo_constants(D1, pk)
             @test_throws "identical" Kirstine.trafo_constants(D2, pk)
+            @test_warn "more rows than cols" Kirstine.trafo_constants(D4, pk)
+            @test_warn "not full rank" Kirstine.trafo_constants(D5, pk)
             @test isa(tc, Kirstine.TCDeltaMethod)
             @test tc.jm == [[3 -4], [-3 -4]]
         end

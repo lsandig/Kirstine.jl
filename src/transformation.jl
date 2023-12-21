@@ -83,6 +83,11 @@ function trafo_constants(trafo::DeltaMethod, pk::PriorSample)
     if ncol != r
         throw(DimensionMismatch("trafo jacobian must have $(r) columns, got $(ncol)"))
     end
+    if size(jm[1], 1) > size(jm[1], 2)
+        @warn "trafo Jacobians have more rows than cols, infomatrices will be singular"
+    elseif any(rank.(jm) .!= size(jm[1], 1))
+        @warn "some trafo Jacobians are not full rank, infomatrices will be singular"
+    end
     return TCDeltaMethod(jm)
 end
 

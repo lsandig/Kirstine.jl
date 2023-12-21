@@ -17,6 +17,7 @@ using LinearAlgebra:
     diagm,
     mul!,
     norm,
+    rank,
     tr
 using Random: rand, rand!
 using RecipesBase
