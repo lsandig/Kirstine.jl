@@ -81,9 +81,8 @@ end
 end
 
 struct DerivativePlot{
-    N,
     Tdc<:DesignCriterion,
-    Tdr<:DesignRegion{N},
+    Tdr<:DesignRegion,
     Tm<:Model,
     Tcp<:CovariateParameterization,
     Tpk<:PriorKnowledge,
@@ -96,7 +95,6 @@ end
 
 @recipe function f(
     dplot::DerivativePlot{
-        1,
         <:DesignCriterion,
         <:DesignRegion{1},
         <:Model,
@@ -137,7 +135,6 @@ end
 
 @recipe function f(
     dplot::DerivativePlot{
-        2,
         <:DesignCriterion,
         <:DesignRegion{2},
         <:Model,
