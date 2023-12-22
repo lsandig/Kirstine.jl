@@ -68,6 +68,7 @@ end
 end
 
 @recipe function f(d::DesignMeasure, dr::DesignRegion{2})
+    check_compatible(d, dr)
     lb, ub = boundingbox(dr)
     xguide --> dimnames(dr)[1]
     yguide --> dimnames(dr)[2]
@@ -78,6 +79,7 @@ end
 end
 
 @recipe function f(d::DesignMeasure, dr::DesignRegion{1})
+    check_compatible(d, dr)
     lb, ub = boundingbox(dr)
     xguide --> dimnames(dr)[1]
     xlims --> (lb[1], ub[1])
