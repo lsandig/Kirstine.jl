@@ -203,9 +203,8 @@ By default, `markersize` indicates the design weights.
 
   - `n_grid::Union{Integer, Tuple{Integer, Integer}}`: number of points in the grid.
     Must match the dimension of the design region.
-  - `label_formatter::Function`: a function for mapping a triple `(k, pt, w)`
-    of an index, design point, and weight to a string for use as a label in the legend.
-    Default: weight in percentages rounded to 3 significant digits.
+  - Keyword arguments for plotting `DesignMeasure`s:
+    `label_formatter`, `minmarkersize`, `maxmarkersize`
 
 !!! note
 
@@ -315,9 +314,8 @@ the following things will be plotted:
 
 # Additional Keyword Arguments
 
-  - `label_formatter::Function`: a function for mapping a triple `(k, pt, w)`
-    of an index, design point, and weight to a string for use as a label in the legend.
-    Default: weight in percentages rounded to 3 significant digits.
+  - Keyword arguments for plotting `DesignMeasure`s:
+    `label_formatter`, `minmarkersize`, `maxmarkersize`
 
 # Examples
 
