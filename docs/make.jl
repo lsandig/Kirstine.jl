@@ -123,6 +123,7 @@ makedocs(modules = [Kirstine],
              ],
              "Mathematical Background" => "math.md",
              "API Reference" => "api.md",
+             "FAQ" => "faq.md",
              "Extending Kirstine" => [
                  "Overview" => "extend.md",
                  "Design Criterion" => "extend-criterion.md",
