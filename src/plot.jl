@@ -237,7 +237,12 @@ end
 @recipe function f(
     efplot::ExpectedFunctionPlot;
     label_formatter = (k, dp, w) -> "$(round(100 * w; sigdigits=3))%",
+    minmarkersize = 2,
+    maxmarkersize = 10,
 )
+    if minmarkersize > maxmarkersize
+        throw(ArgumentError("minmarkersize must be <= maxmarkersize"))
+    end
     (; f, g, h, x, d, m, cp, pk) = efplot
     K = numpoints(d)
     # graphs
@@ -263,7 +268,7 @@ end
         hx = mapreduce((w, p) -> w * h(c[k], p), +, weights(pk), parameters(pk))
         @series begin
             label --> (label_formatter(k, pt[k], wt[k]))
-            markersize --> max(2, sqrt.(100 .* wt[k]))
+            markersize --> max(minmarkersize, maxmarkersize * sqrt(wt[k]))
             markercolor --> k
             seriestype := :scatter
             gx, hx
