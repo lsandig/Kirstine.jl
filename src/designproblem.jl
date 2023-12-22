@@ -133,7 +133,7 @@ function allocate_workspaces(d::DesignMeasure, dp::DesignProblem)
         codomain_dimension(transformation(dp), prior_knowledge(dp)),
     )
     mw = allocate_model_workspace(numpoints(d), model(dp), prior_knowledge(dp))
-    c = allocate_initialize_covariates(d, model(dp), covariate_parameterization(dp))
+    c = implied_covariates(d, model(dp), covariate_parameterization(dp))
     return Workspaces(nw, mw, c)
 end
 

@@ -181,6 +181,7 @@ simplify_unique
 simplify_merge
 informationmatrix
 apply_transformation
+implied_covariates
 ```
 
 ## Plotting

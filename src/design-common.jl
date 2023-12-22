@@ -31,7 +31,17 @@ struct GCPriorSample <: GateauxConstants
     tr_B::Vector{Float64}
 end
 
-function allocate_initialize_covariates(d, m, cp)
+"""
+    implied_covariates(d::DesignMeasure, m::M, cp::Cp)
+
+Return covariates that are implied by `d`
+for instances of user types `M <: Model` and `Cp <: CovariateParameterization`.
+
+This function is useful for debugging.
+
+See also [`map_to_covariate!`](@ref).
+"""
+function implied_covariates(d, m, cp)
     K = numpoints(d)
     cs = [allocate_covariate(m) for _ in 1:K]
     update_covariates!(cs, d, m, cp)
@@ -92,7 +102,7 @@ function informationmatrix(
     p::Parameter,
     na::NormalApproximation,
 )
-    c = Kirstine.allocate_initialize_covariates(d, m, cp)
+    c = implied_covariates(d, m, cp)
     # Note: t = 1 is a dummy value, no trafo will be applied
     nw = NIMWorkspace(dimension(p), 1)
     # wrapping `p` is a bit ugly here

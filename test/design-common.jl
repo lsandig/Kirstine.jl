@@ -202,11 +202,11 @@ include("example-vector.jl")
         end
     end
 
-    @testset "allocate_initialize_covariates" begin
+    @testset "implied_covariates" begin
         let d = DesignMeasure([[0], [1], [2]], [0.2, 0.3, 0.5]),
             m = EmaxModel(1),
             cp = CopyDose(),
-            c = Kirstine.allocate_initialize_covariates(d, m, cp)
+            c = implied_covariates(d, m, cp)
 
             @test length(c) == numpoints(d)
             @test c[1].dose == points(d)[1][1]
@@ -220,7 +220,7 @@ include("example-vector.jl")
             d2 = DesignMeasure([[3], [4], [5]], [0.4, 0.4, 0.2]),
             m = EmaxModel(1),
             cp = CopyDose(),
-            c = Kirstine.allocate_initialize_covariates(d1, m, cp),
+            c = implied_covariates(d1, m, cp),
             res = Kirstine.update_covariates!(c, d2, m, cp)
 
             @test res === c

@@ -242,7 +242,7 @@ end
     K = numpoints(d)
     # graphs
     fx = zeros(length(x), K)
-    c = Kirstine.allocate_initialize_covariates(d, m, cp)
+    c = implied_covariates(d, m, cp)
     for k in 1:K
         for i in 1:length(x)
             fx[i, k] = mapreduce(+, weights(pk), parameters(pk)) do w, p

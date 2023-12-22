@@ -62,7 +62,8 @@ For user types `C <: Covariate`, `M <: Model`, and
 `Cp <: CovariateParameterization` this should set the fields of the single covariate `c`
 according to the single design point `dp`. Finally, this method should return `c`.
 
-See also the [mathematical background](math.md#Design-Problems).
+See also [`implied_covariates`](@ref)
+and the [mathematical background](math.md#Design-Problems).
 """
 function map_to_covariate! end
 

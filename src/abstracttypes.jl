@@ -33,6 +33,8 @@ abstract type Covariate end
     CovariateParameterization
 
 Supertype for user-defined mappings from design points to model covariates.
+
+See also [`implied_covariates`](@ref).
 """
 abstract type CovariateParameterization end
 
