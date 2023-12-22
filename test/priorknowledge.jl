@@ -14,6 +14,7 @@ include("example-testpar.jl")
             @test_throws "must be equal" PriorSample(pars, [0])
             @test_throws "non-negative" PriorSample(pars, [-0.5, 1.5])
             @test_throws "sum to one" PriorSample(pars, [0.5, 1.5])
+            @test_throws "same concrete" PriorSample([TestPar2(1, 2), TestPar3(1, 2, 3)])
         end
 
         # constructor with default uniform weights

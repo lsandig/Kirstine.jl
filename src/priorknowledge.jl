@@ -30,6 +30,9 @@ See also [`parameters`](@ref), [`weights(::PriorSample)`](@ref).
         if any(weights .< 0) || !(sum(weights) ≈ 1)
             throw(ArgumentError("weights must be non-negative and sum to one"))
         end
+        if !isconcretetype(T)
+            throw(ArgumentError("parameters must all have the same concrete type"))
+        end
         return new{T}(weights, parameters)
     end
 end
