@@ -134,7 +134,7 @@ function Kirstine.gateaux_constants(
     # tr(B) = det(M(ζ,θ))^{1/r}
     r = Kirstine.codomain_dimension(trafo, pk)
     # Compute M^{-1} as Symmetric matrices.
-    inv_M = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
+    inv_M = [inv(informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
     # Since we already have M(ζ,θ)^{-1}, we compute tr(B) more numerically stable as
     # exp(-log(det(M(ζ,θ)^{-1}) / r)).
     # We don't use log_det!() since we don't want to modify inv_M.
@@ -162,7 +162,7 @@ function Kirstine.gateaux_constants(
     tc = Kirstine.trafo_constants(trafo, pk)
     t = Kirstine.codomain_dimension(trafo, pk)
     # This computes M^{-1} as Symmetric matrices.
-    inv_M = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
+    inv_M = [inv(informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
     tr_B = map(iM -> exp(-log(det(iM)) / t), inv_M)
     # Note that these A will be dense.
     A = map(inv_M, tc.jm, tr_B) do iM, DT, trB

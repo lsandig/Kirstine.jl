@@ -200,8 +200,10 @@ function objective!(w::Workspaces, d::DesignMeasure, dp::DesignProblem, tc::Traf
     pk = prior_knowledge(dp)
     try
         acc = 0
-        for i in 1:length(pk.p)
-            average_fishermatrix!(w.nw.r_x_r, w.mw, weights(d), m, w.c, pk.p[i])
+        pk_w = weights(pk)
+        pk_p = parameters(pk)
+        for i in 1:length(pk_p)
+            average_fishermatrix!(w.nw.r_x_r, w.mw, weights(d), m, w.c, pk_p[i])
             informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
             w.nw.r_is_inv = false
             apply_transformation!(
@@ -209,9 +211,7 @@ function objective!(w::Workspaces, d::DesignMeasure, dp::DesignProblem, tc::Traf
                 transformation(dp),
                 trafo_jacobianmatrix_for_index(tc, i),
             )
-            acc +=
-                pk.weight[i] *
-                criterion_functional!(w.nw.t_x_t, w.nw.t_is_inv, criterion(dp))
+            acc += pk_w[i] * criterion_functional!(w.nw.t_x_t, w.nw.t_is_inv, criterion(dp))
         end
         return acc
     catch e
@@ -247,10 +247,12 @@ function gateauxderivative!(
     update_model_workspace!(w.mw, m, w.c)
     pk = prior_knowledge(dp)
     acc = 0
-    for i in 1:length(pk.p)
-        average_fishermatrix!(w.nw.r_x_r, w.mw, weights(direction), m, w.c, pk.p[i])
+    pk_w = weights(pk)
+    pk_p = parameters(pk)
+    for i in 1:length(pk_p)
+        average_fishermatrix!(w.nw.r_x_r, w.mw, weights(direction), m, w.c, pk_p[i])
         informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
-        acc += pk.weight[i] * gateaux_integrand(gconst.A[i], w.nw.r_x_r, gconst.tr_B[i])
+        acc += pk_w[i] * gateaux_integrand(gconst.A[i], w.nw.r_x_r, gconst.tr_B[i])
     end
     return acc
 end

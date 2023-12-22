@@ -53,7 +53,7 @@ function gateaux_constants(
     trafo::Identity,
     na::NormalApproximation,
 )
-    invM = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
+    invM = [inv(informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
     tr_B = map(tr, invM)
     A = map(m -> Symmetric(m)^2, invM)
     return GCPriorSample(A, tr_B)
@@ -69,7 +69,7 @@ function gateaux_constants(
     na::NormalApproximation,
 )
     tc = trafo_constants(trafo, pk)
-    invM = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
+    invM = [inv(informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
     JpJ = map(J -> J' * J, tc.jm)
     tr_B = map((J, iM) -> tr(J * Symmetric(iM)), JpJ, invM)
     A = map((J, iM) -> Symmetric(iM) * J * Symmetric(iM), JpJ, invM)

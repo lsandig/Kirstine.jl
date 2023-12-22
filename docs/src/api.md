@@ -137,6 +137,8 @@ JustCopy()
 PriorKnowledge
 PriorSample
 PriorSample(::AbstractVector{T}, ::AbstractVector{<:Real}) where T <: Parameter
+parameters(::PriorSample)
+weights(::PriorSample)
 ```
 
 ## Transformations
@@ -167,7 +169,7 @@ uniform_design
 equidistant_design
 random_design
 points
-weights
+weights(::DesignMeasure)
 numpoints
 sort_points
 sort_weights

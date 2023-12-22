@@ -22,5 +22,21 @@ include("example-testpar.jl")
             @test p.p == [TestPar2(1, 2), TestPar2(3, 4)]
         end
     end
+
+    @testset "weights" begin
+        let p = PriorSample([TestPar2(1, 2), TestPar2(3, 4)])
+
+            # check that this returns a reference
+            @test weights(p) === p.weight
+        end
+    end
+
+    @testset "parameters" begin
+        let p = PriorSample([TestPar2(1, 2), TestPar2(3, 4)])
+
+            # check that this returns a reference
+            @test parameters(p) === p.p
+        end
+    end
 end
 end

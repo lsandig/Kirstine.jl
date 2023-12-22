@@ -49,8 +49,8 @@ function gateaux_constants(
     trafo::Identity,
     na::NormalApproximation,
 )
-    A = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
-    tr_B = fill(parameter_dimension(pk), length(pk.p))
+    A = [inv(informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
+    tr_B = fill(parameter_dimension(pk), length(parameters(pk)))
     return GCPriorSample(A, tr_B)
 end
 
@@ -66,7 +66,7 @@ function gateaux_constants(
     na::NormalApproximation,
 )
     # This computes Symmetric versions of of M(ζ,θ)^{-1}.
-    iim = [inv(informationmatrix(d, m, cp, p, na)) for p in pk.p]
+    iim = [inv(informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
     tc = trafo_constants(trafo, pk)
     nw = NIMWorkspace(parameter_dimension(pk), codomain_dimension(trafo, pk))
 
@@ -82,6 +82,6 @@ function gateaux_constants(
         C = DT' * (Symmetric(nw.t_x_t) \ DT)
         return iM * C * iM
     end
-    tr_B = fill(codomain_dimension(trafo, pk), length(pk.p))
+    tr_B = fill(codomain_dimension(trafo, pk), length(parameters(pk)))
     return GCPriorSample(A, tr_B)
 end

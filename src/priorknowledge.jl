@@ -17,6 +17,8 @@ struct PriorSample{T} <: PriorKnowledge{T}
 Construct a weighted prior sample on the given parameter draws.
 
 If no `weights` are given, a uniform distribution on the elements of `p` is assumed.
+
+See also [`parameters`](@ref), [`weights(::PriorSample)`](@ref).
 """
     function PriorSample(
         parameters::AbstractVector{T},
@@ -33,5 +35,27 @@ If no `weights` are given, a uniform distribution on the elements of `p` is assu
 end
 
 function parameter_dimension(pk::PriorSample)
-    return dimension(pk.p[1])
+    return dimension(parameters(pk)[1])
+end
+
+"""
+    weights(pk::PriorSample)
+
+Return a reference to the weights of the [`PriorSample`](@ref).
+
+See also [`parameters`](@ref).
+"""
+function weights(pk::PriorSample)
+    return pk.weight
+end
+
+"""
+    parameters(pk::PriorSample)
+
+Return a reference to the parameters of the [`PriorSample`](@ref).
+
+See also [`weights(::DesignMeasure)`](@ref).
+"""
+function parameters(pk::PriorSample)
+    return pk.p
 end

@@ -26,7 +26,7 @@ struct NRWorkspace <: ModelWorkspace
 end
 
 function allocate_model_workspace(K::Integer, m::NonlinearRegression, pk::PriorSample)
-    return NRWorkspace(K, unit_length(m), dimension(pk.p[1]))
+    return NRWorkspace(K, unit_length(m), parameter_dimension(pk))
 end
 
 # Initialize matrices that do not depend on the parameter,

@@ -71,7 +71,7 @@ function Kirstine.allocate_model_workspace(
     m::LogisticRegression,
     pk::PriorSample,
 )
-    return LRWorkspace(zeros(1, dimension(pk.p[1])))
+    return LRWorkspace(zeros(1, dimension(parameters(pk)[1])))
 end
 
 # nothing to do

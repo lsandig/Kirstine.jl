@@ -245,7 +245,9 @@ end
     c = Kirstine.allocate_initialize_covariates(d, m, cp)
     for k in 1:K
         for i in 1:length(x)
-            fx[i, k] = mapreduce((w, p) -> w * f(x[i], c[k], p), +, pk.weight, pk.p)
+            fx[i, k] = mapreduce(+, weights(pk), parameters(pk)) do w, p
+                return w * f(x[i], c[k], p)
+            end
         end
     end
     @series begin
@@ -258,7 +260,7 @@ end
     wt = weights(d)
     for k in 1:K
         gx = g(c[k])
-        hx = mapreduce((w, p) -> w * h(c[k], p), +, pk.weight, pk.p)
+        hx = mapreduce((w, p) -> w * h(c[k], p), +, weights(pk), parameters(pk))
         @series begin
             label --> (label_formatter(k, pt[k], wt[k]))
             markersize --> max(2, sqrt.(100 .* wt[k]))

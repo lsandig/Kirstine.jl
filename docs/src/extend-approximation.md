@@ -191,7 +191,7 @@ function infomat(d::DesignMeasure, dp::DesignProblem)
         d,
         model(dp),
         covariate_parameterization(dp),
-        prior_knowledge(dp).p[1],
+        parameters(prior_knowledge(dp))[1],
         normal_approximation(dp),
     )
 end

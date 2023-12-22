@@ -73,7 +73,7 @@ function trafo_constants(trafo::Identity, pk::PriorSample)
 end
 
 function trafo_constants(trafo::DeltaMethod, pk::PriorSample)
-    jm = [trafo.jacobian_matrix(p) for p in pk.p]
+    jm = [trafo.jacobian_matrix(p) for p in parameters(pk)]
     r = parameter_dimension(pk)
     if any(j -> size(j) != size(jm[1]), jm)
         throw(DimensionMismatch("trafo jacobians must be identical in size"))
@@ -96,7 +96,7 @@ function codomain_dimension(trafo::Identity, pk::PriorSample)
 end
 
 function codomain_dimension(trafo::DeltaMethod, pk::PriorSample)
-    return size(trafo.jacobian_matrix(pk.p[1]), 1)
+    return size(trafo.jacobian_matrix(parameters(pk)[1]), 1)
 end
 
 function trafo_jacobianmatrix_for_index(tc::TCIdentity, i::Integer)

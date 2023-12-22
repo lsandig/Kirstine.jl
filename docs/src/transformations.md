@@ -373,7 +373,7 @@ The location of this point makes intuitive sense,
 considering the prior expected time to maximum concentration:
 
 ```@example main
-prior_expected_ttm = mean(ttm, dp_cmax.pk.p)
+prior_expected_ttm = mean(ttm, parameters(prior_knowledge(dp_cmax)))
 ```
 
 ```@setup main

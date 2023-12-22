@@ -270,7 +270,7 @@ function DED_auto(p, rho)
 end
 
 # quickly check for implementation error
-DED_manual(prior_sample.p[1], 10) .- DED_auto(prior_sample.p[1], 10)
+DED_manual(parameters(prior_sample)[1], 10) .- DED_auto(parameters(prior_sample)[1], 10)
 ```
 
 ```@example main

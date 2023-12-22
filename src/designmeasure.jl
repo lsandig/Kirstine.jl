@@ -14,7 +14,7 @@ In Julia, a design point is simply a `Vector{Float64}`.
 Special kinds of design measures can be constructed with [`one_point_design`](@ref),
 [`uniform_design`](@ref), [`equidistant_design`](@ref), [`random_design`](@ref).
 
-See also [`weights`](@ref), [`points`](@ref), [`apportion`](@ref).
+See also [`weights(::DesignMeasure)`](@ref), [`points`](@ref), [`apportion`](@ref).
 """
 struct DesignMeasure <: AbstractPoint
     points::Matrix{Float64}
@@ -194,7 +194,7 @@ end
 
 Return an iterator over the design points of `d`.
 
-See also [`weights`](@ref), [`numpoints`](@ref).
+See also [`weights(::DesignMeasure)`](@ref), [`numpoints`](@ref).
 """
 points(d::DesignMeasure) = eachcol(d.points)
 
@@ -212,7 +212,7 @@ weights(d::DesignMeasure) = d.weights
 
 Return the number of design points of `d`.
 
-See also [`points`](@ref), [`weights`](@ref).
+See also [`points`](@ref), [`weights(::DesignMeasure)`](@ref).
 """
 numpoints(d::DesignMeasure) = size(d.points, 2)
 
