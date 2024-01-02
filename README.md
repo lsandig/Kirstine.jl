@@ -16,7 +16,6 @@ A [Julia][julia-url] package for Bayesian optimal experimental design with nonli
 
 Beta.
 Mostly stable, breaking changes will be mostly cosmetic.
-Documentation is still sparse in some places.
 
 ## Features
 
@@ -38,6 +37,13 @@ You can install it with
 
 ```julia
 Pkg.add("Kirstine")
+```
+
+Alternatively,
+you can get it directly from sourcehut:
+
+```julia
+Pkg.add(url = "https://git.sr.ht/~lsandig/Kirstine.jl")
 ```
 
 ## Documentation
@@ -77,10 +83,13 @@ These are different tasks than what Kirstine.jl attempts to do.
 
 ## Contributing
 
-There is a [git repository and issue tracker at sourcehut][repo-url].
+The source code of Kirstine.jl is managed on [sourcehut](https://sr.ht/%7Elsandig/Kirstine.jl/).
 
-If you have already solved design problems with other software packages,
-you can try to replicate your solutions with Kirstine.jl.
-I'd be grateful to hear about your results,
-especially if they differ from what you expect.
-Ditto if you think Kirstine.jl is missing some crucial feature.
+Please post usage questions and general discussion on the [kirstine-users](https://lists.sr.ht/%7Elsandig/kirstine-users) mailing list.
+
+Only bug reports should be filed on the [issue tracker](https://todo.sr.ht/%7Elsandig/Kirstine.jl/).
+
+Patches are welcome and should be submitted via [`git send-email`](https://git-send-email.io)
+to the [kirstine-devel](https://lists.sr.ht/%7Elsandig/kirstine-devel) mailing list.
+Please make sure that your patch does not break any existing tests
+and includes new tests for any functionality it adds.

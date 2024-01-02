@@ -22,6 +22,10 @@ _On the standard deviations of adjusted and interpolated values of an observed p
 can be considered the first treatment of experimental design as a problem in statistics.
 You can find a longer [biography at the internet archive](https://web.archive.org/web/20090810040534/http://www.webdoe.cc/publications/kirstine.php).
 
+### How can I contribute?
+
+See the [contributing section](index.md#Contributing) on the main page.
+
 ## Supported Design Problems
 
 ### Can I use other regression models?
