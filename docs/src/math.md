@@ -80,7 +80,7 @@ with the following elements:
     The _mean function_ ``\MeanFunction`` must be continuous in ``\Covariate``
     and continuously differentiable in ``\Parameter``.
     The covariance matrix ``\UnitCovariance``
-    may depend on the covariate,
+    may continuously depend on the covariate,
     but is otherwise assumed to be known.
     In simple cases,
     ``\DimUnit=1``,
