@@ -110,6 +110,7 @@ makedocs(modules = [Kirstine],
              edit_link = nothing,
              footer = nothing,
              mathengine = KaTeX(Dict(:macros => math_macros)),
+             size_threshold_ignore = ["api.md"],
          ),
          pages = [
              "Home" => "index.md",
