@@ -9,9 +9,20 @@ using Kirstine
 include("example-emax.jl")
 
 @testset "solve-exchange.jl" begin
+    @testset "Exchange" begin
+        let st = Pso(; swarmsize = 10, iterations = 10)
+            @test_throws "steps must be >= 1" Exchange(
+                optimizer_direction = st,
+                optimizer_weight = st,
+                steps = 0,
+                candidate = one_point_design([42]),
+            )
+        end
+    end
+
     @testset "solve_with" begin
         let dp = DesignProblem(;
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
                 prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
@@ -24,6 +35,7 @@ include("example-emax.jl")
                 optimizer_direction = od,
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 3,
+                simplify_args = Dict(:maxweight => 1e-3),
             ),
             _ = seed!(54321),
             r1 = Kirstine.solve_with(dp, str1, true),

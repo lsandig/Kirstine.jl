@@ -105,9 +105,9 @@ using Random
         end
     end
 
-    @testset "bounding_box" begin
+    @testset "boundingbox" begin
         let dr = DesignInterval(:a => (-2, 3), :b => (5, 7)),
-            (lb, ub) = Kirstine.bounding_box(dr)
+            (lb, ub) = Kirstine.boundingbox(dr)
 
             @test lb == (-2.0, 5.0)
             @test ub == (3.0, 7.0)

@@ -13,7 +13,7 @@ include("example-compartment.jl")
     @testset "solve" begin
         # check that solution is sorted and simplified
         let dp = DesignProblem(;
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 region = DesignInterval(:dose => (0, 10)),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
@@ -24,7 +24,7 @@ include("example-compartment.jl")
                 prototype = uniform_design([[0], [2.45], [2.55], [10]]),
             ),
             _ = seed!(1234),
-            (d, r) = solve(dp, str; trace_state = true, mindist = 1e-1)
+            (d, r) = solve(dp, str; trace_state = true, maxdist = 1e-1)
 
             # design points should be sorted...
             @test issorted(reduce(vcat, points(d)))
@@ -33,9 +33,9 @@ include("example-compartment.jl")
             # states should be traced (20 iterations)
             @test length(optimization_result(r).trace_state) == 20
 
-            # `minposdist` doesn't exist, the correct argument name is `mindist`. Because we
+            # `maxposdist` doesn't exist, the correct argument name is `maxdist`. Because we
             # have not implemented `simplify_unique()` for EmaxModel, the generic method
-            # should complain about gobbling up `minposdist` in its varargs. (We can't test
+            # should complain about gobbling up `maxposdist` in its varargs. (We can't test
             # this in designmeasure.jl because we need a Model and a
             # CovariateParameterization in order to call `simplify()`.)
             @test_logs(
@@ -43,17 +43,35 @@ include("example-compartment.jl")
                     :warn,
                     "unused keyword arguments given to generic `simplify_unique` method",
                 ),
-                solve(dp, str, minposdist = 1e-2)
+                solve(dp, str, maxposdist = 1e-2)
             )
 
             # Warn on too strong simplification. An example with finite objective afterwards
             # would be nicer, but is difficult to construct with this model and prior.
             @test_logs(
                 (:warn, "simplification may have been too eager"),
-                solve(dp, str; mindist = 5)
+                solve(dp, str; maxdist = 5)
             )
         end
     end
+
+    @testset "simplify" begin
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            d = DesignMeasure([0 2.495 2.505 10], [0.492, 0.008, 0.008, 0.492]),
+            s = sort_points(simplify(d, dp; maxweight = 1e-2, maxdist = 1e-2))
+
+            @test objective(s, dp) > -Inf
+            @test points(s) == [[0], [2.5], [10]]
+            @test weights(s) == [0.492, 0.016, 0.492]
+        end
+    end
+
     @testset "efficiency" begin
         # Atkinson et al. example
         let _ = seed!(4711),
@@ -64,7 +82,7 @@ include("example-compartment.jl")
             t_id = Identity(),
             t_auc = DeltaMethod(Dauc),
             dp_for(pk, trafo) = DesignProblem(;
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 # not used in efficiency calculation!
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
@@ -87,7 +105,7 @@ include("example-compartment.jl")
                 region = region(dp6),
                 model = model(dp6),
                 covariate_parameterization = covariate_parameterization(dp6),
-                criterion = AOptimality(),
+                criterion = ACriterion(),
                 prior_knowledge = prior_knowledge(dp6),
             )
 
@@ -120,7 +138,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -131,7 +149,7 @@ include("example-compartment.jl")
                 region = region(dp),
                 model = model(dp),
                 covariate_parameterization = covariate_parameterization(dp),
-                criterion = AOptimality(),
+                criterion = ACriterion(),
                 prior_knowledge = prior_knowledge(dp),
             ),
             d1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),

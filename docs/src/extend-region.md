@@ -1,11 +1,7 @@
 # New Design Regions
 
 ```@setup main
-# we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
-function savefig_nothing(plot, filename)
-	savefig(plot, filename)
-	return nothing
-end
+check_results = true
 ```
 
 A design region is a compact subset of ``\Reals^{\DimDesignRegion}``.
@@ -25,7 +21,7 @@ and a suitable coordinate transformation in the [`CovariateParameterization`](@r
 
 Apart from the subtype of `DesignRegion{N}`, the following methods must be implemented:
 
-  - `bounding_box` is used in several places.
+  - `boundingbox` is used in several places.
   - `isinside` is used in several places.
   - `dimnames` is used for plotting.
   - `random_designpoint!` is used in the initialization step of a particle-based optimizer.
@@ -42,7 +38,7 @@ struct DesignEllipsoid{N} <: Kirstine.DesignRegion{N}
 end
 
 # return the lower bound and upper bound of a box enclosing dr
-function Kirstine.bounding_box(dr::DesignEllipsoid)
+function Kirstine.boundingbox(dr::DesignEllipsoid)
     return dr.center .- dr.semiaxis, dr.center .+ dr.semiaxis
 end
 
@@ -188,7 +184,7 @@ function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::Cop
 end
 
 dp1 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignEllipsoid((:dose, :time), (50.0, 12.0), (50.0, 12.0)),
     model = DTRMod(sigma = 1, m = 1),
     covariate_parameterization = CopyBoth(),
@@ -204,7 +200,18 @@ st1 = DirectMaximization(
 Random.seed!(2468)
 s1, r1 = solve(dp1, st1)
 gd1 = plot_gateauxderivative(s1, dp1)
-savefig_nothing(gd1, "extend-region-gd1.png") # hide
+savefig(gd1, "extend-region-gd1.png") # hide
+nothing # hide
+```
+
+```@setup main
+s1 == DesignMeasure(
+ [0.001029620608683921, 11.929318957679424] => 0.2,
+ [13.533902355555728, 7.93358898138691] => 0.2,
+ [53.87418701936434, 0.30538124532231437] => 0.2,
+ [57.35717914215323, 23.869286781670308] => 0.2,
+ [90.6240950631477, 5.004163019530869] => 0.2,
+) || !check_results || error("not the expected result\n", s1)
 ```
 
 ![](extend-region-gd1.png)

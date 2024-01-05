@@ -11,13 +11,6 @@ Supertype for statistical models.
 abstract type Model end
 
 """
-    NonlinearRegression
-
-Supertype for user-defined nonlinear regression models.
-"""
-abstract type NonlinearRegression <: Model end
-
-"""
     Parameter
 
 Supertype for [`Model`](@ref) parameters.
@@ -40,15 +33,17 @@ abstract type Covariate end
     CovariateParameterization
 
 Supertype for user-defined mappings from design points to model covariates.
+
+See also [`implied_covariates`](@ref).
 """
 abstract type CovariateParameterization end
 
 ## abstract types for package code ##
 
-"""
+@doc raw"""
     DesignRegion{N}
 
-Supertype for design regions. A design region is a compact subset of ``\\Reals^N``.
+Supertype for design regions. A design region is a compact subset of ``\Reals^N``.
 
 The design points of a [`DesignMeasure`](@ref) are taken from this set.
 
@@ -87,7 +82,7 @@ abstract type Transformation end
 
 Supertype for optimal experimental design criteria.
 
-See also [`DOptimality`](@ref), [`AOptimality`](@ref).
+See also [`DCriterion`](@ref), [`ACriterion`](@ref).
 """
 abstract type DesignCriterion end
 
@@ -129,3 +124,6 @@ abstract type ProblemSolvingStrategy end
 Supertype for results of a [`ProblemSolvingStrategy`](@ref).
 """
 abstract type ProblemSolvingResult end
+
+## abstract model specific preallocated objects ##
+abstract type ModelWorkspace end

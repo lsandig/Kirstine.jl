@@ -14,12 +14,29 @@ include("example-testpar.jl")
             @test_throws "must be equal" PriorSample(pars, [0])
             @test_throws "non-negative" PriorSample(pars, [-0.5, 1.5])
             @test_throws "sum to one" PriorSample(pars, [0.5, 1.5])
+            @test_throws "same concrete" PriorSample([TestPar2(1, 2), TestPar3(1, 2, 3)])
         end
 
         # constructor with default uniform weights
         let p = PriorSample([TestPar2(1, 2), TestPar2(3, 4)])
             @test p.weight == [0.5, 0.5]
             @test p.p == [TestPar2(1, 2), TestPar2(3, 4)]
+        end
+    end
+
+    @testset "weights" begin
+        let p = PriorSample([TestPar2(1, 2), TestPar2(3, 4)])
+
+            # check that this returns a reference
+            @test weights(p) === p.weight
+        end
+    end
+
+    @testset "parameters" begin
+        let p = PriorSample([TestPar2(1, 2), TestPar2(3, 4)])
+
+            # check that this returns a reference
+            @test parameters(p) === p.p
         end
     end
 end

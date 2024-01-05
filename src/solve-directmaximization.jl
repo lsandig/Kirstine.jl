@@ -84,21 +84,11 @@ function solve_with(dp::DesignProblem, strategy::DirectMaximization, trace_state
         strategy.fixedweights,
         strategy.fixedpoints,
     )
-    cp = covariate_parameterization(dp)
-    pk = prior_knowledge(dp)
-    m = model(dp)
-    tc = precalculate_trafo_constants(transformation(dp), pk)
-    wm = WorkMatrices(
-        length(weights(strategy.prototype)),
-        unit_length(m),
-        parameter_dimension(pk),
-        codomain_dimension(tc),
-    )
-    c = allocate_initialize_covariates(strategy.prototype, m, cp)
-    f = d -> objective!(wm, c, criterion(dp), d, m, cp, pk, tc, normal_approximation(dp))
+    tc = trafo_constants(transformation(dp), prior_knowledge(dp))
+    w = allocate_workspaces(strategy.prototype, dp)
     or = optimize(
+        d -> objective!(w, d, dp, tc),
         strategy.optimizer,
-        f,
         [strategy.prototype],
         constraints;
         trace_state = trace_state,

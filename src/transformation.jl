@@ -61,35 +61,48 @@ struct DeltaMethod{T<:Function} <: Transformation
 end
 
 struct TCIdentity <: TrafoConstants
-    codomain_dimension::Int64
+    idmat::Matrix{Float64}
 end
+
 struct TCDeltaMethod <: TrafoConstants
-    codomain_dimension::Int64
     jm::Vector{Matrix{Float64}}
 end
 
-function precalculate_trafo_constants(trafo::Identity, pk::PriorSample)
-    return TCIdentity(parameter_dimension(pk))
+function trafo_constants(trafo::Identity, pk::PriorSample)
+    return TCIdentity(diagm(ones(parameter_dimension(pk))))
 end
 
-function precalculate_trafo_constants(trafo::DeltaMethod, pk::PriorSample)
-    jm = [trafo.jacobian_matrix(p) for p in pk.p]
+function trafo_constants(trafo::DeltaMethod, pk::PriorSample)
+    jm = [trafo.jacobian_matrix(p) for p in parameters(pk)]
     r = parameter_dimension(pk)
     if any(j -> size(j) != size(jm[1]), jm)
-        throw(DimensionMismatch("trafo jacobians must be identical in size"))
+        throw(DimensionMismatch("trafo Jacobians must be identical in size"))
     end
     # We know all elements of jm have identical sizes, so checking the first is enough
     ncol = size(jm[1], 2)
     if ncol != r
-        throw(DimensionMismatch("trafo jacobian must have $(r) columns, got $(ncol)"))
+        throw(DimensionMismatch("trafo Jacobian must have $(r) columns, got $(ncol)"))
     end
-    return TCDeltaMethod(size(jm[1], 1), jm)
+    if size(jm[1], 1) > size(jm[1], 2)
+        @warn "trafo Jacobians have more rows than cols, infomatrices will be singular"
+    elseif any(rank.(jm) .!= size(jm[1], 1))
+        @warn "some trafo Jacobians are not full rank, infomatrices will be singular"
+    end
+    return TCDeltaMethod(jm)
 end
 
-function codomain_dimension(tc::TCIdentity)
-    return tc.codomain_dimension
+function codomain_dimension(trafo::Identity, pk::PriorSample)
+    return parameter_dimension(pk)
 end
 
-function codomain_dimension(tc::TCDeltaMethod)
-    return tc.codomain_dimension
+function codomain_dimension(trafo::DeltaMethod, pk::PriorSample)
+    return size(trafo.jacobian_matrix(parameters(pk)[1]), 1)
+end
+
+function trafo_jacobianmatrix_for_index(tc::TCIdentity, i::Integer)
+    return tc.idmat
+end
+
+function trafo_jacobianmatrix_for_index(tc::TCDeltaMethod, i::Integer)
+    return tc.jm[i]
 end

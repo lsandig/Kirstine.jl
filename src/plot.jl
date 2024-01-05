@@ -41,12 +41,17 @@ end
 @recipe function f(
     d::DesignMeasure;
     label_formatter = (k, dp, w) -> "$(round(100 * w; sigdigits=3))%",
+    minmarkersize = 2,
+    maxmarkersize = 10,
 )
     N = length(points(d)[1])
     if N != 1 && N != 2
         throw(ArgumentError("only implemented for 1- or 2-dimensional design points"))
     end
-    markersize --> permutedims(max.(2, sqrt.(100 .* weights(d))))
+    if minmarkersize > maxmarkersize
+        throw(ArgumentError("minmarkersize must be <= maxmarkersize"))
+    end
+    markersize --> permutedims(max.(minmarkersize, maxmarkersize .* sqrt.(weights(d))))
     # scatter each design point explicitly in its own series because grouping can't be used
     # in a recipe: https://github.com/JuliaPlots/Plots.jl/issues/1167
     pt = reduce(hcat, points(d))
@@ -63,7 +68,8 @@ end
 end
 
 @recipe function f(d::DesignMeasure, dr::DesignRegion{2})
-    lb, ub = bounding_box(dr)
+    check_compatible(d, dr)
+    lb, ub = boundingbox(dr)
     xguide --> dimnames(dr)[1]
     yguide --> dimnames(dr)[2]
     xlims --> (lb[1], ub[1])
@@ -73,7 +79,8 @@ end
 end
 
 @recipe function f(d::DesignMeasure, dr::DesignRegion{1})
-    lb, ub = bounding_box(dr)
+    check_compatible(d, dr)
+    lb, ub = boundingbox(dr)
     xguide --> dimnames(dr)[1]
     xlims --> (lb[1], ub[1])
     widen --> true
@@ -81,9 +88,8 @@ end
 end
 
 struct DerivativePlot{
-    N,
     Tdc<:DesignCriterion,
-    Tdr<:DesignRegion{N},
+    Tdr<:DesignRegion,
     Tm<:Model,
     Tcp<:CovariateParameterization,
     Tpk<:PriorKnowledge,
@@ -96,20 +102,25 @@ end
 
 @recipe function f(
     dplot::DerivativePlot{
-        1,
         <:DesignCriterion,
         <:DesignRegion{1},
-        <:NonlinearRegression,
+        <:Model,
         <:CovariateParameterization,
         <:PriorKnowledge,
         <:Transformation,
         <:NormalApproximation,
     };
-    subdivisions = 101,
+    n_grid = 101,
 )
+    if length(n_grid) != 1
+        throw(ArgumentError("n_grid must be a single integer"))
+    end
+    if n_grid < 2
+        throw(ArgumentError("n_grid must be >= 2"))
+    end
     (; d, dp) = dplot
-    lb, ub = bounding_box(region(dp))
-    range_x = range(lb[1], ub[1]; length = subdivisions[1])
+    lb, ub = boundingbox(region(dp))
+    range_x = range(lb[1], ub[1]; length = n_grid[1])
     dsgpts = collect(Iterators.flatten(points(d)))
     x_grid = sort(vcat(range_x, dsgpts))
     dp_grid = [[x] for x in x_grid]
@@ -131,27 +142,32 @@ end
 
 @recipe function f(
     dplot::DerivativePlot{
-        2,
         <:DesignCriterion,
         <:DesignRegion{2},
-        <:NonlinearRegression,
+        <:Model,
         <:CovariateParameterization,
         <:PriorKnowledge,
         <:Transformation,
         <:NormalApproximation,
     };
-    subdivisions = (51, 51),
+    n_grid = (51, 51),
 )
+    if length(n_grid) != 2
+        throw(ArgumentError("n_grid must be a 2-tuple"))
+    end
+    if any(n_grid .< 2)
+        throw(ArgumentError("all elements of n_grid must be >= 2"))
+    end
     (; d, dp) = dplot
     # Calculate Gateaux derivative on a grid over the bounding box of region(dp).
     # Evaluate it only on those points that are inside and fill the rest with NaN,
     # which renders transparently in the heatmap.
-    lb, ub = bounding_box(region(dp))
-    range_x = range(lb[1], ub[1]; length = subdivisions[1])
-    range_y = range(lb[2], ub[2]; length = subdivisions[2])
+    lb, ub = boundingbox(region(dp))
+    range_x = range(lb[1], ub[1]; length = n_grid[1])
+    range_y = range(lb[2], ub[2]; length = n_grid[2])
     xy_grid = collect.(Iterators.product(range_x, range_y))
     inside_dr = isinside.(xy_grid, Ref(region(dp)))
-    gd_grid = fill(NaN, subdivisions[1], subdivisions[2])
+    gd_grid = fill(NaN, n_grid[1], n_grid[2])
     # note: indexing produces a vector
     directions = [one_point_design([d...]) for d in xy_grid[inside_dr]]
     gd = gateauxderivative(d, directions, dp)
@@ -187,15 +203,14 @@ By default, `markersize` indicates the design weights.
 
 # Additional Keyword Arguments
 
-  - `subdivisions::Union{Integer, Tuple{Integer, Integer}}`: number of points in the grid.
+  - `n_grid::Union{Integer, Tuple{Integer, Integer}}`: number of points in the grid.
     Must match the dimension of the design region.
-  - `label_formatter::Function`: a function for mapping a triple `(k, pt, w)`
-    of an index, design point, and weight to a string for use as a label in the legend.
-    Default: weight in percentages rounded to 3 significant digits.
+  - Keyword arguments for plotting `DesignMeasure`s:
+    `label_formatter`, `minmarkersize`, `maxmarkersize`
 
 !!! note
 
-    Currently only implemented for 1- and 2-dimensional [`DesignInterval`](@ref)s.
+    Currently only implemented for 1- and 2-dimensional [`DesignRegion`](@ref)s.
 """
 function plot_gateauxderivative(d::DesignMeasure, dp::DesignProblem; kw...)
     plt_gd = RecipesBase.plot(DerivativePlot(d, dp); kw...)
@@ -223,15 +238,22 @@ end
 @recipe function f(
     efplot::ExpectedFunctionPlot;
     label_formatter = (k, dp, w) -> "$(round(100 * w; sigdigits=3))%",
+    minmarkersize = 2,
+    maxmarkersize = 10,
 )
+    if minmarkersize > maxmarkersize
+        throw(ArgumentError("minmarkersize must be <= maxmarkersize"))
+    end
     (; f, g, h, x, d, m, cp, pk) = efplot
     K = numpoints(d)
     # graphs
     fx = zeros(length(x), K)
-    c = Kirstine.allocate_initialize_covariates(d, m, cp)
+    c = implied_covariates(d, m, cp)
     for k in 1:K
         for i in 1:length(x)
-            fx[i, k] = mapreduce((w, p) -> w * f(x[i], c[k], p), +, pk.weight, pk.p)
+            fx[i, k] = mapreduce(+, weights(pk), parameters(pk)) do w, p
+                return w * f(x[i], c[k], p)
+            end
         end
     end
     @series begin
@@ -244,10 +266,10 @@ end
     wt = weights(d)
     for k in 1:K
         gx = g(c[k])
-        hx = mapreduce((w, p) -> w * h(c[k], p), +, pk.weight, pk.p)
+        hx = mapreduce((w, p) -> w * h(c[k], p), +, weights(pk), parameters(pk))
         @series begin
             label --> (label_formatter(k, pt[k], wt[k]))
-            markersize --> max(2, sqrt.(100 .* wt[k]))
+            markersize --> max(minmarkersize, maxmarkersize * sqrt(wt[k]))
             markercolor --> k
             seriestype := :scatter
             gx, hx
@@ -294,9 +316,8 @@ the following things will be plotted:
 
 # Additional Keyword Arguments
 
-  - `label_formatter::Function`: a function for mapping a triple `(k, pt, w)`
-    of an index, design point, and weight to a string for use as a label in the legend.
-    Default: weight in percentages rounded to 3 significant digits.
+  - Keyword arguments for plotting `DesignMeasure`s:
+    `label_formatter`, `minmarkersize`, `maxmarkersize`
 
 # Examples
 

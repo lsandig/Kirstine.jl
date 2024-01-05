@@ -1,11 +1,7 @@
 # Discrete Priors With Non-Uniform Weights
 
 ```@setup main
-# we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
-function savefig_nothing(plot, filename)
-	savefig(plot, filename)
-	return nothing
-end
+check_results = true
 ```
 
 Sometimes prior knowledge is not described by a continuous distribution,
@@ -40,13 +36,6 @@ function Kirstine.jacobianmatrix!(
     jm[1, 4] = c.dose == 0 ? 0.0 : A * B * log(c.dose / p.ed50)
     return jm
 end
-
-struct CopyDose <: CovariateParameterization end
-
-function Kirstine.map_to_covariate!(c::SigEmaxCovariate, dp, m::SigEmaxModel, cp::CopyDose)
-    c.dose = dp[1]
-    return c
-end
 nothing # hide
 ```
 
@@ -62,7 +51,7 @@ h\in\{1,2,3,4\}
 
 with prior probabilities ``\{0.1, 0.3, 0.4, 0.2\}`` are possible.
 For simplicity suppose further
-that we know the values of the remaining elements of ``θ`` exactly.
+that we know the values of the remaining elements of ``\Parameter`` exactly.
 With a [`PriorSample`](@ref),
 we can pass the vector of prior probabilities as the optional second argument.
 
@@ -73,10 +62,10 @@ prior = PriorSample(
 )
 
 dp = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = CopyDose(),
+    covariate_parameterization = JustCopy(:dose),
     prior_knowledge = prior,
 )
 nothing # hide
@@ -92,13 +81,24 @@ strategy = DirectMaximization(
 )
 
 Random.seed!(31415)
-s1, r1 = solve(dp, strategy, minweight = 1e-3, mindist = 1e-2)
+s1, r1 = solve(dp, strategy, maxweight = 1e-3, maxdist = 1e-2)
 s1
+```
+
+```@setup main
+s1 == DesignMeasure(
+ [0.0] => 0.17962034176078864,
+ [0.04461948295716912] => 0.0934736269518622,
+ [0.25627704567921966] => 0.23934177101306972,
+ [0.4958739526513957] => 0.23846947150228448,
+ [1.0] => 0.24909478877199498,
+) || !check_results || error("not the expected result\n", s1)
 ```
 
 ```@example main
 gd = plot_gateauxderivative(s1, dp)
-savefig_nothing(gd, "discrete-prior-gd.png") # hide
+savefig(gd, "discrete-prior-gd.png") # hide
+nothing # hide
 ```
 
 ![](discrete-prior-gd.png)

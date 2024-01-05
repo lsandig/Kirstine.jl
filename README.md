@@ -5,13 +5,17 @@
 
 A [Julia][julia-url] package for Bayesian optimal experimental design with nonlinear regression models.
 
+[repo][repo-url] | [docs][docs-url] | [change log][change-url]
+
 [julia-url]: https://julialang.org
+[repo-url]: https://sr.ht/~lsandig/Kirstine.jl/
+[docs-url]: https://lsandig.srht.site/Kirstine.jl/index.html
+[change-url]: https://git.sr.ht/~lsandig/Kirstine.jl/refs
 
 ## Project Status
 
 Beta.
 Mostly stable, breaking changes will be mostly cosmetic.
-Documentation is still sparse in some places.
 
 ## Features
 
@@ -28,17 +32,28 @@ Documentation is still sparse in some places.
 
 ## Installation
 
-Kirstine.jl will be registered once it is stable.
-Until then, you can install it with
+Kirstine.jl is in the [General](https://github.com/JuliaRegistries/General) Julia package registry.
+You can install it with
+
+```julia
+Pkg.add("Kirstine")
+```
+
+Alternatively,
+you can get it directly from sourcehut:
+
 ```julia
 Pkg.add(url = "https://git.sr.ht/~lsandig/Kirstine.jl")
 ```
 
 ## Documentation
 
-[Markdown](docs/src/), [HTML](https://lsandig.srht.site/Kirstine.jl/index.html)
+[Markdown](docs/src/), [HTML][docs-url]
 
 To get started, read the [tutorial](https://lsandig.srht.site/Kirstine.jl/tutorial.html).
+
+For a change log,
+see the list of [annotated tags][change-url].
 
 ## License
 
@@ -68,10 +83,13 @@ These are different tasks than what Kirstine.jl attempts to do.
 
 ## Contributing
 
-There is a [git repository and issue tracker at sourcehut](https://sr.ht/~lsandig/Kirstine.jl/).
+The source code of Kirstine.jl is managed on [sourcehut](https://sr.ht/%7Elsandig/Kirstine.jl/).
 
-If you have already solved design problems with other software packages,
-you can try to replicate your solutions with Kirstine.jl.
-I'd be grateful to hear about your results,
-especially if they differ from what you expect.
-Ditto if you think Kirstine.jl is missing some crucial feature.
+Please post usage questions and general discussion on the [kirstine-users](https://lists.sr.ht/%7Elsandig/kirstine-users) mailing list.
+
+Only bug reports should be filed on the [issue tracker](https://todo.sr.ht/%7Elsandig/Kirstine.jl/).
+
+Patches are welcome and should be submitted via [`git send-email`](https://git-send-email.io)
+to the [kirstine-devel](https://lists.sr.ht/%7Elsandig/kirstine-devel) mailing list.
+Please make sure that your patch does not break any existing tests
+and includes new tests for any functionality it adds.

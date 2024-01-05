@@ -14,7 +14,7 @@ In Julia, a design point is simply a `Vector{Float64}`.
 Special kinds of design measures can be constructed with [`one_point_design`](@ref),
 [`uniform_design`](@ref), [`equidistant_design`](@ref), [`random_design`](@ref).
 
-See also [`weights`](@ref), [`points`](@ref), [`apportion`](@ref).
+See also [`weights(::DesignMeasure)`](@ref), [`points`](@ref), [`apportion`](@ref).
 """
 struct DesignMeasure <: AbstractPoint
     points::Matrix{Float64}
@@ -32,10 +32,10 @@ struct DesignMeasure <: AbstractPoint
     """
     function DesignMeasure(points::AbstractMatrix{<:Real}, weights::AbstractVector{<:Real})
         if length(weights) != size(points, 2)
-            error("number of weights and design points must be equal")
+            throw(ArgumentError("number of weights and design points must be equal"))
         end
         if any(weights .< 0) || !(sum(weights) ≈ 1)
-            error("weights must be non-negative and sum to one")
+            throw(ArgumentError("weights must be non-negative and sum to one"))
         end
         new(points, weights)
     end
@@ -68,7 +68,7 @@ function DesignMeasure(
     weights::AbstractVector{<:Real},
 )
     if !allequal(map(length, points))
-        error("design points must have identical lengths")
+        throw(ArgumentError("design points must have identical lengths"))
     end
     return DesignMeasure(reduce(hcat, points), weights)
 end
@@ -160,6 +160,9 @@ DesignMeasure(
 ```
 """
 function equidistant_design(dr::DesignInterval{1}, K::Integer)
+    if K <= 1
+        throw(ArgumentError("equidistant design needs at least K = 2, got $K"))
+    end
     val = range(lowerbound(dr)[1], upperbound(dr)[1]; length = K)
     designpoints = [[dp] for dp in val]
     return uniform_design(designpoints)
@@ -191,7 +194,7 @@ end
 
 Return an iterator over the design points of `d`.
 
-See also [`weights`](@ref), [`numpoints`](@ref).
+See also [`weights(::DesignMeasure)`](@ref), [`numpoints`](@ref).
 """
 points(d::DesignMeasure) = eachcol(d.points)
 
@@ -209,7 +212,7 @@ weights(d::DesignMeasure) = d.weights
 
 Return the number of design points of `d`.
 
-See also [`points`](@ref), [`weights`](@ref).
+See also [`points`](@ref), [`weights(::DesignMeasure)`](@ref).
 """
 numpoints(d::DesignMeasure) = size(d.points, 2)
 
@@ -308,10 +311,10 @@ The result is not simplified, hence its design points might not be unique.
 """
 function mixture(alpha::Real, d1::DesignMeasure, d2::DesignMeasure)
     if length(points(d1)[1]) != length(points(d2)[1])
-        error("design points must have identical lengths")
+        throw(ArgumentError("design points must have identical lengths"))
     end
     if alpha < 0 || alpha > 1
-        error("mixture weight must be between 0 and 1")
+        throw(ArgumentError("mixture weight must be between 0 and 1"))
     end
     w = vcat(alpha .* weights(d1), (1 - alpha) .* weights(d2))
     dp = vcat(points(d1), points(d2))
@@ -359,18 +362,18 @@ function apportion(d::DesignMeasure, n::Integer)
 end
 
 """
-    simplify_drop(d::DesignMeasure, minweight::Real)
+    simplify_drop(d::DesignMeasure, maxweight::Real)
 
-Construct a new `DesignMeasure` where only design points with weights strictly larger than
-`minweight` are kept.
+Construct a new `DesignMeasure` where all design points with weights smaller than or equal to
+`maxweight` are removed.
 
 The vector of remaining weights is re-normalized.
 """
-function simplify_drop(d::DesignMeasure, minweight::Real)
+function simplify_drop(d::DesignMeasure, maxweight::Real)
     if numpoints(d) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
-    enough_weight = weights(d) .> minweight
+    enough_weight = weights(d) .> maxweight
     dps = points(d)[enough_weight]
     ws = weights(d)[enough_weight]
     ws ./= sum(ws)
@@ -421,40 +424,40 @@ function simplify_unique(
 end
 
 """
-    simplify_merge(d::DesignMeasure, dr::DesignRegion, mindist::Real)
+    simplify_merge(d::DesignMeasure, dr::DesignRegion, maxdist::Real)
 
-Merge designpoints with a normalized distance smaller or equal to `mindist`.
+Merge designpoints with a normalized distance smaller or equal to `maxdist`.
 
 The design points are first transformed into the unit (hyper)cube
 by shifting and scaling them according to the bounding box of the design region.
-The argument `mindist` is intepreted relative to this unit cube,
-i.e. only `0 < mindist < sqrt(N)` make sense for a design region of dimension `N`.
+The argument `maxdist` is intepreted relative to this unit cube,
+i.e. only `0 < maxdist < sqrt(N)` make sense for a design region of dimension `N`.
 
-The following two steps are repeated until all points are more than `mindist` apart:
+The following two steps are repeated until all points are more than `maxdist` apart:
 
  1. All pairwise euclidean distances are calculated.
- 2. The two points closest to each other are averaged with their relative weights
+ 2. The two points closest to each other are averaged with their relative weights.
 
 Finally the design points are scaled and shifted back into the original design region.
 """
-function simplify_merge(d::DesignMeasure, dr::DesignRegion, mindist::Real)
+function simplify_merge(d::DesignMeasure, dr::DesignRegion, maxdist::Real)
     if numpoints(d) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
-    # scale bounding box of design region into unit cube
-    lb, ub = bounding_box(dr)
+    lb, ub = boundingbox(dr)
     width = collect(lb .- ub)
-    dps = [(dp .- lb) ./ width for dp in points(d)]
+    dps = deepcopy(points(d))
     ws = weights(d)
     cur_min_dist = 0
-    while cur_min_dist <= mindist
-        # compute pairwise L2-distances, merge the two designpoints nearest to each other
-        dist = map(p -> norm(p[1] .- p[2]), Iterators.product(dps, dps))
+    while cur_min_dist <= maxdist
+        # compute pairwise L2-distances relative to bounding box,
+        # merge the two designpoints nearest to each other
+        dist = map(p -> norm((p[1] .- p[2]) ./ width), Iterators.product(dps, dps))
         dist[diagind(dist)] .= Inf
         cur_min_dist, idx = findmin(dist) # i > j because rows vary fastest
         i = idx[1]
         j = idx[2]
-        if cur_min_dist <= mindist
+        if cur_min_dist <= maxdist
             w_new = ws[i] + ws[j]
             dp_new = (ws[i] .* dps[i] .+ ws[j] .* dps[j]) ./ w_new
             to_keep = (1:length(dps) .!= i) .&& (1:length(dps) .!= j)
@@ -462,7 +465,5 @@ function simplify_merge(d::DesignMeasure, dr::DesignRegion, mindist::Real)
             ws = [w_new; ws[to_keep]]
         end
     end
-    # scale back
-    dps = [(dp .* width) .+ lb for dp in dps]
     return DesignMeasure(dps, ws)
 end

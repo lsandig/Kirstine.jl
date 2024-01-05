@@ -9,13 +9,13 @@ using LinearAlgebra: SingularException, Symmetric, tr, diagm
 include("example-compartment.jl")
 
 @testset "criterion-a.jl" begin
-    @testset "criterion_integrand!" begin
+    @testset "criterion_functional!" begin
         # The functional should be -tr(m) or -tr(inv_m), depending on whether m
         # is passed as already inverted. For singular matrices it should return 0 or -Inf.
         let mreg = [1.0 0.5; 0.5 2.0],
             msng = [1.0 0.5; 0.5 0.25],
-            dc = AOptimality(),
-            ci! = Kirstine.criterion_integrand!
+            dc = ACriterion(),
+            ci! = Kirstine.criterion_functional!
 
             # interpret m as not inverted
             @test ci!(deepcopy(mreg), false, dc) ≈ -12 / 7
@@ -39,7 +39,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = AOptimality(),
+                criterion = ACriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -50,7 +50,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = AOptimality(),
+                criterion = ACriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -66,7 +66,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = AOptimality(),
+                criterion = ACriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -91,7 +91,7 @@ include("example-compartment.jl")
         # is stored. There is one matrix and trace for each prior parameter value.
         #
         # We use an example model from Atkinson et al. with a two-point prior.
-        let dc = AOptimality(),
+        let dc = ACriterion(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
             m = TPCModel(; sigma = 1),
@@ -99,17 +99,17 @@ include("example-compartment.jl")
             g1 = TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
             g2 = TPCParameter(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
             pk = PriorSample([g1, g2]),
-            tc = Kirstine.TCIdentity(3), # the codomain dimension is not used in this test
+            trafo = Identity(),
             na = FisherMatrix(),
             pgc = Kirstine.gateaux_constants,
             # reference information matrices, already wrapped in Symmetric()
             m1 = informationmatrix(a1, m, cp, g1, na),
             m2 = informationmatrix(a1, m, cp, g2, na),
-            gc = pgc(dc, a1, m, cp, pk, tc, na)
+            gc = pgc(dc, a1, m, cp, pk, trafo, na)
 
             # Singular designs should raise an exception. It will be caught by the caller.
-            @test_throws "SingularException" pgc(dc, a4, m, cp, pk, tc, na)
-            @test isa(gc, Kirstine.GCAIdentity)
+            @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
+            @test isa(gc, Kirstine.GCPriorSample)
             @test length(gc.A) == 2
             @test length(gc.tr_B) == 2
             @test Symmetric(gc.A[1]) ≈ inv(m1)^2
@@ -125,7 +125,7 @@ include("example-compartment.jl")
         #
         # We use an example model from Atkinson et al. with a two-point prior
         # and transformation to a 1-dimensional quantity
-        let dc = AOptimality(),
+        let dc = ACriterion(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
             m = TPCModel(; sigma = 1),
@@ -134,57 +134,23 @@ include("example-compartment.jl")
             g2 = TPCParameter(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
             pk = PriorSample([g1, g2]),
             J = [Dauc(g1), Dauc(g2)],
-            tc = Kirstine.TCDeltaMethod(1, J),
+            trafo = DeltaMethod(Dauc),
             na = FisherMatrix(),
             pgc = Kirstine.gateaux_constants,
             # reference information matrices, already wrapped in Symmetric()
             m1 = informationmatrix(a1, m, cp, g1, na),
             m2 = informationmatrix(a1, m, cp, g2, na),
-            gc = pgc(dc, a1, m, cp, pk, tc, na)
+            gc = pgc(dc, a1, m, cp, pk, trafo, na)
 
             # Singular designs should raise an exception. It will be caught by the caller.
-            @test_throws "SingularException" pgc(dc, a4, m, cp, pk, tc, na)
-            @test isa(gc, Kirstine.GCADeltaMethod)
+            @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
+            @test isa(gc, Kirstine.GCPriorSample)
             @test length(gc.A) == 2
             @test length(gc.tr_B) == 2
             @test Symmetric(gc.A[1]) ≈ inv(m1) * J[1]' * J[1] * inv(m1)
             @test Symmetric(gc.A[2]) ≈ inv(m2) * J[2]' * J[2] * inv(m2)
             @test gc.tr_B[1] ≈ tr(J[1] * inv(m1) * J[1]')
             @test gc.tr_B[2] ≈ tr(J[2] * inv(m2) * J[2]')
-        end
-    end
-
-    @testset "gateaux_integrand" begin
-        # Identity transformation
-        #
-        # This should compute tr(A * B) - d, using only upper triangles from
-        # A and B. A is taken from the GateauxConstants, B is the normalized information
-        # matrix corresponding to the direction. Both matrices have size (r, r). Here we
-        # test an example with r = 2.
-        let A = [2.0 3.0; 0.0 7.0],
-            c = Kirstine.GCAIdentity([A], [1.8]),
-            B = [0.4 1.0; 0.0 0.5],
-            gi = Kirstine.gateaux_integrand
-
-            @test gi(c, B, 1) == tr(Symmetric(A) * Symmetric(B)) - 1.8
-            # rule out unintentionally symmetric input
-            @test gi(c, B, 1) != tr(A * B) - 1.8
-        end
-
-        # DeltaMethod transformation
-        #
-        # This should compute tr(A * B) - d, using only upper triangles from
-        # A and B. A is taken from the GateauxConstants, B is the normalized information
-        # matrix corresponding to the direction. Both matrices have size (r, r). Here we
-        # test an example with r = 2.
-        let A = [2.0 3.0; 0.0 7.0],
-            c = Kirstine.GCADeltaMethod([A], [1.8]),
-            B = [0.4 1.0; 0.0 0.5],
-            gi = Kirstine.gateaux_integrand
-
-            @test gi(c, B, 1) == tr(Symmetric(A) * Symmetric(B)) - 1.8
-            # rule out unintentionally symmetric input
-            @test gi(c, B, 1) != tr(A * B) - 1.8
         end
     end
 
@@ -196,7 +162,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = AOptimality(),
+                criterion = ACriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -207,7 +173,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = AOptimality(),
+                criterion = ACriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -230,7 +196,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = AOptimality(),
+                criterion = ACriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),

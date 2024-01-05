@@ -1,11 +1,7 @@
 # New Design Criterion
 
 ```@setup main
-# we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
-function savefig_nothing(plot, filename)
-	savefig(plot, filename)
-	return nothing
-end
+check_results = true
 ```
 
 In this vignette, we will implement a different variant of the D-criterion.
@@ -78,34 +74,30 @@ for the special case ``\Transformation(\Parameter)=\Parameter``.
 
 ## Implementation
 
-When a new `T <: DesignCriterion` is going to be used with a `U <: TrafoConstants`,
-it needs a corresponding `V <: GateauxConstants`
+When a new `T <: DesignCriterion` is going to be used,
+it needs a corresponding `U <: GateauxConstants`
 which wraps precomputed values for all expressions
 that do not depend on the direction of the Gateaux derivative.
 Additionally, the following methods must be implemented.
 
-  - `criterion_integrand(c::T, nim_direction, index)`:
+  - `criterion_integrand(tnim, is_inv::Bool, dc::T)`:
     The function ``\DesignCriterion`` in the mathematical notation.
     This function should be fast.
     Ideally, it should not allocate new memory.
-  - `gateaux_integrand(c::V, nim_direction, index)`:
-    The integrand of the Gateaux derivative.
-    This function should be fast.
-    Ideally, it should not allocate new memory.
-  - `gateaux_constants(dc::T, d::DesignMeasure, m::Model, cp::CovariateParameterization, pk::PriorSample, tc::U, na::NormalApproximation)`:
+  - `gateaux_constants(dc::T, d::DesignMeasure, m::Model, cp::CovariateParameterization, pk::PriorSample, trafo::Transformation, na::NormalApproximation)`:
     Compute the value of all expensive expressions in the Gateaux derivative
     that do not depend on ``\NIMatrix(\DesignMeasureDirection,\Parameter)``
     for every parameter value in the Monte-Carlo sample.
 
 Next, we will implement the alternative D-criterion for [`Identity`](@ref) and [`DeltaMethod`](@ref) transformations.
 Since it is in some way the exponential of the predefined version,
-we will call it `DexpOptimality`.
+we will call it `DexpCriterion`.
 
 ```@example main
 using Kirstine
 using LinearAlgebra: Symmetric, det
 
-struct DexpOptimality <: Kirstine.DesignCriterion end
+struct DexpCriterion <: Kirstine.DesignCriterion end
 
 # `tnim` is the transformed normalized information matrix.
 # It is implicitly symmetric, i.e. only the upper triangle contains sensible values.
@@ -113,10 +105,10 @@ struct DexpOptimality <: Kirstine.DesignCriterion end
 # The information about this is passed in the `is_inv` flag.
 # `log_det!` computes `log(det())` of its argument, treating it as implicitly symmetric
 # and overwriting it in the process.
-function Kirstine.criterion_integrand!(
+function Kirstine.criterion_functional!(
     tnim::AbstractMatrix,
     is_inv::Bool,
-    dc::DexpOptimality,
+    dc::DexpCriterion,
 )
     sgn = is_inv ? -1 : 1
     ld = Kirstine.log_det!(tnim)
@@ -127,50 +119,37 @@ function Kirstine.criterion_integrand!(
     return exp(cv / t)
 end
 
-struct GCDeIdentity <: Kirstine.GateauxConstants
-    A::Vector{Matrix{Float64}}
-    tr_B::Vector{Float64}
-end
-
-struct GCDeDeltaMethod <: Kirstine.GateauxConstants
-    A::Vector{Matrix{Float64}}
-    tr_B::Vector{Float64}
-end
-
 function Kirstine.gateaux_constants(
-    dc::DexpOptimality,
+    dc::DexpCriterion,
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
-    tc::Kirstine.TCIdentity,
+    trafo::Identity,
     na::NormalApproximation,
 )
+    tc = Kirstine.trafo_constants(trafo, pk)
     # For M(ζ,θ) ∈ S_+^r we need
     # A     = (1/r) det(M(ζ,θ))^{1/r} M(ζ,θ)^{-1}
     # tr(B) = det(M(ζ,θ))^{1/r}
-    r = Kirstine.codomain_dimension(tc)
-    # Compute the upper triangles of M^{-1}.
-    inv_M = Kirstine.inverse_information_matrices(d, m, cp, pk, na)
+    r = Kirstine.codomain_dimension(trafo, pk)
+    # Compute M^{-1} as Symmetric matrices.
+    inv_M = [inv(informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
     # Since we already have M(ζ,θ)^{-1}, we compute tr(B) more numerically stable as
     # exp(-log(det(M(ζ,θ)^{-1}) / r)).
-    # We don't use log_det since we don't want to modify inv_M.
-    tr_B = map(iM -> exp(-log(det(Symmetric(iM))) / r), inv_M)
+    # We don't use log_det!() since we don't want to modify inv_M.
+    tr_B = map(iM -> exp(-log(det(iM)) / r), inv_M)
     A = map((iM, trB) -> iM * trB / r, inv_M, tr_B)
-    return GCDeIdentity(A, tr_B)
-end
-
-function Kirstine.gateaux_integrand(c::GCDeIdentity, nim_direction, index)
-    return Kirstine.tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
+    return Kirstine.GCPriorSample(A, tr_B)
 end
 
 function Kirstine.gateaux_constants(
-    dc::DexpOptimality,
+    dc::DexpCriterion,
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
-    tc::Kirstine.TCDeltaMethod,
+    trafo::DeltaMethod,
     na::NormalApproximation,
 )
     # For the
@@ -180,25 +159,20 @@ function Kirstine.gateaux_constants(
     # we need
     # A     = (1/t) det(M(ζ,θ))^{1/t} M(ζ,θ)^{-1} DT' M_T(ζ,θ) DT M(ζ,θ)^{-1}
     # tr(B) = det(M(ζ,θ))^{1/t}
-    t = Kirstine.codomain_dimension(tc)
-    r = Kirstine.parameter_dimension(pk)
-    # This computes the upper triangle of M^{-1}.
-    inv_M = Kirstine.inverse_information_matrices(d, m, cp, pk, na)
-    # We already know that the result will be inverted.
-    inv_MT, _ = Kirstine.transformed_information_matrices(inv_M, true, pk, tc)
-    tr_B = map(iM -> exp(-log(det(Symmetric(iM))) / t), inv_M)
+    tc = Kirstine.trafo_constants(trafo, pk)
+    t = Kirstine.codomain_dimension(trafo, pk)
+    # This computes M^{-1} as Symmetric matrices.
+    inv_M = [inv(informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
+    tr_B = map(iM -> exp(-log(det(iM)) / t), inv_M)
     # Note that these A will be dense.
-    A = map(inv_M, inv_MT, tc.jm, tr_B) do iM, iMT, DT, trB
-        # Now, iMT contains the upper triangle of (M_T(ζ,θ))^{-1}.
+    A = map(inv_M, tc.jm, tr_B) do iM, DT, trB
+        # compute (M_T(ζ,θ))^{-1} from M(ζ,θ)^{-1}.
+        iMT = DT * iM * DT'
         # Instead of an explicit inversion, we solve (M_T(ζ,θ))^{-1} X = DT for X.
-        C = DT' * (Symmetric(iMT) \ DT)
-        return Symmetric(iM) * C * Symmetric(iM) * trB / t
+        C = DT' * (iMT \ DT)
+        return iM * C * iM * trB / t
     end
-    return GCDeDeltaMethod(A, tr_B)
-end
-
-function Kirstine.gateaux_integrand(c::GCDeDeltaMethod, nim_direction, index)
-    return Kirstine.tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
+    return Kirstine.GCPriorSample(A, tr_B)
 end
 ```
 
@@ -229,13 +203,6 @@ function Kirstine.jacobianmatrix!(
     return jm
 end
 
-struct CopyDose <: CovariateParameterization end
-
-function Kirstine.map_to_covariate!(c::SigEmaxCovariate, dp, m::SigEmaxModel, cp::CopyDose)
-    c.dose = dp[1]
-    return c
-end
-
 prior = PriorSample(
     [SigEmaxParameter(e0 = 1, emax = 2, ed50 = 0.4, h = h) for h in 1:4],
     [0.1, 0.3, 0.4, 0.2],
@@ -249,35 +216,35 @@ and once for only estimating `ed50` and `h`.
 
 ```@example main
 dp1a = DesignProblem(
-    criterion = DexpOptimality(),
+    criterion = DexpCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = CopyDose(),
+    covariate_parameterization = JustCopy(:dose),
     prior_knowledge = prior,
 )
 
 dp1b = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = CopyDose(),
+    covariate_parameterization = JustCopy(:dose),
     prior_knowledge = prior,
 )
 
 dp2a = DesignProblem(
-    criterion = DexpOptimality(),
+    criterion = DexpCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = CopyDose(),
+    covariate_parameterization = JustCopy(:dose),
     prior_knowledge = prior,
     transformation = DeltaMethod(p -> [0 0 1 0; 0 0 0 1]),
 )
 
 dp2b = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = CopyDose(),
+    covariate_parameterization = JustCopy(:dose),
     prior_knowledge = prior,
     transformation = DeltaMethod(p -> [0 0 1 0; 0 0 0 1]),
 )
@@ -288,13 +255,13 @@ strategy = DirectMaximization(
 )
 
 Random.seed!(31415)
-s1a, r1a = solve(dp1a, strategy, minweight = 1e-3, mindist = 1e-2)
+s1a, r1a = solve(dp1a, strategy, maxweight = 1e-3, maxdist = 1e-2)
 Random.seed!(31415)
-s1b, r1b = solve(dp1b, strategy, minweight = 1e-3, mindist = 1e-2)
+s1b, r1b = solve(dp1b, strategy, maxweight = 1e-3, maxdist = 1e-2)
 Random.seed!(31415)
-s2a, r2a = solve(dp2a, strategy, minweight = 1e-3, mindist = 1e-2)
+s2a, r2a = solve(dp2a, strategy, maxweight = 1e-3, maxdist = 1e-2)
 Random.seed!(31415)
-s2b, r2b = solve(dp2b, strategy, minweight = 1e-3, mindist = 1e-2)
+s2b, r2b = solve(dp2b, strategy, maxweight = 1e-3, maxdist = 1e-2)
 
 gd1 = plot(
     plot_gateauxderivative(s1a, dp1a; title = "1a"),
@@ -302,7 +269,48 @@ gd1 = plot(
     plot_gateauxderivative(s1b, dp1b; title = "1b"),
     plot_gateauxderivative(s2b, dp2b; title = "2b"),
 )
-savefig_nothing(gd1, "extend-criterion-gd1.png") # hide
+savefig(gd1, "extend-criterion-gd1.png") # hide
+nothing # hide
+```
+
+```@setup main
+s1a == DesignMeasure(
+ [0.0] => 0.17605313466824343,
+ [0.03498798414860223] => 0.08344304160813153,
+ [0.2616383032984309] => 0.2456988438742072,
+ [0.49666377406537887] => 0.2450846449152469,
+ [0.9999998119304254] => 0.2497203349341709,
+) || !check_results || error("not the expected result\n", s1a)
+```
+
+```@setup main
+s2a == DesignMeasure(
+ [0.0] => 0.14765387506515712,
+ [0.029776312843391325] => 0.06478852276124815,
+ [0.27329979413971395] => 0.2954574699564492,
+ [0.4814631852647288] => 0.2970304648464117,
+ [1.0] => 0.1950696673707337,
+) || !check_results || error("not the expected result\n", s2a)
+```
+
+```@setup main
+s1b == DesignMeasure(
+ [0.0] => 0.17962034176078864,
+ [0.04461948295716912] => 0.0934736269518622,
+ [0.25627704567921966] => 0.23934177101306972,
+ [0.4958739526513957] => 0.23846947150228448,
+ [1.0] => 0.24909478877199498,
+) || !check_results || error("not the expected result\n", s1b)
+```
+
+```@setup main
+s2b == DesignMeasure(
+ [0.0] => 0.1426449446174471,
+ [0.046773454616330874] => 0.08797635657487009,
+ [0.2635807148765203] => 0.29015625028527536,
+ [0.47936857346476985] => 0.2848706752086477,
+ [1.0] => 0.1943517733137599,
+) || !check_results || error("not the expected result\n", s2b)
 ```
 
 ![](extend-criterion-gd1.png)
@@ -326,7 +334,8 @@ gd2 = plot(
     plot_gateauxderivative(s1b, dp1a; title = "s1b for dp1a", legend = nothing),
     plot_gateauxderivative(s2b, dp2a; title = "s2b for dp2a", legend = nothing),
 )
-savefig_nothing(gd2, "extend-criterion-gd2.png") # hide
+savefig(gd2, "extend-criterion-gd2.png") # hide
+nothing # hide
 ```
 
 ![](extend-criterion-gd2.png)

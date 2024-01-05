@@ -12,17 +12,14 @@ include("example-emax.jl")
 include("example-vector.jl")
 
 @testset "design-common.jl" begin
-    @testset "WorkMatrices" begin
-        let K = 5, m = 2, r = 4, t = 3, wm = Kirstine.WorkMatrices(K, m, r, t)
-            @test size(wm.r_x_r) == (r, r)
-            @test size(wm.t_x_t) == (t, t)
-            @test size(wm.r_x_t) == (r, t)
-            @test size(wm.t_x_r) == (t, r)
-            @test size(wm.m_x_r) == (m, r)
-            @test length(wm.m_x_m) == K
-            for k in 1:K
-                @test size(wm.m_x_m[k]) == (m, m)
-            end
+    @testset "NIMWorkspace" begin
+        let r = 4, t = 3, nw = Kirstine.NIMWorkspace(r, t)
+            @test_throws "must be positive" Kirstine.NIMWorkspace(0, 2)
+            @test_throws "must be positive" Kirstine.NIMWorkspace(1, -1)
+            @test size(nw.r_x_r) == (r, r)
+            @test size(nw.t_x_t) == (t, t)
+            @test size(nw.r_x_t) == (r, t)
+            @test size(nw.t_x_r) == (t, r)
         end
     end
 
@@ -39,29 +36,16 @@ include("example-vector.jl")
     end
 
     @testset "informationmatrix!" begin
-        let nim = zeros(3, 3),
-            jm = zeros(1, 3),
-            w = [0.25, 0.75],
-            m = EmaxModel(1),
-            # cholesky factor of the one-element 1.0 matrix is 1.0.
-            cvc = [[1.0;;] for _ in 1:length(w)],
-            c = [Dose(0), Dose(5)],
-            p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
+        # The `FisherMatrix` normal approximation should just give the average Fisher
+        # information matrix as NIM.
+        let _ = seed!(1234),
+            afm = rand(3, 3),
+            afm_copy = deepcopy(afm),
             na = FisherMatrix(),
-            res = Kirstine.informationmatrix!(nim, jm, w, m, cvc, c, p, na),
-            ref = mapreduce(+, enumerate(c)) do (k, dose)
-                Kirstine.jacobianmatrix!(jm, m, dose, p)
-                return w[k] * jm' * inv([1.0;;]) * jm
-            end
+            res = Kirstine.informationmatrix!(afm, na)
 
-            # returns first argument?
-            @test res === nim
-            # same result as non-BLAS computation?
-            @test Symmetric(res) == ref
-            # complement of upper triangle not used?
-            @test res[2, 1] == 0
-            @test res[3, 1] == 0
-            @test res[3, 2] == 0
+            @test res === afm
+            @test res == afm_copy
         end
     end
 
@@ -97,8 +81,32 @@ include("example-vector.jl")
         end
     end
 
+    @testset "apply_transformation" begin
+        # This example is chosen to have nice values in the inverted matrices:
+        # M = [2 1; 1 3]
+        # inv(M) = [0.6 -0.2; -0.2, 0.4]
+        # DT3' * inv(M) * DT3 = [2.4 -1.6; -1.6 1.4]
+        # inv(DT3' * inv(M) * DT3) = [1.75 2.0; 2.0 3.0]
+        let M = [2 1; 1 3],
+            p = TestPar2(1, 0),
+            t1 = Identity(),
+            t2 = DeltaMethod(p -> [0 1]), # p -> p.b
+            t3 = DeltaMethod(p -> [2*p.a 0; -1 1]), # p -> [p.a^2, p[2] - p[1]]
+            MT1 = apply_transformation(M, p, t1),
+            MT2 = apply_transformation(M, p, t2),
+            MT3 = apply_transformation(M, p, t3)
+
+            @test MT1 isa Symmetric
+            @test MT1 == M
+            @test MT2 isa Symmetric
+            @test MT2 == [2.5;;]
+            @test MT3 isa Symmetric
+            @test MT3 ≈ [1.75 2; 2 3.0]
+        end
+    end
+
     @testset "log_det!" begin
-        let A = rand(Float64, 3, 3), B = A * A'
+        let _ = seed!(2468), A = rand(Float64, 3, 3), B = A * A'
 
             # note: log_det! overwrites B, so it can't be called first
             @test log(det(B)) ≈ Kirstine.log_det!(B)
@@ -120,104 +128,85 @@ include("example-vector.jl")
         # must use deepcopys, and Symmetric wrappers where necessary.
         let pk = PriorSample([TestPar3(1, 2, 3)]),
             tid = DeltaMethod(p -> diagm(ones(3))),
-            ctid = Kirstine.precalculate_trafo_constants(tid, pk),
+            ctid = Kirstine.trafo_constants(tid, pk),
             tsc = DeltaMethod(p -> diagm([0.5, 2.0, 4.0])),
-            ctsc = Kirstine.precalculate_trafo_constants(tsc, pk),
+            ctsc = Kirstine.trafo_constants(tsc, pk),
             _ = seed!(4321),
             A = reshape(rand(9), 3, 3),
             nim = collect(UpperTriangular(A' * A)),
             inv_nim = collect(UpperTriangular(inv(A' * A))),
-            m = 1,
             r = 3,
             t = 3,
-            K = 1, # dummy, we already have the informationmatrix
-            wm1 = Kirstine.WorkMatrices(K, m, r, t),
-            wm2 = Kirstine.WorkMatrices(K, m, r, t),
-            wm3 = Kirstine.WorkMatrices(K, m, r, t),
-            wm4 = Kirstine.WorkMatrices(K, m, r, t),
+            nw1 = Kirstine.NIMWorkspace(r, t),
+            nw2 = Kirstine.NIMWorkspace(r, t),
+            nw3 = Kirstine.NIMWorkspace(r, t),
+            nw4 = Kirstine.NIMWorkspace(r, t),
             # workaround for `.=` not being valid let statement syntax
-            _ = broadcast!(identity, wm1.r_x_r, nim),
-            _ = broadcast!(identity, wm2.r_x_r, inv_nim),
-            _ = broadcast!(identity, wm3.r_x_r, nim),
-            _ = broadcast!(identity, wm4.r_x_r, inv_nim),
-            (r1, i1) = Kirstine.apply_transformation!(wm1, false, ctid, 1),
-            (r2, i2) = Kirstine.apply_transformation!(wm2, true, ctid, 1),
+            _ = broadcast!(identity, nw1.r_x_r, nim),
+            _ = broadcast!(identity, nw2.r_x_r, inv_nim),
+            _ = broadcast!(identity, nw3.r_x_r, nim),
+            _ = broadcast!(identity, nw4.r_x_r, inv_nim),
+            _ = setfield!(nw1, :r_is_inv, false),
+            r1 = Kirstine.apply_transformation!(nw1, tid, ctid.jm[1]),
+            _ = setfield!(nw2, :r_is_inv, true),
+            r2 = Kirstine.apply_transformation!(nw2, tid, ctid.jm[1]),
             # scaling parameters should be able to be pulled out
-            (r3, _) = Kirstine.apply_transformation!(wm3, false, ctsc, 1),
-            (r4, _) = Kirstine.apply_transformation!(wm4, true, ctsc, 1)
+            _ = setfield!(nw3, :r_is_inv, false),
+            r3 = Kirstine.apply_transformation!(nw3, tsc, ctsc.jm[1]),
+            _ = setfield!(nw4, :r_is_inv, true),
+            r4 = Kirstine.apply_transformation!(nw4, tsc, ctsc.jm[1])
 
-            @test Symmetric(wm1.t_x_t) ≈ Symmetric(inv_nim)
-            @test r1 === wm1
-            @test i1 = true
-            @test Symmetric(wm2.t_x_t) ≈ Symmetric(inv_nim)
-            @test r2 === wm2
-            @test i1 == true
-            @test Symmetric(wm3.t_x_t) ≈ Symmetric(wm4.t_x_t)
-            @test r3 === wm3
-            @test r4 === wm4
-            @test det(Symmetric(wm3.t_x_t)) ≈ 4^2 * det(Symmetric(inv_nim))
+            @test Symmetric(nw1.t_x_t) ≈ Symmetric(inv_nim)
+            @test r1 === nw1
+            @test r1.t_is_inv
+            @test r1.r_is_inv == false # should not touch input matrix flag
+            @test Symmetric(nw2.t_x_t) ≈ Symmetric(inv_nim)
+            @test r2 === nw2
+            @test r2.t_is_inv
+            @test r2.r_is_inv
+            @test Symmetric(nw3.t_x_t) ≈ Symmetric(nw4.t_x_t)
+            @test r3 === nw3
+            @test r4 === nw4
+            @test det(Symmetric(nw3.t_x_t)) ≈ 4^2 * det(Symmetric(inv_nim))
         end
 
         # The Identity transformation simply passes through the input matrix and its
         # inversion flag unchanged.
         let pk = PriorSample([TestPar3(1, 2, 3)]),
-            t = Identity(),
-            tc = Kirstine.precalculate_trafo_constants(t, pk),
+            trafo = Identity(),
+            tc = Kirstine.trafo_constants(trafo, pk),
             _ = seed!(4321),
             A = reshape(rand(9), 3, 3),
             nim = collect(UpperTriangular(A' * A)),
             inv_nim = collect(UpperTriangular(inv(A' * A))),
-            m = 1,
             r = 3,
             t = 3,
-            K = 1, # dummy, we already have the informationmatrix
-            wm1 = Kirstine.WorkMatrices(K, m, r, t),
-            wm2 = Kirstine.WorkMatrices(K, m, r, t),
+            nw1 = Kirstine.NIMWorkspace(r, t),
+            nw2 = Kirstine.NIMWorkspace(r, t),
             # workaround for `.=` not being valid let statement syntax
-            _ = broadcast!(identity, wm1.r_x_r, nim),
-            _ = broadcast!(identity, wm2.r_x_r, inv_nim),
-            (r1, i1) = Kirstine.apply_transformation!(wm1, false, tc, 1),
-            (r2, i2) = Kirstine.apply_transformation!(wm2, true, tc, 1)
+            _ = broadcast!(identity, nw1.r_x_r, nim),
+            _ = broadcast!(identity, nw2.r_x_r, inv_nim),
+            _ = setfield!(nw1, :r_is_inv, false),
+            _ = setfield!(nw2, :r_is_inv, true),
+            r1 = Kirstine.apply_transformation!(nw1, trafo, diagm(ones(3))),
+            r2 = Kirstine.apply_transformation!(nw2, trafo, diagm(ones(3)))
 
-            @test Symmetric(wm1.t_x_t) ≈ Symmetric(nim)
-            @test r1 === wm1
-            @test i1 == false
-            @test Symmetric(wm2.t_x_t) ≈ Symmetric(inv_nim)
-            @test r2 === wm2
-            @test i2 == true
+            @test Symmetric(nw1.t_x_t) ≈ Symmetric(nim)
+            @test r1 === nw1
+            @test r1.t_is_inv == false
+            @test r1.r_is_inv == false
+            @test Symmetric(nw2.t_x_t) ≈ Symmetric(inv_nim)
+            @test r2 === nw2
+            @test r2.t_is_inv == true
+            @test r2.r_is_inv == true
         end
     end
 
-    @testset "transformed_information_matrices" begin
-        # We suppose that `apply_transformation!` works as intended,
-        # and only check with DeltaMethod trafo constants and non-inverted input NIM.
-        let A1 = reshape(rand(9), 3, 3),
-            A2 = reshape(rand(9), 3, 3),
-            nim = [collect(UpperTriangular(A1' * A1)), collect(UpperTriangular(A2' * A2))],
-            nim_bkp = deepcopy(nim),
-            pk = PriorSample([TestPar3(1, 2, 3), TestPar3(4, 5, 6)]), # dummy values
-            t = DeltaMethod(p -> diagm([0.5, 2.0, 4.0])),
-            tc = Kirstine.precalculate_trafo_constants(t, pk),
-            (tnim, is_inv) = Kirstine.transformed_information_matrices(nim, false, pk, tc)
-
-            @test length(tnim) == 2
-            # with the DeltaMethod, the output is always inverted
-            @test is_inv == true
-            # results should not be the same reference
-            @test tnim[1] !== tnim[2]
-            # input nim not modified
-            @test nim == nim_bkp
-            # actual matrices
-            @test Symmetric(tnim[1]) ≈ tc.jm[1]' * inv(Symmetric(nim[1])) * tc.jm[1]
-            @test Symmetric(tnim[2]) ≈ tc.jm[2]' * inv(Symmetric(nim[2])) * tc.jm[2]
-        end
-    end
-
-    @testset "allocate_initialize_covariates" begin
+    @testset "implied_covariates" begin
         let d = DesignMeasure([[0], [1], [2]], [0.2, 0.3, 0.5]),
             m = EmaxModel(1),
             cp = CopyDose(),
-            c = Kirstine.allocate_initialize_covariates(d, m, cp)
+            c = implied_covariates(d, m, cp)
 
             @test length(c) == numpoints(d)
             @test c[1].dose == points(d)[1][1]
@@ -226,22 +215,34 @@ include("example-vector.jl")
         end
     end
 
-    @testset "inverse_information_matrices" begin
-        let d = DesignMeasure([[1], [5], [9]], [0.1, 0.2, 0.7]),
+    @testset "update_covariates!" begin
+        let d1 = DesignMeasure([[0], [1], [2]], [0.2, 0.3, 0.5]),
+            d2 = DesignMeasure([[3], [4], [5]], [0.4, 0.4, 0.2]),
             m = EmaxModel(1),
             cp = CopyDose(),
-            pk = PriorSample([
-                EmaxPar(; e0 = 1, emax = 10, ec50 = 2),
-                EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
-            ]),
-            na = FisherMatrix(),
-            iim = Kirstine.inverse_information_matrices(d, m, cp, pk, na)
+            c = implied_covariates(d1, m, cp),
+            res = Kirstine.update_covariates!(c, d2, m, cp)
 
-            # test that working matrices were deepcopied
-            @test iim[1] !== iim[2]
-            # compare potrf/potri result to higher-level inv call
-            @test Symmetric(iim[1]) ≈ inv(informationmatrix(d, m, cp, pk.p[1], na))
-            @test Symmetric(iim[2]) ≈ inv(informationmatrix(d, m, cp, pk.p[2], na))
+            @test res === c
+            @test c[1].dose == points(d2)[1][1]
+            @test c[2].dose == points(d2)[2][1]
+            @test c[3].dose == points(d2)[3][1]
+        end
+    end
+
+    @testset "gateaux_integrand" begin
+        # This should compute tr(A * B) - d, using only upper triangles from
+        # A and B. A is taken from the GateauxConstants, B is the normalized information
+        # matrix corresponding to the direction. Both matrices have size (r, r). Here we
+        # test an example with r = 2.
+        let A = [2.0 3.0; 0.0 7.0],
+            d = 1.8,
+            B = [0.4 1.0; 0.0 0.5],
+            gi = Kirstine.gateaux_integrand
+
+            @test gi(A, B, d) == tr(Symmetric(A) * Symmetric(B)) - d
+            # rule out unintentionally symmetric input
+            @test gi(A, B, d) != tr(A * B) - d
         end
     end
 end

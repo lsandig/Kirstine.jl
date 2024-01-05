@@ -3,6 +3,7 @@
 
 module DesignmeasureTests
 using Test
+using Random: seed!
 using Kirstine
 
 @testset "designmeasure.jl" begin
@@ -45,15 +46,20 @@ using Kirstine
     end
 
     @testset "equidistant_design" begin
-        let d = equidistant_design(DesignInterval(:a => (1, 4)), 4),
+        let dr = DesignInterval(:a => (1, 4)),
+            d = equidistant_design(dr, 4),
             ref = DesignMeasure([[i] for i in 1:4], fill(0.25, 4))
 
+            @test_throws "at least K = 2" equidistant_design(dr, 1)
             @test d == ref
         end
     end
 
     @testset "random_design" begin
-        let dr = DesignInterval(:a => (2, 4), :b => (-1, 3)), d = random_design(dr, 4)
+        let dr = DesignInterval(:a => (2, 4), :b => (-1, 3)),
+            _ = seed!(7531),
+            d = random_design(dr, 4)
+
             for k in 1:4
                 @test all(points(d)[k] .<= upperbound(dr))
                 @test all(points(d)[k] .>= lowerbound(dr))
@@ -169,6 +175,16 @@ using Kirstine
 
             @test o !== o_simp
             @test o == o_simp
+        end
+
+        # Unmerged points should stay the same.
+        let dr = DesignInterval(:a => (0, 0.95)),
+            d = uniform_design([[0.1], [0.5], [0.8], [0.81]])
+
+            # We don't want to scale [0.5] into the unit cube and back,
+            # since 0.5 / 0.95 * 0.95 != 0.5 numerically.
+            @test d == simplify_merge(d, dr, 0)
+            @test points(d)[1:2] == points(simplify_merge(d, dr, 0.1))[2:3]
         end
     end
 

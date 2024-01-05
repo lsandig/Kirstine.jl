@@ -17,18 +17,8 @@
 #       A(ζ,θ) = M(ζ,θ)^{-1} DT'(θ) DT(θ) M(ζ,θ)^{-1}
 #   tr[B(ζ,θ)] = tr[DT'(θ) DT(θ) M(ζ,θ)^{-1}].
 
-struct GCAIdentity <: GateauxConstants
-    A::Vector{Matrix{Float64}}
-    tr_B::Vector{Float64}
-end
-
-struct GCADeltaMethod <: GateauxConstants
-    A::Vector{Matrix{Float64}}
-    tr_B::Vector{Float64}
-end
-
 """
-    AOptimality <: DesignCriterion
+    ACriterion <: DesignCriterion
 
 Criterion for A-optimal experimental design.
 
@@ -36,9 +26,9 @@ Trace of the inverted normalized information matrix.
 
 See also the [mathematical background](math.md#A-Criterion).
 """
-struct AOptimality <: DesignCriterion end
+struct ACriterion <: DesignCriterion end
 
-function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::AOptimality)
+function criterion_functional!(tnim::AbstractMatrix, is_inv::Bool, dc::ACriterion)
     if is_inv
         # Note: In this branch there won't be an exception if `tnim` is singular. But as this
         # branch is called with the DeltaMethod transformation, an exception will already
@@ -54,44 +44,34 @@ function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::AOptimalit
     end
 end
 
-# Note: only the upper triangle of the symmetric matrix A needs to be filled out,
-# since `gateaux_integrand` uses `tr_prod` for the multiplication.
-# But producing a dense matrix does not hurt either.
-function gateaux_integrand(c::GCAIdentity, nim_direction, index)
-    return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
-end
-
 function gateaux_constants(
-    dc::AOptimality,
+    dc::ACriterion,
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
-    tc::TCIdentity,
+    trafo::Identity,
     na::NormalApproximation,
 )
-    invM = inverse_information_matrices(d, m, cp, pk, na)
+    invM = [inv(informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
     tr_B = map(tr, invM)
     A = map(m -> Symmetric(m)^2, invM)
-    return GCAIdentity(A, tr_B)
-end
-
-function gateaux_integrand(c::GCADeltaMethod, nim_direction, index)
-    return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
+    return GCPriorSample(A, tr_B)
 end
 
 function gateaux_constants(
-    dc::AOptimality,
+    dc::ACriterion,
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
-    tc::TCDeltaMethod,
+    trafo::DeltaMethod,
     na::NormalApproximation,
 )
-    invM = inverse_information_matrices(d, m, cp, pk, na)
+    tc = trafo_constants(trafo, pk)
+    invM = [inv(informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
     JpJ = map(J -> J' * J, tc.jm)
     tr_B = map((J, iM) -> tr(J * Symmetric(iM)), JpJ, invM)
     A = map((J, iM) -> Symmetric(iM) * J * Symmetric(iM), JpJ, invM)
-    return GCADeltaMethod(A, tr_B)
+    return GCPriorSample(A, tr_B)
 end

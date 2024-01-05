@@ -1,11 +1,7 @@
 # A Simple Dose-Response Model
 
 ```@setup main
-# we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
-function savefig_nothing(plot, filename)
-	savefig(plot, filename)
-	return nothing
-end
+check_results = true
 ```
 
 This vignette describes how to set up a simple non-linear regression model
@@ -52,7 +48,8 @@ pse = plot(
     yguide = "response",
     label = "μ(dose, θ)",
 )
-savefig_nothing(pse, "tutorial-sigemax.png") # hide
+savefig(pse, "tutorial-sigemax.png") # hide
+nothing # hide
 ```
 
 ![](tutorial-sigemax.png)
@@ -161,26 +158,20 @@ dr = DesignInterval(:dose => (0, 1))
 nothing # hide
 ```
 
-(Note that the name `:dose` does not necessarily have to match the field name of the `SigEmaxCovariate`.)
-
 A design will then be a discrete probability measure with atoms (design points) from `dr`,
 and a design point is represented by a `Vector{Float64}`.
-In our simple model, these vector have length `1`.
+In our simple model, these vectors have length `1`.
 
 Finally, we need to specify how a design point maps to a `SigEmaxCovariate`.
 Here, the design region is simply the interval of possible doses.
 This means that we can just copy the only element of the design point
 into the covariate's `dose` field.
-To do this, we subtype [`CovariateParameterization`](@ref)
-and define a method for `Kirstine.map_to_covariate!`.
+For this we can use [`JustCopy`](@ref),
+which is a subtype of [`CovariateParameterization`](@ref).
 
 ```@example main
-struct CopyDose <: CovariateParameterization end
-
-function Kirstine.map_to_covariate!(c::SigEmaxCovariate, dp, m::SigEmaxModel, cp::CopyDose)
-    c.dose = dp[1]
-    return c
-end
+cp = JustCopy(:dose)
+nothing # hide
 ```
 
 ### Prior Knowledge
@@ -214,10 +205,10 @@ Now we collect all the parts in a [`DesignProblem`](@ref).
 
 ```@example main
 dp = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = dr,
     model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = CopyDose(),
+    covariate_parameterization = cp,
     prior_knowledge = prior_sample,
 )
 nothing # hide
@@ -262,10 +253,30 @@ The [`solve`](@ref) function returns two objects:
   - `r1`: a [`DirectMaximizationResult`](@ref)
     that contains diagnostic information about the optimization run.
 
-At the REPL, the solution is displayed as `designpoint => weight` pairs.
+We can access the lower-level [`OptimizationResult`](@ref)
+by calling [`optimization_result`](@ref) on `r1`,
+which will show some statistics when printed:
+
+```@example main
+optimization_result(r1)
+```
+
+The solution `s1` is displayed as `designpoint => weight` pairs.
 
 ```@example main
 s1
+```
+
+```@setup main
+s1 == DesignMeasure(
+ [0.0] => 0.13404889547477042,
+ [0.010691842729708925] => 0.1077006446024656,
+ [0.28680117509990044] => 0.1385323232912528,
+ [0.35590085349128153] => 0.024903749604217627,
+ [0.3567666844285769] => 0.12742156052917672,
+ [0.49982025315652223] => 0.22264826193961815,
+ [1.0] => 0.24474456455849863,
+) || !check_results || error("not the expected result\n", s1)
 ```
 
 Looking closely at `s1`,
@@ -279,18 +290,28 @@ we notice that two design points are nearly identical:
 It seems plausible that they would merge to a single one
 if we ran the optimizer for some more iterations.
 But we can also do this after the fact by calling [`simplify`](@ref) on the solution.
-This way we remove all design points with negligible weight,
-and merge all design points that are less than some minimum distance apart.
+This way we merge all design points that are less than some minimum distance apart,
+and remove all design points with negligible weight.
 
 ```@example main
-s2 = sort_points(simplify(s1, dp, minweight = 1e-3, mindist = 2e-2))
+s2 = sort_points(simplify(s1, dp, maxweight = 1e-3, maxdist = 2e-2))
+```
+
+```@setup main
+s2 == DesignMeasure(
+ [0.004763270091889071] => 0.24174954007723604,
+ [0.28680117509990044] => 0.1385323232912528,
+ [0.3566251292474773] => 0.15232531013339434,
+ [0.49982025315652223] => 0.22264826193961815,
+ [1.0] => 0.24474456455849863,
+) || !check_results || error("not the expected result\n", s2)
 ```
 
 Because this issue occurs frequently
 we can directly pass the simplification arguments to `solve`:
 
 ```julia
-s2, r2 = solve(dp, strategy; minweight = 1e-3, mindist = 2e-2)
+s2, r2 = solve(dp, strategy; maxweight = 1e-3, maxdist = 2e-2)
 ```
 
 The original, unsimplified solution can still be accessed at `solution(r2)`.
@@ -303,7 +324,8 @@ the design points of the solution are indicated together with their weights.
 
 ```@example main
 gd = plot_gateauxderivative(s2, dp)
-savefig_nothing(gd, "tutorial-gd.png") # hide
+savefig(gd, "tutorial-gd.png") # hide
+nothing # hide
 ```
 
 ![](tutorial-gd.png)
@@ -314,10 +336,10 @@ we can use [`plot_expected_function`](@ref).
 ```@example main
 mu(dose, p) = p.e0 + p.emax * dose^p.h / (p.ed50^p.h + dose^p.h)
 ef = plot_expected_function(
-    (x, c, p) -> mu(x, p),
-    c -> [c.dose],
-    (c, p) -> [mu(c.dose, p)],
-    0:0.01:1,
+    (x, c, p) -> mu(x, p),     # response for fixed covariate (ignored here) and parameter
+    c -> [c.dose],             # x-coordinate(s) for a point
+    (c, p) -> [mu(c.dose, p)], # y-coordinate(s) for a point
+    0:0.01:1,                  # x-axis grid
     s2,
     model(dp),
     covariate_parameterization(dp),
@@ -325,7 +347,8 @@ ef = plot_expected_function(
     xguide = "dose",
     yguide = "response",
 )
-savefig_nothing(ef, "tutorial-ef.png") # hide
+savefig(ef, "tutorial-ef.png") # hide
+nothing # hide
 ```
 
 ![](tutorial-ef.png)
@@ -335,7 +358,8 @@ and see that the particle swarm has converged already after about `20` iteration
 
 ```@example main
 pr1 = plot(r1)
-savefig_nothing(pr1, "tutorial-pr1.png") # hide
+savefig(pr1, "tutorial-pr1.png") # hide
+nothing # hide
 ```
 
 ![](tutorial-pr1.png)
@@ -361,7 +385,11 @@ that add up to ``\SampleSize``.
 This is achieved with the [`apportion`](@ref) function:
 
 ```@example main
-apportion(s2, 42)
+app = apportion(s2, 42)
+```
+
+```@setup main
+app == [10, 6, 7, 9, 10] || !check_results || error("not the expected result\n", app)
 ```
 
 This tells us to take `10` measurements at the first design point,

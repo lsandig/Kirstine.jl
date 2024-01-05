@@ -14,18 +14,20 @@ using LinearAlgebra:
     SingularException,
     Symmetric,
     diagind,
+    diagm,
     mul!,
     norm,
+    rank,
     tr
 using Random: rand, rand!
 using RecipesBase
 
 export @simple_model,
     @simple_parameter,
-    AOptimality,
+    ACriterion,
     Covariate,
     CovariateParameterization,
-    DOptimality,
+    DCriterion,
     DeltaMethod,
     DesignCriterion,
     DesignInterval,
@@ -38,6 +40,7 @@ export @simple_model,
     ExchangeResult,
     FisherMatrix,
     Identity,
+    JustCopy,
     Model,
     NonlinearRegression,
     NormalApproximation,
@@ -50,6 +53,7 @@ export @simple_model,
     ProblemSolvingStrategy,
     Pso,
     Transformation,
+    apply_transformation,
     apportion,
     covariate_parameterization,
     criterion,
@@ -58,6 +62,7 @@ export @simple_model,
     efficiency,
     equidistant_design,
     gateauxderivative,
+    implied_covariates,
     informationmatrix,
     lowerbound,
     mixture,
@@ -69,6 +74,7 @@ export @simple_model,
     optimization_result,
     optimization_results_direction,
     optimization_results_weight,
+    parameters,
     plot_expected_function,
     plot_gateauxderivative,
     points,
@@ -100,6 +106,7 @@ include("transformation.jl")
 include("normalapproximation.jl")
 include("user.jl")
 include("design-common.jl")
+include("model-nonlinear-regression.jl")
 include("criterion-d.jl")
 include("criterion-a.jl")
 include("designproblem.jl")

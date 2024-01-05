@@ -17,20 +17,8 @@
 #       A(ζ,θ) = M(ζ,θ)^{-1} DT'(θ) M_T(ζ,θ) DT(θ) M(ζ,θ)^{-1}
 #   tr[B(ζ,θ)] = t
 
-# Although tr_B is constant in both cases we store it redundantly in a vector
-# in order to keep the structure consistent with the GCA* types.
-struct GCDIdentity <: GateauxConstants
-    A::Vector{Matrix{Float64}}
-    tr_B::Vector{Float64}
-end
-
-struct GCDDeltaMethod <: GateauxConstants
-    A::Vector{Matrix{Float64}}
-    tr_B::Vector{Float64}
-end
-
 @doc raw"""
-    DOptimality
+    DCriterion
 
 Criterion for D-optimal experimental design.
 
@@ -38,9 +26,9 @@ Log-determinant of the normalized information matrix.
 
 See also the [mathematical background](math.md#D-Criterion).
 """
-struct DOptimality <: DesignCriterion end
+struct DCriterion <: DesignCriterion end
 
-function criterion_integrand!(tnim::AbstractMatrix, is_inv::Bool, dc::DOptimality)
+function criterion_functional!(tnim::AbstractMatrix, is_inv::Bool, dc::DCriterion)
     sgn = is_inv ? -1 : 1
     ld = log_det!(tnim)
     # With the DeltaMethod, `tnim` can be singular without having raised an exception up to
@@ -52,54 +40,48 @@ end
 
 ## Gateaux derivative: Identity ##
 
-# Note: only the upper triangle of the symmetric matrix A needs to be filled out,
-# since `gateaux_integrand` uses `tr_prod` for the multiplication.
-# But producing a dense matrix does not hurt either.
-function gateaux_integrand(c::GCDIdentity, nim_direction, index)
-    return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
-end
-
 function gateaux_constants(
-    dc::DOptimality,
+    dc::DCriterion,
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
-    tc::TCIdentity,
+    trafo::Identity,
     na::NormalApproximation,
 )
-    A = inverse_information_matrices(d, m, cp, pk, na) # only upper triangles
-    tr_B = fill(parameter_dimension(pk), length(pk.p))
-    return GCDIdentity(A, tr_B)
+    A = [inv(informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
+    tr_B = fill(parameter_dimension(pk), length(parameters(pk)))
+    return GCPriorSample(A, tr_B)
 end
 
 ## Gateaux derivative: DeltaMethod ##
 
-function gateaux_integrand(c::GCDDeltaMethod, nim_direction, index)
-    return tr_prod(c.A[index], nim_direction, :U) - c.tr_B[index]
-end
-
 function gateaux_constants(
-    dc::DOptimality,
+    dc::DCriterion,
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
-    tc::TCDeltaMethod,
+    trafo::DeltaMethod,
     na::NormalApproximation,
 )
-    t = codomain_dimension(tc)
-    # This computes the upper triangle of M(ζ,θ)^{-1}.
-    inv_M = inverse_information_matrices(d, m, cp, pk, na)
-    # We already know that the result will be inverted.
-    inv_MT, _ = transformed_information_matrices(inv_M, true, pk, tc)
+    # This computes Symmetric versions of of M(ζ,θ)^{-1}.
+    iim = [inv(informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
+    tc = trafo_constants(trafo, pk)
+    nw = NIMWorkspace(parameter_dimension(pk), codomain_dimension(trafo, pk))
+
     # Note that A will be dense.
-    A = map(inv_M, inv_MT, tc.jm) do iM, iMT, DT
-        # Now, iMT contains the upper triangle of (M_T(ζ,θ))^{-1}.
+    A = map(iim, tc.jm) do iM, DT
+        # compute (M_T(ζ,θ))^{-1} from M(ζ,θ)^{-1}.
+        # since typeof(trafo) == DeltaMethod, we know that the result will be inverted
+        nw.r_x_r .= iM
+        nw.r_is_inv = true
+        apply_transformation!(nw, trafo, DT)
+        # Now, nw.t_x_t contains the upper triangle of (M_T(ζ,θ))^{-1}.
         # Instead of an explicit inversion, we solve (M_T(ζ,θ))^{-1} X = DT for X.
-        C = DT' * (Symmetric(iMT) \ DT)
-        return Symmetric(iM) * C * Symmetric(iM)
+        C = DT' * (Symmetric(nw.t_x_t) \ DT)
+        return iM * C * iM
     end
-    tr_B = fill(t, length(pk.p))
-    return GCDDeltaMethod(A, tr_B)
+    tr_B = fill(codomain_dimension(trafo, pk), length(parameters(pk)))
+    return GCPriorSample(A, tr_B)
 end

@@ -9,14 +9,17 @@ The following pages show how to implement custom versions of the following objec
 
   - [design criterion](extend-criterion.md)
   - [design region](extend-region.md)
-  - model
-  - transformation
-  - normal approximation
+  - [model supertype](extend-model.md)
+  - [normal approximation](extend-approximation.md)
   - [optimizer](extend-optimizer.md)
-  - problem solving strategy
+  - [problem solving strategy](extend-strategy.md)
 
 !!! warning
     
     Writing extensions necessarily involves working with non-exported functions.
-    While stability between versions is one of Kirstines development goals,
-    you should expect them to break more frequently than the public API.
+    In addition to reading the vignettes linked above,
+    it is recommended to also read the relevant parts of [the package sources](https://git.sr.ht/%7Elsandig/Kirstine.jl/tree/main/item/src/).
+    While the [public API](api.md) will be kept stable between minor releases after v1.0,
+    breaking changes can occur in the internals.
+    If you need to extend Kirstine.jl for your work,
+    consider setting an explicit version in your `Project.toml`.

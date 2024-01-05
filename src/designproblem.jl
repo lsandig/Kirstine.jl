@@ -127,6 +127,16 @@ Get the [`NormalApproximation`](@ref) of `dp`.
 """
 normal_approximation(dp::DesignProblem) = dp.na
 
+function allocate_workspaces(d::DesignMeasure, dp::DesignProblem)
+    nw = NIMWorkspace(
+        parameter_dimension(prior_knowledge(dp)),
+        codomain_dimension(transformation(dp), prior_knowledge(dp)),
+    )
+    mw = allocate_model_workspace(numpoints(d), model(dp), prior_knowledge(dp))
+    c = implied_covariates(d, model(dp), covariate_parameterization(dp))
+    return Workspaces(nw, mw, c)
+end
+
 """
     solve(
         dp::DesignProblem,
@@ -165,18 +175,52 @@ function solve(
 end
 
 """
-    simplify(d::DesignMeasure, dp::DesignProblem; minweight = 0, mindist = 0, uargs...)
+    simplify(d::DesignMeasure, dp::DesignProblem; maxweight = 0, maxdist = 0, uargs...)
 
 A wrapper that calls
-[`simplify_drop`](@ref),
 [`simplify_unique`](@ref),
-and [`simplify_merge`](@ref).
+[`simplify_merge`](@ref),
+and [`simplify_drop`](@ref) in that order.
 """
-function simplify(d::DesignMeasure, dp::DesignProblem; minweight = 0, mindist = 0, uargs...)
-    d = simplify_drop(d, minweight)
+function simplify(d::DesignMeasure, dp::DesignProblem; maxweight = 0, maxdist = 0, uargs...)
     d = simplify_unique(d, region(dp), model(dp), covariate_parameterization(dp); uargs...)
-    d = simplify_merge(d, region(dp), mindist)
+    d = simplify_merge(d, region(dp), maxdist)
+    d = simplify_drop(d, maxweight)
     return d
+end
+
+function objective!(w::Workspaces, d::DesignMeasure, dp::DesignProblem, tc::TrafoConstants)
+    m = model(dp)
+    update_covariates!(w.c, d, m, covariate_parameterization(dp))
+    update_model_workspace!(w.mw, m, w.c)
+    # When the information matrix is singular, the objective function is undefined. Lower
+    # level calls may throw a PosDefException or a SingularException. This also means that
+    # `d` can not be a solution to the maximization problem, hence we return negative
+    # infinity in these cases.
+    pk = prior_knowledge(dp)
+    try
+        acc = 0
+        pk_w = weights(pk)
+        pk_p = parameters(pk)
+        for i in 1:length(pk_p)
+            average_fishermatrix!(w.nw.r_x_r, w.mw, weights(d), m, w.c, pk_p[i])
+            informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
+            w.nw.r_is_inv = false
+            apply_transformation!(
+                w.nw,
+                transformation(dp),
+                trafo_jacobianmatrix_for_index(tc, i),
+            )
+            acc += pk_w[i] * criterion_functional!(w.nw.t_x_t, w.nw.t_is_inv, criterion(dp))
+        end
+        return acc
+    catch e
+        if isa(e, PosDefException) || isa(e, SingularException)
+            return -Inf
+        else
+            rethrow(e)
+        end
+    end
 end
 
 """
@@ -187,18 +231,30 @@ Evaluate the objective function.
 See also the [mathematical background](math.md#Objective-Function).
 """
 function objective(d::DesignMeasure, dp::DesignProblem)
-    pk = prior_knowledge(dp)
-    cp = covariate_parameterization(dp)
+    tc = trafo_constants(transformation(dp), prior_knowledge(dp))
+    w = allocate_workspaces(d, dp)
+    return objective!(w, d, dp, tc)
+end
+
+function gateauxderivative!(
+    w::Workspaces,
+    direction::DesignMeasure,
+    dp::DesignProblem,
+    gconst::GateauxConstants,
+)
     m = model(dp)
-    tc = precalculate_trafo_constants(transformation(dp), pk)
-    wm = WorkMatrices(
-        length(weights(d)),
-        unit_length(m),
-        parameter_dimension(pk),
-        codomain_dimension(tc),
-    )
-    c = allocate_initialize_covariates(d, m, cp)
-    return objective!(wm, c, criterion(dp), d, m, cp, pk, tc, normal_approximation(dp))
+    update_covariates!(w.c, direction, m, covariate_parameterization(dp))
+    update_model_workspace!(w.mw, m, w.c)
+    pk = prior_knowledge(dp)
+    acc = 0
+    pk_w = weights(pk)
+    pk_p = parameters(pk)
+    for i in 1:length(pk_p)
+        average_fishermatrix!(w.nw.r_x_r, w.mw, weights(direction), m, w.c, pk_p[i])
+        informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
+        acc += pk_w[i] * gateaux_integrand(gconst.A[i], w.nw.r_x_r, gconst.tr_B[i])
+    end
+    return acc
 end
 
 """
@@ -220,33 +276,23 @@ function gateauxderivative(
     dp::DesignProblem,
 )
     if any(d -> numpoints(d) != 1, directions)
-        error("Gateaux derivatives are only implemented for one-point design directions")
+        throw(ErrorException("derivative only implemented for one-point directions"))
     end
-    cp = covariate_parameterization(dp)
-    na = normal_approximation(dp)
-    pk = prior_knowledge(dp)
-    m = model(dp)
-    tc = precalculate_trafo_constants(transformation(dp), pk)
-    wm = WorkMatrices(
-        length(weights(at)),
-        unit_length(m),
-        parameter_dimension(pk),
-        codomain_dimension(tc),
+    if isinf(objective(at, dp))
+        # undefined objective implies no well-defined derivative
+        return fill(NaN, size(directions))
+    end
+    w = allocate_workspaces(directions[1], dp)
+    gconst = gateaux_constants(
+        criterion(dp),
+        at,
+        model(dp),
+        covariate_parameterization(dp),
+        prior_knowledge(dp),
+        transformation(dp),
+        normal_approximation(dp),
     )
-    gconst = try
-        gateaux_constants(criterion(dp), at, m, cp, pk, tc, na)
-    catch e
-        if isa(e, SingularException)
-            # undefined objective implies no well-defined derivative
-            return fill(NaN, size(directions))
-        else
-            rethrow(e)
-        end
-    end
-    cs = allocate_initialize_covariates(directions[1], m, cp)
-    gd = map(directions) do d
-        gateauxderivative!(wm, cs, gconst, d, m, cp, pk, na)
-    end
+    gd = map(d -> gateauxderivative!(w, d, dp, gconst), directions)
     return gd
 end
 
@@ -270,10 +316,10 @@ function efficiency(d1::DesignMeasure, d2::DesignMeasure, dp::DesignProblem)
     return efficiency(d1, d2, dp, dp)
 end
 
-# same design problem as `dp`, but with criterion replaced by `DOptimality()`.
+# same design problem as `dp`, but with criterion replaced by `DCriterion()`.
 function as_doptimality_problem(dp::DesignProblem)
     dpd = DesignProblem(;
-        criterion = DOptimality(),
+        criterion = DCriterion(),
         model = model(dp),
         region = region(dp),
         covariate_parameterization = covariate_parameterization(dp),
@@ -291,12 +337,10 @@ function efficiency(
     dp2::DesignProblem,
 )
     # check that minimal requirements are met for efficiency to make sense
-    tc1 = precalculate_trafo_constants(dp1.trafo, dp1.pk)
-    tc2 = precalculate_trafo_constants(dp2.trafo, dp2.pk)
-    if codomain_dimension(tc1) != codomain_dimension(tc2)
+    t = codomain_dimension(transformation(dp1), prior_knowledge(dp1))
+    if t != codomain_dimension(transformation(dp2), prior_knowledge(dp2))
         throw(DimensionMismatch("dimensions of transformed parameters must match"))
     end
-    t = codomain_dimension(tc1)
     # Take a shortcut via D criterion objective, which already gives the average
     # log-determinant of the transformed information matrices, and handles exceptions.
     # Note that the design region is irrelevant for relative efficiency.
@@ -321,9 +365,6 @@ See also the [mathematical background](math.md#Shannon-Information).
 """
 function shannon_information(d::DesignMeasure, dp::DesignProblem, n::Integer)
     dpd = as_doptimality_problem(dp)
-    # this is somewhat ugly, computing all constants is a bit unnecessary
-    t = codomain_dimension(
-        precalculate_trafo_constants(transformation(dp), prior_knowledge(dp)),
-    )
+    t = codomain_dimension(transformation(dp), prior_knowledge(dp))
     return (t / 2) * (log(n) - 1 + log(2 * pi)) + 0.5 * objective(d, dpd)
 end

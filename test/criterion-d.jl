@@ -10,13 +10,13 @@ using LinearAlgebra: Symmetric, diagm, tr
 include("example-compartment.jl")
 
 @testset "criterion-d.jl" begin
-    @testset "criterion_integrand!" begin
+    @testset "criterion_functional!" begin
         # The functional should be log(det(m)) or -(log(det(inv_m))), depending on whether m
         # is passed as already inverted. For singular matrices it should always return -Inf.
         let mreg = [1.0 0.5; 0.5 2.0],
             msng = [1.0 0.5; 0.5 0.25],
-            dc = DOptimality(),
-            ci! = Kirstine.criterion_integrand!
+            dc = DCriterion(),
+            ci! = Kirstine.criterion_functional!
 
             # interpret m as not inverted
             @test ci!(deepcopy(mreg), false, dc) ≈ log(1.75)
@@ -37,7 +37,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -60,7 +60,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = draw_from_prior(1000, 2),
                 transformation = DeltaMethod(Dauc),
@@ -85,7 +85,7 @@ include("example-compartment.jl")
         # matrix for each prior parameter value.
         #
         # We use an example model from Atkinson et al. with a two-point prior.
-        let dc = DOptimality(),
+        let dc = DCriterion(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
             m = TPCModel(; sigma = 1),
@@ -93,14 +93,14 @@ include("example-compartment.jl")
             g1 = TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
             g2 = TPCParameter(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
             pk = PriorSample([g1, g2]),
-            tc = Kirstine.TCIdentity(3), # the codomain dimension is not used in this test
+            trafo = Identity(), # the codomain dimension is not used in this test
             na = FisherMatrix(),
             pgc = Kirstine.gateaux_constants,
-            gc = pgc(dc, a1, m, cp, pk, tc, na)
+            gc = pgc(dc, a1, m, cp, pk, trafo, na)
 
             # Singular designs should raise an exception. It will be caught by the caller.
-            @test_throws "SingularException" pgc(dc, a4, m, cp, pk, tc, na)
-            @test isa(gc, Kirstine.GCDIdentity)
+            @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
+            @test isa(gc, Kirstine.GCPriorSample)
             @test length(gc.A) == 2
             @test length(gc.tr_B) == 2
             # Note: the informationmatrix return value is already wrapped in Symmetric()
@@ -120,7 +120,7 @@ include("example-compartment.jl")
         #
         # We use an example model from Atkinson et al. with a two-point prior
         # and transformation to a 1-dimensional quantity.
-        let dc = DOptimality(),
+        let dc = DCriterion(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
             m = TPCModel(; sigma = 1),
@@ -129,10 +129,10 @@ include("example-compartment.jl")
             g2 = TPCParameter(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
             pk = PriorSample([g1, g2]),
             J = [Dauc(g1), Dauc(g2)],
-            tc = Kirstine.TCDeltaMethod(1, J),
+            trafo = DeltaMethod(Dauc),
             na = FisherMatrix(),
             pgc = Kirstine.gateaux_constants,
-            gc = pgc(dc, a1, m, cp, pk, tc, na),
+            gc = pgc(dc, a1, m, cp, pk, trafo, na),
             # Note: the informationmatrix return value is already wrapped in Symmetric()
             M1 = informationmatrix(a1, m, cp, g1, na),
             M2 = informationmatrix(a1, m, cp, g2, na),
@@ -140,47 +140,13 @@ include("example-compartment.jl")
             B2 = J[2]' * inv(J[2] * inv(M2) * J[2]') * J[2]
 
             # Singular designs should raise an exception. It will be caught by the caller.
-            @test_throws "SingularException" pgc(dc, a4, m, cp, pk, tc, na)
-            @test isa(gc, Kirstine.GCDDeltaMethod)
+            @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
+            @test isa(gc, Kirstine.GCPriorSample)
             @test length(gc.A) == 2
             @test length(gc.tr_B) == 2
             @test Symmetric(gc.A[1]) ≈ inv(M1) * B1 * inv(M1)
             @test Symmetric(gc.A[2]) ≈ inv(M2) * B2 * inv(M2)
             @test all(gc.tr_B .== 1)
-        end
-    end
-
-    @testset "gateaux_integrand" begin
-        # Identity transformation
-        #
-        # This should compute tr(A * B) - r, using only upper triangles from A and B. A is
-        # taken from the GateauxConstants, B is the normalized information matrix
-        # corresponding to the direction. Both matrices have size (r, r). Here we test an
-        # example with r = 2.
-        let A = [2.0 3.0; 0.0 7.0],
-            c = Kirstine.GCDIdentity([A], [2]),
-            B = [0.4 1.0; 0.0 0.5],
-            gi = Kirstine.gateaux_integrand
-
-            @test gi(c, B, 1) == tr(Symmetric(A) * Symmetric(B)) - 2
-            # rule out unintentionally symmetric input
-            @test gi(c, B, 1) != tr(A * B) - 2
-        end
-
-        # DeltaMethod transformation
-        #
-        # This should compute tr(A * B) - t, using only upper triangles from A and B. A is
-        # taken from the GateauxConstants, B is the normalized information matrix
-        # corresponding to the direction. Both matrices have size (r, r). t is the length of
-        # the transformed parameter. Here we test an example with r = 2 and t = 1.
-        let A = [2.0 3.0; 0.0 7.0],
-            c = Kirstine.GCDDeltaMethod([A], [1]),
-            B = [0.4 1.0; 0.0 0.5],
-            gi = Kirstine.gateaux_integrand
-
-            @test gi(c, B, 1) == tr(Symmetric(A) * Symmetric(B)) - 1
-            # rule out unintentionally symmetric input
-            @test gi(c, B, 1) != tr(A * B) - 2
         end
     end
 
@@ -195,7 +161,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -206,7 +172,7 @@ include("example-compartment.jl")
                 region = DesignInterval(:time => [0, 48]),
                 model = TPCModel(; sigma = 1),
                 covariate_parameterization = CopyTime(),
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 normal_approximation = FisherMatrix(),
                 prior_knowledge = PriorSample([
                     TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -219,7 +185,7 @@ include("example-compartment.jl")
             d1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             d1dir = one_point_design.(points(d1))
 
-            @test_throws "one-point design" gateauxderivative(d1, [d1], dpi)
+            @test_throws "one-point directions" gateauxderivative(d1, [d1], dpi)
             @test all(isnan.(gateauxderivative(d0, dir, dpi)))
             @test all(isnan.(gateauxderivative(d0, dir, dpd)))
             @test maximum(gateauxderivative(d1, dir, dpi)) <= 0

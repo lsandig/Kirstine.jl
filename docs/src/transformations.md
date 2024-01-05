@@ -21,11 +21,7 @@ and a scaling factor ``s``.
 The covariate ``\Covariate`` denotes the time in hours.
 
 ```@setup main
-# we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
-function savefig_nothing(plot, filename)
-	savefig(plot, filename)
-	return nothing
-end
+check_results = true
 ```
 
 ```@example main
@@ -38,7 +34,8 @@ tpc = plot(
     yguide = "response",
     label = "μ(time , θ)",
 )
-savefig_nothing(tpc, "transformations-tpc.png") # hide
+savefig(tpc, "transformations-tpc.png") # hide
+nothing # hide
 ```
 
 ![](transformations-tpc.png)
@@ -55,7 +52,6 @@ using Kirstine, Plots, Random, Statistics
 
 @simple_model TPC time
 @simple_parameter TPC a e s
-struct Copy <: CovariateParameterization end
 
 function Kirstine.jacobianmatrix!(jm, m::TPCModel, c::TPCCovariate, p::TPCParameter)
     A = exp(-p.a * c.time)
@@ -65,11 +61,6 @@ function Kirstine.jacobianmatrix!(jm, m::TPCModel, c::TPCCovariate, p::TPCParame
     jm[1, 3] = E - A
     return m
 end
-
-function Kirstine.map_to_covariate!(c::TPCCovariate, dp, m::TPCModel, cp::Copy)
-    c.time = dp[1]
-    return c
-end
 ```
 
 In this vignette we will only look at Bayesian optimal designs
@@ -78,8 +69,7 @@ due to their information matrices becoming singular.
 
 !!! note
     
-    Workarounds like generalized inverses or matrix regularization
-    are currently not supported by `Kirstine.jl`.
+    Workarounds like generalized inverses are not officially supported by `Kirstine.jl`.
 
 For the prior we will use “distribution I” from[^ACHJ93],
 which is constructed from two independent uniform distributions around estimates for ``a`` and ``e``,
@@ -109,8 +99,8 @@ function dp_for_trafo(trafo)
     Random.seed!(4711)
     DesignProblem(
         region = DesignInterval(:time => [0, 48]),
-        criterion = DOptimality(),
-        covariate_parameterization = Copy(),
+        criterion = DCriterion(),
+        covariate_parameterization = JustCopy(:time),
         model = TPCModel(sigma = 1),
         prior_knowledge = draw_from_prior(1000, 2),
         transformation = trafo,
@@ -163,16 +153,26 @@ nothing # hide
 s_id
 ```
 
+```@setup main
+s_id == DesignMeasure(
+ [0.228863250498729] => 0.3333144478760726,
+ [1.4181500168247514] => 0.33329978174892977,
+ [18.520007438612772] => 0.33338577037499756,
+) || !check_results || error("not the expected result\n", s_id)
+```
+
 ```@example main
 gd_id = plot_gateauxderivative(s_id, dp_id)
-savefig_nothing(gd_id, "transformations-gd-id.png") # hide
+savefig(gd_id, "transformations-gd-id.png") # hide
+nothing # hide
 ```
 
 ![](transformations-gd-id.png)
 
 ```@example main
 ef_id = plot_expected_response(s_id, dp_id)
-savefig_nothing(ef_id, "transformations-ef-id.png") # hide
+savefig(ef_id, "transformations-ef-id.png") # hide
+nothing # hide
 ```
 
 ![](transformations-ef-id.png)
@@ -217,16 +217,26 @@ s_auc, r_auc = solve(dp_auc, dms)
 s_auc
 ```
 
+```@setup main
+s_auc == DesignMeasure(
+ [0.24531677720907377] => 0.013165898968091254,
+ [1.499218615533174] => 0.038534397924271095,
+ [18.227704273038025] => 0.9482997031076377,
+) || !check_results || error("not the expected result\n", s_auc)
+```
+
 ```@example main
 gd_auc = plot_gateauxderivative(s_auc, dp_auc)
-savefig_nothing(gd_auc, "transformations-gd-auc.png") # hide
+savefig(gd_auc, "transformations-gd-auc.png") # hide
+nothing # hide
 ```
 
 ![](transformations-gd-auc.png)
 
 ```@example main
 ef_auc = plot_expected_response(s_auc, dp_auc)
-savefig_nothing(ef_auc, "transformations-ef-auc.png") # hide
+savefig(ef_auc, "transformations-ef-auc.png") # hide
+nothing # hide
 ```
 
 ![](transformations-ef-auc.png)
@@ -279,16 +289,26 @@ s_ttm, r_ttm = solve(dp_ttm, dms)
 s_ttm
 ```
 
+```@setup main
+s_ttm == DesignMeasure(
+ [0.1785277717204147] => 0.6022152518991615,
+ [2.4347788334799083] => 0.2985274392389716,
+ [8.778030603264321] => 0.09925730886186684,
+) || !check_results || error("not the expected result\n", s_ttm)
+```
+
 ```@example main
 gd_ttm = plot_gateauxderivative(s_ttm, dp_ttm)
-savefig_nothing(gd_ttm, "transformations-gd-ttm.png") # hide
+savefig(gd_ttm, "transformations-gd-ttm.png") # hide
+nothing # hide
 ```
 
 ![](transformations-gd-ttm.png)
 
 ```@example main
 ef_ttm = plot_expected_response(s_ttm, dp_ttm)
-savefig_nothing(ef_ttm, "transformations-ef-ttm.png") # hide
+savefig(ef_ttm, "transformations-ef-ttm.png") # hide
+nothing # hide
 ```
 
 ![](transformations-ef-ttm.png)
@@ -324,16 +344,26 @@ s_cmax, r_cmax = solve(dp_cmax, dms)
 s_cmax
 ```
 
+```@setup main
+s_cmax == DesignMeasure(
+ [0.3634701770982941] => 0.07255932607971026,
+ [1.14355863427162] => 0.9102152568783713,
+ [20.797213533057352] => 0.01722541704191838,
+) || !check_results || error("not the expected result\n", s_cmax)
+```
+
 ```@example main
 gd_cmax = plot_gateauxderivative(s_cmax, dp_cmax)
-savefig_nothing(gd_cmax, "transformations-gd-cmax.png") # hide
+savefig(gd_cmax, "transformations-gd-cmax.png") # hide
+nothing # hide
 ```
 
 ![](transformations-gd-cmax.png)
 
 ```@example main
 ef_cmax = plot_expected_response(s_cmax, dp_cmax)
-savefig_nothing(ef_cmax, "transformations-ef-cmax.png") # hide
+savefig(ef_cmax, "transformations-ef-cmax.png") # hide
+nothing # hide
 ```
 
 ![](transformations-ef-cmax.png)
@@ -343,7 +373,11 @@ The location of this point makes intuitive sense,
 considering the prior expected time to maximum concentration:
 
 ```@example main
-mean(ttm, dp_cmax.pk.p)
+prior_expected_ttm = mean(ttm, parameters(prior_knowledge(dp_cmax)))
+```
+
+```@setup main
+prior_expected_ttm == 1.0272684144529458 || !check_results || error("not the expected result\n", prior_expected_ttm)
 ```
 
 ## Multivariate Functions
@@ -361,16 +395,26 @@ s_both, r_both = solve(dp_both, dms)
 s_both
 ```
 
+```@setup main
+s_both == DesignMeasure(
+ [0.23663824657919236] => 0.4173416078008837,
+ [1.3894258771295565] => 0.4978247422912806,
+ [18.91391407149987] => 0.0848336499078357,
+) || !check_results || error("not the expected result\n", s_both)
+```
+
 ```@example main
 gd_both = plot_gateauxderivative(s_both, dp_both)
-savefig_nothing(gd_both, "transformations-gd-both.png") # hide
+savefig(gd_both, "transformations-gd-both.png") # hide
+nothing # hide
 ```
 
 ![](transformations-gd-both.png)
 
 ```@example main
 ef_both = plot_expected_response(s_both, dp_both)
-savefig_nothing(ef_both, "transformations-ef-both.png") # hide
+savefig(ef_both, "transformations-ef-both.png") # hide
+nothing # hide
 ```
 
 ![](transformations-ef-both.png)

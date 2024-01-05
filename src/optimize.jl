@@ -40,8 +40,8 @@ struct OptimizationResult{
 end
 
 function optimize(
-    optimizer::Optimizer,
     f, # x<:AbstractPoint -> Float64
+    optimizer::Optimizer,
     prototypes::AbstractVector{<:AbstractPoint},
     constraints::AbstractConstraints;
     trace_state = false,
@@ -63,6 +63,9 @@ function optimize(
     twall = time_end - time_start
     x = maximizer(state)
     fx = maximum(state)
+    if !isfinite(fx)
+        @warn "maximum is not finite" x fx
+    end
     return OptimizationResult(x, fx, t_x, t_fx, t_state, n_eval(state), twall)
 end
 

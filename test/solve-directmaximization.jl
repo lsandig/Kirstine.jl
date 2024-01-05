@@ -3,6 +3,7 @@
 
 module SolveDirectmaximizationTests
 using Test
+using Random: seed!
 using Kirstine
 
 include("example-emax.jl")
@@ -10,7 +11,7 @@ include("example-emax.jl")
 @testset "solve-directmaximization.jl" begin
     @testset "solve_with" begin
         let dp = DesignProblem(;
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 region = DesignInterval(:dose => (0, 10)),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
@@ -18,6 +19,7 @@ include("example-emax.jl")
             ),
             pso = Pso(; iterations = 20, swarmsize = 10),
             # random init, no additional constraints
+            _ = seed!(4711),
             str1 = DirectMaximization(;
                 optimizer = pso,
                 prototype = random_design(region(dp), 3),
@@ -38,8 +40,10 @@ include("example-emax.jl")
                 optimizer = pso,
                 prototype = uniform_design([[0, 1], [1, 0]]),
             ),
+            _ = seed!(124816),
             r1 = Kirstine.solve_with(dp, str1, false),
             # additionally trace optimizer states
+            _ = seed!(13927),
             r2 = Kirstine.solve_with(dp, str2, true),
             design_trace = optimization_result(r2).trace_x,
             lower_dp_vals = map(d -> points(d)[1][1], design_trace),
@@ -69,7 +73,7 @@ include("example-emax.jl")
         # DirectMaximization, but with fixed weights / design points that we know are not
         # optimal, in various combinations
         let dp = DesignProblem(;
-                criterion = DOptimality(),
+                criterion = DCriterion(),
                 region = DesignInterval(:dose => (0, 10)),
                 model = EmaxModel(1),
                 covariate_parameterization = CopyDose(),
@@ -86,6 +90,7 @@ include("example-emax.jl")
                 ),
                 true,
             ),
+            _ = seed!(31415),
             r1 = sws(; fw = [2], fp = [2]),
             r2 = sws(; fw = [2], fp = Int64[]),
             r3 = sws(; fw = Int64[], fp = [2]),

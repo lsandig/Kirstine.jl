@@ -1,11 +1,7 @@
 # A Dose-Time-Response Model
 
 ```@setup main
-# we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
-function savefig_nothing(plot, filename)
-	savefig(plot, filename)
-	return nothing
-end
+check_results = true
 ```
 
 This vignette covers four advanced topics:
@@ -263,7 +259,7 @@ set up the design problem and solve it with direct maximization.
 
 ```@example main
 dp1 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 100), :time => (0, 24)),
     model = DTRMod(sigma = 1, m = 1),
     covariate_parameterization = CopyBoth(),
@@ -277,8 +273,19 @@ st1 = DirectMaximization(
 )
 
 Random.seed!(2468)
-s1, r1 = solve(dp1, st1; minpostime = 1e-3, minposdose = 1e-3, mindist = 1e-2)
+s1, r1 = solve(dp1, st1; minpostime = 1e-3, minposdose = 1e-3, maxdist = 1e-2)
 s1
+```
+
+```@setup main
+s1 == DesignMeasure(
+ [0.0, 0.0] => 0.20053030795126028,
+ [14.310132703488692, 7.9551274923954916] => 0.1981120909448802,
+ [61.493484624092964, 24.0] => 0.07683680630261552,
+ [99.99929278721805, 4.0783147418405] => 0.19747192713878975,
+ [100.0, 0.1730851666925906] => 0.1989417430614362,
+ [100.0, 23.998585546217786] => 0.12810712460101795,
+) || !check_results || error("not the expected result\n", s1)
 ```
 
 For a two-dimensional design region,
@@ -286,7 +293,8 @@ the gateaux derivative is plotted as a heatmap.
 
 ```@example main
 gd1 = plot_gateauxderivative(s1, dp1)
-savefig_nothing(gd1, "dtr-gd1.png") # hide
+savefig(gd1, "dtr-gd1.png") # hide
+nothing # hide
 ```
 
 ![](dtr-gd1.png)
@@ -296,7 +304,8 @@ Additionally the measurement times themselves are indicated on their respective 
 
 ```@example main
 er1 = plot_expected_response(s1, dp1)
-savefig_nothing(er1, "dtr-er1.png") # hide
+savefig(er1, "dtr-er1.png") # hide
+nothing # hide
 ```
 
 ![](dtr-er1.png)
@@ -330,7 +339,7 @@ function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::Fix
 end
 
 dp2 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:time => (0, 24)),
     model = DTRMod(1, 1),
     covariate_parameterization = FixedDose(100),
@@ -348,16 +357,28 @@ s2, r2 = solve(dp2, st2)
 s2
 ```
 
+```@setup main
+s2 == DesignMeasure(
+ [0.0] => 0.19963478041237373,
+ [0.15441476713296678] => 0.20006662802108233,
+ [2.2462632650730114] => 0.20067467321750979,
+ [13.338793671645664] => 0.19962045785683458,
+ [24.0] => 0.20000346049219964,
+) || !check_results || error("not the expected result\n", s2)
+```
+
 ```@example main
 gd2 = plot_gateauxderivative(s2, dp2)
-savefig_nothing(gd2, "dtr-gd2.png") # hide
+savefig(gd2, "dtr-gd2.png") # hide
+nothing # hide
 ```
 
 ![](dtr-gd2.png)
 
 ```@example main
 er2 = plot_expected_response(s2, dp2)
-savefig_nothing(er2, "dtr-er2.png") # hide
+savefig(er2, "dtr-er2.png") # hide
+nothing # hide
 ```
 
 ![](dtr-er2.png)
@@ -388,7 +409,7 @@ function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::Fix
 end
 
 dp3 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 100)),
     model = DTRMod(1, 13), # measurements every two hours
     covariate_parameterization = FixedTimes(0:2:24),
@@ -402,13 +423,22 @@ st3 = DirectMaximization(
 )
 
 Random.seed!(1827)
-s3, r3 = solve(dp3, st3; minweight = 1e-4)
+s3, r3 = solve(dp3, st3; maxweight = 1e-4)
 s3
+```
+
+```@setup main
+s3 == DesignMeasure(
+ [0.0] => 0.1051865637147946,
+ [15.949800420851398] => 0.4847347290784628,
+ [100.0] => 0.41007870720674255,
+) || !check_results || error("not the expected result\n", s3)
 ```
 
 ```@example main
 gd3 = plot_gateauxderivative(s3, dp3)
-savefig_nothing(gd3, "dtr-gd3.png") # hide
+savefig(gd3, "dtr-gd3.png") # hide
+nothing # hide
 ```
 
 ![](dtr-gd3.png)
@@ -417,7 +447,8 @@ Each design point now corresponds to 13 individual measurements.
 
 ```@example main
 er3 = plot_expected_response(s3, dp3)
-savefig_nothing(er3, "dtr-er3.png") # hide
+savefig(er3, "dtr-er3.png") # hide
+nothing # hide
 ```
 
 ![](dtr-er3.png)
@@ -494,7 +525,7 @@ function Kirstine.simplify_unique(
 end
 
 dp4 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 100), :Δt => (0, 2)),
     model = DTRMod(1, 13),
     covariate_parameterization = EquidistantTimes(),
@@ -510,7 +541,18 @@ st4a = DirectMaximization(
 Random.seed!(112358)
 s4a, r4a = solve(dp4, st4a; minposdose = 1e-3)
 gd4a = plot_gateauxderivative(s4a, dp4; legend = :bottomleft)
-savefig_nothing(gd4a, "dtr-gd4a.png") # hide
+savefig(gd4a, "dtr-gd4a.png") # hide
+nothing # hide
+```
+
+```@setup main
+s4a == DesignMeasure(
+ [0.0, 2.0] => 0.11399148304475745,
+ [12.258680316012303, 0.9158234222042569] => 0.1538689805572158,
+ [18.960755545027716, 2.0] => 0.13167810034529936,
+ [99.99958420409529, 0.030724171006199445] => 0.2040522096868161,
+ [100.0, 2.0] => 0.39640922636591136,
+) || !check_results || error("not the expected result\n", s4a)
 ```
 
 ![](dtr-gd4a.png)
@@ -525,7 +567,8 @@ There are several things that could have happened.
 
 ```@example main
 pr4a = plot(r4a)
-savefig_nothing(pr4a, "dtr-pr4a.png") # hide
+savefig(pr4a, "dtr-pr4a.png") # hide
+nothing # hide
 ```
 
 ![](dtr-pr4a.png)
@@ -556,9 +599,10 @@ st4b = Exchange(
 )
 
 Random.seed!(314)
-s4b, r4b = solve(dp4, st4b; minposdose = 1e-3, mindist = 2e-2)
+s4b, r4b = solve(dp4, st4b; minposdose = 1e-3, maxdist = 2e-2)
 pr4b = plot(r4b)
-savefig_nothing(pr4b, "dtr-pr4b.png") # hide
+savefig(pr4b, "dtr-pr4b.png") # hide
+nothing # hide
 ```
 
 ![](dtr-pr4b.png)
@@ -572,16 +616,29 @@ Let's look at the solution.
 s4b
 ```
 
+```@setup main
+s4b == DesignMeasure(
+ [0.0, 2.0] => 0.11595421077160158,
+ [12.095246532862653, 0.9020051699201546] => 0.14653802636943558,
+ [20.275450621575725, 2.0] => 0.1492579919353056,
+ [99.99945513048785, 0.027541600449965585] => 0.1904247835946039,
+ [99.99999999999999, 0.440966353402996] => 0.06161366427151828,
+ [100.0, 2.0] => 0.3362113230575351,
+) || !check_results || error("not the expected result\n", s4b)
+```
+
 ```@example main
 gd4b = plot_gateauxderivative(s4b, dp4; legend = :bottomleft)
-savefig_nothing(gd4b, "dtr-gd4b.png") # hide
+savefig(gd4b, "dtr-gd4b.png") # hide
+nothing # hide
 ```
 
 ![](dtr-gd4b.png)
 
 ```@example main
 er4 = plot_expected_response(s4b, dp4)
-savefig_nothing(er4, "dtr-er4.png") # hide
+savefig(er4, "dtr-er4.png") # hide
+nothing # hide
 ```
 
 ![](dtr-er4.png)
@@ -613,10 +670,14 @@ function Kirstine.map_to_covariate!(
     m::DTRMod,
     cp::LogEquidistantTimes,
 )
+    if m.m < 2
+        error("need at least 2 measurements for LogEquidistantTimes")
+    end
     c.dose = dp[1]
     c.time[1] = 0
-    for j in 2:(m.m)
-        c.time[j] = cp.b^(j - 2) * dp[2]
+    c.time[2] = dp[2]
+    for j in 3:(m.m)
+        c.time[j] = cp.b * c.time[j - 1]
     end
     return c
 end
@@ -650,10 +711,10 @@ function Kirstine.simplify_unique(
 end
 
 dp5 = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     model = DTRMod(1, 13),
     covariate_parameterization = LogEquidistantTimes(sqrt(2)),
-    region = DesignInterval(:dose => (0, 100), :Δt => (0, 24 / sqrt(2)^11)),
+    region = DesignInterval(:dose => (0, 100), :Δt => (0, 24 / 45.25483399593908)),
     prior_knowledge = prior,
 )
 
@@ -664,20 +725,31 @@ st5 = DirectMaximization(
 )
 
 Random.seed!(6283)
-s5, r5 = solve(dp5, st5; mindist = 1e-3, minweight = 1e-3, minposdelta = 1e-3)
+s5, r5 = solve(dp5, st5; maxdist = 1e-3, maxweight = 1e-3, minposdelta = 1e-3)
 s5
+```
+
+```@setup main
+s5 == DesignMeasure(
+ [0.0, 0.5303300858899102] => 0.10958860244868715,
+ [17.56761395230221, 0.5303275816838873] => 0.3992041718670002,
+ [99.99726947723131, 0.011673829992532737] => 0.05224177785883233,
+ [100.0, 0.5303300122682958] => 0.43896544782548025,
+) || !check_results || error("not the expected result\n", s5)
 ```
 
 ```@example main
 gd5 = plot_gateauxderivative(s5, dp5; legend = :bottomleft)
-savefig_nothing(gd5, "dtr-gd5.png") # hide
+savefig(gd5, "dtr-gd5.png") # hide
+nothing # hide
 ```
 
 ![](dtr-gd5.png)
 
 ```@example main
 er5 = plot_expected_response(s5, dp5)
-savefig_nothing(er5, "dtr-er5.png") # hide
+savefig(er5, "dtr-er5.png") # hide
+nothing # hide
 ```
 
 ![](dtr-er5.png)
@@ -690,6 +762,16 @@ under their respective design problems:
 ```@example main
 sol_prob = Iterators.zip([s1, s2, s3, s4b, s5], [dp1, dp2, dp3, dp4, dp5])
 eff = [efficiency(d1, d2, p1, p2) for (d1, p1) in sol_prob, (d2, p2) in sol_prob]
+```
+
+```@setup main
+eff == [
+1.0 1.4850650859043615 0.12650911830389935 0.0929991128162769 0.1016413811354575;
+0.6733711602889304 1.0 0.0851875917794263 0.06262292050293754 0.0684423747485524;
+7.904568567127365 11.738798798177912 1.0 0.735117863938274 0.8034312664427492;
+10.752790749472375 15.96859411807681 1.3603260770220753 1.0 1.0929285028369427;
+9.83851251162457 14.610831428246879 1.2446615432675072 0.9149729350129255 1.0
+] || !check_results || error("not the expected result\n", eff)
 ```
 
 In this matrix, `d1` varies over rows and `d2` varies over columns.

@@ -12,7 +12,6 @@ Markdown.MD("Version $(ver)")
 
 Beta.
 Mostly stable, breaking changes will be mostly cosmetic.
-Documentation is still sparse in some places.
 
 ## Features
 
@@ -29,8 +28,15 @@ Documentation is still sparse in some places.
 
 ## Installation
 
-Kirstine.jl will be registered once it is stable.
-Until then, you can install it with
+Kirstine.jl is in the [General](https://github.com/JuliaRegistries/General) Julia package registry.
+You can install it with
+
+```julia
+Pkg.add("Kirstine")
+```
+
+Alternatively,
+you can get it directly from sourcehut:
 
 ```julia
 Pkg.add(url = "https://git.sr.ht/~lsandig/Kirstine.jl")
@@ -52,6 +58,9 @@ Familiarity with the following topics is required:
   - Julia's [type system](https://docs.julialang.org/en/v1/manual/types/)
     and adding [methods](https://docs.julialang.org/en/v1/manual/methods/)
     for user-defined types.
+
+For a change log,
+see the list of [annotated tags](https://git.sr.ht/%7Elsandig/Kirstine.jl/refs).
 
 ## License
 
@@ -78,13 +87,16 @@ These are different tasks than what Kirstine.jl attempts to do.
 
 ## Contributing
 
-There is a [git repository and issue tracker at sourcehut](https://sr.ht/%7Elsandig/Kirstine.jl/).
+The source code of Kirstine.jl is managed on [sourcehut](https://sr.ht/%7Elsandig/Kirstine.jl/).
 
-If you have already solved design problems with other software packages,
-you can try to replicate your solutions with Kirstine.jl.
-I'd be grateful to hear about your results,
-especially if they differ from what you expect.
-Ditto if you think Kirstine.jl is missing some crucial feature.
+Please post usage questions and general discussion on the [kirstine-users](https://lists.sr.ht/%7Elsandig/kirstine-users) mailing list.
+
+Only bug reports should be filed on the [issue tracker](https://todo.sr.ht/%7Elsandig/Kirstine.jl/).
+
+Patches are welcome and should be submitted via [`git send-email`](https://git-send-email.io)
+to the [kirstine-devel](https://lists.sr.ht/%7Elsandig/kirstine-devel) mailing list.
+Please make sure that your patch does not break any existing tests
+and includes new tests for any functionality it adds.
 
 [^FL13]: Valerii V. Fedorov and Sergei L. Leonov (2013). Optimal design for nonlinear response models. CRC Press. [doi:10.1201/b15054](https://dx.doi.org/10.1201/b15054)
 [^CV95]: Kathryn Chaloner and Isabella Verdinelli (1995). Bayesian experimental design: a review. Statistical Science, 10(3), 273–304. [doi:10.1214/ss/1177009939](http://dx.doi.org/10.1214/ss/1177009939)

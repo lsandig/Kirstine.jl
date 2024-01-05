@@ -1,11 +1,7 @@
 # New Optimizer
 
 ```@setup main
-# we can't do the `savefig(); nothing # hide` trick when using JuliaFormatter
-function savefig_nothing(plot, filename)
-	savefig(plot, filename)
-	return nothing
-end
+check_results = true
 ```
 
 Kirstine.jl comes with a simple particle swarm optimizer.
@@ -508,23 +504,16 @@ function Kirstine.jacobianmatrix!(
     return jm
 end
 
-struct CopyDose <: CovariateParameterization end
-
-function Kirstine.map_to_covariate!(c::SigEmaxCovariate, dp, m::SigEmaxModel, cp::CopyDose)
-    c.dose = dp[1]
-    return c
-end
-
 prior = PriorSample(
     [SigEmaxParameter(e0 = 1, emax = 2, ed50 = 0.4, h = h) for h in 1:4],
     [0.1, 0.3, 0.4, 0.2],
 )
 
 dp = DesignProblem(
-    criterion = DOptimality(),
+    criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = CopyDose(),
+    covariate_parameterization = JustCopy(:dose),
     prior_knowledge = prior,
 )
 
@@ -545,9 +534,20 @@ strategy = DirectMaximization(
 )
 
 Random.seed!(31415)
-s, r = solve(dp, strategy, minweight = 1e-3, mindist = 1e-2, trace_state = true)
+s, r = solve(dp, strategy, maxweight = 1e-3, maxdist = 1e-2, trace_state = true)
 gd = plot_gateauxderivative(s, dp)
-savefig_nothing(gd, "extend-optimizer-gd.png") # hide
+savefig(gd, "extend-optimizer-gd.png") # hide
+nothing # hide
+```
+
+```@setup main
+s == DesignMeasure(
+ [0.0] => 0.1766174833331303,
+ [0.04349194595268831] => 0.09539535847442634,
+ [0.25624564723703674] => 0.24020288117533006,
+ [0.49550214188659486] => 0.23921125661155682,
+ [1.0] => 0.24857302040555657,
+) || !check_results || error("not the expected result\n", s)
 ```
 
 ![](extend-optimizer-gd.png)
@@ -559,7 +559,8 @@ dia = plot(
     plot(n_emp; xguide = "iteration", yguide = "no. of empires", legend = nothing),
     layout = (2, 1),
 )
-savefig_nothing(dia, "extend-optimizer-dia.png") # hide
+savefig(dia, "extend-optimizer-dia.png") # hide
+nothing # hide
 ```
 
 ![](extend-optimizer-dia.png)
