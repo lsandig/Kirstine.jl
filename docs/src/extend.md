@@ -19,5 +19,7 @@ The following pages show how to implement custom versions of the following objec
     Writing extensions necessarily involves working with non-exported functions.
     In addition to reading the vignettes linked above,
     it is recommended to also read the relevant parts of [the package sources](https://git.sr.ht/%7Elsandig/Kirstine.jl/tree/main/item/src/).
-    While the public API will be kept stable between minor releases,
-    breaking changes to the internals can occur.
+    While the [public API](api.md) will be kept stable between minor releases after v1.0,
+    breaking changes can occur in the internals.
+    If you need to extend Kirstine.jl for your work,
+    consider setting an explicit version in your `Project.toml`.
