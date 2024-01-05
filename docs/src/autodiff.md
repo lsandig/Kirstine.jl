@@ -226,7 +226,7 @@ s3 == s1
 ## Transformations
 
 A place where autodiff does not incur a noticeable performance hit
-is the computation of a [`Transformation`](@ref)s Jacobian matrix
+is the computation of a [`Transformation`](@ref)'s Jacobian matrix
 at the parameter values in the prior sample,
 since these are computed only once for a design problem.
 
@@ -236,7 +236,7 @@ lets try to find a design that is optimal for estimating
 i.e. the concentration such that
 
 ```math
-\MeanFunction(\mathrm{ED}_{ρ},\Parameter) = E_0 + \frac{ρ}{100} E_{\max}.
+\MeanFunction(\mathrm{ED}_{ρ},\Parameter) = E_0 + \frac{ρ}{100} E_{\max{}}.
 ```
 
 While it is relatively easy to find that

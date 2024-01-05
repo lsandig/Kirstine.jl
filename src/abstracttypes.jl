@@ -40,10 +40,10 @@ abstract type CovariateParameterization end
 
 ## abstract types for package code ##
 
-"""
+@doc raw"""
     DesignRegion{N}
 
-Supertype for design regions. A design region is a compact subset of ``\\Reals^N``.
+Supertype for design regions. A design region is a compact subset of ``\Reals^N``.
 
 The design points of a [`DesignMeasure`](@ref) are taken from this set.
 

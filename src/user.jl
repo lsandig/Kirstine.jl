@@ -3,15 +3,15 @@
 
 ## function stubs for user methods ##
 
-"""
+@doc raw"""
     Kirstine.unit_length(m::M) -> Integer
 
 Return the length of one unit of observation.
 
 # Implementation
 
-For a user type `M <: Model` this should return the length ``\\DimUnit``
-of one unit of observation ``\\Unit``.
+For a user type `M <: Model` this should return the length ``\DimUnit``
+of one unit of observation ``\Unit``.
 
 See also the [mathematical background](math.md#Design-Problems).
 """
