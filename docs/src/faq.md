@@ -26,6 +26,31 @@ You can find a longer [biography at the internet archive](https://web.archive.or
 
 See the [contributing section](index.md#Contributing) on the main page.
 
+Further development of Kirstine.jl will focus on the following topics.
+Feedback, ideas, and discussion on them are highly appreciated.
+
+  - *Abstract Integration.*
+    Investigate whether the internals can reworked
+    to support additional numerical integration methods like HCubature.
+  - *Benchmark.*
+    How does Kirstine.jl compare to other
+    [experimental design packages](https://cran.r-project.org/view=ExperimentalDesign)?
+    This should take into account
+    that they use different optimization algorithms.
+  - *Composed Design Problems.*
+    Figure out an elegant way to support more abstract design problems
+    that are themselves built from several concrete design problems,
+    e.g. for compound objectives or two-stage design.
+  - *Diagnostics.*
+    Plots for high- and low-level optimizers.
+  - *Examples Repository.*
+    Collect further usage examples with more complicated models
+    and reproduce already published results.
+  - *Usability Improvements.*
+    Improve the user interface
+    whenever this is possible without adding too much internal complexity
+    or dependencies on packages outside the standard library.
+
 ## Supported Design Problems
 
 ### Can I use other regression models?
