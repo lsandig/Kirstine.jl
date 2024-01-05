@@ -12,10 +12,10 @@ dimension(dr::DesignRegion{N}) where N = N
 
 ## concrete design regions and constraints for optimization ##
 
-"""
+@doc raw"""
     DesignInterval{N} <: DesignRegion{N}
 
-A (hyper)rectangular subset of ``\\Reals^N``.
+A (hyper)rectangular subset of ``\Reals^N``.
 
 See also [`lowerbound`](@ref), [`upperbound`](@ref), [`dimnames`](@ref).
 """
