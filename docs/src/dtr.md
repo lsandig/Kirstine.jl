@@ -670,10 +670,14 @@ function Kirstine.map_to_covariate!(
     m::DTRMod,
     cp::LogEquidistantTimes,
 )
+    if m.m < 2
+        error("need at least 2 measurements for LogEquidistantTimes")
+    end
     c.dose = dp[1]
     c.time[1] = 0
-    for j in 2:(m.m)
-        c.time[j] = cp.b^(j - 2) * dp[2]
+    c.time[2] = dp[2]
+    for j in 3:(m.m)
+        c.time[j] = cp.b * c.time[j - 1]
     end
     return c
 end
@@ -710,7 +714,7 @@ dp5 = DesignProblem(
     criterion = DCriterion(),
     model = DTRMod(1, 13),
     covariate_parameterization = LogEquidistantTimes(sqrt(2)),
-    region = DesignInterval(:dose => (0, 100), :Δt => (0, 24 / sqrt(2)^11)),
+    region = DesignInterval(:dose => (0, 100), :Δt => (0, 24 / 45.25483399593908)),
     prior_knowledge = prior,
 )
 
@@ -762,11 +766,11 @@ eff = [efficiency(d1, d2, p1, p2) for (d1, p1) in sol_prob, (d2, p2) in sol_prob
 
 ```@setup main
 eff == [
-1.0 1.4850650859043615 0.12650911830389935 0.0929991128162769 0.1016413811354574;
-0.6733711602889304 1.0 0.0851875917794263 0.06262292050293754 0.06844237474855235;
-7.904568567127365 11.738798798177912 1.0 0.735117863938274 0.8034312664427489;
-10.752790749472375 15.96859411807681 1.3603260770220753 1.0 1.0929285028369422;
-9.838512511624579 14.610831428246891 1.2446615432675077 0.914972935012926 1.0
+1.0 1.4850650859043615 0.12650911830389935 0.0929991128162769 0.1016413811354575;
+0.6733711602889304 1.0 0.0851875917794263 0.06262292050293754 0.0684423747485524;
+7.904568567127365 11.738798798177912 1.0 0.735117863938274 0.8034312664427492;
+10.752790749472375 15.96859411807681 1.3603260770220753 1.0 1.0929285028369427;
+9.83851251162457 14.610831428246879 1.2446615432675072 0.9149729350129255 1.0
 ] || !check_results || error("not the expected result\n", eff)
 ```
 
