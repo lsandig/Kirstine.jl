@@ -160,7 +160,7 @@ nothing # hide
 
 A design will then be a discrete probability measure with atoms (design points) from `dr`,
 and a design point is represented by a `Vector{Float64}`.
-In our simple model, these vector have length `1`.
+In our simple model, these vectors have length `1`.
 
 Finally, we need to specify how a design point maps to a `SigEmaxCovariate`.
 Here, the design region is simply the interval of possible doses.

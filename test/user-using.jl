@@ -7,7 +7,7 @@ using Kirstine
 
 include("example-testmod.jl")
 
-@testset "user.jl (import)" begin
+@testset "user.jl (using)" begin
     @testset "simple_model" begin
         @test_throws "no covariate field names" @macroexpand(@simple_model(Foo))
 

@@ -76,12 +76,12 @@ function trafo_constants(trafo::DeltaMethod, pk::PriorSample)
     jm = [trafo.jacobian_matrix(p) for p in parameters(pk)]
     r = parameter_dimension(pk)
     if any(j -> size(j) != size(jm[1]), jm)
-        throw(DimensionMismatch("trafo jacobians must be identical in size"))
+        throw(DimensionMismatch("trafo Jacobians must be identical in size"))
     end
     # We know all elements of jm have identical sizes, so checking the first is enough
     ncol = size(jm[1], 2)
     if ncol != r
-        throw(DimensionMismatch("trafo jacobian must have $(r) columns, got $(ncol)"))
+        throw(DimensionMismatch("trafo Jacobian must have $(r) columns, got $(ncol)"))
     end
     if size(jm[1], 1) > size(jm[1], 2)
         @warn "trafo Jacobians have more rows than cols, infomatrices will be singular"

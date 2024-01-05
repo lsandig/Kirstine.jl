@@ -216,7 +216,7 @@ function objective!(w::Workspaces, d::DesignMeasure, dp::DesignProblem, tc::Traf
         return acc
     catch e
         if isa(e, PosDefException) || isa(e, SingularException)
-            return (-Inf)
+            return -Inf
         else
             rethrow(e)
         end

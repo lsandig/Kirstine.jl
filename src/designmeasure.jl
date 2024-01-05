@@ -436,7 +436,7 @@ i.e. only `0 < maxdist < sqrt(N)` make sense for a design region of dimension `N
 The following two steps are repeated until all points are more than `maxdist` apart:
 
  1. All pairwise euclidean distances are calculated.
- 2. The two points closest to each other are averaged with their relative weights
+ 2. The two points closest to each other are averaged with their relative weights.
 
 Finally the design points are scaled and shifted back into the original design region.
 """

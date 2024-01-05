@@ -210,7 +210,7 @@ By default, `markersize` indicates the design weights.
 
 !!! note
 
-    Currently only implemented for 1- and 2-dimensional [`DesignInterval`](@ref)s.
+    Currently only implemented for 1- and 2-dimensional [`DesignRegion`](@ref)s.
 """
 function plot_gateauxderivative(d::DesignMeasure, dp::DesignProblem; kw...)
     plt_gd = RecipesBase.plot(DerivativePlot(d, dp); kw...)

@@ -48,8 +48,6 @@ function implied_covariates(d, m, cp)
     return cs
 end
 
-## model and criterion agnostic objective and gateaux derivative ##
-
 function update_covariates!(
     c::AbstractVector{<:Covariate},
     d::DesignMeasure,
