@@ -266,6 +266,19 @@ nothing # hide
 
 ![](api-pb.png)
 
+Since the design points are plotted in the given order,
+large points may be plotted over small ones.
+Unfortunately, the z-order of points can not be set independently in Plots.jl.
+Possible workarounds are sorting the points by decreasing weight before plotting,
+or choosing an unfilled marker shape.
+
+```julia
+d = DesignMeasure([0 1 1.01 2], [0.1, 0.1, 0.7, 0.1])
+plot(d) # point at 1 not visible
+plot(sort_weights(d; rev = true)) # point at 1 visible, but legend re-ordered
+plot(d; markershape = :+) # all visible, but colors harder to distinguish
+```
+
 ```@docs
 plot_gateauxderivative
 plot_expected_function
