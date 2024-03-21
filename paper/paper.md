@@ -31,7 +31,7 @@ Accounting here for a full distribution of parameter values
 produces designs
 that are more robust
 than designs for a single best guess.
-To help computing such designs efficiently for general nonlinear regression models,
+To help compute such designs efficiently for general nonlinear regression models,
 we propose the `Julia` [@bezanson-2017-julia] package `Kirstine.jl`.
 
 # Mathematical Background
@@ -64,11 +64,14 @@ Since $\mathrm{M}(\xi, \theta)$ still depends on the unknown $\theta$,
 we either plug in a best guess $\theta_0$
 and obtain a _locally optimal_ design problem,
 or we try to find a _Bayesian optimal_ design
-that maximizes the average of $\phi$ with respect to a prior distribution [@chaloner-1995-bayes-exper-desig].
+that maximizes the average of $\phi$ with respect to a prior distribution with density $p : \Theta \to [0, \infty)$ [@chaloner-1995-bayes-exper-desig].
 Having obtained a candidate design $\xi^*$,
 we then apply an equivalence theorem from infinite-dimensional convex analysis
 to verify
 that the design $\xi^*$ is indeed optimal.
+The setup above can be generalized to designs
+that are optimal for estimating a transformed $T(\theta)$,
+or to models where $\Sigma$ also depends on $x$.
 
 To find a candidate design in practice,
 we must make three simplifications.
@@ -81,9 +84,8 @@ $$
 \frac{1}{S} \sum_{s=1}^{S} \phi(\mathrm{M}(\xi, \theta^{(s)}))
 $$
 is a versatile method for that
-because we can use it with a sample
-$\theta^{(1)},\dots,\theta^{(S)}$, $S\in\mathbb{N}$
-from an arbitrary distribution with density $p(\theta)$.
+because we can use it with any $p$ from which we can draw a sample
+$\theta^{(1)},\dots,\theta^{(S)}$, $S\in\mathbb{N}$.
 Next,
 we reduce the search space from all probability measures on $X$
 to the subset of those
@@ -106,15 +108,18 @@ Among the `R` packages [on CRAN](https://cran.r-project.org/view=ExperimentalDes
 only four deal with nonlinear regression models,
 and all of them have to make a tradeoff between speed and flexibility.
 With MC integration,
-thousands of information matrices have to be computed for one evaluation of the objective function.
-These matrix operations are a performance bottleneck,
-since function arguments in `R` are passed by value.
+thousands of information matrices,
+each built from $K$ Jacobian matrices $\mathrm{D}_{\theta}\mu$,
+have to be computed for one evaluation of the objective function.
+In `R`,
+these matrix-valued functions are a performance bottleneck
+since each call has to allocate new matrix objects.
 To avoid the memory overhead,
 package authors can implement internals in `C`
 and pass around pointers to pre-allocated matrices.
 However,
 this requires the users to be proficient in `C`
-in order to supply the Jacobian matrices $\mathrm{D}_{\theta}\mu$ of their models.
+in order to supply the Jacobian matrices of their models.
 Consequently,
 packages either just accept the slowdown
 [@masoudi-2020-icaod],
@@ -136,6 +141,7 @@ posterior transformations of $\theta$ via the Delta method,
 box-shaped design regions of arbitrary dimension,
 particle swarm optimization [@kennedy-1995-partic],
 and a variant of Fedorov's coordinate exchange algorithm [@yang-2013-optim-desig].
+Plotting functions for checking the equivalence theorem are also provided.
 Locally optimal design is supported implicitly.
 Since user-defined `Julia` code does not inherently incur performance penalties,
 specific regression models are not supplied.
