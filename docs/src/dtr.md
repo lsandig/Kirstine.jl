@@ -52,9 +52,9 @@ c(t, a, e)                                            &= \frac{D}{1-e/a}(\exp(-e
 \mathrm{E}_{\max{}}(c, e_0, e_{\max{}}, \mathrm{EC}_{50}) &= e_0 + \frac{ce_{\max{}}}{\mathrm{EC}_{50} + c} \\
 \MeanFunction((D, t_1,…,t_{\DimUnit}), θ)             &=
 \begin{bmatrix}
-\mathrm{E}_{\max{}}(C(t_1, a, e), e_0, e_{\max{}}, \mathrm{EC}_{50})\\
+\mathrm{E}_{\max{}}(c(t_1, a, e), e_0, e_{\max{}}, \mathrm{EC}_{50})\\
 … \\
-\mathrm{E}_{\max{}}(C(t_{\DimUnit}, a, e), e_0, e_{\max{}}, \mathrm{EC}_{50})\\
+\mathrm{E}_{\max{}}(c(t_{\DimUnit}, a, e), e_0, e_{\max{}}, \mathrm{EC}_{50})\\
 \end{bmatrix}
 \end{aligned}
 ```
