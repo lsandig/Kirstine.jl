@@ -110,11 +110,18 @@ using Kirstine
 The model parameter ``\Parameter`` is just a vector with no additional structure,
 which is why we can use the helper macro [`@simple_parameter`](@ref)
 to define a parameter type `SigEmaxParameter`
-with the fields fields `e0`, `emax`, `ed50`, and `h`.
+with the `Float64` fields `e0`, `emax`, `ed50`, and `h`.
 
 ```@example main
 @simple_parameter SigEmax e0 emax ed50 h
 ```
+
+(The [`@simple_model`](@ref) and [`@simple_parameter`](@ref) macros also set up methods for a few helper functions
+that dispatch on these newly defined types.
+The details are in the macros' docstrings and the [api docs](api.md#Nonlinear-Regression-Models).
+They are not relevant for this tutorial,
+but you should look them up when you need to implement a more complex model,
+like the one in the [dose-dime-response example](dtr.md).)
 
 Next we implement the Jacobian matrix.
 We do this by defining a method for `Kirstine.jacobianmatrix!`

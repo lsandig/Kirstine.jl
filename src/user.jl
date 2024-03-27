@@ -246,6 +246,8 @@ Generate code for defining a [`NonlinearRegression`](@ref) model, a correspondin
 [`Covariate`](@ref), and helper functions for a 1-dimensional unit of observation
 with constant measurement variance.
 
+This macro will define the two types `\$(name)Model` and `\$(name)Covariate`,
+hence `name` should start with a capital letter.
 The model constructor will have the measurement standard deviation `sigma` as a mandatory
 keyword argument.
 
@@ -338,8 +340,10 @@ end
 Generate code for defining a subtype of [`Parameter`](@ref) with the given name and fields,
 and define its dimension as `length(field_names)`.
 
-A type defined this way has a keyword constructor.
-All fields will have type `Float64`.
+This macro will define the type `\$(name)Parameter`,
+hence `name` should start with a capital letter.
+The type will have a keyword constructor.
+All fields will have the type `Float64`.
 
 # Examples
 
