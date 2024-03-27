@@ -40,10 +40,10 @@ and ``h > 0`` controls the steepness of the increasing (or decreasing) part of t
 
 ```@example main
 using Plots
-θ = (e0 = 1, emax = 2, ed50 = 4, h = 5)
+θ = (e0 = 1, emax = 2, ed50 = 0.4, h = 5)
 pse = plot(
     x -> θ.e0 + θ.emax * x^θ.h / (θ.ed50^θ.h + x^θ.h);
-    xlims = (0, 10),
+    xlims = (0, 1),
     xguide = "dose",
     yguide = "response",
     label = "μ(dose, θ)",
