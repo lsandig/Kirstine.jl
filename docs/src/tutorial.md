@@ -149,6 +149,9 @@ function Kirstine.jacobianmatrix!(
 end
 ```
 
+Note that for defining the design problem we do _not_ need to implement the mean function $\MeanFunction$ itself,
+but only its Jacobian matrix $\TotalDiff\MeanFunction$ with respect to $\Parameter$.
+
 !!! note
     
     The `jacobianmatrix!` function is the main place for achieving efficiency gains.
