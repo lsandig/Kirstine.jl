@@ -62,6 +62,8 @@ Familiarity with the following topics is required:
 For a change log,
 see the list of [annotated tags](https://git.sr.ht/%7Elsandig/Kirstine.jl/refs).
 
+There is also a separate repository with [additional examples](https://git.sr.ht/~lsandig/kirstine-examples).
+
 ## License
 
 Kirstine.jl is free and open source software.

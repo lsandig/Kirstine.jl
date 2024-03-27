@@ -55,6 +55,8 @@ To get started, read the [tutorial](https://lsandig.srht.site/Kirstine.jl/tutori
 For a change log,
 see the list of [annotated tags][change-url].
 
+There is also a separate repository with [additional examples](https://git.sr.ht/~lsandig/kirstine-examples).
+
 ## License
 
 Kirstine.jl is free and open source software.
