@@ -77,7 +77,7 @@ math_macros = Dict(
     raw"\PriorDensity" => raw"p",
     raw"\RelEff" => raw"\operatorname{RelEff}",
     raw"\Sensitivity" => raw"φ",
-    raw"\TNIMatrix" => raw"\operatorname{M}_T",
+    raw"\TNIMatrix" => raw"\operatorname{Q}",
     raw"\Trace" => raw"\operatorname{tr}",
     raw"\Transformation" => raw"T",
     # Distributions

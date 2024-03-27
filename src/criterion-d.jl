@@ -14,7 +14,7 @@
 #
 # For the DeltaMethod trafo we precompute
 #
-#       A(ζ,θ) = M(ζ,θ)^{-1} DT'(θ) M_T(ζ,θ) DT(θ) M(ζ,θ)^{-1}
+#       A(ζ,θ) = M(ζ,θ)^{-1} DT'(θ) Q(ζ,θ) DT(θ) M(ζ,θ)^{-1}
 #   tr[B(ζ,θ)] = t
 
 @doc raw"""
@@ -72,13 +72,13 @@ function gateaux_constants(
 
     # Note that A will be dense.
     A = map(iim, tc.jm) do iM, DT
-        # compute (M_T(ζ,θ))^{-1} from M(ζ,θ)^{-1}.
+        # compute (Q(ζ,θ))^{-1} from M(ζ,θ)^{-1}.
         # since typeof(trafo) == DeltaMethod, we know that the result will be inverted
         nw.r_x_r .= iM
         nw.r_is_inv = true
         apply_transformation!(nw, trafo, DT)
-        # Now, nw.t_x_t contains the upper triangle of (M_T(ζ,θ))^{-1}.
-        # Instead of an explicit inversion, we solve (M_T(ζ,θ))^{-1} X = DT for X.
+        # Now, nw.t_x_t contains the upper triangle of (Q(ζ,θ))^{-1}.
+        # Instead of an explicit inversion, we solve (Q(ζ,θ))^{-1} X = DT for X.
         C = DT' * (Symmetric(nw.t_x_t) \ DT)
         return iM * C * iM
     end
