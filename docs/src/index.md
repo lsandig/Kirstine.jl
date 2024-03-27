@@ -70,20 +70,23 @@ and the documentation under GFDL-1.3 or later.
 
 ## Rationale
 
-Why another package for optimal design?
-Currently, `R` packages for design with nonlinear regression have to make a compromise between flexibility
-(allow arbitrary models written in `R`)
-and execution speed
-(implement only a few models in `C`).
-In Julia, we can write both concise high-level code and efficient low-level code in the same language.
-This way,
-Kirstine.jl attempts to provide applied statisticians with a tool
-for efficiently finding designs for arbitrarily complex nonlinear regression models.
+Why yet another package for optimal design?
 
-Note that the `Julia` package [ExperimentalDesign.jl](https://github.com/phrb/ExperimentalDesign.jl)
-and most of the [design packages on CRAN](https://cran.r-project.org/view=ExperimentalDesign)
-are for finding block, factorial, or response-surface designs.
-These are different tasks than what Kirstine.jl attempts to do.
+In `R`, there is already the [ICAOD](https://cran.r-project.org/package=ICAOD) package
+for finding optimal designs in any model
+of which you can implement the Fisher information matrix.
+However,
+it is not as efficient as it could be
+and the code base is hard to extend for more complicated design problems.
+There are also various other packages (e.g., [DoseFinding](https://cran.r-project.org/package=DoseFinding) or [PopED](https://cran.r-project.org/package=PopED))
+for optimal design with special criteria or special kinds of nonlinear regression models.
+In `Julia`, there is already [ExperimentalDesign.jl](https://github.com/phrb/ExperimentalDesign.jl)
+for block, factorial and response-surface designs in linear regression/ANOVA and polynomial regression models.
+
+Kirstine.jl is an attempt to provide applied statisticians
+with a `Julia` package for optimal design in arbitrary nonlinear regression models.
+Its development goals are speed and modularity,
+as well as a small, stable and well-documented code base.
 
 ## Contributing
 
