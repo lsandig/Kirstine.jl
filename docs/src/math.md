@@ -435,6 +435,8 @@ The _approximate expected posterior Shannon information_ for an experiment with 
 and a sample size of ``\SampleSize`` is
 
 ```math
+\ShannonInformation(\DesignMeasure, \SampleSize)
+=
 \frac{\DimTransformedParameter}{2}\log(\SampleSize)
 - \frac{\DimTransformedParameter}{2}(1 + \log(2π))
 + \frac{1}{2} \IntD{\ParameterSet}{
@@ -448,6 +450,13 @@ and a sample size of ``\SampleSize`` is
 Consider two experiments with design measures ``\DesignMeasure_1`` and ``\DesignMeasure_2``,
 and samples sizes ``\SampleSize^{(1)}`` and ``\SampleSize^{(2)}``.
 Equating their approximate expected posterior Shannon information
+
+```math
+\ShannonInformation(\DesignMeasure_1, \SampleSize^{(1)})
+=
+\ShannonInformation(\DesignMeasure_2, \SampleSize^{(2)})
+```
+
 and solving for the ratio of sample sizes yields
 
 ```math
