@@ -45,7 +45,7 @@ math_macros = Dict(
     raw"\ScalarUnitVariance" => raw"σ^2",
     raw"\UnitCovariance" => raw"Σ",
     # Sets
-    raw"\AllDesignMeasures" => raw"Δ",
+    raw"\AllDesignMeasures" => raw"\mathcal{Z}",
     raw"\CovariateSet" => raw"X",
     raw"\DesignRegion" => raw"Z",
     raw"\IndexSet" => raw"I",
@@ -64,7 +64,7 @@ math_macros = Dict(
     raw"\Unit" => raw"y",
     # Functions
     raw"\AverageFisherMatrix" => raw"\operatorname{\bar{F}}",
-    raw"\CovariateParameterization" => raw"C",
+    raw"\CovariateParameterization" => raw"V",
     raw"\DesignCriterion" => raw"Ψ",
     raw"\Expit" => raw"\operatorname{expit}",
     raw"\FisherMatrix" => raw"\operatorname{F}",
@@ -86,7 +86,7 @@ math_macros = Dict(
     raw"\DiracDist" => raw"\operatorname{Dirac}",
     raw"\MvNormDist" => raw"\operatorname{MvNorm}",
     # Miscellaneous
-    raw"\Covariance" => raw"ℂ",
+    raw"\Covariance" => raw"\operatorname{Cov}",
     raw"\Expectation" => raw"𝔼",
     raw"\Hessian" => raw"\operatorname{H\!}",
     raw"\Int" => raw"∫_{#1}#2\operatorname{d}\!#3",
