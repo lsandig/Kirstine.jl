@@ -7,8 +7,8 @@ This page documents the notation for `Kirstine.jl`.
 
   - The set of ``a×a`` symmetric non-negative definite matrices is denoted ``\SNNDMatrices{a}``.
 
-  - The total derivative / Jacobian matrix operator is denoted ``\TotalDiff``.
-  - The Hessian matrix operator is denoted ``\Hessian``.
+  - The total derivative / Jacobian matrix operator is denoted ``\TotalDiff{}``.
+  - The Hessian matrix operator is denoted ``\Hessian{}``.
   - The prime symbol ``(·)'`` denotes the transpose of a matrix, not a first derivative.
   - The matrix-valued derivative
     ``\MatDeriv{φ}{A}{·}``
@@ -173,7 +173,7 @@ over the model's Fisher information matrix
 - \Expectation[\Hessian\LogLikelihood(\Unit,\Covariate,\Parameter)\mid\Parameter]
 ```
 
-where ``\Hessian`` is the Hessian matrix with respect to ``\Parameter``,
+where ``\Hessian{}`` is the Hessian matrix with respect to ``\Parameter``,
 and the expectation is taken with respect to ``\Unit``.
 With the log-likelihood for nonlinear regression
 
