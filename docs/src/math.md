@@ -129,61 +129,28 @@ The set ``\AllDesignMeasures`` denotes the set of all design measures on (some s
 
 ## Objective Function
 
-The following function is to be maximized over the set ``\AllDesignMeasures`` of all design measures:
-
-```math
-\Objective(\DesignMeasure) = \IntD{\ParameterSet}{\DesignCriterion(\TNIMatrix(\DesignMeasure, \Parameter))}{\PriorDensity(\Parameter)}{\Parameter}
-```
-
-Here, ``\TNIMatrix`` denotes the normalized information matrix for ``\Transformation(\Parameter)``,
-
-```math
-\TNIMatrix(\DesignMeasure, \Parameter)
-=
-\bigl[
- (\TotalDiff\Transformation(\Parameter))
-  \NIMatrix^{-1}(\DesignMeasure, \Parameter)
- (\TotalDiff\Transformation(\Parameter))'
-\bigr]^{-1},
-```
-
-and ``\TotalDiff\Transformation`` denotes the Jacobian matrix of the posterior transformation ``\Transformation``.
-
-It is obtained from the normalized information matrix for ``\Parameter``
-by applying multivariate delta method to the underlying normal approximation.
-
-The normalized information matrix for the original parameter ``\Parameter``
-is given by the average
-
-```math
-\NIMatrix(\DesignMeasure, \Parameter)
-=
-\AverageFisherMatrix(\DesignMeasure, \Parameter)
-=
-\IntM{\DesignRegion}{
- \FisherMatrix(\CovariateParameterization(\DesignPoint), \Parameter)
-}{\DesignMeasure}{\DesignPoint},
-```
-
-over the model's Fisher information matrix
+To construct the objective function,
+we first obtain the the Fisher information matrix
+from the expected Hessian matrix of the statistical model's log-likelihood
 
 ```math
 \FisherMatrix(\Covariate, \Parameter)
 =
-- \Expectation[\Hessian\LogLikelihood(\Unit,\Covariate,\Parameter)\mid\Parameter]
+- \Expectation[\Hessian\LogLikelihood(\Unit,\Covariate,\Parameter)\mid\Parameter].
 ```
 
-where ``\Hessian{}`` is the Hessian matrix with respect to ``\Parameter``,
+Here, ``\Hessian{}`` is the Hessian matrix with respect to ``\Parameter``,
 and the expectation is taken with respect to ``\Unit``.
-With the log-likelihood for nonlinear regression
+
+In case of our nonlinear regression model the log-likelihood is
 
 ```math
 \LogLikelihood(\Unit,\Covariate,\Parameter)
 =
-\log\MvNormDist(\Unit\mid\MeanFunction(\Covariate,\Parameter), \UnitCovariance(\Covariate))
+\log\MvNormDist(\Unit\mid\MeanFunction(\Covariate,\Parameter), \UnitCovariance(\Covariate)),
 ```
 
-the Fisher information matrix turns out to be
+so we obtain the Fisher information matrix
 
 ```math
 \FisherMatrix(\Covariate, \Parameter)
@@ -195,6 +162,57 @@ the Fisher information matrix turns out to be
 
 where ``\TotalDiff\MeanFunction`` denotes the Jacobian matrix of the mean function ``\MeanFunction``
 with respect to ``\Parameter``.
+
+!!! note
+    
+    Only ``\FisherMatrix(\Covariate, \Parameter)`` is specific to the statistical model,
+    the remainder of the setup stays the same for any kind of regression.
+    See the extension vignettes for a [logistic regression example](extend-model.md).
+
+Next, we average the Fisher information matrix with respect to a design measure ``\DesignMeasure``
+to obtain the _normalized information matrix_ for the parameter ``\Parameter``
+
+```math
+\NIMatrix(\DesignMeasure, \Parameter)
+=
+\AverageFisherMatrix(\DesignMeasure, \Parameter)
+=
+\IntM{\DesignRegion}{
+ \FisherMatrix(\CovariateParameterization(\DesignPoint), \Parameter)
+}{\DesignMeasure}{\DesignPoint}.
+```
+
+(For intuition:
+up to scaling constants,
+``\NIMatrix^{-1}(\DesignMeasure, \hat{\Parameter})`` is the covariance matrix of a normal approximation
+to a posterior distribution for ``\Parameter`` with posterior mean ``\hat{\Parameter}``.)
+
+An application of the Delta method yields the _normalized information matrix
+for the transformed parameter_ ``\Transformation(\Parameter)``,
+
+```math
+\TNIMatrix(\DesignMeasure, \Parameter)
+=
+\bigl[
+ (\TotalDiff\Transformation(\Parameter))
+  \NIMatrix^{-1}(\DesignMeasure, \Parameter)
+ (\TotalDiff\Transformation(\Parameter))'
+\bigr]^{-1},
+```
+
+where ``\TotalDiff\Transformation`` denotes the Jacobian matrix of the posterior transformation ``\Transformation``.
+
+(To continue with intuition building:
+``\TNIMatrix^{-1}(\DesignMeasure, \Transformation(\hat{\Parameter}))`` is the covariance matrix
+of a normal approximation to the posterior distribution of ``\Transformation(\Parameter)``.)
+
+Finally, the objective function is defined by
+
+```math
+\Objective(\DesignMeasure) = \IntD{\ParameterSet}{\DesignCriterion(\TNIMatrix(\DesignMeasure, \Parameter))}{\PriorDensity(\Parameter)}{\Parameter}.
+```
+
+Our goal is to maximize it over the over the set ``\AllDesignMeasures`` of all design measures.
 
 ## Gateaux Derivative
 
