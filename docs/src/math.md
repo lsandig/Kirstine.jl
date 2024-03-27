@@ -238,6 +238,10 @@ the Gateaux derivative is given by
 Note that the direction ``\DesignMeasureDirection`` enters the Gateaux derivative
 only through the final matrix in the first trace.
 
+Also, don't confuse the normalized information matrix function ``\NIMatrix``
+with the placeholder ``\SomeMatrix``
+that occurs in the symbolic notation of the matrix-valued derivative of ``\DesignCriterion``.
+
 If ``\Transformation(\Parameter)=\Parameter``, the expression above simplifies to
 
 ```math
@@ -319,6 +323,17 @@ for all ``\DesignPoint ∈ \DesignRegion``.
 A design which is optimal with respect to ``\DesignCriterion_D``
 maximizes the approximate expected posterior Shannon information about ``\Transformation(\Parameter)``.
 
+The matrix-valued derivative of ``\log\det\SomeMatrix`` is ``(\SomeMatrix^{-1})'``,
+so we have
+
+```math
+\MatDeriv{\DesignCriterion_D}{\SomeMatrix}{\SomeMatrix} = \SomeMatrix^{-1},
+```
+
+since all matrices in the domain of ``\DesignCriterion_D`` are symmetric.
+Note that ``\SomeMatrix`` here is simply a positive definite symmetric matrix,
+_not_ the normalized information matrix function ``\NIMatrix``.
+
 The Gateaux derivative is
 
 ```math
@@ -359,6 +374,17 @@ For ``\Transformation(\Parameter) = \Parameter`` this simplifies to
 
 A design which is optimal with respect to ``\DesignCriterion_A``
 minimizes the approximate average posterior variance for the elements of ``\Transformation(\Parameter)``.
+
+The matrix-valued derivative of ``\Trace\SomeMatrix^{-1}`` is ``-(M^{-2})'``,
+so we have
+
+```math
+\MatDeriv{\DesignCriterion_A}{\SomeMatrix}{\SomeMatrix} = \SomeMatrix^{-2},
+```
+
+since all matrices in the domain of ``\DesignCriterion_A`` are symmetric.
+Again, ``\SomeMatrix`` here denotes simply a positive definite symmetric matrix,
+_not_ the normalized information matrix function ``\NIMatrix``.
 
 The Gateaux derivative is
 
