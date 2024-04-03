@@ -59,7 +59,7 @@ c(t, a, e)                                            &= \frac{D}{1-e/a}(\exp(-e
 \end{aligned}
 ```
 
-Hence the model covariates are the initial dose ``D`` and the measurement times ``t_1,…,1_{\DimUnit}``.
+Hence the model covariates are the initial dose ``D`` and the measurement times ``t_1,…,t_{\DimUnit}``.
 In the following example, we will consider doses between 0 and 100 mg,
 and times between 0 and 24 hours.
 I.e. the covariate set is
