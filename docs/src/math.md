@@ -494,9 +494,8 @@ and solving for the ratio of sample sizes yields
 This quantity is called the _expected relative D-efficiency_
 of the two designs.
 A relative efficiency smaller than ``1`` means
-that an experiment with ``\DesignMeasure_1`` on average needs more observations
-than an experiment with ``\DesignMeasure_2`` to achieve the same accuracy.
-In this sense, ``\DesignMeasure_1`` is less efficient than ``\DesignMeasure_2``.
+that ``\DesignMeasure_1`` is less efficient than ``\DesignMeasure_2``
+since the first experiment needs a larger sample size than the second to achieve the same accuracy.
 Conversely, a relative efficiency larger than ``1`` means
 that ``\DesignMeasure_1`` is more efficient than ``\DesignMeasure_2``.
 When ``\DesignMeasure_2`` is optimal for the design problem,
