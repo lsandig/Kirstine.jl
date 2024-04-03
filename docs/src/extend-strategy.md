@@ -71,10 +71,10 @@ function Kirstine.solve_with(dp::DesignProblem, strategy::MultipleRuns, trace_st
         strategy.fixedpoints,
     )
     # set up pre-allocated objects for the objective function to work on
-    tc = Kirstine.trafo_constants(transformation(dp), prior_knowledge(dp))
+    oc = Kirstine.objective_constants(dp)
     w = Kirstine.allocate_workspaces(strategy.prototype, dp)
     optimization_helper(prototype) = Kirstine.optimize(
-        d -> Kirstine.objective!(w, d, dp, tc),
+        d -> Kirstine.objective!(w, d, dp, oc),
         strategy.optimizer,
         [prototype],
         constraints;

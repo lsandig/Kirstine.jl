@@ -3,6 +3,7 @@
 ## Design Problems
 
 ```@docs
+AbstractDesignProblem
 DesignProblem
 DesignProblem()
 criterion

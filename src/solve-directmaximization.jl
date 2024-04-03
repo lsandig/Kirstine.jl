@@ -77,17 +77,21 @@ function optimization_result(dmr::DirectMaximizationResult)
     return dmr.or
 end
 
-function solve_with(dp::DesignProblem, strategy::DirectMaximization, trace_state::Bool)
+function solve_with(
+    adp::AbstractDesignProblem,
+    strategy::DirectMaximization,
+    trace_state::Bool,
+)
     constraints = DesignConstraints(
         strategy.prototype,
-        region(dp),
+        region(adp),
         strategy.fixedweights,
         strategy.fixedpoints,
     )
-    tc = trafo_constants(transformation(dp), prior_knowledge(dp))
-    w = allocate_workspaces(strategy.prototype, dp)
+    oc = objective_constants(adp)
+    w = allocate_workspaces(strategy.prototype, adp)
     or = optimize(
-        d -> objective!(w, d, dp, tc),
+        d -> objective!(w, d, adp, oc),
         strategy.optimizer,
         [strategy.prototype],
         constraints;

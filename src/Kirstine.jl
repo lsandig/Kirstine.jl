@@ -25,6 +25,7 @@ using RecipesBase
 export @simple_model,
     @simple_parameter,
     ACriterion,
+    AbstractDesignProblem,
     Covariate,
     CovariateParameterization,
     DCriterion,

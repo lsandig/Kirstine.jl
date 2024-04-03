@@ -20,7 +20,7 @@ mutable struct NIMWorkspace
     end
 end
 
-struct Workspaces
+struct DPWorkspace <: AbstractWorkspace
     nw::NIMWorkspace
     mw::ModelWorkspace
     c::Vector{<:Covariate}

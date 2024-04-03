@@ -10,6 +10,36 @@ include("example-emax.jl")
 include("example-compartment.jl")
 
 @testset "designproblem.jl" begin
+    @testset "objective_constants" begin
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            )
+            oc = Kirstine.objective_constants(dp)
+
+            @test oc isa Kirstine.DPObjectiveConstants
+        end
+    end
+
+    @testset "derivative_constants" begin
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            at = equidistant_design(region(dp), 4)
+
+            dc = Kirstine.derivative_constants(at, dp)
+
+            @test dc isa Kirstine.DPDerivativeConstants
+        end
+    end
+
     @testset "solve" begin
         # check that solution is sorted and simplified
         let dp = DesignProblem(;

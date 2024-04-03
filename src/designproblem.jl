@@ -4,7 +4,7 @@
 ## user-visible functions for design problems and for solving them ##
 
 """
-    DesignProblem
+    DesignProblem <: AbstractDesignProblem
 
 A `DesignProblem` has 7 components:
 
@@ -27,7 +27,7 @@ struct DesignProblem{
     Tpk<:PriorKnowledge,
     Tt<:Transformation,
     Tna<:NormalApproximation,
-}
+} <: AbstractDesignProblem
     dc::Tdc
     dr::Tdr
     m::Tm
@@ -127,6 +127,32 @@ Get the [`NormalApproximation`](@ref) of `dp`.
 """
 normal_approximation(dp::DesignProblem) = dp.na
 
+struct DPObjectiveConstants{Ttc<:TrafoConstants} <: ObjectiveConstants
+    tc::Ttc
+end
+
+function objective_constants(dp::DesignProblem)
+    tc = trafo_constants(transformation(dp), prior_knowledge(dp))
+    return DPObjectiveConstants(tc)
+end
+
+struct DPDerivativeConstants <: DerivativeConstants
+    gc::GateauxConstants
+end
+
+function derivative_constants(at::DesignMeasure, dp::DesignProblem)
+    gc = gateaux_constants(
+        criterion(dp),
+        at,
+        model(dp),
+        covariate_parameterization(dp),
+        prior_knowledge(dp),
+        transformation(dp),
+        normal_approximation(dp),
+    )
+    return DPDerivativeConstants(gc)
+end
+
 function allocate_workspaces(d::DesignMeasure, dp::DesignProblem)
     nw = NIMWorkspace(
         parameter_dimension(prior_knowledge(dp)),
@@ -134,12 +160,12 @@ function allocate_workspaces(d::DesignMeasure, dp::DesignProblem)
     )
     mw = allocate_model_workspace(numpoints(d), model(dp), prior_knowledge(dp))
     c = implied_covariates(d, model(dp), covariate_parameterization(dp))
-    return Workspaces(nw, mw, c)
+    return DPWorkspace(nw, mw, c)
 end
 
 """
     solve(
-        dp::DesignProblem,
+        adp::AbstractDesignProblem,
         strategy::ProblemSolvingStrategy;
         trace_state = false,
         sargs...,
@@ -157,16 +183,16 @@ Return a tuple `(d, r)`.
 See also [`DirectMaximization`](@ref), [`Exchange`](@ref).
 """
 function solve(
-    dp::DesignProblem,
+    adp::AbstractDesignProblem,
     strategy::ProblemSolvingStrategy;
     trace_state = false,
     sargs...,
 )
-    or = solve_with(dp, strategy, trace_state)
-    dopt = sort_points(simplify(solution(or), dp; sargs...))
+    or = solve_with(adp, strategy, trace_state)
+    dopt = sort_points(simplify(solution(or), adp; sargs...))
     # check that we did not accidentally simplify too much
-    o_before = objective(solution(or), dp)
-    o_after = objective(dopt, dp)
+    o_before = objective(solution(or), adp)
+    o_after = objective(dopt, adp)
     rel_diff = (o_after - o_before) / abs(o_before)
     if rel_diff < -0.01
         @warn "simplification may have been too eager" o_before o_after rel_diff
@@ -189,7 +215,12 @@ function simplify(d::DesignMeasure, dp::DesignProblem; maxweight = 0, maxdist = 
     return d
 end
 
-function objective!(w::Workspaces, d::DesignMeasure, dp::DesignProblem, tc::TrafoConstants)
+function objective!(
+    w::DPWorkspace,
+    d::DesignMeasure,
+    dp::DesignProblem,
+    oc::DPObjectiveConstants,
+)
     m = model(dp)
     update_covariates!(w.c, d, m, covariate_parameterization(dp))
     update_model_workspace!(w.mw, m, w.c)
@@ -209,7 +240,7 @@ function objective!(w::Workspaces, d::DesignMeasure, dp::DesignProblem, tc::Traf
             apply_transformation!(
                 w.nw,
                 transformation(dp),
-                trafo_jacobianmatrix_for_index(tc, i),
+                trafo_jacobianmatrix_for_index(oc.tc, i),
             )
             acc += pk_w[i] * criterion_functional!(w.nw.t_x_t, w.nw.t_is_inv, criterion(dp))
         end
@@ -224,23 +255,23 @@ function objective!(w::Workspaces, d::DesignMeasure, dp::DesignProblem, tc::Traf
 end
 
 """
-    objective(d::DesignMeasure, dp::DesignProblem)
+    objective(d::DesignMeasure, adp::AbstractDesignProblem)
 
 Evaluate the objective function.
 
 See also the [mathematical background](math.md#Objective-Function).
 """
-function objective(d::DesignMeasure, dp::DesignProblem)
-    tc = trafo_constants(transformation(dp), prior_knowledge(dp))
-    w = allocate_workspaces(d, dp)
-    return objective!(w, d, dp, tc)
+function objective(d::DesignMeasure, adp::AbstractDesignProblem)
+    oc = objective_constants(adp)
+    w = allocate_workspaces(d, adp)
+    return objective!(w, d, adp, oc)
 end
 
 function gateauxderivative!(
-    w::Workspaces,
+    w::DPWorkspace,
     direction::DesignMeasure,
     dp::DesignProblem,
-    gconst::GateauxConstants,
+    dc::DPDerivativeConstants,
 )
     m = model(dp)
     update_covariates!(w.c, direction, m, covariate_parameterization(dp))
@@ -252,7 +283,7 @@ function gateauxderivative!(
     for i in 1:length(pk_p)
         average_fishermatrix!(w.nw.r_x_r, w.mw, weights(direction), m, w.c, pk_p[i])
         informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
-        acc += pk_w[i] * gateaux_integrand(gconst.A[i], w.nw.r_x_r, gconst.tr_B[i])
+        acc += pk_w[i] * gateaux_integrand(dc.gc.A[i], w.nw.r_x_r, dc.gc.tr_B[i])
     end
     return acc
 end
@@ -273,26 +304,18 @@ See also the [mathematical background](math.md#Gateaux-Derivative).
 function gateauxderivative(
     at::DesignMeasure,
     directions::AbstractArray{DesignMeasure},
-    dp::DesignProblem,
+    adp::AbstractDesignProblem,
 )
     if any(d -> numpoints(d) != 1, directions)
         throw(ErrorException("derivative only implemented for one-point directions"))
     end
-    if isinf(objective(at, dp))
+    if isinf(objective(at, adp))
         # undefined objective implies no well-defined derivative
         return fill(NaN, size(directions))
     end
-    w = allocate_workspaces(directions[1], dp)
-    gconst = gateaux_constants(
-        criterion(dp),
-        at,
-        model(dp),
-        covariate_parameterization(dp),
-        prior_knowledge(dp),
-        transformation(dp),
-        normal_approximation(dp),
-    )
-    gd = map(d -> gateauxderivative!(w, d, dp, gconst), directions)
+    w = allocate_workspaces(directions[1], adp)
+    dc = derivative_constants(at, adp)
+    gd = map(d -> gateauxderivative!(w, d, adp, dc), directions)
     return gd
 end
 
