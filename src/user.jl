@@ -104,8 +104,8 @@ function dimension end
 
 A convenience type to use when design variables and model covariates are identical.
 """
-struct JustCopy <: CovariateParameterization
-    field_names::Vector{Symbol}
+struct JustCopy{N} <: CovariateParameterization
+    field_names::NTuple{N,Symbol}
 end
 
 """
@@ -140,7 +140,7 @@ we can define
 
 ```jldoctest justcopy
 julia> cp = JustCopy(:a, :b)
-JustCopy([:a, :b])
+JustCopy{2}((:a, :b))
 ```
 
 and then solve
@@ -179,7 +179,7 @@ Also note that since the design points are assigned in the order of the names gi
 `cp = JustCopy(:b, :a)` would be equivalent to setting `c.b = dp[1]` and `c.a = dp[2]`.
 """
 function JustCopy(names::Symbol...)
-    return JustCopy(collect(names))
+    return JustCopy(names)
 end
 
 function map_to_covariate!(c::Covariate, dp::AbstractVector{<:Real}, m::Model, cp::JustCopy)
