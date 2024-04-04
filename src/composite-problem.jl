@@ -95,6 +95,32 @@ function objective!(
     return acc
 end
 
+struct CDPDerivativeConstants{T<:DerivativeConstants} <: DerivativeConstants
+    component_constants::Vector{T}
+end
+
+function derivative_constants(at::DesignMeasure, cdp::CompositeDesignProblem)
+    return CDPDerivativeConstants(map(p -> derivative_constants(at, p), problems(cdp)))
+end
+
+function gateauxderivative!(
+    w::CDPWorkspace,
+    direction::DesignMeasure,
+    cdp::CompositeDesignProblem,
+    dc::CDPDerivativeConstants,
+)
+    acc = 0
+    map(
+        weights(cdp),
+        w.component_workspaces,
+        problems(cdp),
+        dc.component_constants,
+    ) do weight, workspace, problem, dconst
+        acc += weight * gateauxderivative!(workspace, direction, problem, dconst)
+    end
+    return acc
+end
+
 """
     simplify(d::DesignMeasure, cdp::CompositeDesignProblem; maxweight = 0, maxdist = 0, uargs...)
 

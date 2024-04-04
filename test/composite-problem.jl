@@ -148,6 +148,72 @@ include("example-compartment.jl")
         end
     end
 
+    @testset "derivative_constants(::CompositeDesignProblem)" begin
+        let dc = DCriterion(),
+            dr = DesignInterval(:dose => (0, 10)),
+            cp = CopyDose(),
+            pk = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            dp1 = DesignProblem(;
+                criterion = dc,
+                region = dr,
+                model = EmaxModel(1),
+                covariate_parameterization = cp,
+                prior_knowledge = pk,
+            ),
+            dp2 = DesignProblem(;
+                criterion = dc,
+                region = dr,
+                model = EmaxModel(2),
+                covariate_parameterization = cp,
+                prior_knowledge = pk,
+            ),
+            cdp = CompositeDesignProblem([dp1, dp2], [1, 1]),
+            at = equidistant_design(dr, 4)
+
+            dcon = Kirstine.derivative_constants(at, cdp)
+
+            @test dcon isa Kirstine.CDPDerivativeConstants
+            @test length(dcon.component_constants) == 2
+            @test dcon.component_constants isa Vector{Kirstine.DPDerivativeConstants}
+        end
+    end
+
+    @testset "gateauxderivative(::CompositeDesignProblem)" begin
+        # Note: we're essentially testing gateauxderivative!() here.
+        let dc = DCriterion(),
+            dr = DesignInterval(:dose => (0, 10)),
+            m = EmaxModel(1),
+            cp = CopyDose(),
+            p1 = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
+            p2 = EmaxPar(; e0 = 1, emax = 10, ec50 = 3),
+            p3 = EmaxPar(; e0 = 1, emax = 10, ec50 = 7),
+            dp_helper(ps, ws) = DesignProblem(;
+                criterion = dc,
+                region = dr,
+                model = m,
+                covariate_parameterization = cp,
+                prior_knowledge = PriorSample(ps, ws),
+            ),
+            dp1 = dp_helper([p1, p2, p3], [0.1, 0.3, 0.6]),
+            dp2 = dp_helper([p2, p3], [1 / 3, 2 / 3]),
+            cdp1 = CompositeDesignProblem([dp1], [1]),
+            cdp2 = CompositeDesignProblem(
+                [dp_helper([p2], [1]), dp_helper([p3], [1])],
+                [1 / 3, 2 / 3],
+            ),
+            cdp3 = CompositeDesignProblem([dp_helper([p1], [1]), cdp2], [0.1, 0.9]),
+            d = equidistant_design(dr, 4),
+            dir = [one_point_design([4.2])]
+
+            # one component is simply a wrapper
+            @test gateauxderivative(d, dir, cdp1) ≈ gateauxderivative(d, dir, dp1)
+            # two components differing only in prior samples are a Baysian problem
+            @test gateauxderivative(d, dir, cdp2) ≈ gateauxderivative(d, dir, dp2)
+            # similarly, but nested
+            @test gateauxderivative(d, dir, cdp3) ≈ gateauxderivative(d, dir, dp1)
+        end
+    end
+
     @testset "simplify(::CompositeDesignProblem)" begin
         let dp_helper(ps) = DesignProblem(;
                 criterion = DCriterion(),
@@ -256,9 +322,12 @@ include("example-compartment.jl")
             )
             seed!(135)
             sc, _ = solve(cdp, str)
+            opd = one_point_design.(points(sc))
 
             @test reduce(hcat, points(sc)) ≈ [-1 0 1] rtol = 1e-4
             @test weights(sc)[2] ≈ 0.146 atol = 1e-3
+            @test gateauxderivative(sc, opd, cdp) ≈ [0, 0, 0] atol = 1e-4
+            @test first(gateauxderivative(sc, [one_point_design([0.5])], cdp)) < 0
         end
     end
 end
