@@ -153,7 +153,7 @@ function derivative_constants(at::DesignMeasure, dp::DesignProblem)
     return DPDerivativeConstants(gc)
 end
 
-function allocate_workspaces(d::DesignMeasure, dp::DesignProblem)
+function allocate_workspace(d::DesignMeasure, dp::DesignProblem)
     nw = NIMWorkspace(
         parameter_dimension(prior_knowledge(dp)),
         codomain_dimension(transformation(dp), prior_knowledge(dp)),
@@ -263,7 +263,7 @@ See also the [mathematical background](math.md#Objective-Function).
 """
 function objective(d::DesignMeasure, adp::AbstractDesignProblem)
     oc = objective_constants(adp)
-    w = allocate_workspaces(d, adp)
+    w = allocate_workspace(d, adp)
     return objective!(w, d, adp, oc)
 end
 
@@ -313,7 +313,7 @@ function gateauxderivative(
         # undefined objective implies no well-defined derivative
         return fill(NaN, size(directions))
     end
-    w = allocate_workspaces(directions[1], adp)
+    w = allocate_workspace(directions[1], adp)
     dc = derivative_constants(at, adp)
     gd = map(d -> gateauxderivative!(w, d, adp, dc), directions)
     return gd

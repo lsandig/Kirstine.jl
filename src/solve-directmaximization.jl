@@ -89,7 +89,7 @@ function solve_with(
         strategy.fixedpoints,
     )
     oc = objective_constants(adp)
-    w = allocate_workspaces(strategy.prototype, adp)
+    w = allocate_workspace(strategy.prototype, adp)
     or = optimize(
         d -> objective!(w, d, adp, oc),
         strategy.optimizer,
