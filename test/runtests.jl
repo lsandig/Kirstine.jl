@@ -17,6 +17,7 @@ using Test
     include("criterion-d.jl")
     include("criterion-a.jl")
     include("designproblem.jl")
+    include("composite-problem.jl")
     include("solve-directmaximization.jl")
     include("solve-exchange.jl")
     include("plot.jl")

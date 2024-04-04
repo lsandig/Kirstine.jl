@@ -7,12 +7,24 @@ AbstractDesignProblem
 DesignProblem
 DesignProblem()
 criterion
-region
+region(::DesignProblem)
 model
 covariate_parameterization
 prior_knowledge
 transformation
 normal_approximation
+```
+
+Several `AbstractDesignProblems` can be combined to form a composite design problem,
+where a weighted sum of the component objectives is maximized.
+Composite design problems can be nested within each other.
+
+```@docs
+CompositeDesignProblem
+CompositeDesignProblem(::AbstractVector{<:AbstractDesignProblem}, ::AbstractVector{<:Real})
+problems(::CompositeDesignProblem)
+weights(::CompositeDesignProblem)
+region(::CompositeDesignProblem)
 ```
 
 Different high-level strategies are available for trying to solve a `DesignProblem`.
