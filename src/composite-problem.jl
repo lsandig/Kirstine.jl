@@ -94,3 +94,30 @@ function objective!(
     end
     return acc
 end
+
+"""
+    simplify(d::DesignMeasure, cdp::CompositeDesignProblem; maxweight = 0, maxdist = 0, uargs...)
+
+A wrapper that calls
+[`simplify_merge`](@ref),
+and [`simplify_drop`](@ref) in that order.
+
+Note that `uargs` are ignored
+since there is no obvious generalization of [`simplify_unique`](@ref)
+for general composite design problems.
+When `uargs` is not empty, a warning is printed.
+"""
+function simplify(
+    d::DesignMeasure,
+    cdp::CompositeDesignProblem;
+    maxweight = 0,
+    maxdist = 0,
+    uargs...,
+)
+    if !isempty(uargs)
+        @warn "uargs $(collect(uargs)) ignored for a composite design problem"
+    end
+    d = simplify_merge(d, region(cdp), maxdist)
+    d = simplify_drop(d, maxweight)
+    return d
+end

@@ -147,5 +147,29 @@ include("example-compartment.jl")
             @test objective(d, cdp3) == objective(d, dp1)
         end
     end
+
+    @testset "simplify(::CompositeDesignProblem)" begin
+        let dp_helper(ps) = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 1)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample(ps),
+            ),
+            p1 = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
+            p2 = EmaxPar(; e0 = 1, emax = 10, ec50 = 3),
+            p3 = EmaxPar(; e0 = 1, emax = 10, ec50 = 7),
+            cdp = CompositeDesignProblem(
+                [dp_helper([p1, p2]), dp_helper([p2, p3])],
+                [0.8, 0.2],
+            ),
+            d = equidistant_design(region(cdp), 4)
+
+            @test_logs(
+                (:warn, "uargs [:foo => 42] ignored for a composite design problem"),
+                simplify(d, cdp; foo = 42)
+            )
+        end
+    end
 end
 end

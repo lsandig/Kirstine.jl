@@ -188,7 +188,8 @@ sort_points
 sort_weights
 mixture
 apportion
-simplify
+simplify(::DesignMeasure, ::DesignProblem)
+simplify(::DesignMeasure, ::CompositeDesignProblem)
 simplify_drop
 simplify_unique
 simplify_merge
