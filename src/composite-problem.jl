@@ -60,3 +60,37 @@ Get the common [`DesignRegion`](@ref) of the component design problems.
 function region(cdp::CompositeDesignProblem)
     return region(first(problems(cdp)))
 end
+
+struct CDPWorkspace{T<:AbstractWorkspace} <: AbstractWorkspace
+    component_workspaces::Vector{T}
+end
+
+function allocate_workspace(d::DesignMeasure, cdp::CompositeDesignProblem)
+    return CDPWorkspace(map(p -> allocate_workspace(d, p), problems(cdp)))
+end
+
+struct CDPObjectiveConstants{T<:ObjectiveConstants} <: ObjectiveConstants
+    component_constants::Vector{T}
+end
+
+function objective_constants(cdp::CompositeDesignProblem)
+    return CDPObjectiveConstants(map(objective_constants, problems(cdp)))
+end
+
+function objective!(
+    wsp::CDPWorkspace,
+    d::DesignMeasure,
+    cdp::CompositeDesignProblem,
+    oc::CDPObjectiveConstants,
+)
+    acc = 0
+    map(
+        weights(cdp),
+        wsp.component_workspaces,
+        problems(cdp),
+        oc.component_constants,
+    ) do weight, workspace, problem, oconst
+        acc += weight * objective!(workspace, d, problem, oconst)
+    end
+    return acc
+end
