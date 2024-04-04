@@ -171,5 +171,95 @@ include("example-compartment.jl")
             )
         end
     end
+
+    # This is Example 1 from
+    # [CW94]: https://dx.doi.org/10.1080/01621459.1994.10476794
+    # where the idea is to find an optimal design
+    # that balances A-optimal estimation of c in
+    #   μ(x, θ) = a + bx + cx^2
+    # with D-optimal estimation of a and b in
+    #   μ(x, θ) = a + bx
+    #
+    # To obtain Kirstine.jl's problem weights (w1, w2) from  [CW94]'s lambda,
+    # we need to account for the slightly different definitions of the A- and D-criterion in (7) and (8).
+    # To match the article,
+    # we must multiply Kirstine.jl's A/D-criterion by 0.25 and 0.5, respectively.
+    # We move these factors to the problem weights
+    #   (w1, w2) = (1/4, 1/2) .* (lambda, 1 - lambda)
+    #
+    # However, the optimal designs themselves are published in
+    # [S82]: https://doi.org/10.2307/2287327
+    # where the notation is different.
+    # The component designs are not mixed in terms of lambda,
+    # but depend on an efficiency value rho,
+    # which is called e1 in [CW94].
+    # Here, Equation (12) gives the conversion as
+    lambda_from_e1(e1) = e1^2 / (4 + 4 * sqrt(1 - e1) - 4 * e1 + e1^2)
+    # Hence with
+    problem_weights_from_rho(rho) = [lambda_from_e1(rho) / 4, (1 - lambda_from_e1(rho)) / 2]
+    # we can specify a problem from Table 1 of [S82] in a way Kirstine.jl understands
+    # and then compare the results.
+    # All solutions have points {-1, 0, 1} with equal weights on the boundary.
+    # The weight at 0 is given by 1-2α₁ in Table 1 from [S82].
+    # This number uniquely characterizes the solution.
+    # For rho = 0.5 this weight is given as 0.146 (to 3 decimal points).
+
+    # Note: This implementation is somewhat lazy.
+    @simple_model Quadratic x
+    @simple_model Linear x
+    @simple_parameter QPoly a b c
+    @simple_parameter LPoly a b
+    function Kirstine.jacobianmatrix!(
+        jm,
+        m::QuadraticModel,
+        c::QuadraticCovariate,
+        p::QPolyParameter,
+    )
+        jm[1, 1] = 1
+        jm[1, 2] = c.x
+        jm[1, 3] = c.x^2
+    end
+    function Kirstine.jacobianmatrix!(
+        jm,
+        m::LinearModel,
+        c::LinearCovariate,
+        p::LPolyParameter,
+    )
+        jm[1, 1] = 1
+        jm[1, 2] = c.x
+    end
+
+    @testset "solve(::CompoundDesignProblem)" begin
+        let dr = DesignInterval(:x => (-1, 1)),
+            cp = JustCopy(:x),
+            dp1 = DesignProblem(;
+                criterion = ACriterion(),
+                model = QuadraticModel(; sigma = 1),
+                prior_knowledge = PriorSample([QPolyParameter(; a = 1, b = 1, c = 1)]),
+                region = dr,
+                covariate_parameterization = cp,
+                transformation = DeltaMethod(p -> [0 0 1]),
+            ),
+            dp2 = DesignProblem(;
+                criterion = DCriterion(),
+                model = LinearModel(; sigma = 1),
+                prior_knowledge = PriorSample([LPolyParameter(; a = 1, b = 1)]),
+                region = dr,
+                covariate_parameterization = cp,
+            ),
+            cdp = CompositeDesignProblem([dp1, dp2], problem_weights_from_rho(0.5))
+
+            str = DirectMaximization(;
+                optimizer = Pso(; swarmsize = 50, iterations = 50),
+                # start with neither optimal points nor weights
+                prototype = DesignMeasure([-0.9 0.2 0.8], [0.1, 0.7, 0.2]),
+            )
+            seed!(135)
+            sc, _ = solve(cdp, str)
+
+            @test reduce(hcat, points(sc)) ≈ [-1 0 1] rtol = 1e-4
+            @test weights(sc)[2] ≈ 0.146 atol = 1e-3
+        end
+    end
 end
 end
