@@ -27,7 +27,7 @@ weights(::CompositeDesignProblem)
 region(::CompositeDesignProblem)
 ```
 
-Different high-level strategies are available for trying to solve a `DesignProblem`.
+Different high-level strategies are available for trying to solve any `AbstractDesignProblem`.
 
 ```@docs
 solve

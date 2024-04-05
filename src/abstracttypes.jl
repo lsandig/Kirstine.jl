@@ -127,7 +127,7 @@ abstract type AbstractWorkspace end
 """
     ProblemSolvingStrategy
 
-Supertype for algorithms for solving a [`DesignProblem`](@ref).
+Supertype for algorithms for solving an [`AbstractDesignProblem`](@ref).
 """
 abstract type ProblemSolvingStrategy end
 
