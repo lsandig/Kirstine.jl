@@ -37,9 +37,11 @@ math_macros = Dict(
     raw"\DimParameter" => raw"r",
     raw"\DimTransformedParameter" => raw"t",
     raw"\DimUnit" => raw"m",
+    raw"\IndexComponent" => raw"j",
     raw"\IndexDesignPoint" => raw"k",
     raw"\IndexUnit" => raw"i",
     raw"\NumDesignPoints" => raw"K",
+    raw"\NumComponents" => raw"J",
     raw"\SampleSize" => raw"n",
     # Fixed model parameters
     raw"\ScalarUnitVariance" => raw"σ^2",
@@ -53,6 +55,7 @@ math_macros = Dict(
     raw"\Reals" => raw"ℝ",
     raw"\SNNDMatrices" => raw"\mathrm{S}_{+}^{#1}",
     # Variables
+    raw"\ComponentWeight" => "a",
     raw"\Covariate" => raw"x",
     raw"\DesignMeasure" => raw"ζ",
     raw"\DesignMeasureDirection" => raw"δ",

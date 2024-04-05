@@ -5,6 +5,10 @@
 
 """
     CompositeDesignProblem <: AbstractDesignProblem
+
+A weighted construct of other abstract design problems.
+
+See the [mathematical background](math.md#Composite-Design-Problems).
 """
 struct CompositeDesignProblem{T<:AbstractDesignProblem} <: AbstractDesignProblem
     problems::Vector{T}
