@@ -100,6 +100,27 @@ include("example-dtr.jl")
 
             @test_throws "got 3" plot_gateauxderivative(d, dp)
         end
+
+        # composite 1d problem
+        let dp_helper(cr) = DesignProblem(;
+                criterion = cr,
+                region = DesignInterval(:dose => (0, 1)),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 0, emax = 1, ec50 = 0.2)]),
+                model = EmaxModel(1),
+                covariate_parameterization = JustCopy(:dose),
+            ),
+            dp1 = dp_helper(DCriterion()),
+            dp2 = dp_helper(ACriterion()),
+            cdp = CompositeDesignProblem([dp1, dp2], [0.5, 0.5]),
+            d = equidistant_design(region(cdp), 5)
+
+            @test try
+                plot_gateauxderivative(d, cdp)
+                true
+            catch
+                false
+            end
+        end
     end
 end
 end
