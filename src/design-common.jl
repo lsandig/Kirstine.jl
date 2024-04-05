@@ -246,3 +246,12 @@ function tr_prod(A::AbstractMatrix, B::AbstractMatrix, uplo::Symbol)
     end
     return acc
 end
+
+## abstract design problem interface ##
+
+function region end
+function allocate_workspace end
+function objective_constants end
+function derivative_constants end
+function objective! end
+function gateauxderivative! end
