@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-## composite design problem made up of weighted abstract design problems  ##
+## implement AbstractDesignProblem interface for CompositeDesignProblem ##
 
 """
     CompositeDesignProblem <: AbstractDesignProblem
@@ -81,6 +81,14 @@ function objective_constants(cdp::CompositeDesignProblem)
     return CDPObjectiveConstants(map(objective_constants, problems(cdp)))
 end
 
+struct CDPDerivativeConstants{T<:DerivativeConstants} <: DerivativeConstants
+    component_constants::Vector{T}
+end
+
+function derivative_constants(at::DesignMeasure, cdp::CompositeDesignProblem)
+    return CDPDerivativeConstants(map(p -> derivative_constants(at, p), problems(cdp)))
+end
+
 function objective!(
     wsp::CDPWorkspace,
     d::DesignMeasure,
@@ -97,14 +105,6 @@ function objective!(
         acc += weight * objective!(workspace, d, problem, oconst)
     end
     return acc
-end
-
-struct CDPDerivativeConstants{T<:DerivativeConstants} <: DerivativeConstants
-    component_constants::Vector{T}
-end
-
-function derivative_constants(at::DesignMeasure, cdp::CompositeDesignProblem)
-    return CDPDerivativeConstants(map(p -> derivative_constants(at, p), problems(cdp)))
 end
 
 function gateauxderivative!(

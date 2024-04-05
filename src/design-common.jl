@@ -20,12 +20,6 @@ mutable struct NIMWorkspace
     end
 end
 
-struct DPWorkspace <: AbstractWorkspace
-    nw::NIMWorkspace
-    mw::ModelWorkspace
-    c::Vector{<:Covariate}
-end
-
 struct GCPriorSample <: GateauxConstants
     A::Vector{Matrix{Float64}}
     tr_B::Vector{Float64}
@@ -255,3 +249,84 @@ function objective_constants end
 function derivative_constants end
 function objective! end
 function gateauxderivative! end
+
+"""
+    objective(d::DesignMeasure, adp::AbstractDesignProblem)
+
+Evaluate the objective function.
+
+See also the [mathematical background](math.md#Objective-Function).
+"""
+function objective(d::DesignMeasure, adp::AbstractDesignProblem)
+    oc = objective_constants(adp)
+    w = allocate_workspace(d, adp)
+    return objective!(w, d, adp, oc)
+end
+
+"""
+    gateauxderivative(
+        at::DesignMeasure,
+        directions::AbstractArray{DesignMeasure},
+        dp::DesignProblem,
+    )
+
+Evaluate the Gateaux derivative for each direction.
+
+Directions must be one-point design measures.
+
+See also the [mathematical background](math.md#Gateaux-Derivative).
+"""
+function gateauxderivative(
+    at::DesignMeasure,
+    directions::AbstractArray{DesignMeasure},
+    adp::AbstractDesignProblem,
+)
+    if any(d -> numpoints(d) != 1, directions)
+        throw(ErrorException("derivative only implemented for one-point directions"))
+    end
+    if isinf(objective(at, adp))
+        # undefined objective implies no well-defined derivative
+        return fill(NaN, size(directions))
+    end
+    w = allocate_workspace(directions[1], adp)
+    dc = derivative_constants(at, adp)
+    gd = map(d -> gateauxderivative!(w, d, adp, dc), directions)
+    return gd
+end
+
+"""
+    solve(
+        adp::AbstractDesignProblem,
+        strategy::ProblemSolvingStrategy;
+        trace_state = false,
+        sargs...,
+    )
+
+Return a tuple `(d, r)`.
+
+  - `d`: The best [`DesignMeasure`](@ref) found. As post-processing, [`simplify`](@ref) is
+    called with `sargs` and the design points are sorted with [`sort_points`](@ref).
+
+  - `r`: A subtype of [`ProblemSolvingResult`](@ref) that is specific to the strategy used.
+    If `trace_state=true`, this object contains additional debugging information.
+    The unsimplified version of `d` can be accessed as `solution(r)`.
+
+See also [`DirectMaximization`](@ref), [`Exchange`](@ref).
+"""
+function solve(
+    adp::AbstractDesignProblem,
+    strategy::ProblemSolvingStrategy;
+    trace_state = false,
+    sargs...,
+)
+    or = solve_with(adp, strategy, trace_state)
+    dopt = sort_points(simplify(solution(or), adp; sargs...))
+    # check that we did not accidentally simplify too much
+    o_before = objective(solution(or), adp)
+    o_after = objective(dopt, adp)
+    rel_diff = (o_after - o_before) / abs(o_before)
+    if rel_diff < -0.01
+        @warn "simplification may have been too eager" o_before o_after rel_diff
+    end
+    return dopt, or
+end

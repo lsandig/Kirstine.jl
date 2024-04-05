@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-## user-visible functions for design problems and for solving them ##
+## implement AbstractDesignProblem interface for DesignProblem ##
 
 """
     DesignProblem <: AbstractDesignProblem
@@ -127,6 +127,22 @@ Get the [`NormalApproximation`](@ref) of `dp`.
 """
 normal_approximation(dp::DesignProblem) = dp.na
 
+struct DPWorkspace <: AbstractWorkspace
+    nw::NIMWorkspace
+    mw::ModelWorkspace
+    c::Vector{<:Covariate}
+end
+
+function allocate_workspace(d::DesignMeasure, dp::DesignProblem)
+    nw = NIMWorkspace(
+        parameter_dimension(prior_knowledge(dp)),
+        codomain_dimension(transformation(dp), prior_knowledge(dp)),
+    )
+    mw = allocate_model_workspace(numpoints(d), model(dp), prior_knowledge(dp))
+    c = implied_covariates(d, model(dp), covariate_parameterization(dp))
+    return DPWorkspace(nw, mw, c)
+end
+
 struct DPObjectiveConstants{Ttc<:TrafoConstants} <: ObjectiveConstants
     tc::Ttc
 end
@@ -151,68 +167,6 @@ function derivative_constants(at::DesignMeasure, dp::DesignProblem)
         normal_approximation(dp),
     )
     return DPDerivativeConstants(gc)
-end
-
-function allocate_workspace(d::DesignMeasure, dp::DesignProblem)
-    nw = NIMWorkspace(
-        parameter_dimension(prior_knowledge(dp)),
-        codomain_dimension(transformation(dp), prior_knowledge(dp)),
-    )
-    mw = allocate_model_workspace(numpoints(d), model(dp), prior_knowledge(dp))
-    c = implied_covariates(d, model(dp), covariate_parameterization(dp))
-    return DPWorkspace(nw, mw, c)
-end
-
-"""
-    solve(
-        adp::AbstractDesignProblem,
-        strategy::ProblemSolvingStrategy;
-        trace_state = false,
-        sargs...,
-    )
-
-Return a tuple `(d, r)`.
-
-  - `d`: The best [`DesignMeasure`](@ref) found. As post-processing, [`simplify`](@ref) is
-    called with `sargs` and the design points are sorted with [`sort_points`](@ref).
-
-  - `r`: A subtype of [`ProblemSolvingResult`](@ref) that is specific to the strategy used.
-    If `trace_state=true`, this object contains additional debugging information.
-    The unsimplified version of `d` can be accessed as `solution(r)`.
-
-See also [`DirectMaximization`](@ref), [`Exchange`](@ref).
-"""
-function solve(
-    adp::AbstractDesignProblem,
-    strategy::ProblemSolvingStrategy;
-    trace_state = false,
-    sargs...,
-)
-    or = solve_with(adp, strategy, trace_state)
-    dopt = sort_points(simplify(solution(or), adp; sargs...))
-    # check that we did not accidentally simplify too much
-    o_before = objective(solution(or), adp)
-    o_after = objective(dopt, adp)
-    rel_diff = (o_after - o_before) / abs(o_before)
-    if rel_diff < -0.01
-        @warn "simplification may have been too eager" o_before o_after rel_diff
-    end
-    return dopt, or
-end
-
-"""
-    simplify(d::DesignMeasure, dp::DesignProblem; maxweight = 0, maxdist = 0, uargs...)
-
-A wrapper that calls
-[`simplify_unique`](@ref),
-[`simplify_merge`](@ref),
-and [`simplify_drop`](@ref) in that order.
-"""
-function simplify(d::DesignMeasure, dp::DesignProblem; maxweight = 0, maxdist = 0, uargs...)
-    d = simplify_unique(d, region(dp), model(dp), covariate_parameterization(dp); uargs...)
-    d = simplify_merge(d, region(dp), maxdist)
-    d = simplify_drop(d, maxweight)
-    return d
 end
 
 function objective!(
@@ -254,19 +208,6 @@ function objective!(
     end
 end
 
-"""
-    objective(d::DesignMeasure, adp::AbstractDesignProblem)
-
-Evaluate the objective function.
-
-See also the [mathematical background](math.md#Objective-Function).
-"""
-function objective(d::DesignMeasure, adp::AbstractDesignProblem)
-    oc = objective_constants(adp)
-    w = allocate_workspace(d, adp)
-    return objective!(w, d, adp, oc)
-end
-
 function gateauxderivative!(
     w::DPWorkspace,
     direction::DesignMeasure,
@@ -289,34 +230,18 @@ function gateauxderivative!(
 end
 
 """
-    gateauxderivative(
-        at::DesignMeasure,
-        directions::AbstractArray{DesignMeasure},
-        dp::DesignProblem,
-    )
+    simplify(d::DesignMeasure, dp::DesignProblem; maxweight = 0, maxdist = 0, uargs...)
 
-Evaluate the Gateaux derivative for each direction.
-
-Directions must be one-point design measures.
-
-See also the [mathematical background](math.md#Gateaux-Derivative).
+A wrapper that calls
+[`simplify_unique`](@ref),
+[`simplify_merge`](@ref),
+and [`simplify_drop`](@ref) in that order.
 """
-function gateauxderivative(
-    at::DesignMeasure,
-    directions::AbstractArray{DesignMeasure},
-    adp::AbstractDesignProblem,
-)
-    if any(d -> numpoints(d) != 1, directions)
-        throw(ErrorException("derivative only implemented for one-point directions"))
-    end
-    if isinf(objective(at, adp))
-        # undefined objective implies no well-defined derivative
-        return fill(NaN, size(directions))
-    end
-    w = allocate_workspace(directions[1], adp)
-    dc = derivative_constants(at, adp)
-    gd = map(d -> gateauxderivative!(w, d, adp, dc), directions)
-    return gd
+function simplify(d::DesignMeasure, dp::DesignProblem; maxweight = 0, maxdist = 0, uargs...)
+    d = simplify_unique(d, region(dp), model(dp), covariate_parameterization(dp); uargs...)
+    d = simplify_merge(d, region(dp), maxdist)
+    d = simplify_drop(d, maxweight)
+    return d
 end
 
 """
