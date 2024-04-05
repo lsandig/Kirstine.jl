@@ -24,6 +24,7 @@ Mostly stable, breaking changes will be mostly cosmetic.
 - variance-covariance matrix may depend on covariate
 - Bayesian and locally optimal design
 - design criteria: D, A
+- composite design problems
 - separation of design variables and model covariates
 - particle swarm optimization
 - direct maximization and exchange algorithm
