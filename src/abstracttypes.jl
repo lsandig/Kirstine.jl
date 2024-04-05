@@ -88,8 +88,10 @@ abstract type DesignCriterion end
 
 ## helper types for precomputed constants ##
 
+abstract type ObjectiveConstants end
 abstract type TrafoConstants end
 
+abstract type DerivativeConstants end
 abstract type GateauxConstants end
 
 ## types related to particle-based optimization ##
@@ -109,12 +111,23 @@ abstract type OptimizerState{T<:AbstractPoint,U<:AbstractPointDifference} end
 
 abstract type AbstractConstraints end
 
-## types related to solving design problems
+## types related to defining and solving design problems ##
+
+"""
+    AbstractDesignProblem
+
+Supertype for all kinds of design problems.
+
+See also [`DesignProblem`](@ref).
+"""
+abstract type AbstractDesignProblem end
+
+abstract type AbstractWorkspace end
 
 """
     ProblemSolvingStrategy
 
-Supertype for algorithms for solving a [`DesignProblem`](@ref).
+Supertype for algorithms for solving an [`AbstractDesignProblem`](@ref).
 """
 abstract type ProblemSolvingStrategy end
 

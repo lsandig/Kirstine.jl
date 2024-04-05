@@ -87,95 +87,54 @@ end
     d
 end
 
-struct DerivativePlot{
-    Tdc<:DesignCriterion,
-    Tdr<:DesignRegion,
-    Tm<:Model,
-    Tcp<:CovariateParameterization,
-    Tpk<:PriorKnowledge,
-    Tt<:Transformation,
-    Tna<:NormalApproximation,
-}
-    d::DesignMeasure
-    dp::DesignProblem{Tdc,Tdr,Tm,Tcp,Tpk,Tt,Tna}
+struct DerivativePlot{N,Tdr<:DesignRegion{N}}
+    dr::Tdr
+    marginal_grids::NTuple{N,Vector{Float64}}
+    gd::Array{Float64,N}
+    function DerivativePlot(
+        d::DesignMeasure,
+        adp::AbstractDesignProblem,
+        n_grid::NTuple{N,Integer},
+    ) where N
+        if any(n_grid .< 2)
+            throw(ArgumentError("n_grid must be .>= 2"))
+        end
+        dr = region(adp)
+        # Calculate Gateaux derivative on a grid over the bounding box of dr.
+        # Evaluate it only on those points that are inside and fill the rest with NaN,
+        # which renders transparently in the heatmap.
+        lb, ub = boundingbox(dr)
+        marginal_grids = map((l, u, n) -> collect(range(l, u; length = n)), lb, ub, n_grid)
+        if N == 1
+            append!(marginal_grids[1], Iterators.flatten(points(d)))
+            sort!(marginal_grids[1])
+        end
+        product_dp_grid = collect.(Iterators.product(marginal_grids...))
+        inside_dr = isinside.(product_dp_grid, Ref(dr))
+        gd_grid = fill(NaN, size(product_dp_grid))
+        # note: indexing and array with another array produces a vector
+        directions = [one_point_design(dp) for dp in product_dp_grid[inside_dr]]
+        gd = gateauxderivative(d, directions, adp)
+        gd_grid[inside_dr] .= gd
+        return new{N,typeof(dr)}(dr, marginal_grids, gd_grid)
+    end
 end
 
-@recipe function f(
-    dplot::DerivativePlot{
-        <:DesignCriterion,
-        <:DesignRegion{1},
-        <:Model,
-        <:CovariateParameterization,
-        <:PriorKnowledge,
-        <:Transformation,
-        <:NormalApproximation,
-    };
-    n_grid = 101,
-)
-    if length(n_grid) != 1
-        throw(ArgumentError("n_grid must be a single integer"))
-    end
-    if n_grid < 2
-        throw(ArgumentError("n_grid must be >= 2"))
-    end
-    (; d, dp) = dplot
-    lb, ub = boundingbox(region(dp))
-    range_x = range(lb[1], ub[1]; length = n_grid[1])
-    dsgpts = collect(Iterators.flatten(points(d)))
-    x_grid = sort(vcat(range_x, dsgpts))
-    dp_grid = [[x] for x in x_grid]
-    inside_dr = isinside.(dp_grid, Ref(region(dp)))
-    directions = [one_point_design(dp) for dp in dp_grid]
-    gd_grid = fill(NaN, length(x_grid))
-    gd = gateauxderivative(d, directions, dp)
-    gd_grid[inside_dr] .= gd
-
+@recipe function f(dplot::DerivativePlot{1,<:DesignRegion{1}})
     seriestype := :line
     markershape := :none
     label --> ""
-    xguide --> dimnames(region(dp))[1]
+    xguide --> dimnames(dplot.dr)[1]
     yguide --> "Gateaux derivative"
     linecolor --> :black
 
-    x_grid, gd_grid
+    dplot.marginal_grids[1], dplot.gd
 end
 
-@recipe function f(
-    dplot::DerivativePlot{
-        <:DesignCriterion,
-        <:DesignRegion{2},
-        <:Model,
-        <:CovariateParameterization,
-        <:PriorKnowledge,
-        <:Transformation,
-        <:NormalApproximation,
-    };
-    n_grid = (51, 51),
-)
-    if length(n_grid) != 2
-        throw(ArgumentError("n_grid must be a 2-tuple"))
-    end
-    if any(n_grid .< 2)
-        throw(ArgumentError("all elements of n_grid must be >= 2"))
-    end
-    (; d, dp) = dplot
-    # Calculate Gateaux derivative on a grid over the bounding box of region(dp).
-    # Evaluate it only on those points that are inside and fill the rest with NaN,
-    # which renders transparently in the heatmap.
-    lb, ub = boundingbox(region(dp))
-    range_x = range(lb[1], ub[1]; length = n_grid[1])
-    range_y = range(lb[2], ub[2]; length = n_grid[2])
-    xy_grid = collect.(Iterators.product(range_x, range_y))
-    inside_dr = isinside.(xy_grid, Ref(region(dp)))
-    gd_grid = fill(NaN, n_grid[1], n_grid[2])
-    # note: indexing produces a vector
-    directions = [one_point_design([d...]) for d in xy_grid[inside_dr]]
-    gd = gateauxderivative(d, directions, dp)
-    ex = extrema(gd)
-    gd_grid[inside_dr] .= gd
-
-    xguide --> (dimnames(region(dp))[1])
-    yguide --> (dimnames(region(dp))[2])
+@recipe function f(dplot::DerivativePlot{2,<:DesignRegion{2}})
+    ex = extrema(dplot.gd)
+    xguide --> (dimnames(dplot.dr)[1])
+    yguide --> (dimnames(dplot.dr)[2])
     # perceptually uniform gradient from blue via white to red
     fillcolor --> :diverging_bwr_55_98_c37_n256
     max_abs_gd = max(abs(ex[1]), abs(ex[2]))
@@ -183,13 +142,13 @@ end
     seriestype := :heatmap
     label := ""
 
-    range_x, range_y, permutedims(gd_grid)
+    dplot.marginal_grids[1], dplot.marginal_grids[2], permutedims(dplot.gd)
 end
 
 """
-    plot_gateauxderivative(d::DesignMeasure, dp::DesignProblem; <keyword arguments>)
+    plot_gateauxderivative(d::DesignMeasure, adp::AbstractDesignProblem; <keyword arguments>)
 
-Plot the [`gateauxderivative`](@ref) in directions from a grid on the design region of `dp`,
+Plot the [`gateauxderivative`](@ref) in directions from a grid on `region(adp)`,
 overlaid with the design points of `d`.
 
 For 2-dimensional design regions,
@@ -203,8 +162,10 @@ By default, `markersize` indicates the design weights.
 
 # Additional Keyword Arguments
 
-  - `n_grid::Union{Integer, Tuple{Integer, Integer}}`: number of points in the grid.
+  - `n_grid::Union{Integer, Tuple{Integer}, Tuple{Integer, Integer}}`:
+    number of points in the grid.
     Must match the dimension of the design region.
+    Defaults to `101` for one dimension, and to `(51, 51)` for two.
   - Keyword arguments for plotting `DesignMeasure`s:
     `label_formatter`, `minmarkersize`, `maxmarkersize`
 
@@ -212,8 +173,29 @@ By default, `markersize` indicates the design weights.
 
     Currently only implemented for 1- and 2-dimensional [`DesignRegion`](@ref)s.
 """
-function plot_gateauxderivative(d::DesignMeasure, dp::DesignProblem; kw...)
-    plt_gd = RecipesBase.plot(DerivativePlot(d, dp); kw...)
+function plot_gateauxderivative(
+    d::DesignMeasure,
+    adp::AbstractDesignProblem;
+    n_grid = missing,
+    kw...,
+)
+    N = dimension(region(adp))
+    if ismissing(n_grid)
+        if N == 1
+            n_grid = 101
+        elseif N == 2
+            n_grid = (51, 51)
+        else
+            msg = "only implemented for 1 or 2 dimensional regions, got $N"
+            throw(ArgumentError(msg))
+        end
+    end
+    if length(n_grid) != N
+        msg = "length(n_grid) must match dimension of design region, here $N"
+        throw(ArgumentError(msg))
+    end
+    n_grid_tuple = n_grid isa Integer ? (n_grid,) : n_grid
+    plt_gd = RecipesBase.plot(DerivativePlot(d, adp, n_grid_tuple); kw...)
     return RecipesBase.plot!(plt_gd, d; kw...)
 end
 

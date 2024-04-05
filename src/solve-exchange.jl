@@ -113,12 +113,12 @@ function optimization_results_weight(er::ExchangeResult)
     return er.orw
 end
 
-function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
+function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state::Bool)
     (; candidate, optimizer_weight, optimizer_direction, steps, simplify_args) = strategy
-    check_compatible(candidate, region(dp))
+    check_compatible(candidate, region(adp))
     # The workspaces and the constraints are independent of the current candidate.
-    workspaces_direction = allocate_workspaces(one_point_design(points(candidate)[1]), dp)
-    constraints_direction = DesignConstraints(region(dp), [false], [false])
+    workspaces_direction = allocate_workspace(one_point_design(points(candidate)[1]), adp)
+    constraints_direction = DesignConstraints(region(adp), [false], [false])
     ORType = OptimizationResult{
         DesignMeasure,
         SignedMeasure,
@@ -128,20 +128,12 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
     ors_w = ORType[]
     for i in 1:steps
         # Simplify the result of the previous iteration.
-        candidate = simplify(candidate, dp; simplify_args...)
+        candidate = simplify(candidate, adp; simplify_args...)
         # Find the direction in which the Gateaux derivative is largest.
         prototypes_direction = map(one_point_design, points(candidate))
-        gc_direction = gateaux_constants(
-            criterion(dp),
-            candidate,
-            model(dp),
-            covariate_parameterization(dp),
-            prior_knowledge(dp),
-            transformation(dp),
-            normal_approximation(dp),
-        )
+        dc_direction = derivative_constants(candidate, adp)
         or_gd = optimize(
-            d -> gateauxderivative!(workspaces_direction, d, dp, gc_direction),
+            d -> gateauxderivative!(workspaces_direction, d, adp, dc_direction),
             optimizer_direction,
             prototypes_direction,
             constraints_direction;
@@ -157,7 +149,7 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
             # We achieve this by prepending it in a mixture (the weight does not matter)
             # and then relying on `simplify_merge` to delete the later occurrence.
             candidate = mixture(0, direction, candidate)
-            candidate = simplify_merge(candidate, region(dp), 0)
+            candidate = simplify_merge(candidate, region(adp), 0)
         else
             # The direction is actually a new point, prepend it.
             candidate = mixture(1 / (1 + numpoints(candidate)), direction, candidate)
@@ -170,7 +162,7 @@ function solve_with(dp::DesignProblem, strategy::Exchange, trace_state::Bool)
         )
         # We discard the first return value and simplify manually at the top of the loop
         # since solve() sorts the points, and we don't want this.
-        _, rw = solve(dp, wstr; trace_state = trace_state)
+        _, rw = solve(adp, wstr; trace_state = trace_state)
         candidate = solution(rw)
         push!(ors_d, or_gd)
         push!(ors_w, optimization_result(rw))

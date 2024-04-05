@@ -21,7 +21,7 @@ for early stopping.
 For a `Ts <: ProblemSolvingStrategy` we need a corresponding `Tr <: ProblemSolvingResult`,
 plus methods for the following functions:
 
-  - `solve_with(dp::DesignProblem, strategy::Ts, trace_state::Bool)`
+  - `solve_with(adp::AbstractDesignProblem, strategy::Ts, trace_state::Bool)`
     which does the actual work and returns a `Tr`.
     The flag `trace_state` should passed to the low-level [`Optimizer`](@ref).
   - `solution(res::Tr)` to extract the best solution that was found.
@@ -62,19 +62,23 @@ function Kirstine.solution(mrr::MultipleRunsResult)
     return mrr.ors[end].maximizer
 end
 
-function Kirstine.solve_with(dp::DesignProblem, strategy::MultipleRuns, trace_state::Bool)
+function Kirstine.solve_with(
+    adp::AbstractDesignProblem,
+    strategy::MultipleRuns,
+    trace_state::Bool,
+)
     # `Kirstine.optimize()` needs to know the constraints for the optimization problem.
     constraints = Kirstine.DesignConstraints(
         strategy.prototype,
-        region(dp),
+        region(adp),
         strategy.fixedweights,
         strategy.fixedpoints,
     )
     # set up pre-allocated objects for the objective function to work on
-    tc = Kirstine.trafo_constants(transformation(dp), prior_knowledge(dp))
-    w = Kirstine.allocate_workspaces(strategy.prototype, dp)
+    oc = Kirstine.objective_constants(adp)
+    w = Kirstine.allocate_workspace(strategy.prototype, adp)
     optimization_helper(prototype) = Kirstine.optimize(
-        d -> Kirstine.objective!(w, d, dp, tc),
+        d -> Kirstine.objective!(w, d, adp, oc),
         strategy.optimizer,
         [prototype],
         constraints;

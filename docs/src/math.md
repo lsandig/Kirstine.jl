@@ -214,6 +214,8 @@ Finally, the objective function is defined by
 
 Our goal is to maximize it over the over the set ``\AllDesignMeasures`` of all design measures.
 
+For the objective function of a [composite design problem](#Composite-Design-Problems) see below.
+
 ## Gateaux Derivative
 
 The infinite-dimensional directional derivative of ``\Objective``
@@ -331,6 +333,8 @@ a design measure ``\DesignMeasure^*`` maximizes ``\Objective`` iff
 ```
 
 for all ``\DesignPoint ∈ \DesignRegion``.
+
+For the Gateaux derivative of a [composite design problem](#Composite-Design-Problems) see below.
 
 ## D-Criterion
 
@@ -560,3 +564,37 @@ In this general case, the two integrals must be calculated separately:
 ```
 
 This more general quantity of course now also depends on the potentially different prior densities!
+
+## Composite Design Problems
+
+Suppose we have ``\NumComponents`` design problems
+and corresponding non-negative weights ``\ComponentWeight_{1},\dots\ComponentWeight_{\NumComponents}``.
+Denote the individual objective functions by ``\Objective_{1},\dots,\Objective_{\NumComponents}``.
+Then a _composite design problem_ has the objective function
+
+```math
+\Objective_{\mathrm{comp}}(\DesignMeasure)
+=
+\sum_{\IndexComponent=1}^{\NumComponents}
+\ComponentWeight_{\IndexComponent} \Objective_{\IndexComponent}(\DesignMeasure)
+```
+
+Since ``\Objective_{\mathrm{comp}}`` is concave and differentiable,
+it has a Gateaux derivative
+
+```math
+\GateauxDerivative_{\mathrm{comp}}(\DesignMeasure, \DesignMeasureDirection)
+=
+\sum_{\IndexComponent=1}^{\NumComponents}
+\ComponentWeight_{\IndexComponent} \GateauxDerivative_{\IndexComponent}(\DesignMeasure, \DesignMeasureDirection)
+,
+```
+
+which is made up of the individual problems' Gateaux derivatives,
+and that can be used with the equivalence theorem.
+
+!!! note
+    
+      - All individual design problems must have the same design region.
+      - The ``\ComponentWeight_{\IndexComponent}`` don't need to sum to one.
+      - Composite design problems can be nested.

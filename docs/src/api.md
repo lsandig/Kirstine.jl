@@ -2,11 +2,14 @@
 
 ## Design Problems
 
+### Specifying and Composing Design Problems
+
 ```@docs
+AbstractDesignProblem
 DesignProblem
 DesignProblem()
 criterion
-region
+region(::DesignProblem)
 model
 covariate_parameterization
 prior_knowledge
@@ -14,7 +17,21 @@ transformation
 normal_approximation
 ```
 
-Different high-level strategies are available for trying to solve a `DesignProblem`.
+Several `AbstractDesignProblems` can be combined to form a composite design problem,
+where a weighted sum of the component objectives is maximized.
+Composite design problems can be nested within each other.
+
+```@docs
+CompositeDesignProblem
+CompositeDesignProblem(::AbstractVector{<:AbstractDesignProblem}, ::AbstractVector{<:Real})
+problems(::CompositeDesignProblem)
+weights(::CompositeDesignProblem)
+region(::CompositeDesignProblem)
+```
+
+### Solving Design Problems
+
+Different high-level strategies are available for trying to solve any `AbstractDesignProblem`.
 
 ```@docs
 solve
@@ -175,7 +192,8 @@ sort_points
 sort_weights
 mixture
 apportion
-simplify
+simplify(::DesignMeasure, ::DesignProblem)
+simplify(::DesignMeasure, ::CompositeDesignProblem)
 simplify_drop
 simplify_unique
 simplify_merge

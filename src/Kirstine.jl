@@ -25,6 +25,8 @@ using RecipesBase
 export @simple_model,
     @simple_parameter,
     ACriterion,
+    AbstractDesignProblem,
+    CompositeDesignProblem,
     Covariate,
     CovariateParameterization,
     DCriterion,
@@ -79,6 +81,7 @@ export @simple_model,
     plot_gateauxderivative,
     points,
     prior_knowledge,
+    problems,
     random_design,
     region,
     shannon_information,
@@ -110,6 +113,7 @@ include("model-nonlinear-regression.jl")
 include("criterion-d.jl")
 include("criterion-a.jl")
 include("designproblem.jl")
+include("composite-problem.jl")
 include("solve-directmaximization.jl")
 include("solve-exchange.jl")
 include("plot.jl")
