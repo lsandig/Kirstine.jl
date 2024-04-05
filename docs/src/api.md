@@ -2,6 +2,8 @@
 
 ## Design Problems
 
+### Specifying and Composing Design Problems
+
 ```@docs
 AbstractDesignProblem
 DesignProblem
@@ -26,6 +28,8 @@ problems(::CompositeDesignProblem)
 weights(::CompositeDesignProblem)
 region(::CompositeDesignProblem)
 ```
+
+### Solving Design Problems
 
 Different high-level strategies are available for trying to solve any `AbstractDesignProblem`.
 
