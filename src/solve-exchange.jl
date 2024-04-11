@@ -131,7 +131,15 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
         candidate = simplify(candidate, adp; simplify_args...)
         # Find the direction in which the Gateaux derivative is largest.
         prototypes_direction = map(one_point_design, points(candidate))
-        dc_direction = derivative_constants(candidate, adp)
+        dc_direction = try
+            derivative_constants(candidate, adp)
+        catch e
+            if e isa SingularException
+                throw(ArgumentError("step $(step): candidate design is singular"))
+            else
+                rethrow(e)
+            end
+        end
         or_gd = optimize(
             d -> gateauxderivative!(workspaces_direction, d, adp, dc_direction),
             optimizer_direction,

@@ -64,11 +64,20 @@ include("example-emax.jl")
                 optimizer_direction = od,
                 candidate = uniform_design([[0, 1], [1, 0]]),
                 steps = 1,
+            ),
+            # initial design is singular
+            str5 = Exchange(;
+                optimizer_weight = ow,
+                optimizer_direction = od,
+                candidate = one_point_design([5]),
+                steps = 1,
             )
 
             # errors from check_compatible
             @test_throws "outside design region" (@test_warn "dp =" solve(dp, str3))
             @test_throws "must match" solve(dp, str4)
+            # singular candidate design
+            @test_throws "candidate design is singular" solve(dp, str5)
             # result type
             @test isa(r1, ExchangeResult)
             @test isa(r2, ExchangeResult)
