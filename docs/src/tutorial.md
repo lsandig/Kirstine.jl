@@ -321,6 +321,7 @@ Because this issue occurs frequently
 we can directly pass the simplification arguments to `solve`:
 
 ```julia
+Random.seed!(54321)
 s2, r2 = solve(dp, strategy; maxweight = 1e-3, maxdist = 2e-2)
 ```
 
