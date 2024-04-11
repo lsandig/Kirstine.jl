@@ -172,3 +172,16 @@ This is because during optimization,
 design points are not forced to be unique.
 When the solution is simplified afterwards,
 additional weight can be merged onto the initially fixed point.
+
+### How can I speed up convergence?
+
+Design problems with a large number of prior draws can take considerable time to run,
+and even then may end up in a local maximum.
+Sometimes it can help to first solve a problem with a one-point prior
+(e.g. at the mean of the draws),
+and use this solution as the `candidate`
+for solving the original problem with the [`Exchange`](@ref) strategy.
+
+Similarly,
+when you already have the solution to a Bayesian problem with the [`Identity`](@ref) posterior transformation,
+you can use it as the initial candidate for solving a [`DeltaMethod`](@ref) problem.
