@@ -260,10 +260,10 @@ include("example-vector.jl")
                 prototype = uniform_design([[0], [2.45], [2.55], [10]]),
             ),
             _ = seed!(1234),
-            (d, r) = solve(dp, str; trace_state = true, maxdist = 1e-1)
+            (d, r) = solve(dp, str; trace_state = true, maxdist = 1e-1, rev = true)
 
-            # design points should be sorted...
-            @test issorted(reduce(vcat, points(d)))
+            # design points should be sorted backwards...
+            @test issorted(points(d), by = first, rev = true)
             # ... and simplified
             @test numpoints(d) == 3
             # states should be traced (20 iterations)

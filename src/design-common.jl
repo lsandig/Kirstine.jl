@@ -304,8 +304,10 @@ end
 
 Return a tuple `(d, r)`.
 
-  - `d`: The best [`DesignMeasure`](@ref) found. As post-processing, [`simplify`](@ref) is
-    called with `sargs` and the design points are sorted with [`sort_points`](@ref).
+  - `d`: The best [`DesignMeasure`](@ref) found.
+    As post-processing, [`simplify`](@ref) and [`sort_points`](@ref) are called.
+    Their respective keyword arguments can be mixed in `sargs`,
+    since `solve` will take care to pass them along correctly.
 
   - `r`: A subtype of [`ProblemSolvingResult`](@ref) that is specific to the strategy used.
     If `trace_state=true`, this object contains additional debugging information.
@@ -320,7 +322,10 @@ function solve(
     sargs...,
 )
     or = solve_with(adp, strategy, trace_state)
-    dopt = sort_points(simplify(solution(or), adp; sargs...))
+    sort_point_kwargs = [:rev, :dimorder]
+    sortargs = filter(p -> p.first in sort_point_kwargs, sargs)
+    simpargs = setdiff(sargs, sortargs)
+    dopt = sort_points(simplify(solution(or), adp; simpargs...); sortargs...)
     # check that we did not accidentally simplify too much
     o_before = objective(solution(or), adp)
     o_after = objective(dopt, adp)

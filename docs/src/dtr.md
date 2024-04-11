@@ -288,6 +288,14 @@ s1 == DesignMeasure(
 ) || !check_results || error("not the expected result\n", s1)
 ```
 
+To sort the design point by time instead of dose,
+we can use the `dimorder` argument of [`sort_points`](@ref).
+We could also have directly passed it to [`solve`](@ref).
+
+```@example main
+sort_points(s1; dimorder = [2, 1])
+```
+
 For a two-dimensional design region,
 the gateaux derivative is plotted as a heatmap.
 
