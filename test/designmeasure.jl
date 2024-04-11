@@ -190,18 +190,22 @@ using Kirstine
 
     # sorting
     @testset "sort_points" begin
-        let d = DesignMeasure([[3, 4], [2, 1], [1, 1], [2, 3]], [0.4, 0.2, 0.3, 0.1]),
+        let d = DesignMeasure([[3, 4], [2, 1], [1, 2], [2, 3]], [0.4, 0.2, 0.3, 0.1]),
             d_sorted = sort_points(d),
-            refp = DesignMeasure([[1, 1], [2, 1], [2, 3], [3, 4]], [0.3, 0.2, 0.1, 0.4])
+            refp1 = DesignMeasure([[1, 2], [2, 1], [2, 3], [3, 4]], [0.3, 0.2, 0.1, 0.4]),
+            refp2 = DesignMeasure([[2, 1], [1, 2], [2, 3], [3, 4]], [0.2, 0.3, 0.1, 0.4])
 
-            @test d_sorted == refp
+            @test d_sorted == refp1
             # check that a copy is returned
             points(d_sorted)[1][1] = 42
-            @test points(d_sorted)[1] == [42, 1]
-            @test points(d)[3] == [1, 1]
-            @test sort_points(refp) !== refp
-            @test weights(sort_points(d; rev = true)) == reverse(weights(refp))
-            @test points(sort_points(d; rev = true)) == reverse(points(refp))
+            @test points(d_sorted)[1] == [42, 2]
+            @test points(d)[3] == [1, 2]
+            @test sort_points(refp1) !== refp1
+            @test weights(sort_points(d; rev = true)) == reverse(weights(refp1))
+            @test points(sort_points(d; rev = true)) == reverse(points(refp1))
+            @test sort_points(d; dimorder = [2, 1]) == refp2
+            @test_throws "permutation of 1:2" sort_points(d; dimorder = [2])
+            @test_throws "permutation of 1:2" sort_points(d; dimorder = [3, 1, 2])
         end
     end
 
