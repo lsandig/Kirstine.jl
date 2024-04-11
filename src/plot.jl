@@ -169,7 +169,8 @@ By default, `markersize` indicates the design weights.
   - `overlay_points::Bool`: draw also `points(d)` on top of the graph.
     Defaults to `true`.
   - Keyword arguments for plotting `DesignMeasure`s:
-    `label_formatter`, `minmarkersize`, `maxmarkersize`
+    `label_formatter`, `minmarkersize`, `maxmarkersize`.
+    See the [API reference](api.md#Plotting) for what they do.
 
 !!! note
 
@@ -339,7 +340,8 @@ the following things will be plotted:
     `fillcolor` and `fillalpha`.
   - `probability::Real=0.8`: probability to use for the credible band.
   - Keyword arguments for plotting `DesignMeasure`s:
-    `label_formatter`, `minmarkersize`, `maxmarkersize`
+    `label_formatter`, `minmarkersize`, `maxmarkersize`.
+    See the [API reference](api.md#Plotting) for what they do.
 
 # Examples
 
