@@ -20,9 +20,6 @@ Wrapper for results of particle-based optimization.
 | n_eval          | total number of objective evaluations                |
 | seconds_elapsed | total runtime                                        |
 
-Note that `trace_state` will only contain the initial state when saving all states was not
-explicitly requested.
-
 See also [`solve`](@ref).
 """
 struct OptimizationResult{
@@ -50,7 +47,10 @@ function optimize(
     state = optimizer_state(f, optimizer, prototypes, constraints)
     t_x = [deepcopy(maximizer(state))]
     t_fx = [maximum(state)]
-    t_state = [deepcopy(state)]
+    t_state = typeof(state)[]
+    if trace_state
+        push!(t_state, deepcopy(state))
+    end
     for i in 2:iterations(optimizer)
         tick!(f, state, optimizer, constraints, i)
         push!(t_x, deepcopy(maximizer(state)))
