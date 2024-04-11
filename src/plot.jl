@@ -166,6 +166,8 @@ By default, `markersize` indicates the design weights.
     number of points in the grid.
     Must match the dimension of the design region.
     Defaults to `101` for one dimension, and to `(51, 51)` for two.
+  - `overlay_points::Bool`: draw also `points(d)` on top of the graph.
+    Defaults to `true`.
   - Keyword arguments for plotting `DesignMeasure`s:
     `label_formatter`, `minmarkersize`, `maxmarkersize`
 
@@ -177,6 +179,7 @@ function plot_gateauxderivative(
     d::DesignMeasure,
     adp::AbstractDesignProblem;
     n_grid = missing,
+    overlay_points::Bool = true,
     kw...,
 )
     N = dimension(region(adp))
@@ -196,7 +199,10 @@ function plot_gateauxderivative(
     end
     n_grid_tuple = n_grid isa Integer ? (n_grid,) : n_grid
     plt_gd = RecipesBase.plot(DerivativePlot(d, adp, n_grid_tuple); kw...)
-    return RecipesBase.plot!(plt_gd, d; kw...)
+    if overlay_points
+        RecipesBase.plot!(plt_gd, d; kw...)
+    end
+    return plt_gd
 end
 
 struct ExpectedFunctionPlot{

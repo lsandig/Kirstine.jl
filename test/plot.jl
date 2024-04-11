@@ -28,7 +28,8 @@ include("example-dtr.jl")
             ),
             pt1 = plot_gateauxderivative(d, dp),
             pt2 = plot_gateauxderivative(d, dp; n_grid = 11),
-            pt3 = plot_gateauxderivative(d, dp; label_formatter = (k, pt, w) -> k)
+            pt3 = plot_gateauxderivative(d, dp; label_formatter = (k, pt, w) -> k),
+            pt4 = plot_gateauxderivative(d, dp; overlay_points = false)
 
             # axes are widened, so they should be strictly smaller
             @test xlims(pt1)[1] < lowerbound(dr)[1]
@@ -40,6 +41,11 @@ include("example-dtr.jl")
             # check for a few labels
             @test pt1.subplots[1].attr[:xaxis].plotattributes[:guide] == :dose
             @test pt3.subplots[1].series_list[2].plotattributes[:label] == "1"
+
+            # plot/don't plot design points
+            # 1 graph + 3 points
+            @test length(pt1[1].series_list) == 4
+            @test length(pt4[1].series_list) == 1
 
             @test_throws "here 1" plot_gateauxderivative(d, dp; n_grid = (11, 11))
             @test_throws ".>= 2" plot_gateauxderivative(d, dp; n_grid = -10)
