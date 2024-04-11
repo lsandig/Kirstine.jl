@@ -21,6 +21,7 @@ using LinearAlgebra:
     tr
 using Random: rand, rand!
 using RecipesBase
+using Statistics: quantile
 
 export @simple_model,
     @simple_parameter,

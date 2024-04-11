@@ -228,26 +228,55 @@ end
     label_formatter = (k, dp, w) -> "$(round(100 * w; sigdigits=3))%",
     minmarkersize = 2,
     maxmarkersize = 10,
+    bands = false,
+    probability = 0.8,
 )
+    (; f, g, h, x, d, m, cp, pk) = efplot
     if minmarkersize > maxmarkersize
         throw(ArgumentError("minmarkersize must be <= maxmarkersize"))
+    elseif bands && any(weights(pk) .!= first(weights(pk)))
+        msg = "credibility bands are only implemented for uniform prior weights"
+        throw(ArgumentError(msg))
+    elseif probability < 0 || probability > 1
+        throw(ArgumentError("probability must be in in interval [0, 1]"))
     end
-    (; f, g, h, x, d, m, cp, pk) = efplot
     K = numpoints(d)
     # graphs
-    fx = zeros(length(x), K)
+    num_draws = length(weights(pk))
+    fx = zeros(num_draws)
+    fxm = zeros(length(x), K)
+    fxl = zeros(length(x), K)
+    fxu = zeros(length(x), K)
     c = implied_covariates(d, m, cp)
+    qprobs = ((1 - probability) / 2, (1 + probability) / 2)
+    pars = parameters(pk)
     for k in 1:K
         for i in 1:length(x)
-            fx[i, k] = mapreduce(+, weights(pk), parameters(pk)) do w, p
-                return w * f(x[i], c[k], p)
+            for s in 1:num_draws
+                fx[s] = f(x[i], c[k], pars[s])
             end
+            fxm[i, k] = mapreduce((w, fxs) -> w * fxs, +, weights(pk), fx)
+            if bands
+                fxl[i, k], fxu[i, k] = quantile(fx, qprobs)
+            end
+        end
+    end
+    if bands
+        @series begin
+            label --> nothing
+            fillcolor --> :black
+            fillalpha --> 0.1
+            linecolor := nothing
+            # lower/upper bounds should be unique as _pairs_
+            fxlu = unique(vcat(fxl, fxu); dims = 2)
+            fillrange := fxlu[1:length(x), :]
+            x, fxlu[(length(x) + 1):end, :]
         end
     end
     @series begin
         linecolor --> :black
         label --> nothing
-        x, unique(fx; dims = 2)
+        x, unique(fxm; dims = 2)
     end
     # points
     pt = points(d)
@@ -304,6 +333,11 @@ the following things will be plotted:
 
 # Additional Keyword Arguments
 
+  - `bands::Bool=false`: plot point-wise credible bands.
+    Currently only implemented for uniform `weights(d)`.
+    Color and opacity can be controlled with the standard keyword arguments
+    `fillcolor` and `fillalpha`.
+  - `probability::Real=0.8`: probability to use for the credible band.
   - Keyword arguments for plotting `DesignMeasure`s:
     `label_formatter`, `minmarkersize`, `maxmarkersize`
 
