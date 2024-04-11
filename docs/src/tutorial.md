@@ -300,7 +300,7 @@ we notice that two design points are nearly identical:
 It seems plausible that they would merge to a single one
 if we ran the optimizer for some more iterations.
 But we can also do this after the fact by calling [`simplify`](@ref) on the solution.
-This way we merge all design points that are less than some minimum distance apart,
+This way we merge all design points that are less than some maximum distance apart,
 and remove all design points with negligible weight.
 
 ```@example main
