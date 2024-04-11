@@ -37,10 +37,6 @@ Feedback, ideas, and discussion on them are highly appreciated.
     [experimental design packages](https://cran.r-project.org/view=ExperimentalDesign)?
     This should take into account
     that they use different optimization algorithms.
-  - *Composed Design Problems.*
-    Figure out an elegant way to support more abstract design problems
-    that are themselves built from several concrete design problems,
-    e.g. for compound objectives or two-stage design.
   - *Diagnostics.*
     Plots for high- and low-level optimizers.
   - *Examples Repository.*
@@ -68,18 +64,20 @@ to see what needs to be implemented.
 *Linear regression* is a special kind of nonlinear regression,
 so it is already supported implicitly.
 
-### Can I solve compound design problems?
+### Can I solve composite design problems?
 
-No.
-Compound design problems,
+Yes.
+[Composite design problems](math.md#Composite-Design-Problems),
 i.e. maximizing a weighted sum
 
 ```math
-\DesignMeasure ↦ \sum_{j=1}^J λ_j \Objective_j(\DesignMeasure)
+\DesignMeasure ↦
+\sum_{\IndexComponent=1}^{\NumComponents}
+\ComponentWeight_{\IndexComponent} \Objective_{\IndexComponent}(\DesignMeasure)
 ```
 
-of different [objective functions](math.md#Objective-Function),
-are currently not supported.
+of different objective functions
+is supported with the [`CompositeDesignProblem`](@ref) type.
 
 ### Can a design region have more than 2 dimensions?
 
