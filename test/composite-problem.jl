@@ -5,6 +5,7 @@ module CompositeDesignProblemTests
 using Test
 using Kirstine
 using Random: seed!
+using BenchmarkTools: @ballocated
 
 include("example-emax.jl")
 include("example-compartment.jl")
@@ -176,6 +177,38 @@ include("example-compartment.jl")
             @test length(dcon.component_constants) == 2
             @test dcon.component_constants isa
                   Vector{<:Kirstine.DPDerivativeConstants{Kirstine.GCPriorSample}}
+        end
+    end
+
+    @testset "objective!" begin
+        # The correct implementation of the criteria is checked in criterion-{a,d}.jl.
+        # Here we test whether there are spurious memory allocations
+        # that could point to type instability.
+        let dc = DCriterion(),
+            dr = DesignInterval(:dose => (0, 10)),
+            cp = CopyDose(),
+            pk = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            dp1 = DesignProblem(;
+                criterion = dc,
+                region = dr,
+                model = EmaxModel(1),
+                covariate_parameterization = cp,
+                prior_knowledge = pk,
+            ),
+            dp2 = DesignProblem(;
+                criterion = dc,
+                region = dr,
+                model = EmaxModel(2),
+                covariate_parameterization = cp,
+                prior_knowledge = pk,
+            ),
+            cdp = CompositeDesignProblem([dp1, dp2], [1, 1]),
+            d = equidistant_design(region(dp1), 4),
+            ws = Kirstine.allocate_workspace(d, cdp),
+            oc = Kirstine.objective_constants(cdp)
+
+            ba = @ballocated Kirstine.objective!($ws, $d, $cdp, $oc) evals = 1 samples = 1
+            @test ba == 0
         end
     end
         end

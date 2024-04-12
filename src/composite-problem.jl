@@ -95,14 +95,14 @@ function objective!(
     cdp::CompositeDesignProblem,
     oc::CDPObjectiveConstants,
 )
-    acc = 0
-    map(
-        weights(cdp),
-        wsp.component_workspaces,
-        problems(cdp),
-        oc.component_constants,
-    ) do weight, workspace, problem, oconst
-        acc += weight * objective!(workspace, d, problem, oconst)
+    acc = 0.0
+    numprobs = length(weights(cdp))
+    ws = weights(cdp)
+    ps = problems(cdp)
+    cc = oc.component_constants
+    wk = wsp.component_workspaces
+    for i in 1:numprobs
+        acc += ws[i] * objective!(wk[i], d, ps[i], cc[i])
     end
     return acc
 end
