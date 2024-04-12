@@ -206,7 +206,7 @@ end
 # https://netlib.org/lapack/explore-html/d8/d6c/group__variants_p_ocomputational_ga2f55f604a6003d03b5cd4a0adcfb74d6.html
 function log_det!(A::AbstractMatrix)
     potrf!('U', A)
-    acc = 0
+    acc = 0.0
     for i in 1:size(A, 1)
         acc += A[i, i] > 0 ? log(A[i, i]) : -Inf
     end

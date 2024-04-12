@@ -184,7 +184,7 @@ function objective!(
     # infinity in these cases.
     pk = prior_knowledge(dp)
     try
-        acc = 0
+        acc = 0.0
         pk_w = weights(pk)
         pk_p = parameters(pk)
         for i in 1:length(pk_p)
@@ -218,7 +218,7 @@ function gateauxderivative!(
     update_covariates!(w.c, direction, m, covariate_parameterization(dp))
     update_model_workspace!(w.mw, m, w.c)
     pk = prior_knowledge(dp)
-    acc = 0
+    acc = 0.0
     pk_w = weights(pk)
     pk_p = parameters(pk)
     for i in 1:length(pk_p)
