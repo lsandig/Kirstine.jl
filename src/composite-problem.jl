@@ -108,19 +108,19 @@ function objective!(
 end
 
 function gateauxderivative!(
-    w::CDPWorkspace,
+    wsp::CDPWorkspace,
     direction::DesignMeasure,
     cdp::CompositeDesignProblem,
     dc::CDPDerivativeConstants,
 )
-    acc = 0
-    map(
-        weights(cdp),
-        w.component_workspaces,
-        problems(cdp),
-        dc.component_constants,
-    ) do weight, workspace, problem, dconst
-        acc += weight * gateauxderivative!(workspace, direction, problem, dconst)
+    acc = 0.0
+    numprobs = length(weights(cdp))
+    ws = weights(cdp)
+    ps = problems(cdp)
+    cc = dc.component_constants
+    wk = wsp.component_workspaces
+    for i in 1:numprobs
+        acc += ws[i] * gateauxderivative!(wk[i], direction, ps[i], cc[i])
     end
     return acc
 end
