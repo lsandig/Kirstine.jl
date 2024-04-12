@@ -174,7 +174,10 @@ include("example-compartment.jl")
 
             @test dcon isa Kirstine.CDPDerivativeConstants
             @test length(dcon.component_constants) == 2
-            @test dcon.component_constants isa Vector{Kirstine.DPDerivativeConstants}
+            @test dcon.component_constants isa
+                  Vector{<:Kirstine.DPDerivativeConstants{Kirstine.GCPriorSample}}
+        end
+    end
         end
     end
 

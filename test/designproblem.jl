@@ -62,6 +62,32 @@ include("example-compartment.jl")
         end
     end
 
+    @testset "gateauxderivative!" begin
+        # The correct implementation of the criteria is checked in criterion-{a,d}.jl.
+        # Here we test whether there are spurious memory allocations
+        # that could point to type instability.
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 1)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            at = equidistant_design(region(dp), 4),
+            dir = one_point_design([0.5]),
+            ws = Kirstine.allocate_workspace(dir, dp),
+            dcon = Kirstine.derivative_constants(at, dp)
+
+            ba = @ballocated(
+                Kirstine.gateauxderivative!($ws, $dir, $dp, $dcon);
+                evals = 1,
+                samples = 1
+            )
+
+            @test ba == 0
+        end
+    end
+
     @testset "simplify" begin
         let dp = DesignProblem(;
                 criterion = DCriterion(),

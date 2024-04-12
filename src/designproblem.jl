@@ -152,8 +152,8 @@ function objective_constants(dp::DesignProblem)
     return DPObjectiveConstants(tc)
 end
 
-struct DPDerivativeConstants <: DerivativeConstants
-    gc::GateauxConstants
+struct DPDerivativeConstants{Tgc<:GateauxConstants} <: DerivativeConstants
+    gc::Tgc
 end
 
 function derivative_constants(at::DesignMeasure, dp::DesignProblem)
