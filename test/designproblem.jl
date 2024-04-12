@@ -5,6 +5,7 @@ module DesignproblemTests
 using Test
 using Kirstine
 using Random: seed!
+using BenchmarkTools: @ballocated
 
 include("example-emax.jl")
 include("example-compartment.jl")
@@ -37,6 +38,27 @@ include("example-compartment.jl")
             dc = Kirstine.derivative_constants(at, dp)
 
             @test dc isa Kirstine.DPDerivativeConstants
+        end
+    end
+
+    @testset "objective!" begin
+        # The correct implementation of the criteria is checked in criterion-{a,d}.jl.
+        # Here we test whether there are spurious memory allocations
+        # that could point to type instability.
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 1)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            d = equidistant_design(region(dp), 4),
+            ws = Kirstine.allocate_workspace(d, dp),
+            oc = Kirstine.objective_constants(dp)
+
+            ba = @ballocated Kirstine.objective!($ws, $d, $dp, $oc) evals = 1 samples = 1
+
+            @test ba == 0
         end
     end
 

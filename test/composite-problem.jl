@@ -80,7 +80,7 @@ include("example-compartment.jl")
 
             @test wsp isa Kirstine.CDPWorkspace
             @test length(wsp.component_workspaces) == 2
-            @test eltype(wsp.component_workspaces) == Kirstine.DPWorkspace
+            @test eltype(wsp.component_workspaces) <: Kirstine.DPWorkspace
         end
     end
 

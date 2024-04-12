@@ -127,10 +127,10 @@ Get the [`NormalApproximation`](@ref) of `dp`.
 """
 normal_approximation(dp::DesignProblem) = dp.na
 
-struct DPWorkspace <: AbstractWorkspace
+struct DPWorkspace{Tmw<:ModelWorkspace,Tc<:Covariate} <: AbstractWorkspace
     nw::NIMWorkspace
-    mw::ModelWorkspace
-    c::Vector{<:Covariate}
+    mw::Tmw
+    c::Vector{Tc}
 end
 
 function allocate_workspace(d::DesignMeasure, dp::DesignProblem)
