@@ -135,7 +135,7 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
             derivative_constants(candidate, adp)
         catch e
             if e isa SingularException
-                throw(ArgumentError("step $(step): candidate design is singular"))
+                throw(ArgumentError("step $(i): candidate design is singular"))
             else
                 rethrow(e)
             end

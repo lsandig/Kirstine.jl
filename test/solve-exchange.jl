@@ -77,7 +77,7 @@ include("example-emax.jl")
             @test_throws "outside design region" (@test_warn "dp =" solve(dp, str3))
             @test_throws "must match" solve(dp, str4)
             # singular candidate design
-            @test_throws "candidate design is singular" solve(dp, str5)
+            @test_throws "step 1: candidate design is singular" solve(dp, str5)
             # result type
             @test isa(r1, ExchangeResult)
             @test isa(r2, ExchangeResult)
