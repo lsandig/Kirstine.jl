@@ -92,7 +92,7 @@ DesignMeasure(
 """
 function DesignMeasure(dp_w::Pair...)
     ws = [w for (_, w) in dp_w]
-    dps = [dp for (dp, _) in dp_w]
+    dps = stack(first, dp_w) # this indirectly promotes dp eltypes
     return DesignMeasure(dps, ws)
 end
 

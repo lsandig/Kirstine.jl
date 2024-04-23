@@ -24,10 +24,15 @@ using Kirstine
         end
 
         # constructor from point => weight pairs
-        let d = DesignMeasure([1] => 0.2, [42] => 0.3, [9] => 0.5),
-            ref = DesignMeasure([[1], [42], [9]], [0.2, 0.3, 0.5])
+        let d1 = DesignMeasure([1] => 0.2, [42] => 0.3, [9] => 0.5),
+            d2 = DesignMeasure([1.0] => 0.2, [42] => 0.3, [9] => 0.5),
+            d3 = DesignMeasure([42] => 1.0),
+            ref12 = DesignMeasure([[1], [42], [9]], [0.2, 0.3, 0.5]),
+            ref3 = DesignMeasure([[42.0]], [1.0])
 
-            @test d == ref
+            @test d1 == ref12
+            @test d2 == ref12
+            @test d3 == ref3
         end
     end
 
