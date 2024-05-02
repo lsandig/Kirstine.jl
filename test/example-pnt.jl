@@ -5,6 +5,14 @@ struct Pnt <: Kirstine.AbstractPoint
     x::Vector{Float64}
 end
 
+function Base.:(==)(p1::Pnt, p2::Pnt)
+    return p1.x == p2.x
+end
+
+function Base.hash(p::Pnt, h::UInt)
+    return hash(p.x, h)
+end
+
 struct PntDiff <: Kirstine.AbstractPointDifference
     v::Vector{Float64}
 end

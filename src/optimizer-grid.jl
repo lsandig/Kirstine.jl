@@ -53,13 +53,9 @@ function optimizer_state(
     prototypes::AbstractVector{<:AbstractPoint},
     c::AbstractConstraints,
 )
-    if length(prototypes) > 1
-        @warn "grid search only uses first prototype"
-    elseif length(prototypes) == 0
-        throw(ArgumentError("grid search needs a prototype"))
-    end
     # construct grid subject to constraints
-    x = construct_grid(o.gs, c, prototypes[1])
+    x_raw = construct_grid(o.gs, c, prototypes)
+    x = unique(vcat(x_raw, prototypes))
     # evaluate f on grid points
     fx = map(f, x)
     return GridSearchState(x, fx)

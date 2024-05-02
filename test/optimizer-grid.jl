@@ -7,12 +7,17 @@ using Kirstine
 
 include("example-pnt.jl")
 
-function Kirstine.construct_grid(gs::BBoxGrid, c::BoxConstraints, dummy::Pnt)
+function Kirstine.construct_grid(
+    gs::BBoxGrid,
+    c::BoxConstraints,
+    prototypes::AbstractVector{Pnt},
+)
     ranges = map((l, u, n) -> range(l, u; length = n), c.lb.x, c.ub.x, gs.n_points)
-    return reshape([Pnt(collect(x)) for x in Iterators.product(ranges...)], :)
+    grid_points = reshape([Pnt(collect(x)) for x in Iterators.product(ranges...)], :)
+    return grid_points
 end
 
-@testset "optimize-grid.jl" begin
+@testset "optimizer-grid.jl" begin
     @testset "BBoxGrid" begin
         @test_throws "at least 2" BBoxGrid(1, 2, 3)
     end
@@ -32,7 +37,7 @@ end
             c = BoxConstraints(Pnt([0, 0]), Pnt([1, 1])),
             ref_x = [[0, 0], [0, 0.5], [0, 1], [1, 0], [1, 0.5], [1, 1]]
 
-            pts = Kirstine.construct_grid(bbg, c, Pnt([42, 42]))
+            pts = Kirstine.construct_grid(bbg, c, Pnt[])
             pts_x = [p.x for p in pts]
 
             @test pts isa Vector{Pnt}
@@ -48,14 +53,13 @@ end
             p = Pnt([0, 0]),
             c = BoxConstraints(Pnt([-1, -1]), Pnt([4, 4]))
 
-            gss = Kirstine.optimizer_state(f, gs, [p], c)
+            gss1 = Kirstine.optimizer_state(f, gs, Pnt[], c)
+            gss2 = Kirstine.optimizer_state(f, gs, [Pnt([0, 0]), Pnt([-1, -1])], c)
 
-            @test gss isa Kirstine.GridSearchState
-            @test_logs(
-                (:warn, "grid search only uses first prototype"),
-                Kirstine.optimizer_state(f, gs, [p, p], c)
-            )
-            @test_throws "needs a prototype" Kirstine.optimizer_state(f, gs, Pnt[], c)
+            @test gss1 isa Kirstine.GridSearchState
+            @test length(gss1.x) == 9
+            # prototypes are appended, the whole list is made unique
+            @test length(gss2.x) == 10
         end
     end
 
@@ -66,11 +70,10 @@ end
             gs1 = GridSearch(BBoxGrid(11, 11)),
             # grid that does not include xstar
             gs2 = GridSearch(BBoxGrid(3, 3)),
-            prototype = Pnt([0, 0]),
             constr = BoxConstraints(Pnt([-1, -1]), Pnt([4, 4]))
 
-            r1 = Kirstine.optimize(f, gs1, [prototype], constr; trace_state = true)
-            r2 = Kirstine.optimize(f, gs2, [prototype], constr)
+            r1 = Kirstine.optimize(f, gs1, Pnt[], constr; trace_state = true)
+            r2 = Kirstine.optimize(f, gs2, Pnt[], constr)
 
             @test r1.maximizer.x == xstar
             @test r1.maximum == 0
