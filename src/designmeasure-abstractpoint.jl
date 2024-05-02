@@ -70,6 +70,33 @@ function check_compatible(d::DesignMeasure, dr::DesignRegion{N}) where N
     return true
 end
 
+function construct_grid(
+    gs::BBoxGrid{N},
+    c::DesignConstraints,
+    prototypes::AbstractVector{DesignMeasure},
+) where N
+    if isempty(prototypes)
+        throw(ArgumentError("grid search needs a prototype"))
+    elseif N != length(first(points(first(prototypes))))
+        throw(ArgumentError("grid spec and design point dimension do not match"))
+    elseif numpoints(first(prototypes)) != 1
+        throw(ArgumentError("grid only implemented for one-point prototypes"))
+    elseif !(all(c.fixw))
+        throw(ArgumentError("grid on weights is not implemented"))
+    end
+    # product of design points over bounding box
+    lb = boundingbox(c.dr)[1]
+    ub = boundingbox(c.dr)[2]
+    ranges = map((l, u, n) -> collect(range(l, u; length = n)), lb, ub, gs.n_points)
+    bbg = collect.(Iterators.product(ranges...))
+    points_inside = filter(p -> isinside(p, c.dr), bbg)
+    if isempty(points_inside)
+        throw(ArgumentError("no grid points satisfy design constraints"))
+    end
+    opd = one_point_design.(points_inside)
+    return opd
+end
+
 function ap_rand!(d::DesignMeasure, c::DesignConstraints)
     K = numpoints(d)
     pts = points(d)
