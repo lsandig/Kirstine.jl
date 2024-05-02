@@ -112,6 +112,16 @@ using Kirstine
         end
     end
 
+    @testset "hash" begin
+        let d1 = DesignMeasure([1.0;;], [1.0]),
+            d2 = DesignMeasure([2.0;;], [1.0]),
+            d3 = DesignMeasure([1.0;;], [1.0])
+
+            # implicitly constructs a Set, which calls hash()
+            @test unique([d1, d2, d3]) == [d1, d2]
+        end
+    end
+
     @testset "mixture" begin
         let d = equidistant_design(DesignInterval(:a => (1, 4)), 4),
             dirac = one_point_design([5]),
