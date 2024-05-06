@@ -65,9 +65,9 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
         end
     end
 
-    @testset "construct_grid(::BBoxGrid)" begin
+    @testset "construct_grid(::ProductGrid)" begin
         # argument errors
-        let gs33 = BBoxGrid(3, 3),
+        let gs33 = ProductGrid(3, 3),
             dr2 = DesignInterval(:a => (0, 1), :b => (2, 4)),
             c2free = Kirstine.DesignConstraints(dr2, [false], [false]),
             cg = Kirstine.construct_grid
@@ -83,7 +83,7 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
         end
 
         # 1d design region, one-point design
-        let gs3 = BBoxGrid(3),
+        let gs3 = ProductGrid(3),
             dr = DesignInterval(:a => (0, 1)),
             cfixw = Kirstine.DesignConstraints(dr, [true], [false]),
             d = one_point_design([0.1])
@@ -97,7 +97,7 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
         end
 
         # weird region, too coarse grid
-        let gs2 = BBoxGrid(2, 2),
+        let gs2 = ProductGrid(2, 2),
             dr = UnitBall{2}(),
             c = Kirstine.DesignConstraints(dr, [true], [false]),
             d = one_point_design([0, 0])

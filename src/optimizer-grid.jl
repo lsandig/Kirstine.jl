@@ -7,9 +7,9 @@ abstract type GridSpec end
 
 function construct_grid end
 
-struct BBoxGrid{N} <: GridSpec
+struct ProductGrid{N} <: GridSpec
     n_points::NTuple{N,Int64}
-    function BBoxGrid(n_points::Integer...)
+    function ProductGrid(n_points::Integer...)
         if any(n_points .< 2)
             throw(ArgumentError("need at least 2 points in each direction"))
         end

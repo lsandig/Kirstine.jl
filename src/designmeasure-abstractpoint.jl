@@ -71,7 +71,7 @@ function check_compatible(d::DesignMeasure, dr::DesignRegion{N}) where N
 end
 
 function construct_grid(
-    gs::BBoxGrid{N},
+    gs::ProductGrid{N},
     c::DesignConstraints,
     prototypes::AbstractVector{DesignMeasure},
 ) where N
