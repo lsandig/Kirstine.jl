@@ -9,14 +9,19 @@ function construct_grid end
 
 struct ProductGrid{N} <: GridSpec
     n_points::NTuple{N,Int64}
-    function ProductGrid(n_points::Integer...)
+    function ProductGrid{N}(n_points::NTuple{N,Integer}) where N
         if any(n_points .< 2)
             throw(ArgumentError("need at least 2 points in each direction"))
         end
-        n = length(n_points)
-        new{n}(n_points)
+        return new{N}(n_points)
     end
 end
+
+# The inner constructor for a one-dimensional product grid needs a 1-Tuple,
+# which is not very user friendly to type: `ProductGrid{1}((42,))`;
+# hence we define a convenient outer splatting constructor for arbitrary dimensions.
+ProductGrid(n_points::Integer...) = ProductGrid{length(n_points)}(n_points)
+
 
 struct GridSearch{T<:GridSpec} <: Optimizer
     gs::T
