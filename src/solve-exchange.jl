@@ -114,21 +114,14 @@ function optimization_results_weight(er::ExchangeResult)
 end
 
 function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state::Bool)
-    (; candidate, optimizer_weight, optimizer_direction, steps, simplify_args) = strategy
-    check_compatible(candidate, region(adp))
+    check_compatible(strategy.candidate, region(adp))
     # The workspaces and the constraints are independent of the current candidate.
-    workspaces_direction = allocate_workspace(one_point_design(points(candidate)[1]), adp)
-    constraints_direction = DesignConstraints(region(adp), [false], [false])
-    ORType = OptimizationResult{
-        DesignMeasure,
-        SignedMeasure,
-        PsoState{DesignMeasure,SignedMeasure},
-    }
-    ors_d = ORType[]
-    ors_w = ORType[]
-    for i in 1:steps
+    point_for_dim = first(points(strategy.candidate))
+    workspaces_direction = allocate_workspace(one_point_design(point_for_dim), adp)
+    constraints_direction = DesignConstraints(region(adp), [true], [false])
+    function onestep(i::Integer, candidate::DesignMeasure)
         # Simplify the result of the previous iteration.
-        candidate = simplify(candidate, adp; simplify_args...)
+        candidate = simplify(candidate, adp; strategy.simplify_args...)
         # Find the direction in which the Gateaux derivative is largest.
         prototypes_direction = map(one_point_design, points(candidate))
         dc_direction = try
@@ -142,7 +135,7 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
         end
         or_gd = optimize(
             d -> gateauxderivative!(workspaces_direction, d, adp, dc_direction),
-            optimizer_direction,
+            strategy.optimizer_direction,
             prototypes_direction,
             constraints_direction;
             trace_state = trace_state,
@@ -164,16 +157,23 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
         end
         # Re-optimize the weights.
         wstr = DirectMaximization(;
-            optimizer = optimizer_weight,
+            optimizer = strategy.optimizer_weight,
             prototype = candidate,
             fixedpoints = 1:numpoints(candidate),
         )
         # We discard the first return value and simplify manually at the top of the loop
         # since solve() sorts the points, and we don't want this.
         _, rw = solve(adp, wstr; trace_state = trace_state)
-        candidate = solution(rw)
-        push!(ors_d, or_gd)
-        push!(ors_w, optimization_result(rw))
+        return or_gd, optimization_result(rw)
+    end
+    ord, orw = onestep(1, strategy.candidate)
+    ors_d = [ord]
+    ors_w = [orw]
+    for i in 2:(strategy.steps)
+        last_candidate = ors_w[i - 1].maximizer
+        ord, orw = onestep(i, last_candidate)
+        push!(ors_d, ord)
+        push!(ors_w, orw)
     end
     return ExchangeResult(ors_d, ors_w)
 end
