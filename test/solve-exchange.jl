@@ -111,21 +111,21 @@ include("example-emax.jl")
             # grid that contains the points of the solution [[0], [2.5], [10]]
             str1 = Exchange(;
                 optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
-                optimizer_direction = GridSearch(ProductGrid(101)),
+                optimizer_direction = GridSearch(; gridspec = ProductGrid(101)),
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 5,
             ),
             # grid that does not contain [2.5]
             str2 = Exchange(;
                 optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
-                optimizer_direction = GridSearch(ProductGrid(11)),
+                optimizer_direction = GridSearch(; gridspec = ProductGrid(11)),
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 5,
             )
             # grid does not contain [2.5], but a prototype point is off-grid, single step
             str3 = Exchange(;
                 optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
-                optimizer_direction = GridSearch(ProductGrid(11)),
+                optimizer_direction = GridSearch(; gridspec = ProductGrid(11)),
                 candidate = uniform_design([[2.9], [0], [10]]),
                 steps = 1,
             )

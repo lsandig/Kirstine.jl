@@ -50,7 +50,7 @@ end
     @testset "optimizer_state" begin
         let xstar = ones(2),
             f(p) = -sum((p.x .- xstar) .^ 2),
-            gs = GridSearch(ProductGrid(3, 3)),
+            gs = GridSearch(; gridspec = ProductGrid(3, 3)),
             p = Pnt([0, 0]),
             c = BoxConstraints(Pnt([-1, -1]), Pnt([4, 4]))
 
@@ -68,9 +68,9 @@ end
         let xstar = ones(2),
             f(p) = -sum((p.x .- xstar) .^ 2),
             # grid that includes xstar
-            gs1 = GridSearch(ProductGrid(11, 11)),
+            gs1 = GridSearch(; gridspec = ProductGrid(11, 11)),
             # grid that does not include xstar
-            gs2 = GridSearch(ProductGrid(3, 3)),
+            gs2 = GridSearch(; gridspec = ProductGrid(3, 3)),
             constr = BoxConstraints(Pnt([-1, -1]), Pnt([4, 4]))
 
             r1 = Kirstine.optimize(f, gs1, Pnt[], constr; trace_state = true)

@@ -27,6 +27,8 @@ struct GridSearch{T<:GridSpec} <: Optimizer
     gs::T
 end
 
+GridSearch(; gridspec::GridSpec) = GridSearch(gridspec)
+
 struct GridSearchState{T<:AbstractPoint,U} <: OptimizerState{T,U}
     x::Vector{T}
     fx::Vector{Float64}
