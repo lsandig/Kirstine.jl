@@ -104,7 +104,7 @@ abstract type AbstractPointDifference end
 
 Supertype for particle-based optimization algorithms.
 
-See also [`Pso`](@ref).
+See also [`Pso`](@ref), [`GridSearch`](@ref).
 """
 abstract type Optimizer end
 abstract type OptimizerState{T<:AbstractPoint,U<:AbstractPointDifference} end

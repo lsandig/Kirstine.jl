@@ -3,10 +3,39 @@
 
 ## generic grid search ##
 
+"""
+    GridSpec
+
+Supertype for grid specifications.
+
+See also [`ProductGrid`](@ref), [`GridSearch`](@ref).
+"""
 abstract type GridSpec end
 
+# Function stub for
+#
+# (gs::T, c::U, ps::AbstractVector{V}) -> AbstractVector{V}
+#
+# where T <: GridSpec, U <: AbstractConstraints, V <: AbstractPoint
+#
+# See designmeasure-abstractpoint.jl for ProductGrid and DesignMeasure implementation,
+# and ../test/optimizer-grid.jl for Euclidean points.
 function construct_grid end
 
+"""
+    ProductGrid <: GridSpec
+
+A Cartesian product with the given number of grid points in each dimension.
+
+# Examples
+
+A 2-dimensional grid with 5×11 points:
+
+```jldoctest
+julia> ProductGrid(5, 11)
+ProductGrid{2}((5, 11))
+```
+"""
 struct ProductGrid{N} <: GridSpec
     n_points::NTuple{N,Int64}
     function ProductGrid{N}(n_points::NTuple{N,Integer}) where N
@@ -22,11 +51,40 @@ end
 # hence we define a convenient outer splatting constructor for arbitrary dimensions.
 ProductGrid(n_points::Integer...) = ProductGrid{length(n_points)}(n_points)
 
+"""
+    GridSearch <: Optimizer
 
+A grid search optimizer.
+
+This optimizer is particularly useful for the direction-finding step in [`Exchange`](@ref).
+
+(Strictly speaking this is not particle-based, but uses the same internal infrastructure.)
+
+# Initialization
+
+Similar to optimization with [`Pso`](@ref),
+the optimizer state is initialized internally with a vector of prototype points.
+The first prototype determines the structure of each grid point
+that is constructed from the [`GridSpec`](@ref).
+This set of points is then merged with the vector of prototypes
+and used for maximization.
+"""
 struct GridSearch{T<:GridSpec} <: Optimizer
     gs::T
 end
 
+"""
+    GridSearch(; gridspec::GridSpec)
+
+Set up parameters for a grid search.
+
+# Examples
+
+```jldoctest
+julia> GridSearch(; gridspec = ProductGrid(11, 11))
+GridSearch{ProductGrid{2}}(ProductGrid{2}((11, 11)))
+```
+"""
 GridSearch(; gridspec::GridSpec) = GridSearch(gridspec)
 
 struct GridSearchState{T<:AbstractPoint,U} <: OptimizerState{T,U}
@@ -44,6 +102,7 @@ struct GridSearchState{T<:AbstractPoint,U} <: OptimizerState{T,U}
     end
 end
 
+# Implementation of optimizer interface
 iterations(s::GridSearch) = 1
 
 maximizer(s::GridSearchState) = s.x[argmax(s.fx)]
@@ -54,6 +113,7 @@ n_eval(s::GridSearchState) = length(s.fx)
 
 tick!(f, s::GridSearchState, o::GridSearch, c::AbstractConstraints, i::Integer) = s
 
+# Note: user-visible documentation is attached to `GridSearch`.
 function optimizer_state(
     f,
     o::GridSearch,
