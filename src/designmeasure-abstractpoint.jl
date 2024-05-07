@@ -28,6 +28,13 @@ struct DesignConstraints{N,T<:DesignRegion{N}} <: AbstractConstraints
         if length(fixw) != length(fixp)
             throw(DimensionMismatch("fix vectors must have identical lengths"))
         end
+        # Fixing all weights but one is mathematically equivalent to fixing them all.
+        # For numerical stability and identical program behavior in both cases
+        # it is better to explicitly fix them all.
+        if count(fixw) == length(fixw) - 1
+            @info "explicitly fixing implicitly fixed weight"
+            fixw .= true
+        end
         return new{N,T}(dr, fixw, fixp)
     end
 end
@@ -48,12 +55,6 @@ function DesignConstraints(
     end
     fixw = [k in fixedweights for k in 1:K]
     fixp = [k in fixedpoints for k in 1:K]
-    # Fixing all weights but one is equivalent to fixing them all. For
-    # numerical stability it is better to explicitly fix them all.
-    if count(fixw) == K - 1
-        @info "explicitly fixing implicitly fixed weight"
-        fixw .= true
-    end
     return DesignConstraints(dr, fixw, fixp)
 end
 

@@ -118,7 +118,7 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
     check_compatible(candidate, region(adp))
     # The workspaces and the constraints are independent of the current candidate.
     workspaces_direction = allocate_workspace(one_point_design(points(candidate)[1]), adp)
-    constraints_direction = DesignConstraints(region(adp), [false], [false])
+    constraints_direction = DesignConstraints(region(adp), [true], [false])
     ORType = OptimizationResult{
         DesignMeasure,
         SignedMeasure,
