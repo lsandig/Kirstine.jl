@@ -11,7 +11,7 @@ A constricted particle swarm optimizer.
 There is a large number of published PSO variants,
 this one was taken from two [^CK02] publications [^ES00].
 
-## Initialization
+# Initialization
 
 The swarm is initialized from a vector of prototypical `AbstractPoint`s,
 which are supplied by the caller via a non-exported interface.
