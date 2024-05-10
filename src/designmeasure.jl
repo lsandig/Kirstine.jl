@@ -483,7 +483,8 @@ function simplify_merge(d::DesignMeasure, dr::DesignRegion, maxdist::Real)
         j = idx[2]
         if cur_min_dist <= maxdist
             w_new = ws[i] + ws[j]
-            dp_new = (ws[i] .* dps[i] .+ ws[j] .* dps[j]) ./ w_new
+            dp_raw = (ws[i] .* dps[i] .+ ws[j] .* dps[j]) ./ w_new
+            dp_new = min.(max.(dps[i], dps[j]), max.(min.(dps[i], dps[j]), dp_raw))
             to_keep = (1:length(dps) .!= i) .&& (1:length(dps) .!= j)
             dps = [[dp_new]; dps[to_keep]]
             ws = [w_new; ws[to_keep]]

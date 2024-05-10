@@ -191,6 +191,20 @@ using Kirstine
             @test d == simplify_merge(d, dr, 0)
             @test points(d)[1:2] == points(simplify_merge(d, dr, 0.1))[2:3]
         end
+
+        # Numerical inaccuracies should not move points outside the region
+        # (this is a simplified example that occurred with the Exchange algorithm)
+        let dr = DesignInterval(:a => (0, 100), :b => (0, 2)),
+            d = DesignMeasure(
+                [50.0, 1.0] => 0.6735084208551483,
+                [100.0, 2.0] => 0.3264915791448518,
+                [100.0, 2.0] => 0,
+            )
+
+            s = simplify_merge(d, dr, 0)
+
+            @test first(points(s))[1] <= 100
+        end
     end
 
     # sorting
