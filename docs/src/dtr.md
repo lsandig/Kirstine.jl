@@ -65,7 +65,7 @@ and times between 0 and 24 hours.
 I.e. the covariate set is
 
 ```math
-\CovariateSet =	[0,	100] × [0, 24]^{\DimUnit}.
+\CovariateSet = [0, 100] × [0, 24]^{\DimUnit}.
 ```
 
 A unit of observation is a vector ``\Unit∈\Reals^{\DimUnit}``,
