@@ -76,7 +76,7 @@ mutable struct PsoState{T,U} <: OptimizerState{T,U}
 end
 
 maximizer(state::PsoState) = state.g
-maximum(state::PsoState) = state.fg
+Base.maximum(state::PsoState) = state.fg
 n_eval(state::PsoState) = state.n_eval
 
 # Note: user-visible documentation for this method is attached to `Pso`.
