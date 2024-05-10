@@ -330,8 +330,9 @@ function solve(
     o_before = objective(solution(or), adp)
     o_after = objective(dopt, adp)
     rel_diff = (o_after - o_before) / abs(o_before)
+    diff_numpoints = numpoints(solution(or)) - numpoints(dopt)
     if rel_diff < -0.01
-        @warn "simplification may have been too eager" o_before o_after rel_diff
+        @warn "simplification may have been too eager" o_before o_after rel_diff diff_numpoints
     end
     return dopt, or
 end
