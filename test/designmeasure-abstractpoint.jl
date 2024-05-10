@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module DesignmeasureAbstractpointTests
@@ -37,9 +37,14 @@ using Kirstine
             # If only one weight index is not given as fixed, it is still implicitly fixed
             # because of the simplex constraint. In this case we want to have it fixed
             # explicitly.
+            # Check that this is the case for both constructors.
             @test_logs(
                 (:info, "explicitly fixing implicitly fixed weight"),
                 dcon(d, dr, [1, 3], Int64[])
+            )
+            @test_logs(
+                (:info, "explicitly fixing implicitly fixed weight"),
+                dcon(dr, [true, false, true], fill(false, 3))
             )
             @test c.fixw == [false, true, false]
             @test c.fixp == [false, false, true]
@@ -56,6 +61,22 @@ using Kirstine
             @test check(d1, dr1)
             @test_throws "length must match" check(d1, dr2)
             @test_throws "outside design region" (@test_warn "dp =" check(d2, dr2))
+        end
+    end
+
+    @testset "satisfy_constraints" begin
+        let p = [one_point_design([x]) for x in [1, 1, 2]],
+            dr = DesignInterval(:a => (0, 10)),
+            c = Kirstine.DesignConstraints(dr, [true], [true])
+
+            @test_throws "points must be identical" Kirstine.satisfy_constraints(p, c)
+        end
+
+        let p = [DesignMeasure([2 2 * w 3 * w], [w / 2, w / 2, 1 - w]) for w in [0.2, 0.3]],
+            dr = DesignInterval(:a => (0, 10)),
+            c = Kirstine.DesignConstraints(dr, [true, false, false], [false, false, false])
+
+            @test_throws "weights must be identical" Kirstine.satisfy_constraints(p, c)
         end
     end
 
@@ -79,7 +100,7 @@ using Kirstine
             c3 = dcon(dr, [false, false, true], [false, false, true]),
             r3 = arp(d, c3)
             # some weights fixed that already sum to one (see below)
-            c4 = dcon(dr, [false, true, true, true], fill(false, 4))
+            c4 = dcon(dr, [false, false, true, true], fill(false, 4))
 
             # check that weights are non-negative and sum to one
             @test sum(weights(r0)) ≈ 1
@@ -109,7 +130,7 @@ using Kirstine
 
             @test_logs(
                 (:warn, "fixed weights already sum to one"),
-                arp(mixture(0.0, one_point_design([0]), d), c4)
+                arp(DesignMeasure([1 2 3 4], [0, 0, 0.4, 0.6]), c4)
             )
         end
     end

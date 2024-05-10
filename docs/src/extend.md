@@ -1,18 +1,31 @@
 # Extending Kirstine
 
-The code of Kirstine.jl is written in a modular fashion.
-This means that you can write drop-in replacements for many of the types that constitute a [`DesignProblem`](@ref)
-in order to implement any functionality that you might be missing.
-You can even implement your own high- or low-level optimization algorithms.
+Since Kirstine.jl's code base is quite modular,
+you can extend the package's functionality in multiple ways.
+All of the high-level logic is implemented in terms of abstract supertypes.
+For example,
+a general `DesignRegion` is used wherever possible,
+and the specifics of a `DesignInterval`
+are implemented in a few short functions.
+Hence you can,
+in your own code _outside_ the package,
+define a custom subtype of `DesignRegion` and the handful of required methods,
+and it will seamlessly blend in.
+Such is the magic of multiple dispatch.
+This does not only work with the parts of a `DesignProblem`,
+but also with the optimization algorithms.
+They are represented by subtypes of `Optimizer` (for the low-level work)
+and `ProblemSolvingStrategy` (for high-level design-specific stuff).
+Moreover, the finicky logic for moving around `DesignMeasures` is encapsulated,
+so your custom `Optimizer` subtype will only have to deal with `AbstractPoints`.
+The following example vignettes will show you how to implement
 
-The following pages show how to implement custom versions of the following objects:
-
-  - [design criterion](extend-criterion.md)
-  - [design region](extend-region.md)
-  - [model supertype](extend-model.md)
-  - [normal approximation](extend-approximation.md)
-  - [optimizer](extend-optimizer.md)
-  - [problem solving strategy](extend-strategy.md)
+  - a non-logarithmized determinant [design criterion](extend-criterion.md)
+  - an ellipsoidal [design region](extend-region.md)
+  - a nonlinear logistic regression [model](extend-model.md)
+  - a regularizing [normal approximation](extend-approximation.md)
+  - a variant of the imperialist competitive algorithm as a low-level [optimizer](extend-optimizer.md)
+  - a multi-run [problem solving strategy](extend-strategy.md)
 
 !!! warning
     

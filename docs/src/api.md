@@ -2,11 +2,14 @@
 
 ## Design Problems
 
+### Specifying and Composing Design Problems
+
 ```@docs
+AbstractDesignProblem
 DesignProblem
 DesignProblem()
 criterion
-region
+region(::DesignProblem)
 model
 covariate_parameterization
 prior_knowledge
@@ -14,7 +17,21 @@ transformation
 normal_approximation
 ```
 
-Different high-level strategies are available for trying to solve a `DesignProblem`.
+Several `AbstractDesignProblems` can be combined to form a composite design problem,
+where a weighted sum of the component objectives is maximized.
+Composite design problems can be nested within each other.
+
+```@docs
+CompositeDesignProblem
+CompositeDesignProblem(::AbstractVector{<:AbstractDesignProblem}, ::AbstractVector{<:Real})
+problems(::CompositeDesignProblem)
+weights(::CompositeDesignProblem)
+region(::CompositeDesignProblem)
+```
+
+### Solving Design Problems
+
+Different high-level strategies are available for trying to solve any `AbstractDesignProblem`.
 
 ```@docs
 solve
@@ -175,7 +192,8 @@ sort_points
 sort_weights
 mixture
 apportion
-simplify
+simplify(::DesignMeasure, ::DesignProblem)
+simplify(::DesignMeasure, ::CompositeDesignProblem)
 simplify_drop
 simplify_unique
 simplify_merge
@@ -265,6 +283,19 @@ nothing # hide
 ```
 
 ![](api-pb.png)
+
+Since the design points are plotted in the given order,
+large points may be plotted over small ones.
+Unfortunately, the z-order of points can not be set independently in Plots.jl.
+Possible workarounds are sorting the points by decreasing weight before plotting,
+or choosing an unfilled marker shape.
+
+```julia
+d = DesignMeasure([0 1 1.01 2], [0.1, 0.1, 0.7, 0.1])
+plot(d) # point at 1 not visible
+plot(sort_weights(d; rev = true)) # point at 1 visible, but legend re-ordered
+plot(d; markershape = :+) # all visible, but colors harder to distinguish
+```
 
 ```@docs
 plot_gateauxderivative

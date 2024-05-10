@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module UserUsingTests
@@ -67,6 +67,18 @@ include("example-testmod.jl")
         end
     end
 
+    @testset "==(JustCopy)" begin
+        let jc1 = JustCopy(:a, :b),
+            jc2 = JustCopy(:a, :b),
+            jc3 = JustCopy(:a, :c),
+            jc4 = JustCopy(:b, :a)
+
+            @test jc1 == jc2
+            @test jc1 != jc3
+            @test jc1 != jc4
+        end
+    end
+
     @testset "map_to_covariate!(JustCopy)" begin
         let mtc! = Kirstine.map_to_covariate!,
             c1 = TestCovar2(0, 0),
@@ -86,7 +98,7 @@ include("example-testmod.jl")
             # design point is not modified
             @test dp == [42.0, 3.14]
             # covariate parameterization is not modified
-            @test jc1.field_names == [:a, :b]
+            @test jc1.field_names == (:a, :b)
 
             @test_throws "dimension of design point" mtc!(c1, [1.0], m, jc1)
             @test_throws "field names of covariate" mtc!(c1, dp, m, jc2)

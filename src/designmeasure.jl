@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## design measures ##
@@ -14,7 +14,8 @@ In Julia, a design point is simply a `Vector{Float64}`.
 Special kinds of design measures can be constructed with [`one_point_design`](@ref),
 [`uniform_design`](@ref), [`equidistant_design`](@ref), [`random_design`](@ref).
 
-See also [`weights(::DesignMeasure)`](@ref), [`points`](@ref), [`apportion`](@ref).
+See also [`weights(::DesignMeasure)`](@ref), [`points`](@ref), [`apportion`](@ref),
+[plotting API](api.md#Plotting).
 """
 struct DesignMeasure <: AbstractPoint
     points::Matrix{Float64}
@@ -91,7 +92,7 @@ DesignMeasure(
 """
 function DesignMeasure(dp_w::Pair...)
     ws = [w for (_, w) in dp_w]
-    dps = [dp for (dp, _) in dp_w]
+    dps = stack(first, dp_w) # this indirectly promotes dp eltypes
     return DesignMeasure(dps, ws)
 end
 
@@ -246,29 +247,52 @@ function Base.show(io::IO, ::MIME"text/plain", d::DesignMeasure)
 end
 
 """
-    sort_points(d::DesignMeasure; rev::Bool = false)
+    sort_points(d::DesignMeasure; rev = false, dimorder = 1:length(first(points(d))))
 
 Return a representation of `d` where the design points are sorted lexicographically.
+
+By default,
+the result is sorted by the first dimension of the design points,
+and ties are resolved by the second,
+further ties by the third,
+and so on.
+This can be changed by setting `dimorder` to a different permutation.
 
 See also [`sort_weights`](@ref).
 
 # Examples
 
 ```jldoctest
-julia> sort_points(uniform_design([[3, 4], [2, 1], [1, 1], [2, 3]]))
+julia> sort_points(uniform_design([[3, 40], [2, 10], [1, 20], [2, 30]]))
 DesignMeasure(
- [1.0, 1.0] => 0.25,
- [2.0, 1.0] => 0.25,
- [2.0, 3.0] => 0.25,
- [3.0, 4.0] => 0.25,
+ [1.0, 20.0] => 0.25,
+ [2.0, 10.0] => 0.25,
+ [2.0, 30.0] => 0.25,
+ [3.0, 40.0] => 0.25,
+)
+
+julia> sort_points(uniform_design([[3, 40], [2, 10], [1, 20], [2, 30]]); dimorder = [2, 1])
+DesignMeasure(
+ [2.0, 10.0] => 0.25,
+ [1.0, 20.0] => 0.25,
+ [2.0, 30.0] => 0.25,
+ [3.0, 40.0] => 0.25,
 )
 ```
 """
-function sort_points(d::DesignMeasure; rev::Bool = false)
+function sort_points(
+    d::DesignMeasure;
+    rev::Bool = false,
+    dimorder::AbstractVector{<:Integer} = 1:length(first(points(d))),
+)
+    ordered_dims = 1:length(first(points(d)))
+    if sort(dimorder) != ordered_dims
+        throw(ArgumentError("dimorder must be a permutation of $(ordered_dims)"))
+    end
     # note: no (deep)copies needed because indexing with `p` generates a copy
     dp = points(d)
     w = weights(d)
-    for i in length(dp[1]):-1:1
+    for i in reverse(dimorder)
         p = sortperm(map(x -> x[i], dp); rev = rev)
         dp = dp[p]
         w = w[p]
@@ -459,7 +483,8 @@ function simplify_merge(d::DesignMeasure, dr::DesignRegion, maxdist::Real)
         j = idx[2]
         if cur_min_dist <= maxdist
             w_new = ws[i] + ws[j]
-            dp_new = (ws[i] .* dps[i] .+ ws[j] .* dps[j]) ./ w_new
+            dp_raw = (ws[i] .* dps[i] .+ ws[j] .* dps[j]) ./ w_new
+            dp_new = min.(max.(dps[i], dps[j]), max.(min.(dps[i], dps[j]), dp_raw))
             to_keep = (1:length(dps) .!= i) .&& (1:length(dps) .!= j)
             dps = [[dp_new]; dps[to_keep]]
             ws = [w_new; ws[to_keep]]

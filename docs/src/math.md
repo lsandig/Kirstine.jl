@@ -7,8 +7,8 @@ This page documents the notation for `Kirstine.jl`.
 
   - The set of ``a×a`` symmetric non-negative definite matrices is denoted ``\SNNDMatrices{a}``.
 
-  - The total derivative / Jacobian matrix operator is denoted ``\TotalDiff``.
-  - The Hessian matrix operator is denoted ``\Hessian``.
+  - The total derivative / Jacobian matrix operator is denoted ``\TotalDiff{}``.
+  - The Hessian matrix operator is denoted ``\Hessian{}``.
   - The prime symbol ``(·)'`` denotes the transpose of a matrix, not a first derivative.
   - The matrix-valued derivative
     ``\MatDeriv{φ}{A}{·}``
@@ -129,61 +129,28 @@ The set ``\AllDesignMeasures`` denotes the set of all design measures on (some s
 
 ## Objective Function
 
-The following function is to be maximized over the set ``\AllDesignMeasures`` of all design measures:
-
-```math
-\Objective(\DesignMeasure) = \IntD{\ParameterSet}{\DesignCriterion(\TNIMatrix(\DesignMeasure, \Parameter))}{\PriorDensity(\Parameter)}{\Parameter}
-```
-
-Here, ``\TNIMatrix`` denotes the normalized information matrix for ``\Transformation(\Parameter)``,
-
-```math
-\TNIMatrix(\DesignMeasure, \Parameter)
-=
-\bigl[
- (\TotalDiff\Transformation(\Parameter))
-  \NIMatrix^{-1}(\DesignMeasure, \Parameter)
- (\TotalDiff\Transformation(\Parameter))'
-\bigr]^{-1},
-```
-
-and ``\TotalDiff\Transformation`` denotes the Jacobian matrix of the posterior transformation ``\Transformation``.
-
-It is obtained from the normalized information matrix for ``\Parameter``
-by applying multivariate delta method to the underlying normal approximation.
-
-The normalized information matrix for the original parameter ``\Parameter``
-is given by the average
-
-```math
-\NIMatrix(\DesignMeasure, \Parameter)
-=
-\AverageFisherMatrix(\DesignMeasure, \Parameter)
-=
-\IntM{\DesignRegion}{
- \FisherMatrix(\CovariateParameterization(\DesignPoint), \Parameter)
-}{\DesignMeasure}{\DesignPoint},
-```
-
-over the model's Fisher information matrix
+To construct the objective function,
+we first obtain the the Fisher information matrix
+from the expected Hessian matrix of the statistical model's log-likelihood
 
 ```math
 \FisherMatrix(\Covariate, \Parameter)
 =
-- \Expectation[\Hessian\LogLikelihood(\Unit,\Covariate,\Parameter)\mid\Parameter]
+- \Expectation[\Hessian\LogLikelihood(\Unit,\Covariate,\Parameter)\mid\Parameter].
 ```
 
-where ``\Hessian`` is the Hessian matrix with respect to ``\Parameter``,
+Here, ``\Hessian{}`` is the Hessian matrix with respect to ``\Parameter``,
 and the expectation is taken with respect to ``\Unit``.
-With the log-likelihood for nonlinear regression
+
+In case of our nonlinear regression model the log-likelihood is
 
 ```math
 \LogLikelihood(\Unit,\Covariate,\Parameter)
 =
-\log\MvNormDist(\Unit\mid\MeanFunction(\Covariate,\Parameter), \UnitCovariance(\Covariate))
+\log\MvNormDist(\Unit\mid\MeanFunction(\Covariate,\Parameter), \UnitCovariance(\Covariate)),
 ```
 
-the Fisher information matrix turns out to be
+so we obtain the Fisher information matrix
 
 ```math
 \FisherMatrix(\Covariate, \Parameter)
@@ -195,6 +162,59 @@ the Fisher information matrix turns out to be
 
 where ``\TotalDiff\MeanFunction`` denotes the Jacobian matrix of the mean function ``\MeanFunction``
 with respect to ``\Parameter``.
+
+!!! note
+    
+    Only ``\FisherMatrix(\Covariate, \Parameter)`` is specific to the statistical model,
+    the remainder of the setup stays the same for any kind of regression.
+    See the extension vignettes for a [logistic regression example](extend-model.md).
+
+Next, we average the Fisher information matrix with respect to a design measure ``\DesignMeasure``
+to obtain the _normalized information matrix_ for the parameter ``\Parameter``
+
+```math
+\NIMatrix(\DesignMeasure, \Parameter)
+=
+\AverageFisherMatrix(\DesignMeasure, \Parameter)
+=
+\IntM{\DesignRegion}{
+ \FisherMatrix(\CovariateParameterization(\DesignPoint), \Parameter)
+}{\DesignMeasure}{\DesignPoint}.
+```
+
+(For intuition:
+up to scaling constants,
+``\NIMatrix^{-1}(\DesignMeasure, \hat{\Parameter})`` is the covariance matrix of a normal approximation
+to a posterior distribution for ``\Parameter`` with posterior mean ``\hat{\Parameter}``.)
+
+An application of the Delta method yields the _normalized information matrix
+for the transformed parameter_ ``\Transformation(\Parameter)``,
+
+```math
+\TNIMatrix(\DesignMeasure, \Parameter)
+=
+\bigl[
+ (\TotalDiff\Transformation(\Parameter))
+  \NIMatrix^{-1}(\DesignMeasure, \Parameter)
+ (\TotalDiff\Transformation(\Parameter))'
+\bigr]^{-1},
+```
+
+where ``\TotalDiff\Transformation`` denotes the Jacobian matrix of the posterior transformation ``\Transformation``.
+
+(To continue with intuition building:
+``\TNIMatrix^{-1}(\DesignMeasure, \Transformation(\hat{\Parameter}))`` is the covariance matrix
+of a normal approximation to the posterior distribution of ``\Transformation(\Parameter)``.)
+
+Finally, the objective function is defined by
+
+```math
+\Objective(\DesignMeasure) = \IntD{\ParameterSet}{\DesignCriterion(\TNIMatrix(\DesignMeasure, \Parameter))}{\PriorDensity(\Parameter)}{\Parameter}.
+```
+
+Our goal is to maximize it over the over the set ``\AllDesignMeasures`` of all design measures.
+
+For the objective function of a [composite design problem](#Composite-Design-Problems) see below.
 
 ## Gateaux Derivative
 
@@ -237,6 +257,10 @@ the Gateaux derivative is given by
 
 Note that the direction ``\DesignMeasureDirection`` enters the Gateaux derivative
 only through the final matrix in the first trace.
+
+Also, don't confuse the normalized information matrix function ``\NIMatrix``
+with the placeholder ``\SomeMatrix``
+that occurs in the symbolic notation of the matrix-valued derivative of ``\DesignCriterion``.
 
 If ``\Transformation(\Parameter)=\Parameter``, the expression above simplifies to
 
@@ -310,6 +334,8 @@ a design measure ``\DesignMeasure^*`` maximizes ``\Objective`` iff
 
 for all ``\DesignPoint ∈ \DesignRegion``.
 
+For the Gateaux derivative of a [composite design problem](#Composite-Design-Problems) see below.
+
 ## D-Criterion
 
 ```math
@@ -318,6 +344,17 @@ for all ``\DesignPoint ∈ \DesignRegion``.
 
 A design which is optimal with respect to ``\DesignCriterion_D``
 maximizes the approximate expected posterior Shannon information about ``\Transformation(\Parameter)``.
+
+The matrix-valued derivative of ``\log\det\SomeMatrix`` is ``(\SomeMatrix^{-1})'``,
+so we have
+
+```math
+\MatDeriv{\DesignCriterion_D}{\SomeMatrix}{\SomeMatrix} = \SomeMatrix^{-1},
+```
+
+since all matrices in the domain of ``\DesignCriterion_D`` are symmetric.
+Note that ``\SomeMatrix`` here is simply a positive definite symmetric matrix,
+_not_ the normalized information matrix function ``\NIMatrix``.
 
 The Gateaux derivative is
 
@@ -359,6 +396,17 @@ For ``\Transformation(\Parameter) = \Parameter`` this simplifies to
 
 A design which is optimal with respect to ``\DesignCriterion_A``
 minimizes the approximate average posterior variance for the elements of ``\Transformation(\Parameter)``.
+
+The matrix-valued derivative of ``\Trace\SomeMatrix^{-1}`` is ``-(M^{-2})'``,
+so we have
+
+```math
+\MatDeriv{\DesignCriterion_A}{\SomeMatrix}{\SomeMatrix} = \SomeMatrix^{-2},
+```
+
+since all matrices in the domain of ``\DesignCriterion_A`` are symmetric.
+Again, ``\SomeMatrix`` here denotes simply a positive definite symmetric matrix,
+_not_ the normalized information matrix function ``\NIMatrix``.
 
 The Gateaux derivative is
 
@@ -409,6 +457,8 @@ The _approximate expected posterior Shannon information_ for an experiment with 
 and a sample size of ``\SampleSize`` is
 
 ```math
+\ShannonInformation(\DesignMeasure, \SampleSize)
+=
 \frac{\DimTransformedParameter}{2}\log(\SampleSize)
 - \frac{\DimTransformedParameter}{2}(1 + \log(2π))
 + \frac{1}{2} \IntD{\ParameterSet}{
@@ -422,6 +472,13 @@ and a sample size of ``\SampleSize`` is
 Consider two experiments with design measures ``\DesignMeasure_1`` and ``\DesignMeasure_2``,
 and samples sizes ``\SampleSize^{(1)}`` and ``\SampleSize^{(2)}``.
 Equating their approximate expected posterior Shannon information
+
+```math
+\ShannonInformation(\DesignMeasure_1, \SampleSize^{(1)})
+=
+\ShannonInformation(\DesignMeasure_2, \SampleSize^{(2)})
+```
+
 and solving for the ratio of sample sizes yields
 
 ```math
@@ -441,9 +498,8 @@ and solving for the ratio of sample sizes yields
 This quantity is called the _expected relative D-efficiency_
 of the two designs.
 A relative efficiency smaller than ``1`` means
-that an experiment with ``\DesignMeasure_1`` on average needs more observations
-than an experiment with ``\DesignMeasure_2`` to achieve the same accuracy.
-In this sense, ``\DesignMeasure_1`` is less efficient than ``\DesignMeasure_2``.
+that ``\DesignMeasure_1`` is less efficient than ``\DesignMeasure_2``
+since the first experiment needs a larger sample size than the second to achieve the same accuracy.
 Conversely, a relative efficiency larger than ``1`` means
 that ``\DesignMeasure_1`` is more efficient than ``\DesignMeasure_2``.
 When ``\DesignMeasure_2`` is optimal for the design problem,
@@ -508,3 +564,37 @@ In this general case, the two integrals must be calculated separately:
 ```
 
 This more general quantity of course now also depends on the potentially different prior densities!
+
+## Composite Design Problems
+
+Suppose we have ``\NumComponents`` design problems
+and corresponding non-negative weights ``\ComponentWeight_{1},\dots\ComponentWeight_{\NumComponents}``.
+Denote the individual objective functions by ``\Objective_{1},\dots,\Objective_{\NumComponents}``.
+Then a _composite design problem_ has the objective function
+
+```math
+\Objective_{\mathrm{comp}}(\DesignMeasure)
+=
+\sum_{\IndexComponent=1}^{\NumComponents}
+\ComponentWeight_{\IndexComponent} \Objective_{\IndexComponent}(\DesignMeasure)
+```
+
+Since ``\Objective_{\mathrm{comp}}`` is concave and differentiable,
+it has a Gateaux derivative
+
+```math
+\GateauxDerivative_{\mathrm{comp}}(\DesignMeasure, \DesignMeasureDirection)
+=
+\sum_{\IndexComponent=1}^{\NumComponents}
+\ComponentWeight_{\IndexComponent} \GateauxDerivative_{\IndexComponent}(\DesignMeasure, \DesignMeasureDirection)
+,
+```
+
+which is made up of the individual problems' Gateaux derivatives,
+and that can be used with the equivalence theorem.
+
+!!! note
+    
+      - All individual design problems must have the same design region.
+      - The ``\ComponentWeight_{\IndexComponent}`` don't need to sum to one.
+      - Composite design problems can be nested.

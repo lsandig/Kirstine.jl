@@ -80,7 +80,7 @@ which wraps precomputed values for all expressions
 that do not depend on the direction of the Gateaux derivative.
 Additionally, the following methods must be implemented.
 
-  - `criterion_integrand(tnim, is_inv::Bool, dc::T)`:
+  - `criterion_functional!(tnim, is_inv::Bool, dc::T)`:
     The function ``\DesignCriterion`` in the mathematical notation.
     This function should be fast.
     Ideally, it should not allocate new memory.
@@ -154,10 +154,10 @@ function Kirstine.gateaux_constants(
 )
     # For the
     #  * original NIM M(ζ,θ) ∈ S_+^r,
-    #  * transformed NIM M_T(ζ,θ) ∈ S_+^t,
+    #  * transformed NIM Q(ζ,θ) ∈ S_+^t,
     #  * and transformation T: ℝ^r → ℝ^t with Jacobian matrix DT,
     # we need
-    # A     = (1/t) det(M(ζ,θ))^{1/t} M(ζ,θ)^{-1} DT' M_T(ζ,θ) DT M(ζ,θ)^{-1}
+    # A     = (1/t) det(M(ζ,θ))^{1/t} M(ζ,θ)^{-1} DT' Q(ζ,θ) DT M(ζ,θ)^{-1}
     # tr(B) = det(M(ζ,θ))^{1/t}
     tc = Kirstine.trafo_constants(trafo, pk)
     t = Kirstine.codomain_dimension(trafo, pk)
@@ -166,9 +166,9 @@ function Kirstine.gateaux_constants(
     tr_B = map(iM -> exp(-log(det(iM)) / t), inv_M)
     # Note that these A will be dense.
     A = map(inv_M, tc.jm, tr_B) do iM, DT, trB
-        # compute (M_T(ζ,θ))^{-1} from M(ζ,θ)^{-1}.
+        # compute (Q(ζ,θ))^{-1} from M(ζ,θ)^{-1}.
         iMT = DT * iM * DT'
-        # Instead of an explicit inversion, we solve (M_T(ζ,θ))^{-1} X = DT for X.
+        # Instead of an explicit inversion, we solve (Q(ζ,θ))^{-1} X = DT for X.
         C = DT' * (iMT \ DT)
         return iM * C * iM * trB / t
     end

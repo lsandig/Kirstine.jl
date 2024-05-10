@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module SolveDirectmaximizationTests
@@ -57,7 +57,7 @@ include("example-emax.jl")
             @test isa(r1, DirectMaximizationResult)
             @test isa(r2, DirectMaximizationResult)
             # traced state
-            @test length(optimization_result(r1).trace_state) == 1
+            @test length(optimization_result(r1).trace_state) == 0
             @test length(optimization_result(r2).trace_state) == 20
             # increasing objective
             @test issorted(optimization_result(r1).trace_fx)

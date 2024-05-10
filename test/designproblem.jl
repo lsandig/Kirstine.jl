@@ -1,17 +1,31 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module DesignproblemTests
 using Test
 using Kirstine
 using Random: seed!
+using BenchmarkTools: @ballocated
 
 include("example-emax.jl")
 include("example-compartment.jl")
 
 @testset "designproblem.jl" begin
-    @testset "solve" begin
-        # check that solution is sorted and simplified
+    @testset "objective_constants" begin
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            )
+            oc = Kirstine.objective_constants(dp)
+
+            @test oc isa Kirstine.DPObjectiveConstants
+        end
+    end
+
+    @testset "derivative_constants" begin
         let dp = DesignProblem(;
                 criterion = DCriterion(),
                 region = DesignInterval(:dose => (0, 10)),
@@ -19,39 +33,58 @@ include("example-compartment.jl")
                 covariate_parameterization = CopyDose(),
                 prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
             ),
-            str = DirectMaximization(;
-                optimizer = Pso(; swarmsize = 10, iterations = 20),
-                prototype = uniform_design([[0], [2.45], [2.55], [10]]),
+            at = equidistant_design(region(dp), 4)
+
+            dc = Kirstine.derivative_constants(at, dp)
+
+            @test dc isa Kirstine.DPDerivativeConstants
+        end
+    end
+
+    @testset "objective!" begin
+        # The correct implementation of the criteria is checked in criterion-{a,d}.jl.
+        # Here we test whether there are spurious memory allocations
+        # that could point to type instability.
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 1)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
             ),
-            _ = seed!(1234),
-            (d, r) = solve(dp, str; trace_state = true, maxdist = 1e-1)
+            d = equidistant_design(region(dp), 4),
+            ws = Kirstine.allocate_workspace(d, dp),
+            oc = Kirstine.objective_constants(dp)
 
-            # design points should be sorted...
-            @test issorted(reduce(vcat, points(d)))
-            # ... and simplified
-            @test numpoints(d) == 3
-            # states should be traced (20 iterations)
-            @test length(optimization_result(r).trace_state) == 20
+            ba = @ballocated Kirstine.objective!($ws, $d, $dp, $oc) evals = 1 samples = 1
 
-            # `maxposdist` doesn't exist, the correct argument name is `maxdist`. Because we
-            # have not implemented `simplify_unique()` for EmaxModel, the generic method
-            # should complain about gobbling up `maxposdist` in its varargs. (We can't test
-            # this in designmeasure.jl because we need a Model and a
-            # CovariateParameterization in order to call `simplify()`.)
-            @test_logs(
-                (
-                    :warn,
-                    "unused keyword arguments given to generic `simplify_unique` method",
-                ),
-                solve(dp, str, maxposdist = 1e-2)
+            @test ba == 0
+        end
+    end
+
+    @testset "gateauxderivative!" begin
+        # The correct implementation of the criteria is checked in criterion-{a,d}.jl.
+        # Here we test whether there are spurious memory allocations
+        # that could point to type instability.
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 1)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            at = equidistant_design(region(dp), 4),
+            dir = one_point_design([0.5]),
+            ws = Kirstine.allocate_workspace(dir, dp),
+            dcon = Kirstine.derivative_constants(at, dp)
+
+            ba = @ballocated(
+                Kirstine.gateauxderivative!($ws, $dir, $dp, $dcon);
+                evals = 1,
+                samples = 1
             )
 
-            # Warn on too strong simplification. An example with finite objective afterwards
-            # would be nicer, but is difficult to construct with this model and prior.
-            @test_logs(
-                (:warn, "simplification may have been too eager"),
-                solve(dp, str; maxdist = 5)
-            )
+            @test ba == 0
         end
     end
 

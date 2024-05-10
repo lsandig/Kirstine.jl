@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## preallocating objects for less memory overhead ##
@@ -18,12 +18,6 @@ mutable struct NIMWorkspace
         end
         new(zeros(r, r), zeros(r, t), zeros(t, r), zeros(t, t), false, false)
     end
-end
-
-struct Workspaces
-    nw::NIMWorkspace
-    mw::ModelWorkspace
-    c::Vector{<:Covariate}
 end
 
 struct GCPriorSample <: GateauxConstants
@@ -212,7 +206,7 @@ end
 # https://netlib.org/lapack/explore-html/d8/d6c/group__variants_p_ocomputational_ga2f55f604a6003d03b5cd4a0adcfb74d6.html
 function log_det!(A::AbstractMatrix)
     potrf!('U', A)
-    acc = 0
+    acc = 0.0
     for i in 1:size(A, 1)
         acc += A[i, i] > 0 ? log(A[i, i]) : -Inf
     end
@@ -245,4 +239,100 @@ function tr_prod(A::AbstractMatrix, B::AbstractMatrix, uplo::Symbol)
         throw(ArgumentError("uplo argument must be either :U or :L, got $uplo"))
     end
     return acc
+end
+
+## abstract design problem interface ##
+
+function region end
+function allocate_workspace end
+function objective_constants end
+function derivative_constants end
+function objective! end
+function gateauxderivative! end
+
+"""
+    objective(d::DesignMeasure, adp::AbstractDesignProblem)
+
+Evaluate the objective function.
+
+See also the [mathematical background](math.md#Objective-Function).
+"""
+function objective(d::DesignMeasure, adp::AbstractDesignProblem)
+    oc = objective_constants(adp)
+    w = allocate_workspace(d, adp)
+    return objective!(w, d, adp, oc)
+end
+
+"""
+    gateauxderivative(
+        at::DesignMeasure,
+        directions::AbstractArray{DesignMeasure},
+        dp::DesignProblem,
+    )
+
+Evaluate the Gateaux derivative for each direction.
+
+Directions must be one-point design measures.
+
+See also the [mathematical background](math.md#Gateaux-Derivative).
+"""
+function gateauxderivative(
+    at::DesignMeasure,
+    directions::AbstractArray{DesignMeasure},
+    adp::AbstractDesignProblem,
+)
+    if any(d -> numpoints(d) != 1, directions)
+        throw(ErrorException("derivative only implemented for one-point directions"))
+    end
+    if isinf(objective(at, adp))
+        # undefined objective implies no well-defined derivative
+        return fill(NaN, size(directions))
+    end
+    w = allocate_workspace(directions[1], adp)
+    dc = derivative_constants(at, adp)
+    gd = map(d -> gateauxderivative!(w, d, adp, dc), directions)
+    return gd
+end
+
+"""
+    solve(
+        adp::AbstractDesignProblem,
+        strategy::ProblemSolvingStrategy;
+        trace_state = false,
+        sargs...,
+    )
+
+Return a tuple `(d, r)`.
+
+  - `d`: The best [`DesignMeasure`](@ref) found.
+    As post-processing, [`simplify`](@ref) and [`sort_points`](@ref) are called.
+    Their respective keyword arguments can be mixed in `sargs`,
+    since `solve` will take care to pass them along correctly.
+
+  - `r`: A subtype of [`ProblemSolvingResult`](@ref) that is specific to the strategy used.
+    If `trace_state=true`, this object contains additional debugging information.
+    The unsimplified version of `d` can be accessed as `solution(r)`.
+
+See also [`DirectMaximization`](@ref), [`Exchange`](@ref).
+"""
+function solve(
+    adp::AbstractDesignProblem,
+    strategy::ProblemSolvingStrategy;
+    trace_state = false,
+    sargs...,
+)
+    or = solve_with(adp, strategy, trace_state)
+    sort_point_kwargs = [:rev, :dimorder]
+    sortargs = filter(p -> p.first in sort_point_kwargs, sargs)
+    simpargs = setdiff(sargs, sortargs)
+    dopt = sort_points(simplify(solution(or), adp; simpargs...); sortargs...)
+    # check that we did not accidentally simplify too much
+    o_before = objective(solution(or), adp)
+    o_after = objective(dopt, adp)
+    rel_diff = (o_after - o_before) / abs(o_before)
+    diff_numpoints = numpoints(solution(or)) - numpoints(dopt)
+    if rel_diff < -0.01
+        @warn "simplification may have been too eager" o_before o_after rel_diff diff_numpoints
+    end
+    return dopt, or
 end

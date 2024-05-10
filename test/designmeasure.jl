@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module DesignmeasureTests
@@ -24,10 +24,15 @@ using Kirstine
         end
 
         # constructor from point => weight pairs
-        let d = DesignMeasure([1] => 0.2, [42] => 0.3, [9] => 0.5),
-            ref = DesignMeasure([[1], [42], [9]], [0.2, 0.3, 0.5])
+        let d1 = DesignMeasure([1] => 0.2, [42] => 0.3, [9] => 0.5),
+            d2 = DesignMeasure([1.0] => 0.2, [42] => 0.3, [9] => 0.5),
+            d3 = DesignMeasure([42] => 1.0),
+            ref12 = DesignMeasure([[1], [42], [9]], [0.2, 0.3, 0.5]),
+            ref3 = DesignMeasure([[42.0]], [1.0])
 
-            @test d == ref
+            @test d1 == ref12
+            @test d2 == ref12
+            @test d3 == ref3
         end
     end
 
@@ -186,22 +191,40 @@ using Kirstine
             @test d == simplify_merge(d, dr, 0)
             @test points(d)[1:2] == points(simplify_merge(d, dr, 0.1))[2:3]
         end
+
+        # Numerical inaccuracies should not move points outside the region
+        # (this is a simplified example that occurred with the Exchange algorithm)
+        let dr = DesignInterval(:a => (0, 100), :b => (0, 2)),
+            d = DesignMeasure(
+                [50.0, 1.0] => 0.6735084208551483,
+                [100.0, 2.0] => 0.3264915791448518,
+                [100.0, 2.0] => 0,
+            )
+
+            s = simplify_merge(d, dr, 0)
+
+            @test first(points(s))[1] <= 100
+        end
     end
 
     # sorting
     @testset "sort_points" begin
-        let d = DesignMeasure([[3, 4], [2, 1], [1, 1], [2, 3]], [0.4, 0.2, 0.3, 0.1]),
+        let d = DesignMeasure([[3, 4], [2, 1], [1, 2], [2, 3]], [0.4, 0.2, 0.3, 0.1]),
             d_sorted = sort_points(d),
-            refp = DesignMeasure([[1, 1], [2, 1], [2, 3], [3, 4]], [0.3, 0.2, 0.1, 0.4])
+            refp1 = DesignMeasure([[1, 2], [2, 1], [2, 3], [3, 4]], [0.3, 0.2, 0.1, 0.4]),
+            refp2 = DesignMeasure([[2, 1], [1, 2], [2, 3], [3, 4]], [0.2, 0.3, 0.1, 0.4])
 
-            @test d_sorted == refp
+            @test d_sorted == refp1
             # check that a copy is returned
             points(d_sorted)[1][1] = 42
-            @test points(d_sorted)[1] == [42, 1]
-            @test points(d)[3] == [1, 1]
-            @test sort_points(refp) !== refp
-            @test weights(sort_points(d; rev = true)) == reverse(weights(refp))
-            @test points(sort_points(d; rev = true)) == reverse(points(refp))
+            @test points(d_sorted)[1] == [42, 2]
+            @test points(d)[3] == [1, 2]
+            @test sort_points(refp1) !== refp1
+            @test weights(sort_points(d; rev = true)) == reverse(weights(refp1))
+            @test points(sort_points(d; rev = true)) == reverse(points(refp1))
+            @test sort_points(d; dimorder = [2, 1]) == refp2
+            @test_throws "permutation of 1:2" sort_points(d; dimorder = [2])
+            @test_throws "permutation of 1:2" sort_points(d; dimorder = [3, 1, 2])
         end
     end
 

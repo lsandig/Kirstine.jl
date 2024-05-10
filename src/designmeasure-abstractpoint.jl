@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## abstract point interface to design measures for optimizer ##
@@ -28,6 +28,13 @@ struct DesignConstraints{N,T<:DesignRegion{N}} <: AbstractConstraints
         if length(fixw) != length(fixp)
             throw(DimensionMismatch("fix vectors must have identical lengths"))
         end
+        # Fixing all weights but one is mathematically equivalent to fixing them all.
+        # For numerical stability and identical program behavior in both cases
+        # it is better to explicitly fix them all.
+        if count(fixw) == length(fixw) - 1
+            @info "explicitly fixing implicitly fixed weight"
+            fixw .= true
+        end
         return new{N,T}(dr, fixw, fixp)
     end
 end
@@ -48,12 +55,6 @@ function DesignConstraints(
     end
     fixw = [k in fixedweights for k in 1:K]
     fixp = [k in fixedpoints for k in 1:K]
-    # Fixing all weights but one is equivalent to fixing them all. For
-    # numerical stability it is better to explicitly fix them all.
-    if count(fixw) == K - 1
-        @info "explicitly fixing implicitly fixed weight"
-        fixw .= true
-    end
     return DesignConstraints(dr, fixw, fixp)
 end
 
@@ -66,6 +67,23 @@ function check_compatible(d::DesignMeasure, dr::DesignRegion{N}) where N
             @error "" dp dr
             throw(ArgumentError("design point is outside design region"))
         end
+    end
+    return true
+end
+
+function satisfy_constraints(ds::AbstractVector{DesignMeasure}, c::DesignConstraints)
+    for d in ds
+        check_compatible(d, c.dr)
+    end
+    val_fixw = [weights(d)[c.fixw] for d in ds]
+    val_fixp = [points(d)[c.fixp] for d in ds]
+    if !allequal(val_fixw)
+        msg = "fixed weights must be identical across prototypes, found $(val_fixw)"
+        throw(ArgumentError(msg))
+    end
+    if !allequal(val_fixp)
+        msg = "fixed points must be identical across prototypes, found $(val_fixp)"
+        throw(ArgumentError(msg))
     end
     return true
 end

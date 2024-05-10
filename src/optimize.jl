@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## abstract particle based optimization ##
@@ -19,9 +19,6 @@ Wrapper for results of particle-based optimization.
 | trace_state     | vector of internal optimizer state in each iteration |
 | n_eval          | total number of objective evaluations                |
 | seconds_elapsed | total runtime                                        |
-
-Note that `trace_state` will only contain the initial state when saving all states was not
-explicitly requested.
 
 See also [`solve`](@ref).
 """
@@ -47,10 +44,16 @@ function optimize(
     trace_state = false,
 )
     time_start = time()
+    if !satisfy_constraints(prototypes, constraints)
+        throw(ArgumentError("prototypes do not satisfy constraints"))
+    end
     state = optimizer_state(f, optimizer, prototypes, constraints)
     t_x = [deepcopy(maximizer(state))]
     t_fx = [maximum(state)]
-    t_state = [deepcopy(state)]
+    t_state = typeof(state)[]
+    if trace_state
+        push!(t_state, deepcopy(state))
+    end
     for i in 2:iterations(optimizer)
         tick!(f, state, optimizer, constraints, i)
         push!(t_x, deepcopy(maximizer(state)))

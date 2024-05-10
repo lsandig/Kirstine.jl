@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 using Documenter, Kirstine
@@ -37,15 +37,17 @@ math_macros = Dict(
     raw"\DimParameter" => raw"r",
     raw"\DimTransformedParameter" => raw"t",
     raw"\DimUnit" => raw"m",
+    raw"\IndexComponent" => raw"j",
     raw"\IndexDesignPoint" => raw"k",
     raw"\IndexUnit" => raw"i",
     raw"\NumDesignPoints" => raw"K",
+    raw"\NumComponents" => raw"J",
     raw"\SampleSize" => raw"n",
     # Fixed model parameters
     raw"\ScalarUnitVariance" => raw"σ^2",
     raw"\UnitCovariance" => raw"Σ",
     # Sets
-    raw"\AllDesignMeasures" => raw"Δ",
+    raw"\AllDesignMeasures" => raw"\mathcal{Z}",
     raw"\CovariateSet" => raw"X",
     raw"\DesignRegion" => raw"Z",
     raw"\IndexSet" => raw"I",
@@ -53,6 +55,7 @@ math_macros = Dict(
     raw"\Reals" => raw"ℝ",
     raw"\SNNDMatrices" => raw"\mathrm{S}_{+}^{#1}",
     # Variables
+    raw"\ComponentWeight" => "a",
     raw"\Covariate" => raw"x",
     raw"\DesignMeasure" => raw"ζ",
     raw"\DesignMeasureDirection" => raw"δ",
@@ -64,7 +67,7 @@ math_macros = Dict(
     raw"\Unit" => raw"y",
     # Functions
     raw"\AverageFisherMatrix" => raw"\operatorname{\bar{F}}",
-    raw"\CovariateParameterization" => raw"C",
+    raw"\CovariateParameterization" => raw"V",
     raw"\DesignCriterion" => raw"Ψ",
     raw"\Expit" => raw"\operatorname{expit}",
     raw"\FisherMatrix" => raw"\operatorname{F}",
@@ -77,7 +80,8 @@ math_macros = Dict(
     raw"\PriorDensity" => raw"p",
     raw"\RelEff" => raw"\operatorname{RelEff}",
     raw"\Sensitivity" => raw"φ",
-    raw"\TNIMatrix" => raw"\operatorname{M}_T",
+    raw"\ShannonInformation" => raw"\mathcal{I}",
+    raw"\TNIMatrix" => raw"\operatorname{Q}",
     raw"\Trace" => raw"\operatorname{tr}",
     raw"\Transformation" => raw"T",
     # Distributions
@@ -85,7 +89,7 @@ math_macros = Dict(
     raw"\DiracDist" => raw"\operatorname{Dirac}",
     raw"\MvNormDist" => raw"\operatorname{MvNorm}",
     # Miscellaneous
-    raw"\Covariance" => raw"ℂ",
+    raw"\Covariance" => raw"\operatorname{Cov}",
     raw"\Expectation" => raw"𝔼",
     raw"\Hessian" => raw"\operatorname{H\!}",
     raw"\Int" => raw"∫_{#1}#2\operatorname{d}\!#3",

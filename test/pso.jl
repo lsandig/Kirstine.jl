@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module PsoTests
@@ -19,6 +19,12 @@ end
 struct BoxConstraints <: Kirstine.AbstractConstraints
     lb::Pnt
     ub::Pnt
+end
+
+function Kirstine.satisfy_constraints(ps::AbstractVector{Pnt}, c::BoxConstraints)
+    all_above_lb = all(p -> all(p.x .>= c.lb.x), ps)
+    all_below_ub = all(p -> all(p.x .<= c.ub.x), ps)
+    return all_above_lb && all_below_ub
 end
 
 function Kirstine.ap_rand!(p::Pnt, c::BoxConstraints)
@@ -86,6 +92,7 @@ end
             f(p) = -sum((p.x .- xstar) .^ 2),
             pso = Pso(; iterations = 100, swarmsize = 20),
             prototype = Pnt(zeros(n)),
+            outside = Pnt([-1, -1, 5, -1]),
             constr1 = BoxConstraints(Pnt(fill(-1, n)), Pnt(fill(2, n))),
             constr2 = BoxConstraints(Pnt(fill(-1, n)), Pnt(collect(1:n) ./ 2)),
             _ = seed!(4711),
@@ -123,6 +130,8 @@ end
                 [Pnt([-1, 0, 1, 2])],
                 constr1,
             )
+
+            @test_throws "do not satisfy" Kirstine.optimize(f, pso, [outside], constr1)
         end
     end
 end

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 using Test
@@ -17,6 +17,7 @@ using Test
     include("criterion-d.jl")
     include("criterion-a.jl")
     include("designproblem.jl")
+    include("composite-problem.jl")
     include("solve-directmaximization.jl")
     include("solve-exchange.jl")
     include("plot.jl")

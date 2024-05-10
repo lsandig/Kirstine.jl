@@ -52,20 +52,20 @@ c(t, a, e)                                            &= \frac{D}{1-e/a}(\exp(-e
 \mathrm{E}_{\max{}}(c, e_0, e_{\max{}}, \mathrm{EC}_{50}) &= e_0 + \frac{ce_{\max{}}}{\mathrm{EC}_{50} + c} \\
 \MeanFunction((D, t_1,…,t_{\DimUnit}), θ)             &=
 \begin{bmatrix}
-\mathrm{E}_{\max{}}(C(t_1, a, e), e_0, e_{\max{}}, \mathrm{EC}_{50})\\
+\mathrm{E}_{\max{}}(c(t_1, a, e), e_0, e_{\max{}}, \mathrm{EC}_{50})\\
 … \\
-\mathrm{E}_{\max{}}(C(t_{\DimUnit}, a, e), e_0, e_{\max{}}, \mathrm{EC}_{50})\\
+\mathrm{E}_{\max{}}(c(t_{\DimUnit}, a, e), e_0, e_{\max{}}, \mathrm{EC}_{50})\\
 \end{bmatrix}
 \end{aligned}
 ```
 
-Hence the model covariates are the initial dose ``D`` and the measurement times ``t_1,…,1_{\DimUnit}``.
+Hence the model covariates are the initial dose ``D`` and the measurement times ``t_1,…,t_{\DimUnit}``.
 In the following example, we will consider doses between 0 and 100 mg,
 and times between 0 and 24 hours.
 I.e. the covariate set is
 
 ```math
-\CovariateSet =	[0,	100] × [0, 24]^{\DimUnit}.
+\CovariateSet = [0, 100] × [0, 24]^{\DimUnit}.
 ```
 
 A unit of observation is a vector ``\Unit∈\Reals^{\DimUnit}``,
@@ -286,6 +286,14 @@ s1 == DesignMeasure(
  [100.0, 0.1730851666925906] => 0.1989417430614362,
  [100.0, 23.998585546217786] => 0.12810712460101795,
 ) || !check_results || error("not the expected result\n", s1)
+```
+
+To sort the design point by time instead of dose,
+we can use the `dimorder` argument of [`sort_points`](@ref).
+We could also have directly passed it to [`solve`](@ref).
+
+```@example main
+sort_points(s1; dimorder = [2, 1])
 ```
 
 For a two-dimensional design region,
@@ -593,9 +601,9 @@ we can hope that it gives us the solution after a few steps.
 ```@example main
 st4b = Exchange(
     candidate = s4a,
-    steps = 8,
+    steps = 6,
     optimizer_direction = Pso(swarmsize = 25, iterations = 10),
-    optimizer_weight = Pso(swarmsize = 25, iterations = 10),
+    optimizer_weight = Pso(swarmsize = 25, iterations = 25),
 )
 
 Random.seed!(314)
@@ -618,12 +626,12 @@ s4b
 
 ```@setup main
 s4b == DesignMeasure(
- [0.0, 2.0] => 0.11595421077160158,
- [12.095246532862653, 0.9020051699201546] => 0.14653802636943558,
- [20.275450621575725, 2.0] => 0.1492579919353056,
- [99.99945513048785, 0.027541600449965585] => 0.1904247835946039,
- [99.99999999999999, 0.440966353402996] => 0.06161366427151828,
- [100.0, 2.0] => 0.3362113230575351,
+ [0.0, 2.0] => 0.1137232342451187,
+ [12.258680316012303, 0.9158234222042569] => 0.1457894552403696,
+ [19.593596408255703, 2.0] => 0.1471416385906509,
+ [99.99999450061316, 0.027467917484113615] => 0.19550901636913995,
+ [100.0, 0.43533868322900837] => 0.05617938718584929,
+ [100.0, 2.0] => 0.34165726836887167,
 ) || !check_results || error("not the expected result\n", s4b)
 ```
 
@@ -766,11 +774,11 @@ eff = [efficiency(d1, d2, p1, p2) for (d1, p1) in sol_prob, (d2, p2) in sol_prob
 
 ```@setup main
 eff == [
-1.0 1.4850650859043615 0.12650911830389935 0.0929991128162769 0.1016413811354575;
-0.6733711602889304 1.0 0.0851875917794263 0.06262292050293754 0.0684423747485524;
-7.904568567127365 11.738798798177912 1.0 0.735117863938274 0.8034312664427492;
-10.752790749472375 15.96859411807681 1.3603260770220753 1.0 1.0929285028369427;
-9.83851251162457 14.610831428246879 1.2446615432675072 0.9149729350129255 1.0
+1.0 1.4850650859043615 0.12650911830389935 0.09299711798671212 0.1016413811354575;
+0.6733711602889304 1.0 0.0851875917794263 0.06262157724223892 0.0684423747485524;
+7.904568567127365 11.738798798177912 1.0 0.7351020956711994 0.8034312664427492;
+10.753021401618971 15.96893665152671 1.3603552566217763 1.0 1.0929519466396846;
+9.83851251162457 14.610831428246879 1.2446615432675072 0.9149533088572939 1.0
 ] || !check_results || error("not the expected result\n", eff)
 ```
 

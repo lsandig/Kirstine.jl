@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module DesignCommonTests
@@ -243,6 +243,51 @@ include("example-vector.jl")
             @test gi(A, B, d) == tr(Symmetric(A) * Symmetric(B)) - d
             # rule out unintentionally symmetric input
             @test gi(A, B, d) != tr(A * B) - d
+        end
+    end
+
+    @testset "solve" begin
+        # check that solution is sorted and simplified
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            str = DirectMaximization(;
+                optimizer = Pso(; swarmsize = 10, iterations = 20),
+                prototype = uniform_design([[0], [2.45], [2.55], [10]]),
+            ),
+            _ = seed!(1234),
+            (d, r) = solve(dp, str; trace_state = true, maxdist = 1e-1, rev = true)
+
+            # design points should be sorted backwards...
+            @test issorted(points(d), by = first, rev = true)
+            # ... and simplified
+            @test numpoints(d) == 3
+            # states should be traced (20 iterations)
+            @test length(optimization_result(r).trace_state) == 20
+
+            # `maxposdist` doesn't exist, the correct argument name is `maxdist`. Because we
+            # have not implemented `simplify_unique()` for EmaxModel, the generic method
+            # should complain about gobbling up `maxposdist` in its varargs. (We can't test
+            # this in designmeasure.jl because we need a Model and a
+            # CovariateParameterization in order to call `simplify()`.)
+            @test_logs(
+                (
+                    :warn,
+                    "unused keyword arguments given to generic `simplify_unique` method",
+                ),
+                solve(dp, str, maxposdist = 1e-2)
+            )
+
+            # Warn on too strong simplification. An example with finite objective afterwards
+            # would be nicer, but is difficult to construct with this model and prior.
+            @test_logs(
+                (:warn, "simplification may have been too eager"),
+                solve(dp, str; maxdist = 5)
+            )
         end
     end
 end

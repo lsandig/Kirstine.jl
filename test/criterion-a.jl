@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module DesignAOptimalTests
@@ -120,7 +120,7 @@ include("example-compartment.jl")
 
         # DeltaMethod transformation
         #
-        # The GateauxConstants wrap M^{-1} J' J M^{-1} and the trace of M_T^{-1} at the
+        # The GateauxConstants wrap M^{-1} J' J M^{-1} and the trace of Q^{-1} at the
         # candidate solution. There is one matrix and trace for each prior parameter value.
         #
         # We use an example model from Atkinson et al. with a two-point prior

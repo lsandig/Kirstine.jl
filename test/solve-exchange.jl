@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module SolveExchangeTests
@@ -64,11 +64,20 @@ include("example-emax.jl")
                 optimizer_direction = od,
                 candidate = uniform_design([[0, 1], [1, 0]]),
                 steps = 1,
+            ),
+            # initial design is singular
+            str5 = Exchange(;
+                optimizer_weight = ow,
+                optimizer_direction = od,
+                candidate = one_point_design([5]),
+                steps = 1,
             )
 
             # errors from check_compatible
             @test_throws "outside design region" (@test_warn "dp =" solve(dp, str3))
             @test_throws "must match" solve(dp, str4)
+            # singular candidate design
+            @test_throws "step 1: candidate design is singular" solve(dp, str5)
             # result type
             @test isa(r1, ExchangeResult)
             @test isa(r2, ExchangeResult)
@@ -78,8 +87,8 @@ include("example-emax.jl")
                 optimization_results_direction(r1),
             )
             @test all(or -> length(or.trace_state) == 20, optimization_results_weight(r1))
-            @test all(or -> length(or.trace_state) == 1, optimization_results_direction(r2))
-            @test all(or -> length(or.trace_state) == 1, optimization_results_weight(r2))
+            @test all(or -> length(or.trace_state) == 0, optimization_results_direction(r2))
+            @test all(or -> length(or.trace_state) == 0, optimization_results_weight(r2))
             # increasing objective (from step to step)
             @test issorted(optimization_results_weight(r1), by = or -> or.maximum)
             @test issorted(optimization_results_weight(r2), by = or -> or.maximum)
