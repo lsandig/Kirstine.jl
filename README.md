@@ -1,6 +1,6 @@
 # Kirstine.jl
 
-<!-- SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de> -->
+<!-- SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de> -->
 <!-- SPDX-License-Identifier: GFDL-1.3-or-later -->
 
 A [Julia][julia-url] package for Bayesian optimal experimental design with nonlinear regression models.

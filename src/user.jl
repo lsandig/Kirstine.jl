@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## function stubs for user methods ##
