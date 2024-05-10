@@ -64,6 +64,22 @@ using Kirstine
         end
     end
 
+    @testset "satisfy_constraints" begin
+        let p = [one_point_design([x]) for x in [1, 1, 2]],
+            dr = DesignInterval(:a => (0, 10)),
+            c = Kirstine.DesignConstraints(dr, [true], [true])
+
+            @test_throws "points must be identical" Kirstine.satisfy_constraints(p, c)
+        end
+
+        let p = [DesignMeasure([2 2 * w 3 * w], [w / 2, w / 2, 1 - w]) for w in [0.2, 0.3]],
+            dr = DesignInterval(:a => (0, 10)),
+            c = Kirstine.DesignConstraints(dr, [true, false, false], [false, false, false])
+
+            @test_throws "weights must be identical" Kirstine.satisfy_constraints(p, c)
+        end
+    end
+
     @testset "ap_rand!(DesignPoint)" begin
         # check that constraints are handled correctly
         let dr = DesignInterval(:a => (0, 5)),

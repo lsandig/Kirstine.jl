@@ -71,6 +71,23 @@ function check_compatible(d::DesignMeasure, dr::DesignRegion{N}) where N
     return true
 end
 
+function satisfy_constraints(ds::AbstractVector{DesignMeasure}, c::DesignConstraints)
+    for d in ds
+        check_compatible(d, c.dr)
+    end
+    val_fixw = [weights(d)[c.fixw] for d in ds]
+    val_fixp = [points(d)[c.fixp] for d in ds]
+    if !allequal(val_fixw)
+        msg = "fixed weights must be identical across prototypes, found $(val_fixw)"
+        throw(ArgumentError(msg))
+    end
+    if !allequal(val_fixp)
+        msg = "fixed points must be identical across prototypes, found $(val_fixp)"
+        throw(ArgumentError(msg))
+    end
+    return true
+end
+
 function ap_rand!(d::DesignMeasure, c::DesignConstraints)
     K = numpoints(d)
     pts = points(d)
