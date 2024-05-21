@@ -71,6 +71,24 @@ Kirstine.jl is free and open source software.
 The code is licensed under GPL-3.0 or later,
 and the documentation under GFDL-1.3 or later.
 
+## Citing
+
+Kirstine.jl is [published in the Journal of Open Source Software](https://joss.theoj.org/papers/10.21105/joss.06424).
+You can cite the package like this:
+
+```
+@article{,
+  author =  {Ludger Sandig},
+  title =   {Kirstine.jl: A Julia Package for Bayesian Optimal Design of Experiments},
+  journal = {Journal of Open Source Software},
+  volume =  9,
+  number =  97,
+  pages =   6424,
+  year =    2024,
+  doi =     {10.21105/joss.06424},
+}
+```
+
 ## Rationale
 
 Why yet another package for optimal design?
