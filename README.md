@@ -5,12 +5,14 @@
 
 A [Julia][julia-url] package for Bayesian optimal experimental design with nonlinear regression models.
 
-[repo][repo-url] | [docs][docs-url] | [change log][change-url]
+[repo][repo-url] | [docs][docs-url] | [change log][change-url] | [examples][examples-url] | [mailing lists][lists-url]
 
 [julia-url]: https://julialang.org
 [repo-url]: https://sr.ht/~lsandig/Kirstine.jl/
 [docs-url]: https://lsandig.srht.site/Kirstine.jl/index.html
 [change-url]: https://git.sr.ht/~lsandig/Kirstine.jl/refs
+[examples-url]: https://git.sr.ht/~lsandig/kirstine-examples
+[lists-url]: https://sr.ht/~lsandig/Kirstine.jl/lists
 
 ## Project Status
 
