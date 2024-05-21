@@ -92,6 +92,26 @@ include("example-dtr.jl")
             @test_throws ".>= 2" plot_gateauxderivative(d, dp; n_grid = (1, 10))
         end
 
+        # singular design measure with all-nan Gateaux derivative
+        let p = DTRParameter(; a = 1, e = 0.1, e0 = 0, emax = 1, ec50 = 0.2),
+            dr = DesignInterval(:dose => (0, 1), :time => (0, 1)),
+            d = one_point_design([1, 0.05]),
+            dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = dr,
+                prior_knowledge = PriorSample([p]),
+                model = DTRMod(; sigma = 1, m = 1),
+                covariate_parameterization = CopyBoth(),
+            )
+
+            @test try
+                plot_gateauxderivative(d, dp)
+                true
+            catch
+                false
+            end
+        end
+
         # pseudo 3d example, only to test the error message
         let p = EmaxPar(; e0 = 0, emax = 1, ec50 = 0.2),
             dr = DesignInterval(:dose => (0, 1), :foo => (0, 1), :bar => (0, 1)),

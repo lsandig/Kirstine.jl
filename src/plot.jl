@@ -132,7 +132,8 @@ end
 end
 
 @recipe function f(dplot::DerivativePlot{2,<:DesignRegion{2}})
-    ex = extrema(filter(!isnan, dplot.gd))
+    gd_not_nan = filter(!isnan, dplot.gd)
+    ex = isempty(gd_not_nan) ? (-1.0, 1.0) : extrema(gd_not_nan)
     xguide --> (dimnames(dplot.dr)[1])
     yguide --> (dimnames(dplot.dr)[2])
     # perceptually uniform gradient from blue via white to red
