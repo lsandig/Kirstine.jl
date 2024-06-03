@@ -94,6 +94,12 @@ include("example-compartment.jl")
         let dc = ACriterion(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
+            # for a4_ni, the infomatrix has rank 1, but is still numerically inv()able
+            a4_ni = DesignMeasure(
+                [1.0122] => 1.0 - 2 * eps(Float64),
+                [0.2288] => eps(Float64),
+                [18.471] => eps(Float64),
+            ),
             m = TPCModel(; sigma = 1),
             cp = CopyTime(),
             g1 = TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -109,6 +115,7 @@ include("example-compartment.jl")
 
             # Singular designs should raise an exception. It will be caught by the caller.
             @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
+            @test_throws "SingularException" pgc(dc, a4_ni, m, cp, pk, trafo, na)
             @test isa(gc, Kirstine.GCPriorSample)
             @test length(gc.A) == 2
             @test length(gc.tr_B) == 2
@@ -128,6 +135,12 @@ include("example-compartment.jl")
         let dc = ACriterion(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
+            # for a4_ni, the infomatrix has rank 1, but is still numerically inv()able
+            a4_ni = DesignMeasure(
+                [1.0122] => 1.0 - 2 * eps(Float64),
+                [0.2288] => eps(Float64),
+                [18.471] => eps(Float64),
+            ),
             m = TPCModel(; sigma = 1),
             cp = CopyTime(),
             g1 = TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -144,6 +157,7 @@ include("example-compartment.jl")
 
             # Singular designs should raise an exception. It will be caught by the caller.
             @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
+            @test_throws "SingularException" pgc(dc, a4_ni, m, cp, pk, trafo, na)
             @test isa(gc, Kirstine.GCPriorSample)
             @test length(gc.A) == 2
             @test length(gc.tr_B) == 2
