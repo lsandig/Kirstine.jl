@@ -158,6 +158,15 @@ using Kirstine
             @test o !== o_simp
             @test o == o_simp
         end
+
+        # When no point is dropped the weights should not be rescaled.
+        # In this example, we have sum(weights(d)) ≈ 1.0, but != 1.0
+        let d = DesignMeasure([1.0] => 0.7193961892006324, [2.0] => 0.28060381079936747),
+            s = simplify_drop(d, 0)
+
+            @test weights(s) == weights(d)
+            @test weights(s) !== weights(d)
+        end
     end
 
     @testset "simplify_merge" begin

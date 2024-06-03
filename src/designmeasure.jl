@@ -398,6 +398,9 @@ function simplify_drop(d::DesignMeasure, maxweight::Real)
         return deepcopy(d) # return a copy for consistency
     end
     enough_weight = weights(d) .> maxweight
+    if all(enough_weight)
+        return deepcopy(d)
+    end
     dps = points(d)[enough_weight]
     ws = weights(d)[enough_weight]
     ws ./= sum(ws)
