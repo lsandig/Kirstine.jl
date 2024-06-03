@@ -162,7 +162,7 @@ s == DesignMeasure(
  [0.25627719942704874] => 0.23990318667725455,
  [0.49521184488138004] => 0.23940518207234693,
  [0.99999937754188] => 0.24890755029906544,
-) || !check_results || error("not the expected result\n", s1a)
+) || !check_results || error("not the expected result\n", s)
 ```
 
 ![](extend-strategy-gd.png)
