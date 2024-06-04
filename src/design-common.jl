@@ -115,20 +115,21 @@ function inv_informationmatrices(
     imat = [informationmatrix(d, m, cp, p, na) for p in parameters(pk)]
     # For a singular matrix, inv() below would throw a SingularException(n),
     # where n is the index of one of the singular values.
-    # However, there are rank-deficient matrices where inv() does not throw an exception,
-    # but which we want to treat as numerically singular.
-    # Hence we are more strict here.
+    # However, there are nearly singular matrices where inv() does not throw an exception,
+    # but produces huge and unstable results.
+    # To be more strict,
+    # we compare the reciprocal 1-norm condition number to machine epsilon.
+    # This is also what the solve() function in R is doing with its default tol argument.
     # Note that we don't know the index of the singular value,
-    # so we supply a dummy -1 here.
+    # so we supply a dummy -1 to the exception constructor.
     for im in imat
-        if rank(im) != dimension(first(parameters(pk)))
+        if inv(cond(im, 1)) < eps(Float64)
             throw(SingularException(-1))
         end
     end
     inv_imat = map(inv, imat)
     return inv_imat
 end
-
 
 """
     apply_transformation(nim::AbstractMatrix{<:Real}, p::Parameter, trafo::Transformation)

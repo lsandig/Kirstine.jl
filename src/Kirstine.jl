@@ -13,6 +13,7 @@ using LinearAlgebra:
     PosDefException,
     SingularException,
     Symmetric,
+    cond,
     diagind,
     diagm,
     mul!,
