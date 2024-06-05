@@ -58,6 +58,10 @@ Optimizer
 OptimizationResult
 Pso
 Pso()
+GridSearch
+GridSearch()
+GridSpec
+ProductGrid
 ```
 
 ## Design Criteria

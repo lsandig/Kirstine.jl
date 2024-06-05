@@ -3,6 +3,9 @@
 
 @recipe function f(r::OptimizationResult)
     niter = length(r.trace_fx)
+    seriestype --> (niter == 1 ? :scatter : :line)
+    xticks --> (niter == 1 ? [1] : :auto)
+    xlims --> (niter == 1 ? (0.5, 1.5) : :auto)
     xguide --> "iteration"
     yguide --> "objective"
     label --> ""
@@ -103,20 +106,19 @@ struct DerivativePlot{N,Tdr<:DesignRegion{N}}
         # Calculate Gateaux derivative on a grid over the bounding box of dr.
         # Evaluate it only on those points that are inside and fill the rest with NaN,
         # which renders transparently in the heatmap.
-        lb, ub = boundingbox(dr)
-        marginal_grids = map((l, u, n) -> collect(range(l, u; length = n)), lb, ub, n_grid)
+        mg = marginal_grids(dr, n_grid)
         if N == 1
-            append!(marginal_grids[1], Iterators.flatten(points(d)))
-            sort!(marginal_grids[1])
+            append!(mg[1], Iterators.flatten(points(d)))
+            sort!(mg[1])
         end
-        product_dp_grid = collect.(Iterators.product(marginal_grids...))
+        product_dp_grid = collect.(Iterators.product(mg...))
         inside_dr = isinside.(product_dp_grid, Ref(dr))
         gd_grid = fill(NaN, size(product_dp_grid))
         # note: indexing and array with another array produces a vector
         directions = [one_point_design(dp) for dp in product_dp_grid[inside_dr]]
         gd = gateauxderivative(d, directions, adp)
         gd_grid[inside_dr] .= gd
-        return new{N,typeof(dr)}(dr, marginal_grids, gd_grid)
+        return new{N,typeof(dr)}(dr, mg, gd_grid)
     end
 end
 

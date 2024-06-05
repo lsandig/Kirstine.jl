@@ -237,6 +237,10 @@ function Base.:(==)(d1::DesignMeasure, d2::DesignMeasure)
     return weights(d1) == weights(d2) && points(d1) == points(d2)
 end
 
+function Base.hash(d::DesignMeasure, h::UInt)
+    return hash(d.points, hash(d.weights, h))
+end
+
 function Base.show(io::IO, ::MIME"text/plain", d::DesignMeasure)
     pairs = map(weights(d), points(d)) do w, dp
         return string(dp) * " => " * string(w)

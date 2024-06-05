@@ -24,10 +24,13 @@ using Random: rand, rand!
 using RecipesBase
 using Statistics: quantile
 
+import Base: maximum
+
 export @simple_model,
     @simple_parameter,
     ACriterion,
     AbstractDesignProblem,
+    ProductGrid,
     CompositeDesignProblem,
     Covariate,
     CovariateParameterization,
@@ -43,6 +46,8 @@ export @simple_model,
     Exchange,
     ExchangeResult,
     FisherMatrix,
+    GridSearch,
+    GridSpec,
     Identity,
     JustCopy,
     Model,
@@ -103,6 +108,7 @@ export @simple_model,
 include("abstracttypes.jl")
 include("optimize.jl")
 include("pso.jl")
+include("optimizer-grid.jl")
 include("designregion.jl")
 include("designmeasure.jl")
 include("designmeasure-abstractpoint.jl")

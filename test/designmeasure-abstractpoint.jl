@@ -6,6 +6,12 @@ using Test
 using Random
 using Kirstine
 
+# not a full implementenation (cf. extend-region.md),
+# but just enough for testing construct_grid()
+struct UnitBall{N} <: Kirstine.DesignRegion{N} end
+Kirstine.boundingbox(dr::UnitBall{N}) where N = (fill(-1.0, N), fill(1.0, N))
+Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
+
 @testset "designmeasure-abstractpoint.jl" begin
     @testset "SignedMeasure" begin
         @test_throws "must be equal" Kirstine.SignedMeasure([1 2], [0])
@@ -77,6 +83,62 @@ using Kirstine
             c = Kirstine.DesignConstraints(dr, [true, false, false], [false, false, false])
 
             @test_throws "weights must be identical" Kirstine.satisfy_constraints(p, c)
+        end
+    end
+
+    @testset "construct_grid(::ProductGrid)" begin
+        # argument errors
+        let gs33 = ProductGrid(3, 3),
+            dr2 = DesignInterval(:a => (0, 1), :b => (2, 4)),
+            c2free = Kirstine.DesignConstraints(dr2, [false, false], [false, false]),
+            c2fix = Kirstine.DesignConstraints(dr2, [true, true], [false, false]),
+            d = DesignMeasure([1 3; 0 4], [0.5, 0.5])
+
+            cg = Kirstine.construct_grid
+
+            @test_throws "needs a prototype" cg(gs33, c2free, DesignMeasure[])
+            @test_throws "do not match" cg(gs33, c2free, [DesignMeasure([1.0;;], [1.0])])
+            @test_throws "weights is not" cg(gs33, c2free, [d])
+            @test_throws MethodError cg(ProductGrid(3), c2fix, [d])
+        end
+
+        # 1d design region, one-point design
+        let gs3 = ProductGrid(3),
+            dr = DesignInterval(:a => (0, 1)),
+            cfixw = Kirstine.DesignConstraints(dr, [true], [false]),
+            d = one_point_design([0.1])
+
+            g = Kirstine.construct_grid(gs3, cfixw, [d])
+
+            @test length(g) == 3
+            @test g[1] == one_point_design([0])
+            @test g[2] == one_point_design([0.5])
+            @test g[3] == one_point_design([1])
+        end
+
+        # 1d design region, four-point design with two fixed, weights fixed
+        let gs = ProductGrid(4),
+            dr = DesignInterval(:z => (0, 1)),
+            fixw = fill(true, 4),
+            fixp = [true, false, false, true],
+            c = Kirstine.DesignConstraints(dr, fixw, fixp),
+            prototype = uniform_design([[0], [0.3], [0.6], [1.0]])
+
+            g = Kirstine.construct_grid(gs, c, [prototype])
+
+            @test length(g) == 16
+            @test all(numpoints.(g) .== 4)
+            @test all([first(points(d)) == [0] for d in g])
+            @test uniform_design([[0], [1 / 3], [2 / 3], [1.0]]) in g
+        end
+
+        # weird region, too coarse grid
+        let gs2 = ProductGrid(2, 2),
+            dr = UnitBall{2}(),
+            c = Kirstine.DesignConstraints(dr, [true], [false]),
+            d = one_point_design([0, 0])
+
+            @test_throws "no grid points satisfy" Kirstine.construct_grid(gs2, c, [d])
         end
     end
 
