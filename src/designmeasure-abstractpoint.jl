@@ -83,9 +83,7 @@ function construct_grid(
         throw(ArgumentError("grid on weights is not implemented"))
     end
     # first build a grid on the design region
-    lb = boundingbox(c.dr)[1]
-    ub = boundingbox(c.dr)[2]
-    region_ranges = map((l, u, n) -> collect(range(l, u; length = n)), lb, ub, gs.n_points)
+    region_ranges = marginal_grids(c.dr, gs.n_points)
     bbg = collect.(Iterators.product(region_ranges...))
     region_grid = filter(p -> isinside(p, c.dr), bbg)
     if isempty(region_grid)

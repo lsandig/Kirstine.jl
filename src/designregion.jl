@@ -10,6 +10,13 @@ Return the dimension `N` of the design region.
 """
 dimension(dr::DesignRegion{N}) where N = N
 
+function marginal_grids(dr::DesignRegion{N}, n_points::NTuple{N,Int64}) where N
+    # Note: we assume that all(n_points .>= 2) has been checked by the caller.
+    lb, ub = boundingbox(dr)
+    mg = map((l, u, n) -> collect(range(l, u; length = n)), lb, ub, n_points)
+    return mg
+end
+
 ## concrete design regions and constraints for optimization ##
 
 @doc raw"""

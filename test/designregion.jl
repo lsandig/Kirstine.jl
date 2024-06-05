@@ -7,6 +7,19 @@ using Kirstine
 using Random
 
 @testset "designregion.jl" begin
+    @testset "marginal_grids" begin
+        let dr1 = DesignInterval(:a => (0, 1)),
+            dr2 = DesignInterval(:a => (0, 1), :b => (20, 30))
+
+            mg1 = Kirstine.marginal_grids(dr1, (5,))
+            mg2 = Kirstine.marginal_grids(dr2, (3, 3))
+
+            @test mg1 == ([0, 0.25, 0.5, 0.75, 1],)
+            @test mg2 == ([0, 0.5, 1], [20, 25, 30])
+            @test_throws MethodError Kirstine.marginal_grids(dr1, (3, 4))
+        end
+    end
+
     @testset "DesignInterval" begin
         @test_throws "must be identical" DesignInterval([:a], [1, 2], [3, 4])
         @test_throws "must be identical" DesignInterval([:a, :b], [2], [3, 4])
