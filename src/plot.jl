@@ -3,6 +3,9 @@
 
 @recipe function f(r::OptimizationResult)
     niter = length(r.trace_fx)
+    seriestype --> (niter == 1 ? :scatter : :line)
+    xticks --> (niter == 1 ? [1] : :auto)
+    xlims --> (niter == 1 ? (0.5, 1.5) : :auto)
     xguide --> "iteration"
     yguide --> "objective"
     label --> ""
