@@ -70,16 +70,15 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
         let gs33 = ProductGrid(3, 3),
             dr2 = DesignInterval(:a => (0, 1), :b => (2, 4)),
             c2free = Kirstine.DesignConstraints(dr2, [false], [false]),
+            c2fix = Kirstine.DesignConstraints(dr2, [true], [false]),
+            d = DesignMeasure([1; 2;;], [1])
+
             cg = Kirstine.construct_grid
 
             @test_throws "needs a prototype" cg(gs33, c2free, DesignMeasure[])
             @test_throws "do not match" cg(gs33, c2free, [DesignMeasure([1.0;;], [1.0])])
-            @test_throws "one-point" cg(
-                gs33,
-                c2free,
-                [DesignMeasure([1 1; 2 3], [0.5, 0.5])],
-            )
-            @test_throws "weights is not" cg(gs33, c2free, [DesignMeasure([1; 2;;], [1])])
+            @test_throws "weights is not" cg(gs33, c2free, [d])
+            @test_throws MethodError cg(ProductGrid(3), c2fix, [d])
         end
 
         # 1d design region, one-point design
@@ -94,6 +93,22 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
             @test g[1] == one_point_design([0])
             @test g[2] == one_point_design([0.5])
             @test g[3] == one_point_design([1])
+        end
+
+        # 1d design region, four-point design with two fixed, weights fixed
+        let gs = ProductGrid(4),
+            dr = DesignInterval(:z => (0, 1)),
+            fixw = fill(true, 4),
+            fixp = [true, false, false, true],
+            c = Kirstine.DesignConstraints(dr, fixw, fixp),
+            prototype = uniform_design([[0], [0.3], [0.6], [1.0]])
+
+            g = Kirstine.construct_grid(gs, c, [prototype])
+
+            @test length(g) == 16
+            @test all(numpoints.(g) .== 4)
+            @test all([first(points(d)) == [0] for d in g])
+            @test uniform_design([[0], [1 / 3], [2 / 3], [1.0]]) in g
         end
 
         # weird region, too coarse grid

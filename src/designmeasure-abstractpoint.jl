@@ -72,29 +72,42 @@ end
 
 function construct_grid(
     gs::ProductGrid{N},
-    c::DesignConstraints,
+    c::DesignConstraints{N,<:DesignRegion{N}},
     prototypes::AbstractVector{DesignMeasure},
 ) where N
     if isempty(prototypes)
         throw(ArgumentError("grid search needs a prototype"))
     elseif N != length(first(points(first(prototypes))))
         throw(ArgumentError("grid spec and design point dimension do not match"))
-    elseif numpoints(first(prototypes)) != 1
-        throw(ArgumentError("grid only implemented for one-point prototypes"))
     elseif !(all(c.fixw))
         throw(ArgumentError("grid on weights is not implemented"))
     end
-    # product of design points over bounding box
+    # first build a grid on the design region
     lb = boundingbox(c.dr)[1]
     ub = boundingbox(c.dr)[2]
-    ranges = map((l, u, n) -> collect(range(l, u; length = n)), lb, ub, gs.n_points)
-    bbg = collect.(Iterators.product(ranges...))
-    points_inside = filter(p -> isinside(p, c.dr), bbg)
-    if isempty(points_inside)
+    region_ranges = map((l, u, n) -> collect(range(l, u; length = n)), lb, ub, gs.n_points)
+    bbg = collect.(Iterators.product(region_ranges...))
+    region_grid = filter(p -> isinside(p, c.dr), bbg)
+    if isempty(region_grid)
         throw(ArgumentError("no grid points satisfy design constraints"))
     end
-    opd = one_point_design.(points_inside)
-    return opd
+    # then build a product of grids for each point of the design measure;
+    # each "factor" is either the region_grid (for free points)
+    # or a vector with a single design point (for fixed points)
+    prototype_weights = weights(first(prototypes))
+    prototype_points = collect.(points(first(prototypes)))
+    points_ranges = map(1:length(prototype_points)) do k
+        c.fixp[k] ? [prototype_points[k]] : region_grid
+    end
+    # Note: The length of prototype_points is not known at compile time.
+    # Hence, the following product iterator does not have a concrete type.
+    # Without the manual type annotation, g would be of type Any.
+    # This problem does _not_ occur above for bbg
+    # since dimension(c.dr) == N _is_ known at compile time.
+    pr_iter = Iterators.product(points_ranges...)
+    points_grid = vec(collect.(pr_iter))::Vector{Vector{Vector{Float64}}}
+    g = [DesignMeasure(pts, prototype_weights) for pts in points_grid]
+    return g
 end
 
 function ap_rand!(d::DesignMeasure, c::DesignConstraints)
