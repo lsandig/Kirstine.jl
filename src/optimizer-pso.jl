@@ -39,7 +39,7 @@ struct Pso <: Optimizer
             throw(ArgumentError("swarmsize must be at least 2"))
         end
         if c1 < 0 || c2 < 0 || c1 + c2 <= 4
-            throw(ArgumentError("c1 and c2 must be non-negative and, c1 + c2 > 4"))
+            throw(ArgumentError("c1 and c2 must be non-negative, and c1 + c2 > 4"))
         end
         return new(iterations, swarmsize, c1, c2)
     end
