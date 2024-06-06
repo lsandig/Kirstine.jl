@@ -71,9 +71,15 @@ function check_compatible(d::DesignMeasure, dr::DesignRegion{N}) where N
     return true
 end
 
-function satisfy_constraints(ds::AbstractVector{DesignMeasure}, c::DesignConstraints)
+function assert_constraints(ds::AbstractVector{DesignMeasure}, c::DesignConstraints)
     for d in ds
         check_compatible(d, c.dr)
+    end
+    K = length(c.fixw)
+    np = numpoints.(ds)
+    if !all(np .== K)
+        msg = "all prototypes must have $K point(s), found $(np)"
+        throw(ArgumentError(msg))
     end
     val_fixw = [weights(d)[c.fixw] for d in ds]
     val_fixp = [points(d)[c.fixp] for d in ds]
@@ -85,7 +91,7 @@ function satisfy_constraints(ds::AbstractVector{DesignMeasure}, c::DesignConstra
         msg = "fixed points must be identical across prototypes, found $(val_fixp)"
         throw(ArgumentError(msg))
     end
-    return true
+    return nothing
 end
 
 function construct_grid(

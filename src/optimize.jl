@@ -44,9 +44,7 @@ function optimize(
     trace_state = false,
 )
     time_start = time()
-    if !satisfy_constraints(prototypes, constraints)
-        throw(ArgumentError("prototypes do not satisfy constraints"))
-    end
+    assert_constraints(prototypes, constraints)
     state = optimizer_state(f, optimizer, prototypes, constraints)
     t_x = [deepcopy(maximizer(state))]
     t_fx = [maximum(state)]

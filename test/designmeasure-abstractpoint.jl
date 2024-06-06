@@ -70,19 +70,26 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
         end
     end
 
-    @testset "satisfy_constraints" begin
+    @testset "assert_constraints" begin
         let p = [one_point_design([x]) for x in [1, 1, 2]],
             dr = DesignInterval(:a => (0, 10)),
             c = Kirstine.DesignConstraints(dr, [true], [true])
 
-            @test_throws "points must be identical" Kirstine.satisfy_constraints(p, c)
+            @test_throws "points must be identical" Kirstine.assert_constraints(p, c)
         end
 
         let p = [DesignMeasure([2 2 * w 3 * w], [w / 2, w / 2, 1 - w]) for w in [0.2, 0.3]],
             dr = DesignInterval(:a => (0, 10)),
             c = Kirstine.DesignConstraints(dr, [true, false, false], [false, false, false])
 
-            @test_throws "weights must be identical" Kirstine.satisfy_constraints(p, c)
+            @test_throws "weights must be identical" Kirstine.assert_constraints(p, c)
+        end
+
+        let p = [uniform_design([[0.1], [0.2]]), one_point_design([0.42])],
+            dr = DesignInterval(:a => (0, 1)),
+            c = Kirstine.DesignConstraints(dr, [true], [false])
+
+            @test_throws "must have 1 point(s)" Kirstine.assert_constraints(p, c)
         end
     end
 

@@ -22,10 +22,13 @@ struct BoxConstraints <: Kirstine.AbstractConstraints
     ub::Pnt
 end
 
-function Kirstine.satisfy_constraints(ps::AbstractVector{Pnt}, c::BoxConstraints)
+function Kirstine.assert_constraints(ps::AbstractVector{Pnt}, c::BoxConstraints)
     all_above_lb = all(p -> all(p.x .>= c.lb.x), ps)
     all_below_ub = all(p -> all(p.x .<= c.ub.x), ps)
-    return all_above_lb && all_below_ub
+    if !(all_above_lb && all_below_ub)
+        throw(ArgumentError("prototypes do not satisfy constraints"))
+    end
+    return nothing
 end
 
 function Kirstine.ap_rand!(p::Pnt, c::BoxConstraints)
