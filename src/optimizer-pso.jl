@@ -133,33 +133,38 @@ function tick!(
 )
     phi = optimizer.c1 + optimizer.c2
     chi = 2 / abs(2 - phi - sqrt(phi^2 - 4 * phi))
-    pso_update_velocity!(state, optimizer.c1, optimizer.c2, chi)
+    for i in 1:length(state.x)
+        pso_randomize_velocity_multipliers!(state)
+        pso_update_velocity!(state, i, optimizer.c1, optimizer.c2, chi)
+    end
     pso_update_position!(state, constraints)
     pso_evaluate_objective!(f, state)
     pso_update_best!(state)
     return state
 end
 
-function pso_update_velocity!(state::PsoState, c1, c2, chi)
-    for i in 1:length(state.x)
-        # In vector notation:
-        #
-        #   v[i] += c1 .* r1 .* (g - x[i]) .+ c2 .* r2 .* (p[i] - x[i])
-        #   v[i] *= chi
-        #
-        # with elements of r1, r2 uniformly random from [0,1].
-        ap_diff!(state.diffp, state.p[i], state.x[i])
-        ap_diff!(state.diffg, state.g, state.x[i])
-        ap_rand!(state.r1, 0, 1)
-        ap_rand!(state.r2, 0, 1)
-        ap_mul!(state.diffp, state.r1)
-        ap_mul!(state.diffg, state.r2)
-        ap_mul!(state.diffp, c1)
-        ap_mul!(state.diffg, c2)
-        ap_add!(state.v[i], state.diffp)
-        ap_add!(state.v[i], state.diffg)
-        ap_mul!(state.v[i], chi)
-    end
+function pso_randomize_velocity_multipliers!(state::PsoState)
+    ap_rand!(state.r1, 0, 1)
+    ap_rand!(state.r2, 0, 1)
+    return state
+end
+
+function pso_update_velocity!(state::PsoState, i, c1, c2, chi)
+    # In vector notation:
+    #
+    #   v[i] += c1 .* r1 .* (p[i] - x[i]) .+ c2 .* r2 .* (g - x[i])
+    #   v[i] *= chi
+    #
+    # with elements of r1, r2 uniformly random from [0,1].
+    ap_diff!(state.diffp, state.p[i], state.x[i])
+    ap_diff!(state.diffg, state.g, state.x[i])
+    ap_mul!(state.diffp, state.r1)
+    ap_mul!(state.diffg, state.r2)
+    ap_mul!(state.diffp, c1)
+    ap_mul!(state.diffg, c2)
+    ap_add!(state.v[i], state.diffp)
+    ap_add!(state.v[i], state.diffg)
+    ap_mul!(state.v[i], chi)
     return state
 end
 

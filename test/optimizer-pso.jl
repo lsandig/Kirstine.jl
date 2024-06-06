@@ -57,6 +57,59 @@ include("example-pnt.jl")
         end
     end
 
+    @testset "pso_update_velocity!" begin
+        let x1 = [2, 1],
+            p1 = [1, 1],
+            v1 = [1, 0.5],
+            g = [4, 5],
+            r1 = [0.8, 0.5],
+            r2 = [1.0, 0.4],
+            c1 = 2.0,
+            c2 = 2.05,
+            chi = 0.8,
+            o = Pso(; swarmsize = 2, iterations = 1),
+            ps = [Pnt(x1), Pnt([7, 7])], # we need >= 2 points for a sensible swarm
+            c = BoxConstraints(Pnt([0, 0]), Pnt([10, 10])),
+            state = Kirstine.optimizer_state(p -> 42, o, ps, c) # dummy function
+
+            # We have already initialized the current position of the first particle.
+            # Now we its personal best location as well as its current velocity,
+            # and also some global best position.
+            # We set the random components to deterministic values and run the velocity update.
+            # The second particle is conceptually the same and not tested.
+            # Note that the _values_ at x/p/g are irrelevant for the velocity update.
+            state.p[1].x .= p1
+            state.v[1].v .= v1
+            state.g.x .= g
+            state.r1.v .= r1
+            state.r2.v .= r2
+
+            v1new = @. chi * (v1 + c1 * r1 * (p1 - x1) + c2 * r2 * (g - x1))
+            @test v1new == [2.8, 3.024]
+
+            Kirstine.pso_update_velocity!(state, 1, c1, c2, chi)
+            @test state.v[1].v == v1new
+        end
+    end
+
+    @testset "pso_randomize_velocity_multipliers!()" begin
+        let r1 = [0.42, 0.21],
+            r2 = [0.5, 1.0],
+            o = Pso(; swarmsize = 2, iterations = 1),
+            ps = [Pnt([2, 1]), Pnt([7, 7])],
+            c = BoxConstraints(Pnt([0, 0]), Pnt([10, 10])),
+            state = Kirstine.optimizer_state(p -> 42, o, ps, c)
+
+            state.r1.v .= r1
+            state.r2.v .= r2
+            Kirstine.pso_randomize_velocity_multipliers!(state)
+
+            @test state.r1.v != state.r2.v
+            @test state.r1.v != r1
+            @test state.r2.v != r2
+        end
+    end
+
     @testset "optimize" begin
         let n = 4,
             xstar = ones(n),
