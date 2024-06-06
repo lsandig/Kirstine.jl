@@ -19,6 +19,44 @@ include("example-pnt.jl")
         @test_throws "non-negative" Pso(iterations = 10, swarmsize = 5, c1 = 6, c2 = -1)
     end
 
+    @testset "optimizer_state" begin
+        let fconst(p) = 42,
+            finf(p) = p.x[1] > 3 ? Inf : p.x[1],
+            fnan(p) = NaN,
+            o3 = Pso(; swarmsize = 3, iterations = 10),
+            o5 = Pso(; swarmsize = 5, iterations = 10),
+            ps = [Pnt([i]) for i in 1:5],
+            c = BoxConstraints(Pnt([0]), Pnt([10]))
+
+            @test_throws ">= number" Kirstine.optimizer_state(fconst, o3, ps, c)
+            @test_throws "infinite objective" Kirstine.optimizer_state(finf, o5, ps, c)
+            @test_throws "NaN on all" Kirstine.optimizer_state(fnan, o5, ps, c)
+        end
+
+        let f(p) = -p.x[1],
+            o = Pso(; swarmsize = 5, iterations = 10),
+            ps = [Pnt([i]) for i in 0:2],
+            c = BoxConstraints(Pnt([0]), Pnt([10]))
+
+            state = Kirstine.optimizer_state(f, o, ps, c)
+
+            @test state isa Kirstine.PsoState
+            # prototypes are used first
+            @test state.x[1:3] == ps
+            # remaining particles are random
+            @test all(Ref(state.x[4]) .!= state.x[1:3])
+            @test all(Ref(state.x[5]) .!= state.x[1:4])
+            # objective was evaluated
+            @test all(state.fx .== [-pt.x[1] for pt in state.x])
+            # personal and global bests are initialized
+            @test state.fp == state.fx
+            @test state.fg == -state.x[1].x[1]
+            @test state.fg == maximum(state.fx)
+            # each point is evaluated once
+            @test state.n_eval == o.swarmsize
+        end
+    end
+
     @testset "optimize" begin
         let n = 4,
             xstar = ones(n),
@@ -47,14 +85,6 @@ include("example-pnt.jl")
             @test length(r1.trace_fx) == 100
             @test length(r1.trace_x) == 100
             @test length(r2.trace_state) == 100
-
-            @test_throws "infinite objective" Kirstine.optimize(
-                p -> p.x[1] < 0 ? Inf : sum(p.x),
-                pso,
-                [Pnt([-1, 0, 1, 2])],
-                constr1,
-            )
-            @test_throws "NaN on all" Kirstine.optimize(p -> NaN, pso, [prototype], constr1)
 
             seed!(4711)
             @test_warn "maximum is not finite" Kirstine.optimize(
