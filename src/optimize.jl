@@ -70,7 +70,9 @@ function optimize(
     return OptimizationResult(x, fx, t_x, t_fx, t_state, n_eval(state), twall)
 end
 
-function prettyruntime(t)
+function prettydifftime(t)
+    maybe_sign = t >= 0 ? "" : "-"
+    t = abs(t)
     h, r = divrem(t, 3600)
     m, r = divrem(r, 60)
     s, r = divrem(r, 1)
@@ -79,7 +81,7 @@ function prettyruntime(t)
     pad_m = lpad(Int64(m), 2, '0')
     pad_s = lpad(Int64(s), 2, '0')
     pad_ms = lpad(Int64(ms), 3, '0')
-    return join([string_h, pad_m, pad_s, pad_ms], ":", ".")
+    return maybe_sign * join([string_h, pad_m, pad_s, pad_ms], ":", ".")
 end
 
 function Base.show(
@@ -90,7 +92,7 @@ function Base.show(
     println(io, "OptimizationResult")
     println(io, "* iterations: ", length(r.trace_fx))
     println(io, "* evaluations: ", r.n_eval)
-    println(io, "* elapsed time: ", prettyruntime(r.seconds_elapsed))
+    println(io, "* elapsed time: ", prettydifftime(r.seconds_elapsed))
     println(io, "* traced states: ", length(r.trace_state))
     println(io, "* state type: ", S)
     println(io, "* maximum: ", r.maximum)
