@@ -10,7 +10,7 @@ using Statistics: mean
 
 include("example-pnt.jl")
 
-@testset "pso.jl" begin
+@testset "optimizer-pso.jl" begin
     @testset "Pso" begin
         @test_throws "must be positive" Pso(iterations = -1, swarmsize = 5, c1 = 3, c2 = 4)
         @test_throws "at least 2" Pso(iterations = 10, swarmsize = 1, c1 = 3, c2 = 4)

@@ -107,7 +107,7 @@ export @simple_model,
 
 include("abstracttypes.jl")
 include("optimize.jl")
-include("pso.jl")
+include("optimizer-pso.jl")
 include("optimizer-grid.jl")
 include("designregion.jl")
 include("designmeasure.jl")

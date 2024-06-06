@@ -4,7 +4,7 @@
 using Test
 
 @testset "Kirstine" begin
-    include("pso.jl")
+    include("optimizer-pso.jl")
     include("optimizer-grid.jl")
     include("designregion.jl")
     include("designmeasure.jl")
