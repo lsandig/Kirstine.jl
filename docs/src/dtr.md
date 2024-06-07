@@ -583,7 +583,7 @@ nothing # hide
 
 Looking at the optimization progress it seems that running with more iterations will not help.
 
-Now, we could try direct maximization again,
+We could try direct maximization again,
 this time with a prototype with more design points.
 But there is a smarter thing we can try instead.
 The [`Exchange`](@ref) algorithm can be understood as a kind of coordinate-wise infinite-dimensional gradient ascent,
@@ -598,25 +598,37 @@ Running this with a random starting design can be slow to converge,
 but since we already have promising candidate,
 we can hope that it gives us the solution after a few steps.
 
+For part 1,
+we will not use PSO,
+but a [`GridSearch`](@ref) over the design region $\DesignRegion$.
+This has the advantage
+that grid search is deterministic and will always find the maximum (on the grid),
+while Pso may sometimes get stuck in a local maximum
+and make the overall exchange algorithm somewhat unstable.
+On the other hand,
+grid search on a very fine grid can take a lot of time.
+
+In this particular example we save some runtime
+since we can reasonably guess
+that a single step of the exchange algorithm might be sufficient,
+and that the new point will be added at a point with ``D=100``.
+This is why we can get away with a [`ProductGrid`](@ref)
+that has only 2 different dose values.
+For the second dimension,
+the grid has 51 different values at ``Δt=0,0.04,…,2``.
+
 ```@example main
 st4b = Exchange(
     candidate = s4a,
-    steps = 6,
-    optimizer_direction = Pso(swarmsize = 25, iterations = 10),
-    optimizer_weight = Pso(swarmsize = 25, iterations = 25),
+    steps = 1,
+    optimizer_direction = GridSearch(gridspec = ProductGrid(2, 51)),
+    optimizer_weight = Pso(swarmsize = 25, iterations = 50),
 )
 
 Random.seed!(314)
 s4b, r4b = solve(dp4, st4b; minposdose = 1e-3, maxdist = 2e-2)
-pr4b = plot(r4b)
-savefig(pr4b, "dtr-pr4b.png") # hide
 nothing # hide
 ```
-
-![](dtr-pr4b.png)
-
-We see that the maximal derivative drops sharply after two steps,
-and the objective increases as well.
 
 Let's look at the solution.
 
@@ -626,13 +638,17 @@ s4b
 
 ```@setup main
 s4b == DesignMeasure(
- [0.0, 2.0] => 0.1137232342451187,
- [12.258680316012303, 0.9158234222042569] => 0.1457894552403696,
- [19.593596408255703, 2.0] => 0.14714163859065088,
- [99.99999450061316, 0.02746791748411361] => 0.19550901636913953,
- [100.0, 0.43533868322900837] => 0.0561793871858493,
- [100.0, 2.0] => 0.3416572683688719,
+ [0.0, 2.0] => 0.11343676907254417,
+ [12.258680316012303, 0.9158234222042569] => 0.1466543099306418,
+ [18.960755545027716, 2.0] => 0.1450562405792781,
+ [99.99958420409529, 0.030724171006199445] => 0.19609399574206807,
+ [100.0, 0.44] => 0.051532056457751135,
+ [100.0, 2.0] => 0.34722662821771666,
 ) || !check_results || error("not the expected result\n", s4b)
+```
+
+```@example main
+efficiency(s4a, s4b, dp4)
 ```
 
 ```@example main
@@ -774,11 +790,11 @@ eff = [efficiency(d1, d2, p1, p2) for (d1, p1) in sol_prob, (d2, p2) in sol_prob
 
 ```@setup main
 eff == [
-1.0 1.485065085904362 0.1265091183038994 0.0929971179867122 0.1016413811354575;
-0.6733711602889302 1.0 0.0851875917794263 0.06262157724223895 0.0684423747485524;
-7.904568567127361 11.738798798177912 1.0 0.7351020956711998 0.8034312664427492;
-10.75302140161896 15.968936651526702 1.3603552566217756 1.0 1.0929519466396842;
-9.83851251162457 14.610831428246879 1.2446615432675072 0.9149533088572943 1.0
+1.0 1.485065085904362 0.1265091183038994 0.09303061979858476 0.1016413811354575;
+0.6733711602889302 1.0 0.0851875917794263 0.06264413639617135 0.0684423747485524;
+7.904568567127361 11.738798798177912 1.0 0.7353669130402696 0.8034312664427492;
+10.749149066888325 15.9631859824173 1.359865370969225 1.0 1.0925583571894433;
+9.83851251162457 14.610831428246879 1.2446615432675072 0.9152829168525648 1.0
 ] || !check_results || error("not the expected result\n", eff)
 ```
 
@@ -797,7 +813,7 @@ But isn't a unit with 13 measurements already inherently “larger” than a uni
 Because of our choice of ``\UnitCovariance``,
 a different comparison can be devised.
 Since we assumed uncorrelated within-unit errors with ``\UnitCovariance = σ^2I_{\DimUnit}``
-any of the solutions `s2` through `s5` can be identified with candidate solution for `dp1`.
+any of the solutions `s2` through `s5` can be identified with a candidate solution for `dp1`.
 For example, we can “split up” a design point from `s4`,
 
 ```math
