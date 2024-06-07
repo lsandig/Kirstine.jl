@@ -20,10 +20,12 @@ end
 @recipe function f(rs::AbstractVector{<:OptimizationResult})
     nsteps = length(rs)
     steps = collect(1:nsteps)
+    seriestype --> (nsteps == 1 ? :scatter : :line)
+    xticks --> (nsteps == 1 ? [1] : :auto)
+    xlims --> (nsteps == 1 ? (0.5, 1.5) : (1, nsteps))
     fx = [r.maximum for r in rs]
     xguide --> "step"
     yguide --> "best objective value"
-    xlims --> (1, nsteps)
     label --> ""
     steps, fx
 end
@@ -33,6 +35,8 @@ end
     @series begin
         subplot := 1
         yguide --> "max derivative"
+        ylims --> (0, NaN)
+        widen --> true
         optimization_results_direction(r)
     end
     @series begin
