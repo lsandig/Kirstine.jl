@@ -60,11 +60,12 @@ This optimizer is particularly useful for the direction-finding step in [`Exchan
 but can also be used for [`DirectMaximization`](@ref)
 as long as all weights of the candidate are fixed,
 and there are only few non-fixed design points.
-
-Note that the number of grid points is exponential both in the dimension of the design region
+Note that for `DirectMaximization`,
+the total number of grid points is exponential both in the dimension of the design region
 and in the number of non-fixed design points.
 
-(Strictly speaking this is not particle-based, but uses the same internal infrastructure.)
+(Strictly speaking this optimizer is not particle-based,
+but it uses the same internal infrastructure.)
 
 # Initialization
 
@@ -85,7 +86,7 @@ end
 Set up parameters for a grid search.
 
 The [`GridSpec`](@ref) is used to construct a grid over the problem's [`DesignRegion`](@ref),
-so their dimensions must be equal.
+so the dimensions of both must be equal.
 
 # Examples
 
