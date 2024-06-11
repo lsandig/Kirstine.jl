@@ -14,7 +14,7 @@ While [Kirstine.jl uses](math.md#D-Criterion)
 some authors prefer
 
 ```math
-\DesignCriterion_{\tilde{D}}(\SomeMatrix) = \det(\SomeMatrix)^{1/\DimParameter}
+\DesignCriterion_{\tilde{D}}(\SomeMatrix) = \det(\SomeMatrix)^{1/a}
 ```
 
 for an ``a×a`` positive definite matrix ``\SomeMatrix``.
