@@ -340,20 +340,6 @@ function efficiency(d1::DesignMeasure, d2::DesignMeasure, dp::DesignProblem)
     return efficiency(d1, d2, dp, dp)
 end
 
-# same design problem as `dp`, but with criterion replaced by `DCriterion()`.
-function as_doptimality_problem(dp::DesignProblem)
-    dpd = DesignProblem(;
-        criterion = DCriterion(),
-        model = model(dp),
-        region = region(dp),
-        covariate_parameterization = covariate_parameterization(dp),
-        prior_knowledge = prior_knowledge(dp),
-        transformation = transformation(dp),
-        normal_approximation = normal_approximation(dp),
-    )
-    return dpd
-end
-
 function efficiency(
     d1::DesignMeasure,
     d2::DesignMeasure,
@@ -368,8 +354,8 @@ function efficiency(
     # Take a shortcut via D criterion objective, which already gives the average
     # log-determinant of the transformed information matrices, and handles exceptions.
     # Note that the design region is irrelevant for relative efficiency.
-    dp1d = as_doptimality_problem(dp1)
-    dp2d = as_doptimality_problem(dp2)
+    dp1d = DesignProblem(dp1; criterion = DCriterion())
+    dp2d = DesignProblem(dp2; criterion = DCriterion())
     return exp((objective(d1, dp1d) - objective(d2, dp2d)) / t)
 end
 
@@ -388,7 +374,7 @@ See also the [mathematical background](math.md#Shannon-Information).
         so this function ignores the type of `criterion(dp)`.
 """
 function shannon_information(d::DesignMeasure, dp::DesignProblem, n::Integer)
-    dpd = as_doptimality_problem(dp)
+    dpd = DesignProblem(dp; criterion = DCriterion())
     t = codomain_dimension(transformation(dp), prior_knowledge(dp))
     return (t / 2) * (log(n) - 1 + log(2 * pi)) + 0.5 * objective(d, dpd)
 end
