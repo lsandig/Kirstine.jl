@@ -35,47 +35,52 @@ struct DesignProblem{
     pk::Tpk
     trafo::Tt
     na::Tna
-    @doc """
-        DesignProblem(<keyword arguments>)
+end
 
-    Construct a design problem with some sensible defaults.
+"""
+    DesignProblem(<keyword arguments>)
 
-    # Arguments
-    - `criterion::DesignCriterion`
-    - `region::DesignRegion`
-    - `model::Model`
-    - `covariate_parameterization::CovariateParameterization`
-    - `prior_knowledge::PriorKnowledge`
-    - `transformation::Transformation = Identity()`
-    - `normal_approximation::NormalApproximation = FisherMatrix()`
-    """
-    function DesignProblem(;
-        criterion::Tdc,
-        region::Tdr,
-        model::Tm,
-        covariate_parameterization::Tcp,
-        prior_knowledge::Tpk,
-        transformation::Tt = Identity(),
-        normal_approximation::Tna = FisherMatrix(),
-    ) where {
-        Tdc<:DesignCriterion,
-        Tdr<:DesignRegion,
-        Tm<:Model,
-        Tcp<:CovariateParameterization,
-        Tpk<:PriorKnowledge,
-        Tt<:Transformation,
-        Tna<:NormalApproximation,
-    }
-        new{Tdc,Tdr,Tm,Tcp,Tpk,Tt,Tna}(
-            criterion,
-            region,
-            model,
-            covariate_parameterization,
-            prior_knowledge,
-            transformation,
-            normal_approximation,
-        )
-    end
+Construct a design problem with some sensible defaults.
+
+# Arguments
+
+  - `criterion::DesignCriterion`
+  - `region::DesignRegion`
+  - `model::Model`
+  - `covariate_parameterization::CovariateParameterization`
+  - `prior_knowledge::PriorKnowledge`
+  - `transformation::Transformation = Identity()`
+  - `normal_approximation::NormalApproximation = FisherMatrix()`
+"""
+function DesignProblem(;
+    criterion::Tdc,
+    region::Tdr,
+    model::Tm,
+    covariate_parameterization::Tcp,
+    prior_knowledge::Tpk,
+    transformation::Tt = Identity(),
+    normal_approximation::Tna = FisherMatrix(),
+) where {
+    Tdc<:DesignCriterion,
+    Tdr<:DesignRegion,
+    Tm<:Model,
+    Tcp<:CovariateParameterization,
+    Tpk<:PriorKnowledge,
+    Tt<:Transformation,
+    Tna<:NormalApproximation,
+}
+    dp = DesignProblem{Tdc,Tdr,Tm,Tcp,Tpk,Tt,Tna}(
+        criterion,
+        region,
+        model,
+        covariate_parameterization,
+        prior_knowledge,
+        transformation,
+        normal_approximation,
+    )
+    return dp
+end
+
 function Base.:(==)(dp1::DesignProblem, dp2::DesignProblem)
     fields_are_equal =
         criterion(dp1) == criterion(dp2) &&

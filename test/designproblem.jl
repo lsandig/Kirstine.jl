@@ -11,6 +11,20 @@ include("example-emax.jl")
 include("example-compartment.jl")
 
 @testset "designproblem.jl" begin
+    @testset "DesignProblem" begin
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            )
+            dp_str = repr(dp)
+            dp_parsed = eval(Meta.parse(dp_str))
+            @test dp == dp_parsed
+        end
+    end
+
     @testset "==" begin
         let dp1 = DesignProblem(;
                 criterion = DCriterion(),
