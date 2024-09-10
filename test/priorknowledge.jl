@@ -21,6 +21,9 @@ include("example-testpar.jl")
         let p = PriorSample([TestPar2(1, 2), TestPar2(3, 4)])
             @test p.weight == [0.5, 0.5]
             @test p.p == [TestPar2(1, 2), TestPar2(3, 4)]
+
+            # round trip via textual representation
+            @test p == eval(Meta.parse(repr(p)))
         end
     end
 

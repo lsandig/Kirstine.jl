@@ -9,20 +9,11 @@
 A sample from a prior distribution, or a discrete prior distribution with finite support.
 """
 struct PriorSample{T} <: PriorKnowledge{T}
-    weight::Vector{Float64}
     p::Vector{T}
-    @doc """
-    PriorSample(p::AbstractVector{<:Parameter} [, weights::AbstractVector{<:Real}])
-
-Construct a weighted prior sample on the given parameter draws.
-
-If no `weights` are given, a uniform distribution on the elements of `p` is assumed.
-
-See also [`parameters`](@ref), [`weights(::PriorSample)`](@ref).
-"""
-    function PriorSample(
+    weight::Vector{Float64}
+    function PriorSample{T}(
         parameters::AbstractVector{T},
-        weights::AbstractVector{<:Real} = fill(1 / length(parameters), length(parameters)),
+        weights::AbstractVector{<:Real},
     ) where T<:Parameter
         if length(weights) != length(parameters)
             throw(ArgumentError("number of weights and parameter values must be equal"))
@@ -33,8 +24,24 @@ See also [`parameters`](@ref), [`weights(::PriorSample)`](@ref).
         if !isconcretetype(T)
             throw(ArgumentError("parameters must all have the same concrete type"))
         end
-        return new{T}(weights, parameters)
+        return new{T}(parameters, weights)
     end
+end
+
+"""
+    PriorSample(p::AbstractVector{<:Parameter} [, weights::AbstractVector{<:Real}])
+
+Construct a weighted prior sample on the given parameter draws.
+
+If no `weights` are given, a uniform distribution on the elements of `p` is assumed.
+
+See also [`parameters`](@ref), [`weights(::PriorSample)`](@ref).
+"""
+function PriorSample(
+    parameters::AbstractVector{T},
+    weights::AbstractVector{<:Real} = fill(1 / length(parameters), length(parameters)),
+) where T<:Parameter
+    return PriorSample{T}(parameters, weights)
 end
 
 function parameter_dimension(pk::PriorSample)
