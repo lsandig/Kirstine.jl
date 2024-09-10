@@ -228,29 +228,13 @@ dp1a = DesignProblem(
     prior_knowledge = prior,
 )
 
-dp1b = DesignProblem(
-    criterion = DCriterion(),
-    region = DesignInterval(:dose => (0, 1)),
-    model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = JustCopy(:dose),
-    prior_knowledge = prior,
-)
+dp1b = DesignProblem(dp1a; criterion = DCriterion())
 
-dp2a = DesignProblem(
-    criterion = DexpCriterion(),
-    region = DesignInterval(:dose => (0, 1)),
-    model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = JustCopy(:dose),
-    prior_knowledge = prior,
-    transformation = DeltaMethod(p -> [0 0 1 0; 0 0 0 1]),
-)
+dp2a = DesignProblem(dp1a; transformation = DeltaMethod(p -> [0 0 1 0; 0 0 0 1]))
 
 dp2b = DesignProblem(
+    dp1a;
     criterion = DCriterion(),
-    region = DesignInterval(:dose => (0, 1)),
-    model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = JustCopy(:dose),
-    prior_knowledge = prior,
     transformation = DeltaMethod(p -> [0 0 1 0; 0 0 0 1]),
 )
 

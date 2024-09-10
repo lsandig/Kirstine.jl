@@ -146,9 +146,6 @@ function draw_from_prior(n)
     end
     return PriorSample(pars)
 end
-
-Random.seed!(4711)
-prior = draw_from_prior(1000)
 nothing # hide
 ```
 
@@ -258,12 +255,13 @@ set up the design problem and solve it with direct maximization.
     This is in order to reduce the documentation's compilation time.
 
 ```@example main
+Random.seed!(4711)
 dp1 = DesignProblem(
     criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 100), :time => (0, 24)),
     model = DTRMod(sigma = 1, m = 1),
     covariate_parameterization = CopyBoth(),
-    prior_knowledge = prior,
+    prior_knowledge = draw_from_prior(1000),
 )
 
 Random.seed!(1357)
@@ -334,6 +332,7 @@ m &= 1 \\
 
 This time there are no problems with uniqueness
 and the implementation is straightforward.
+Note how the `DesignProblem` differs from `dp1` only in its design region and its covariate parameterization.
 
 ```@example main
 struct FixedDose <: CovariateParameterization
@@ -347,11 +346,9 @@ function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::Fix
 end
 
 dp2 = DesignProblem(
-    criterion = DCriterion(),
+    dp1;
     region = DesignInterval(:time => (0, 24)),
-    model = DTRMod(1, 1),
     covariate_parameterization = FixedDose(100),
-    prior_knowledge = prior,
 )
 
 Random.seed!(111317)
@@ -417,11 +414,10 @@ function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::Fix
 end
 
 dp3 = DesignProblem(
-    criterion = DCriterion(),
+    dp1;
     region = DesignInterval(:dose => (0, 100)),
     model = DTRMod(1, 13), # measurements every two hours
     covariate_parameterization = FixedTimes(0:2:24),
-    prior_knowledge = prior,
 )
 
 Random.seed!(9630)
@@ -533,11 +529,9 @@ function Kirstine.simplify_unique(
 end
 
 dp4 = DesignProblem(
-    criterion = DCriterion(),
+    dp3;
     region = DesignInterval(:dose => (0, 100), :Δt => (0, 2)),
-    model = DTRMod(1, 13),
     covariate_parameterization = EquidistantTimes(),
-    prior_knowledge = prior,
 )
 
 Random.seed!(124816)
@@ -735,11 +729,9 @@ function Kirstine.simplify_unique(
 end
 
 dp5 = DesignProblem(
-    criterion = DCriterion(),
-    model = DTRMod(1, 13),
+    dp3;
     covariate_parameterization = LogEquidistantTimes(sqrt(2)),
     region = DesignInterval(:dose => (0, 100), :Δt => (0, 24 / 45.25483399593908)),
-    prior_knowledge = prior,
 )
 
 Random.seed!(132435)
