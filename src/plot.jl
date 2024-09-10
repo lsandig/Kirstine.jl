@@ -231,30 +231,28 @@ struct ExpectedFunctionPlot{
     pk::Tpk
 end
 
-@recipe function f(
-    efplot::ExpectedFunctionPlot;
-    label_formatter = (k, dp, w) -> "$(round(100 * w; sigdigits=3))%",
-    minmarkersize = 2,
-    maxmarkersize = 10,
-    bands = false,
-    probability = 0.8,
+function expected_function_graph_data(
+    f::Function,
+    x::AbstractVector{<:Real},
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample,
+    bands::Bool,
+    probability::Real,
 )
-    (; f, g, h, x, d, m, cp, pk) = efplot
-    if minmarkersize > maxmarkersize
-        throw(ArgumentError("minmarkersize must be <= maxmarkersize"))
-    elseif bands && any(weights(pk) .!= first(weights(pk)))
+    if bands && any(weights(pk) .!= first(weights(pk)))
         msg = "credibility bands are only implemented for uniform prior weights"
         throw(ArgumentError(msg))
     elseif probability < 0 || probability > 1
         throw(ArgumentError("probability must be in in interval [0, 1]"))
     end
     K = numpoints(d)
-    # graphs
     num_draws = length(weights(pk))
     fx = zeros(num_draws)
     fxm = zeros(length(x), K)
-    fxl = zeros(length(x), K)
-    fxu = zeros(length(x), K)
+    fxl = fill(NaN, length(x), K)
+    fxu = fill(NaN, length(x), K)
     c = implied_covariates(d, m, cp)
     qprobs = ((1 - probability) / 2, (1 + probability) / 2)
     pars = parameters(pk)
@@ -269,35 +267,72 @@ end
             end
         end
     end
+    unique_fxm = unique(fxm; dims = 2)
+    # lower/upper bounds should be unique as _pairs_
+    unique_pairs = unique(vcat(fxl, fxu); dims = 2)
+    unique_fxl = unique_pairs[1:length(x), :]
+    unique_fxu = unique_pairs[(length(x) + 1):end, :]
+    return unique_fxm, unique_fxl, unique_fxu
+end
+
+function expected_function_point_data(
+    g::Function,
+    h::Function,
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample,
+)
+    c = implied_covariates(d, m, cp)
+    gx = mapreduce(g, hcat, c)
+    hx = similar(gx)
+    for k in 1:numpoints(d)
+        hx[:, k] .= mapreduce((w, p) -> w * h(c[k], p), +, weights(pk), parameters(pk))
+    end
+    return gx, hx
+end
+
+@recipe function f(
+    efplot::ExpectedFunctionPlot;
+    label_formatter = (k, dp, w) -> "$(round(100 * w; sigdigits=3))%",
+    minmarkersize = 2,
+    maxmarkersize = 10,
+    bands = false,
+    probability = 0.8,
+)
+    (; f, g, h, x, d, m, cp, pk) = efplot
+    if minmarkersize > maxmarkersize
+        throw(ArgumentError("minmarkersize must be <= maxmarkersize"))
+    end
+    fxm, fxl, fxu = expected_function_graph_data(f, x, d, m, cp, pk, bands, probability)
     if bands
         @series begin
             label --> nothing
             fillcolor --> :black
             fillalpha --> 0.1
             linecolor := nothing
-            # lower/upper bounds should be unique as _pairs_
-            fxlu = unique(vcat(fxl, fxu); dims = 2)
-            fillrange := fxlu[1:length(x), :]
-            x, fxlu[(length(x) + 1):end, :]
+            fillrange := fxl
+            x, fxu
         end
     end
+    # graphs
     @series begin
         linecolor --> :black
         label --> nothing
-        x, unique(fxm; dims = 2)
+        x, fxm
     end
     # points
     pt = points(d)
     wt = weights(d)
-    for k in 1:K
-        gx = g(c[k])
-        hx = mapreduce((w, p) -> w * h(c[k], p), +, weights(pk), parameters(pk))
+    gx, hx = expected_function_point_data(g, h, d, m, cp, pk)
+    for k in 1:numpoints(d)
         @series begin
             label --> (label_formatter(k, pt[k], wt[k]))
+            # TODO: refactor into separate function?
             markersize --> max(minmarkersize, maxmarkersize * sqrt(wt[k]))
             markercolor --> k
             seriestype := :scatter
-            gx, hx
+            gx[:, k], hx[:, k]
         end
     end
 end

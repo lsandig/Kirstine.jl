@@ -53,3 +53,8 @@ function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::Cop
     c.time[1] = dp[2]
     return c
 end
+
+function response(dose::Real, time::Real, p::DTRParameter)
+    c = dose / (1 - p.e / p.a) * (exp(-time * p.e) - exp(-time * p.a))
+    return p.e0 + p.emax * c / (p.ec50 + c)
+end
