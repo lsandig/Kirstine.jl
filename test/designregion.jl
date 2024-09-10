@@ -27,20 +27,25 @@ using Random
         @test_throws "strictly larger" DesignInterval([:a, :b], [1, 2], [0, 4])
         @test_throws "strictly larger" DesignInterval([:a, :b], [1, 2], [1, 4])
 
-        # inner constructor: check conversion to Float64 and tuples
+        # outer constructor: conversion to Float64 and tuples
         let dr = DesignInterval([:a, :b], [0, 0], [1, 2])
             @test dr.name === (:a, :b)
             @test dr.lowerbound === (0.0, 0.0)
             @test dr.upperbound === (1.0, 2.0)
         end
 
-        # outer constructor
+        # outer constructor: conversion from pairs
         let dr = DesignInterval(:a => (0, 1), :b => (0, 2)),
             ref = DesignInterval((:a, :b), (0, 0), (1, 2))
 
             @test all(ref.name .== dr.name)
             @test all(ref.lowerbound .== dr.lowerbound)
             @test all(ref.upperbound .== dr.upperbound)
+        end
+
+        # inner constructor and round trip via textual representation
+        let dr = DesignInterval([:a, :b], [0, 0], [1, 2])
+            @test dr == eval(Meta.parse(repr(dr)))
         end
     end
 

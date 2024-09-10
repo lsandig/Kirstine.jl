@@ -30,31 +30,41 @@ struct DesignInterval{N} <: DesignRegion{N}
     name::NTuple{N,Symbol}
     lowerbound::NTuple{N,Float64}
     upperbound::NTuple{N,Float64}
-    @doc """
-        DesignInterval(names, lowerbounds, upperbounds)
-
-    Construct a design interval.
-
-    # Examples
-    ```jldoctest
-    julia> DesignInterval([:dose, :time], [0, 0], [300, 20])
-    DesignInterval{2}((:dose, :time), (0.0, 0.0), (300.0, 20.0))
-    ```
-    """
-    function DesignInterval(name, lowerbound, upperbound)
-        n = length(name)
-        if !(n == length(lowerbound) == length(upperbound))
-            throw(ArgumentError("lengths of name and bounds must be identical"))
-        end
+    function DesignInterval{N}(
+        name::NTuple{N,Symbol},
+        lowerbound::NTuple{N,Float64},
+        upperbound::NTuple{N,Float64},
+    ) where N
         if any(upperbound .<= lowerbound)
             throw(ArgumentError("upper bounds must be strictly larger than lower bounds"))
         end
-        new{n}(
-            tuple(name...),
-            tuple(convert.(Float64, lowerbound)...),
-            tuple(convert.(Float64, upperbound)...),
-        )
+        return new{N}(name, lowerbound, upperbound)
     end
+end
+
+"""
+    DesignInterval(names, lowerbounds, upperbounds)
+
+Construct a design interval.
+
+# Examples
+
+```jldoctest
+julia> DesignInterval([:dose, :time], [0, 0], [300, 20])
+DesignInterval{2}((:dose, :time), (0.0, 0.0), (300.0, 20.0))
+```
+"""
+function DesignInterval(name, lowerbound, upperbound)
+    N = length(name)
+    if !(N == length(lowerbound) == length(upperbound))
+        throw(ArgumentError("lengths of name and bounds must be identical"))
+    end
+    dr = DesignInterval{N}(
+        tuple(name...),
+        tuple(convert.(Float64, lowerbound)...),
+        tuple(convert.(Float64, upperbound)...),
+    )
+    return dr
 end
 
 """
