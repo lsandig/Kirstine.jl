@@ -76,6 +76,27 @@ struct DesignProblem{
             normal_approximation,
         )
     end
+function Base.:(==)(dp1::DesignProblem, dp2::DesignProblem)
+    fields_are_equal =
+        criterion(dp1) == criterion(dp2) &&
+        region(dp1) == region(dp2) &&
+        model(dp1) == model(dp2) &&
+        covariate_parameterization(dp1) == covariate_parameterization(dp2) &&
+        prior_knowledge(dp1) == prior_knowledge(dp2) &&
+        transformation(dp1) == transformation(dp2) &&
+        normal_approximation(dp1) == normal_approximation(dp2)
+    return fields_are_equal
+end
+
+function Base.hash(dp::DesignProblem, h::UInt)
+    h = hash(criterion(dp), h)
+    h = hash(region(dp), h)
+    h = hash(model(dp), h)
+    h = hash(covariate_parameterization(dp), h)
+    h = hash(prior_knowledge(dp), h)
+    h = hash(transformation(dp), h)
+    h = hash(normal_approximation(dp), h)
+    return h
 end
 
 """

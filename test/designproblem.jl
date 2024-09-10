@@ -11,6 +11,46 @@ include("example-emax.jl")
 include("example-compartment.jl")
 
 @testset "designproblem.jl" begin
+    @testset "==" begin
+        let dp1 = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            dp2 = deepcopy(dp1)
+
+            @test dp1 == dp2
+        end
+    end
+
+    @testset "hash" begin
+        let dr = DesignInterval(:dose => (0, 10)),
+            m = EmaxModel(1),
+            cp = CopyDose(),
+            pk = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            dp1 = DesignProblem(;
+                criterion = DCriterion(),
+                region = dr,
+                model = m,
+                covariate_parameterization = cp,
+                prior_knowledge = pk,
+            ),
+            dp2 = DesignProblem(;
+                criterion = ACriterion(),
+                region = dr,
+                model = m,
+                covariate_parameterization = cp,
+                prior_knowledge = pk,
+            ),
+            dp3 = deepcopy(dp1)
+
+            # implicitly constructs a Set, which calls hash()
+            @test unique([dp1, dp2, dp3]) == [dp1, dp2]
+        end
+    end
+
     @testset "objective_constants" begin
         let dp = DesignProblem(;
                 criterion = DCriterion(),
