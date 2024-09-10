@@ -81,6 +81,56 @@ function DesignProblem(;
     return dp
 end
 
+"""
+    DesignProblem(prototype::DesignProblem; <keyword arguments>)
+
+Construct a design problem with defaults from `prototype`.
+
+All explicitly given keyword arguments will be part of the new design problem.
+For every missing keyword argument,
+the corresponding field from `prototype` is copied instead.
+Note that the result does not share memory with `prototype`.
+
+This function is useful for constructing variations of a given problem
+without having to re-type a lot of code
+or having to write helper functions.
+
+# Example
+
+Consider some design problem
+
+```julia
+dp = DesignProblem(; criterion = DCriterion(), other_keyword_arguments...)
+```
+
+This constructs a similar problem where only the criterion differs:
+
+```julia
+DesignCriterion(dp; criterion = ACriterion())
+```
+"""
+function DesignProblem(
+    dp::DesignProblem;
+    criterion = deepcopy(criterion(dp)),
+    region = deepcopy(region(dp)),
+    model = deepcopy(model(dp)),
+    covariate_parameterization = deepcopy(covariate_parameterization(dp)),
+    prior_knowledge = deepcopy(prior_knowledge(dp)),
+    transformation = deepcopy(transformation(dp)),
+    normal_approximation = deepcopy(normal_approximation(dp)),
+)
+    modified_dp = DesignProblem(;
+        criterion = criterion,
+        region = region,
+        model = model,
+        covariate_parameterization = covariate_parameterization,
+        prior_knowledge = prior_knowledge,
+        transformation = transformation,
+        normal_approximation = normal_approximation,
+    )
+    return modified_dp
+end
+
 function Base.:(==)(dp1::DesignProblem, dp2::DesignProblem)
     fields_are_equal =
         criterion(dp1) == criterion(dp2) &&

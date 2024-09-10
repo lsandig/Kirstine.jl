@@ -8,6 +8,7 @@
 AbstractDesignProblem
 DesignProblem
 DesignProblem()
+DesignProblem(::DesignProblem)
 criterion
 region(::DesignProblem)
 model

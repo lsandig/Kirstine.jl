@@ -23,6 +23,27 @@ include("example-compartment.jl")
             dp_parsed = eval(Meta.parse(dp_str))
             @test dp == dp_parsed
         end
+
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            dp_a = DesignProblem(dp; criterion = ACriterion()),
+            dp_copy = DesignProblem(dp)
+
+            # replacement works
+            @test criterion(dp_a) == ACriterion()
+            # other fields are equal (check by substituting back) ...
+            @test dp == DesignProblem(dp_a; criterion = DCriterion())
+            # ... but not identical when they don't refer to singleton objects
+            @test prior_knowledge(dp_a) !== prior_knowledge(dp)
+
+            @test dp_copy == dp
+            @test dp_copy !== dp
+        end
     end
 
     @testset "==" begin
