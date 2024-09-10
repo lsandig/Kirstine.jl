@@ -158,6 +158,7 @@ JustCopy()
 PriorKnowledge
 PriorSample
 PriorSample(::AbstractVector{T}, ::AbstractVector{<:Real}) where T <: Parameter
+Base.:(==)(::PriorSample, ::PriorSample)
 parameters(::PriorSample)
 weights(::PriorSample)
 ```

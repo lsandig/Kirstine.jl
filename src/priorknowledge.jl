@@ -62,3 +62,26 @@ See also [`weights(::DesignMeasure)`](@ref).
 function parameters(pk::PriorSample)
     return pk.p
 end
+
+"""
+    ==(pk1::PriorSample, pk2::PriorSample)
+
+Test prior samples for equality.
+
+Two prior samples are considered equal iff
+
+  - they have the same subtype of [`Parameter`](@ref),
+  - and their parameter draws are equal,
+  - and their weights are equal,
+  - and the order of the draws is equal.
+
+Note that this is stricter than when comparing prior samples as mathematical sets,
+where the order of the draws does not matter.
+"""
+function Base.:(==)(pk1::PriorSample, pk2::PriorSample)
+    return weights(pk1) == weights(pk2) && parameters(pk1) == parameters(pk2)
+end
+
+function Base.hash(pk::PriorSample, h::UInt)
+    return hash(parameters(pk), hash(weights(pk), h))
+end
