@@ -310,7 +310,7 @@ end
 
 A wrapper that calls
 [`simplify_unique`](@ref),
-[`simplify_merge`](@ref),
+[`simplify_merge`](@ref) (with the design region of `dp`),
 and [`simplify_drop`](@ref) in that order.
 """
 function simplify(d::DesignMeasure, dp::DesignProblem; maxweight = 0, maxdist = 0, uargs...)

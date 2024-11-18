@@ -4,6 +4,7 @@
 module DesignmeasureTests
 using Test
 using Random: seed!
+using LinearAlgebra: norm
 using Kirstine
 
 @testset "designmeasure.jl" begin
@@ -179,6 +180,29 @@ using Kirstine
         end
     end
 
+    @testset "coordinates_in_bounding_box" begin
+        let dr = DesignInterval(:a => (1, 2), :b => (-1, 3)), dp = [1.8, 2]
+            @test Kirstine.coordinates_in_bounding_box(dp, dr) ≈ [0.8, 0.75]
+        end
+    end
+
+    @testset "pairwise_distance_matrix" begin
+        let dps = [[1, 1], [5, 1], [3, 10]],
+            l2dist(x, y) = norm(x - y),
+            l1dist(x, y) = norm(x - y, 1),
+            infdist(x, y) = norm(x - y, Inf),
+            shear(dp) = [dp[1], dp[1] + dp[2]]
+
+            pdm1 = Kirstine.pairwise_distance_matrix(dps, identity, l2dist)
+            pdm2 = Kirstine.pairwise_distance_matrix(dps, identity, l1dist)
+            pdm3 = Kirstine.pairwise_distance_matrix(dps, shear, infdist)
+
+            @test pdm1 == [0 4 sqrt(85); 4 0 sqrt(85); sqrt(85) sqrt(85) 0]
+            @test pdm2 == [0 4 11; 4 0 11; 11 11 0]
+            @test pdm3 == [0 4 11; 4 0 7; 11 7 0]
+        end
+    end
+
     @testset "simplify_merge" begin
         let d = DesignMeasure([[1, 1], [5, 1], [3, 10]], [0.3, 0.1, 0.6]),
             dr = DesignInterval(:a => (0, 100), :b => (0, 100)),
@@ -223,6 +247,21 @@ using Kirstine
             s = simplify_merge(d, dr, 0)
 
             @test first(points(s))[1] <= 100
+        end
+
+        # different f or distance functions
+        let d = DesignMeasure([[1, 1], [5, 1], [3, 10]], [0.3, 0.1, 0.6]),
+            dref = DesignMeasure([[2, 1], [3, 10]], [0.4, 0.6]),
+            d2ref = DesignMeasure([[1, 1]], [1]),
+            l2dist(x, y) = norm(x - y),
+            infdist(x, y) = norm(x - y, Inf),
+            shear(dp) = [dp[1], dp[1] + dp[2]]
+
+            d1 = simplify_merge(d, identity, infdist, 6)
+            d2 = simplify_merge(d, shear, l2dist, 6)
+
+            @test d1 == dref
+            @test d2 == dref
         end
     end
 

@@ -459,42 +459,133 @@ end
 
 Merge designpoints with a normalized distance smaller or equal to `maxdist`.
 
-The design points are first transformed into the unit (hyper)cube
-by shifting and scaling them according to the bounding box of the design region.
-The argument `maxdist` is intepreted relative to this unit cube,
-i.e. only `0 < maxdist < sqrt(N)` make sense for a design region of dimension `N`.
+Special case of `simplify_merge` with `f(z) = (z .- lb) ./ (ub .- lb)`,
+where `ub` and `lb` define the bounding box of `dr`,
+and `distfun(x, y) = norm(x - y)`.
+
+In other words,
+the design points of `d` are scaled into the `N`-dimensional unit cube
+before measuring their pairwise distances.
+Note that the largest possible distance between points is `sqrt(N)`.
+
+# Examples
+
+After scaling into the unit square,
+the distance between the first two points less than `0.3`,
+hence they are merged.
+
+```jldoctest
+julia> d = DesignMeasure([[2.25, 2], [3.5, 2.5], [10, 3]], [0.3, 0.1, 0.6]);
+
+julia> simplify_merge(d, DesignInterval(:a => (1, 11), :b => (2, 4)), 0.3)
+DesignMeasure(
+ [2.5624999999999996, 2.125] => 0.4,
+ [10.0, 3.0] => 0.6,
+)
+```
+"""
+function simplify_merge(d::DesignMeasure, dr::DesignRegion, maxdist::Real)
+    l2dist(p1, p2) = norm(p1 .- p2)
+    return simplify_merge(d, p -> coordinates_in_bounding_box(p, dr), l2dist, maxdist)
+end
+
+function coordinates_in_bounding_box(dp::AbstractVector{<:Real}, dr::DesignRegion)
+    lb, ub = boundingbox(dr)
+    width = collect(ub .- lb)
+    return (dp .- lb) ./ width
+end
+
+function pairwise_distance_matrix(
+    dps::AbstractVector{<:AbstractVector{<:Real}},
+    f::Function,
+    distfun::Function,
+)
+    return map(p -> distfun(f(p[1]), f(p[2])), Iterators.product(dps, dps))
+end
+
+# Note: design measure before functions for consistency with the design region variant
+"""
+    simplify_merge(d::DesignMeasure, f::Function, distfun::Function, maxdist::Real)
+
+Merge design points with `distfun(f(dp1), f(dp2))` smaller or equal to `maxdist`.
 
 The following two steps are repeated until all points are more than `maxdist` apart:
 
- 1. All pairwise euclidean distances are calculated.
- 2. The two points closest to each other are averaged with their relative weights.
+ 1. All pairwise distances are calculated.
+ 2. The two points closest to each other are averaged according to their relative weights.
 
-Finally the design points are scaled and shifted back into the original design region.
+# Examples
+
+The first example uses the 2-norm for measuring distances between the points directly,
+and merges the first two points since they are `1/sqrt(2)` apart.
+The second example uses the 1-norm instead,
+where the first two points have distance `1`,
+so nothing happens.
+
+```jldoctest
+julia> d = DesignMeasure([[1, 2], [1.5, 2.5], [3, 3]], [0.1, 0.4, 0.5]);
+
+julia> simplify_merge(d, identity, (x, y) -> sqrt(sum((x .- y) .^ 2)), 0.8)
+DesignMeasure(
+ [1.4000000000000001, 2.4] => 0.5,
+ [3.0, 3.0] => 0.5,
+)
+
+julia> simplify_merge(d, identity, (x, y) -> sum(abs.(x - y)), 0.8)
+DesignMeasure(
+ [1.0, 2.0] => 0.1,
+ [1.5, 2.5] => 0.4,
+ [3.0, 3.0] => 0.5,
+)
+```
+
+The third example has two pairs of points with the same distance to each other.
+When simplified with a design region, either none or both are merged.
+However, when mapped onto the graph of the `exp()` function,
+only the second pair will be merged
+since it is spread much wider than the first.
+Such a behavior might be desired
+with a more complicated expected response function in place of `exp()`.
+
+```jldoctest
+julia> d = uniform_design([[0.2], [0.3], [4.9], [5.0]]);
+
+julia> simplify_merge(d, DesignInterval(:a => (0, 10)), 0.01)
+DesignMeasure(
+ [0.25] => 0.5,
+ [4.95] => 0.5,
+)
+
+julia> simplify_merge(d, z -> [z[1], exp(z[1])], (x, y) -> sqrt(sum((x .- y) .^ 2)), 1)
+DesignMeasure(
+ [0.25] => 0.5,
+ [4.9] => 0.25,
+ [5.0] => 0.25,
+)
+```
 """
-function simplify_merge(d::DesignMeasure, dr::DesignRegion, maxdist::Real)
-    if numpoints(d) == 1 # nothing to do for one-point-designs
-        return deepcopy(d) # return a copy for consistency
-    end
-    lb, ub = boundingbox(dr)
-    width = collect(lb .- ub)
-    dps = deepcopy(points(d))
-    ws = weights(d)
+function simplify_merge(d::DesignMeasure, f::Function, distfun::Function, maxdist::Real)
+    # nothing to do for one-point-designs, return a copy for consistency
+    numpoints(d) == 1 && return deepcopy(d)
+    dps = collect.(points(d))
+    ws = deepcopy(weights(d))
     cur_min_dist = 0
     while cur_min_dist <= maxdist
-        # compute pairwise L2-distances relative to bounding box,
+        # compute pairwise distances of transformed designpoints,
         # merge the two designpoints nearest to each other
-        dist = map(p -> norm((p[1] .- p[2]) ./ width), Iterators.product(dps, dps))
-        dist[diagind(dist)] .= Inf
-        cur_min_dist, idx = findmin(dist) # i > j because rows vary fastest
+        distmat = pairwise_distance_matrix(dps, f, distfun)
+        distmat[diagind(distmat)] .= Inf
+        cur_min_dist, idx = findmin(distmat) # i > j because rows vary fastest
         i = idx[1]
         j = idx[2]
         if cur_min_dist <= maxdist
             w_new = ws[i] + ws[j]
             dp_raw = (ws[i] .* dps[i] .+ ws[j] .* dps[j]) ./ w_new
             dp_new = min.(max.(dps[i], dps[j]), max.(min.(dps[i], dps[j]), dp_raw))
-            to_keep = (1:length(dps) .!= i) .&& (1:length(dps) .!= j)
-            dps = [[dp_new]; dps[to_keep]]
-            ws = [w_new; ws[to_keep]]
+            deleteat!(dps, (j, i))
+            pushfirst!(dps, dp_new)
+            deleteat!(ws, (j, i))
+            pushfirst!(ws, w_new)
         end
     end
     return DesignMeasure(dps, ws)
