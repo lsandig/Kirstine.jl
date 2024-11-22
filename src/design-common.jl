@@ -357,12 +357,13 @@ function solve(
     simpargs = setdiff(sargs, sortargs)
     dopt = sort_points(simplify(solution(or), adp; simpargs...); sortargs...)
     # check that we did not accidentally simplify too much
-    o_before = objective(solution(or), adp)
-    o_after = objective(dopt, adp)
-    rel_diff = (o_after - o_before) / abs(o_before)
+    objective_before = objective(solution(or), adp)
+    objective_after = objective(dopt, adp)
+    rel_diff = (objective_after - objective_before) / abs(objective_before)
     diff_numpoints = numpoints(solution(or)) - numpoints(dopt)
     if rel_diff < -0.01
-        @warn "simplification may have been too eager" o_before o_after rel_diff diff_numpoints
+        msg = "simplification may have been too eager"
+        @warn msg objective_before objective_after rel_diff diff_numpoints
     end
     return dopt, or
 end
