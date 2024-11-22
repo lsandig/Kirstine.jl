@@ -357,6 +357,7 @@ ef = plot_expected_function(
     prior_knowledge(dp);
     xguide = "dose",
     yguide = "response",
+    bands = true,              # prior credibility bands, by default 80%
 )
 savefig(ef, "tutorial-ef.png") # hide
 nothing # hide
