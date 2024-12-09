@@ -1,0 +1,103 @@
+# SPDX-FileCopyrightText: 2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+module FrankWolfeTests
+using Kirstine, Test
+using Plots
+
+include("example-pnt.jl")
+
+function Kirstine.fw_linear_maximization_oracle!(
+    v::Pnt,
+    gx::AbstractVector{<:Real},
+    c::BoxConstraints,
+)
+    box_corners = Iterators.product(Iterators.zip(c.lb.x, c.ub.x)...)
+    v.x .= argmax(corner -> mapreduce(*, +, gx, corner), box_corners)
+    return v
+end
+
+function Kirstine.fw_gradient_length(p::Pnt, c::BoxConstraints)
+    return length(p.x)
+end
+
+@testset "optimizer-frank-wolfe.jl" begin
+    @testset "FrankWolfe" begin
+        # check both positional and keyword-based constructor
+        @test_throws "must be positive" FrankWolfe(-1)
+        @test_throws "must be positive" FrankWolfe(; iterations = -1)
+    end
+
+    @testset "optimizer_state" begin
+        let f(p) = -(p.x[1] - 1)^2,
+            g!(grad, p) = grad[1] = -2 * (p.x[1] - 1),
+            gnan!(grad, p) = grad[1] = NaN,
+            ginf!(grad, p) = grad[1] = Inf,
+            gninf!(grad, p) = grad[1] = -Inf,
+            opt = FrankWolfe(5),
+            # |------|------|
+            # 0   x0=5     10
+            x0 = Pnt([5]),
+            c = BoxConstraints(Pnt([0]), Pnt([10])),
+            state = Kirstine.optimizer_state((f, g!), opt, [x0], c)
+
+            @test_throws "exactly 1" Kirstine.optimizer_state((f, g!), opt, [x0, x0], c)
+            @test_throws "NaN" Kirstine.optimizer_state((f, gnan!), opt, [x0], c)
+            @test_throws "Inf" Kirstine.optimizer_state((f, ginf!), opt, [x0], c)
+            @test_throws "Inf" Kirstine.optimizer_state((f, gninf!), opt, [x0], c)
+            @test state isa Kirstine.FrankWolfeState{Pnt,PntDiff}
+            # we should not share memory with given arguments
+            @test state.x == c.lb
+            @test state.x !== c.lb
+            @test state.x !== x0
+            @test state.v == c.lb
+            @test state.diff.v == [0] # note: always initialized at 0
+            @test state.stepsize == 1
+            @test state.fx == -1
+            @test state.gx == [-8]
+            @test state.n_eval == 1
+        end
+    end
+
+    @testset "tick!" begin
+        let opt = FrankWolfe(2),
+            n = 2,
+            xstar = ones(n),
+            f(p) = -sum((p.x .- xstar) .^ 2),
+            g!(grad, p) = grad .= -2 .* (p.x .- xstar),
+            c = BoxConstraints(Pnt([0, 0]), Pnt([10, 10])),
+            state = Kirstine.optimizer_state((f, g!), opt, [Pnt([5, 0.5])], c),
+            iter = 2
+
+            Kirstine.tick!((f, g!), state, opt, c, iter)
+            @test state.gx == [2, -18]
+            @test state.v == Pnt([10, 0])
+            @test state.stepsize ≈ 2 / 3
+            @test state.x.x ≈ [20 / 3, 10 / 3]
+        end
+    end
+
+    @testset "optimize" begin
+        let n = 4,
+            xstar = ones(n),
+            f(p) = -sum((p.x .- xstar) .^ 2),
+            g!(grad, p) = grad .= -2 .* (p.x .- xstar),
+            fw = FrankWolfe(; iterations = 2000),
+            prototype = Pnt(zeros(n)),
+            outside = Pnt([-1, -1, 5, -1]),
+            constr1 = BoxConstraints(Pnt(fill(-1, n)), Pnt(fill(2, n))),
+            constr2 = BoxConstraints(Pnt(fill(-1, n)), Pnt(collect(1:n) ./ 2))
+
+            # This solution will be at xstar, inside the constraints...
+            r1 = Kirstine.optimize((f, g!), fw, [prototype], constr1)
+            # ... and this one will be on the boundary at [0.5, 1, 1, ..., 1]
+            r2 = Kirstine.optimize((f, g!), fw, [prototype], constr2; trace_state = true)
+
+            @test r1.maximizer.x ≈ xstar rtol = 1e-4
+            @test r1.maximum ≈ 0.0 atol = 1e-4
+            @test r2.maximizer.x ≈ [0.5; xstar[2:end]] rtol = 1e-4
+            @test r2.maximum ≈ -0.25 rtol = 1e-4
+        end
+    end
+end
+end

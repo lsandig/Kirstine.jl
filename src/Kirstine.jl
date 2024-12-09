@@ -46,6 +46,7 @@ export @simple_model,
     Exchange,
     ExchangeResult,
     FisherMatrix,
+    FrankWolfe,
     GridSearch,
     GridSpec,
     Identity,
@@ -109,6 +110,7 @@ include("abstracttypes.jl")
 include("optimize.jl")
 include("optimizer-pso.jl")
 include("optimizer-grid.jl")
+include("optimizer-frank-wolfe.jl")
 include("designregion.jl")
 include("designmeasure.jl")
 include("designmeasure-abstractpoint.jl")

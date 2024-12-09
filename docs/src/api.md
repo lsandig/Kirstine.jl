@@ -63,6 +63,8 @@ GridSearch
 GridSearch()
 GridSpec
 ProductGrid
+FrankWolfe
+FrankWolfe(::Integer)
 ```
 
 ## Design Criteria
