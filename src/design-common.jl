@@ -191,7 +191,7 @@ function apply_transformation!(nw::NIMWorkspace, trafo::Identity, _)
     return nw
 end
 
-function apply_transformation!(nw::NIMWorkspace, trafo::DeltaMethod, jm::Matrix{Float64})
+function _apply_transformation_delta!(nw::NIMWorkspace, jm::Matrix{Float64})
     # Denote the Jacobian matrix of T by J and the normalized information matrix by M. We
     # want to efficiently calculate J * inv(M) * J'.
     #
@@ -232,6 +232,10 @@ function apply_transformation!(nw::NIMWorkspace, trafo::DeltaMethod, jm::Matrix{
     # Note that for this method, the result is not just an upper triangle, but always a
     # dense matrix.
     return nw
+end
+
+function apply_transformation!(nw::NIMWorkspace, trafo::DeltaMethod, jm::Matrix{Float64})
+    return _apply_transformation_delta!(nw, jm)
 end
 
 ## linear algebra shortcuts ##

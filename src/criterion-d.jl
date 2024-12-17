@@ -40,6 +40,33 @@ end
 
 ## Gateaux derivative: Identity ##
 
+function gateaux_constants!(
+    gc::GCPriorSample,
+    mw::ModelWorkspace,
+    nw::NIMWorkspace,
+    c::AbstractVector{<:Covariate},
+    dc::DCriterion,
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample,
+    tc::TCIdentity,
+    na::NormalApproximation,
+)
+    ps = parameters(pk)
+    update_covariates!(c, d, m, cp)
+    update_model_workspace!(mw, m, c)
+    for i in 1:length(ps)
+        average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, ps[i])
+        informationmatrix!(nw.r_x_r, na)
+        potrf!('U', nw.r_x_r)
+        potri!('U', nw.r_x_r)
+        gc.A[i] .= nw.r_x_r # only upper triangle
+        gc.tr_B[i] = parameter_dimension(pk)
+    end
+    return gc
+end
+
 function gateaux_constants(
     dc::DCriterion,
     d::DesignMeasure,
@@ -84,4 +111,41 @@ function gateaux_constants(
     end
     tr_B = fill(codomain_dimension(trafo, pk), length(parameters(pk)))
     return GCPriorSample(A, tr_B)
+end
+
+function gateaux_constants!(
+    gc::GCPriorSample,
+    mw::ModelWorkspace,
+    nw::NIMWorkspace,
+    c::AbstractVector{<:Covariate},
+    dc::DCriterion,
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample,
+    tc::TCDeltaMethod,
+    na::NormalApproximation,
+)
+    ps = parameters(pk)
+    update_covariates!(c, d, m, cp)
+    update_model_workspace!(mw, m, c)
+    for i in 1:length(ps)
+        average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, ps[i])
+        informationmatrix!(nw.r_x_r, na)
+        gc.A[i] .= nw.r_x_r # store it temporarily here, apply_transformation!() will overwrite it
+        nw.r_is_inv = false
+        _apply_transformation_delta!(nw, tc.jm[i]) # nw.t_x_t := inv(Q)
+        # nw.r_x_t := inv(M) * DT'
+        nw.r_x_t .= tc.jm[i]'
+        posv!('U', gc.A[i], nw.r_x_t)
+        # nw.t_x_r := DT * inv(M)
+        nw.t_x_r .= nw.r_x_t'
+        # nw.t_x_r := Q * DT * inv(M)
+        posv!('U', nw.t_x_t, nw.t_x_r)
+        # nw.r_x_r := inv(M) * DT' * Q * DT * inv(M)
+        gemm!('N', 'N', 1.0, nw.r_x_t, nw.t_x_r, 0.0, nw.r_x_r)
+        gc.A[i] .= nw.r_x_r # dense
+        gc.tr_B[i] = size(nw.t_x_t, 1)
+    end
+    return gc
 end
