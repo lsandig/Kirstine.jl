@@ -4,6 +4,7 @@
 module Kirstine
 
 using LinearAlgebra:
+    BLAS.gemm!,
     BLAS.symm!,
     BLAS.syrk!,
     BLAS.trsm!,

@@ -61,6 +61,16 @@ function gateaux_integrand(A::AbstractMatrix, nim_direction::AbstractMatrix, tr_
     return tr_prod(A, nim_direction, :U) - tr_B
 end
 
+function mirror_to_lower_triangle!(m::AbstractMatrix)
+    n = size(m, 1) # Note: we assume m to be square
+    for j in 1:(n - 1)
+        for i in (j + 1):n
+            m[i, j] = m[j, i]
+        end
+    end
+    return m
+end
+
 ## normalized information matrix for θ ##
 
 # In the simplest case, the normalized information is just the Fisher information matrix

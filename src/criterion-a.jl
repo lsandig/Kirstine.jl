@@ -44,6 +44,35 @@ function criterion_functional!(tnim::AbstractMatrix, is_inv::Bool, dc::ACriterio
     end
 end
 
+function gateaux_constants!(
+    gc::GCPriorSample,
+    mw::ModelWorkspace,
+    nw::NIMWorkspace,
+    c::AbstractVector{<:Covariate},
+    dc::ACriterion,
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample,
+    tc::TCIdentity,
+    na::NormalApproximation,
+)
+    ps = parameters(pk)
+    update_covariates!(c, d, m, cp)
+    update_model_workspace!(mw, m, c)
+    for i in 1:length(ps)
+        average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, ps[i])
+        informationmatrix!(nw.r_x_r, na)
+        potrf!('U', nw.r_x_r)
+        potri!('U', nw.r_x_r)
+        gc.tr_B[i] = tr(nw.r_x_r)
+        # mul!() needs dense matrices, symm!() would need a dense B
+        mirror_to_lower_triangle!(nw.r_x_r)
+        mul!(gc.A[i], nw.r_x_r, nw.r_x_r)
+    end
+    return gc
+end
+
 function gateaux_constants(
     dc::ACriterion,
     d::DesignMeasure,
@@ -74,4 +103,36 @@ function gateaux_constants(
     tr_B = map((J, iM) -> tr(J * Symmetric(iM)), JpJ, invM)
     A = map((J, iM) -> Symmetric(iM) * J * Symmetric(iM), JpJ, invM)
     return GCPriorSample(A, tr_B)
+end
+
+function gateaux_constants!(
+    gc::GCPriorSample,
+    mw::ModelWorkspace,
+    nw::NIMWorkspace,
+    c::AbstractVector{<:Covariate},
+    dc::ACriterion,
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample,
+    tc::TCDeltaMethod,
+    na::NormalApproximation,
+)
+    ps = parameters(pk)
+    update_covariates!(c, d, m, cp)
+    update_model_workspace!(mw, m, c)
+    for i in 1:length(ps)
+        average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, ps[i])
+        informationmatrix!(nw.r_x_r, na)
+        potrf!('U', nw.r_x_r)
+        potri!('U', nw.r_x_r)
+        # nw.t_x_r := DT * inv(M)
+        symm!('R', 'U', 1.0, nw.r_x_r, tc.jm[i], 0.0, nw.t_x_r)
+        # gc.A[i] := (DT * inv(M))' * DT * inv(M)
+        gemm!('T', 'N', 1.0, nw.t_x_r, nw.t_x_r, 0.0, gc.A[i])
+        # nw.t_x_t := DT * inv(M) * DT'
+        gemm!('N', 'T', 1.0, nw.t_x_r, tc.jm[i], 0.0, nw.t_x_t)
+        gc.tr_B[i] = tr(nw.t_x_t)
+    end
+    return gc
 end

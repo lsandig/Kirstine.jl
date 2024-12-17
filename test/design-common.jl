@@ -36,6 +36,18 @@ include("example-compartment.jl")
         end
     end
 
+    @testset "mirror_to_lower_triangle!" begin
+        let m1 = [1;;], m2 = [1 2; 0 3], m3 = [1 2 3; 0 4 5; 0 0 6]
+            Kirstine.mirror_to_lower_triangle!(m1)
+            Kirstine.mirror_to_lower_triangle!(m2)
+            Kirstine.mirror_to_lower_triangle!(m3)
+
+            @test m1 == [1;;]
+            @test m2 == [1 2; 2 3]
+            @test m3 == [1 2 3; 2 4 5; 3 5 6]
+        end
+    end
+
     @testset "informationmatrix!" begin
         # The `FisherMatrix` normal approximation should just give the average Fisher
         # information matrix as NIM.
