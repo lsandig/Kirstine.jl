@@ -25,6 +25,27 @@ struct GCPriorSample <: GateauxConstants
     tr_B::Vector{Float64}
 end
 
+function gateaux_constants(
+    dc::DesignCriterion,
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample,
+    trafo::Transformation,
+    na::NormalApproximation,
+)
+    t = codomain_dimension(trafo, pk)
+    r = parameter_dimension(pk)
+    numdraws = length(parameters(pk))
+    gc = GCPriorSample([zeros(r, r) for _ in 1:numdraws], zeros(numdraws))
+    mw = allocate_model_workspace(numpoints(d), m, pk)
+    nw = NIMWorkspace(r, t)
+    c = implied_covariates(d, m, cp)
+    tc = trafo_constants(trafo, pk)
+    gateaux_constants!(gc, mw, nw, c, dc, d, m, cp, pk, tc, na)
+    return gc
+end
+
 """
     implied_covariates(d::DesignMeasure, m::M, cp::Cp)
 
@@ -279,6 +300,20 @@ function tr_prod(A::AbstractMatrix, B::AbstractMatrix, uplo::Symbol)
         throw(ArgumentError("uplo argument must be either :U or :L, got $uplo"))
     end
     return acc
+end
+
+function opnorm1_sym_u(A::AbstractMatrix{Float64})
+    # modeled after LinearAlgebra.opnorm1()
+    m, n = size(A)
+    nrm = 0.0
+    for j in 1:n
+        nrmj = 0.0
+        for i in 1:m
+            nrmj += i <= j ? abs(A[i, j]) : abs(A[j, i])
+        end
+        nrm = max(nrm, nrmj)
+    end
+    return nrm
 end
 
 ## abstract design problem interface ##

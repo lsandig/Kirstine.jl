@@ -63,46 +63,18 @@ function gateaux_constants!(
     for i in 1:length(ps)
         average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, ps[i])
         informationmatrix!(nw.r_x_r, na)
+        mnorm = opnorm1_sym_u(nw.r_x_r)
         potrf!('U', nw.r_x_r)
         potri!('U', nw.r_x_r)
+        invmnorm = opnorm1_sym_u(nw.r_x_r)
+        # check for numerical singularity, see DCriterion/Identity method
+        inv(mnorm * invmnorm) < eps(Float64) && throw(SingularException(-1))
         gc.tr_B[i] = tr(nw.r_x_r)
         # mul!() needs dense matrices, symm!() would need a dense B
         mirror_to_lower_triangle!(nw.r_x_r)
         mul!(gc.A[i], nw.r_x_r, nw.r_x_r)
     end
     return gc
-end
-
-function gateaux_constants(
-    dc::ACriterion,
-    d::DesignMeasure,
-    m::Model,
-    cp::CovariateParameterization,
-    pk::PriorSample,
-    trafo::Identity,
-    na::NormalApproximation,
-)
-    invM = inv_informationmatrices(d, m, cp, pk, na)
-    tr_B = map(tr, invM)
-    A = map(m -> Symmetric(m)^2, invM)
-    return GCPriorSample(A, tr_B)
-end
-
-function gateaux_constants(
-    dc::ACriterion,
-    d::DesignMeasure,
-    m::Model,
-    cp::CovariateParameterization,
-    pk::PriorSample,
-    trafo::DeltaMethod,
-    na::NormalApproximation,
-)
-    tc = trafo_constants(trafo, pk)
-    invM = inv_informationmatrices(d, m, cp, pk, na)
-    JpJ = map(J -> J' * J, tc.jm)
-    tr_B = map((J, iM) -> tr(J * Symmetric(iM)), JpJ, invM)
-    A = map((J, iM) -> Symmetric(iM) * J * Symmetric(iM), JpJ, invM)
-    return GCPriorSample(A, tr_B)
 end
 
 function gateaux_constants!(
@@ -124,8 +96,12 @@ function gateaux_constants!(
     for i in 1:length(ps)
         average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, ps[i])
         informationmatrix!(nw.r_x_r, na)
+        mnorm = opnorm1_sym_u(nw.r_x_r)
         potrf!('U', nw.r_x_r)
         potri!('U', nw.r_x_r)
+        invmnorm = opnorm1_sym_u(nw.r_x_r)
+        # check for numerical singularity, see DCriterion/Identity method
+        inv(mnorm * invmnorm) < eps(Float64) && throw(SingularException(-1))
         # nw.t_x_r := DT * inv(M)
         symm!('R', 'U', 1.0, nw.r_x_r, tc.jm[i], 0.0, nw.t_x_r)
         # gc.A[i] := (DT * inv(M))' * DT * inv(M)

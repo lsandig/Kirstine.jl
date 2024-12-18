@@ -5,7 +5,7 @@ module DesignCommonTests
 using Test
 using Kirstine
 using Random: seed!
-using LinearAlgebra: SingularException, Symmetric, UpperTriangular, tr, det, diagm
+using LinearAlgebra: SingularException, Symmetric, UpperTriangular, tr, det, diagm, opnorm
 
 include("example-testpar.jl")
 include("example-emax.jl")
@@ -45,6 +45,12 @@ include("example-compartment.jl")
             @test m1 == [1;;]
             @test m2 == [1 2; 2 3]
             @test m3 == [1 2 3; 2 4 5; 3 5 6]
+        end
+    end
+
+    @testset "opnorm1_sym_u" begin
+        let A = randn(3, 3)
+            @test opnorm(Symmetric(A), 1) == Kirstine.opnorm1_sym_u(A)
         end
     end
 
