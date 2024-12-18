@@ -36,16 +36,20 @@ mutable struct FrankWolfeState{T,U} <: OptimizerState{T,U}
     stepsize::Float64
     fx::Float64
     gx::Vector{<:Float64}
-    n_eval::Int64
+    n_eval_f::Int64
+    n_eval_g::Int64
 end
 
 maximizer(s::FrankWolfeState) = s.x
 maximum(s::FrankWolfeState) = s.fx
-n_eval(s::FrankWolfeState) = s.n_eval
+gradient(s::FrankWolfeState) = s.gx
+n_eval_f(s::FrankWolfeState) = s.n_eval_f
+n_eval_g(s::FrankWolfeState) = s.n_eval_g
 
 # note: location of prototype only determines which boundary vertex is chosen first
 function Kirstine.optimizer_state(
-    (f, g!),
+    f,
+    g!,
     o::FrankWolfe,
     prototypes::AbstractVector{<:AbstractPoint},
     constraints::AbstractConstraints,
@@ -67,19 +71,22 @@ function Kirstine.optimizer_state(
     ap_copy!(x, v)
     x_diff = deepcopy(ap_as_difference(v))
     fx = f(x)
-    state = FrankWolfeState{typeof(x),typeof(x_diff)}(x, v, x_diff, 1, fx, gx, 1)
+    state = FrankWolfeState{typeof(x),typeof(x_diff)}(x, v, x_diff, 1, fx, gx, 1, 1)
     return state
 end
 
 function Kirstine.tick!(
-    (f, g!),
+    f,
+    g!,
     state::FrankWolfeState,
     optimizer::FrankWolfe,
     constraints::AbstractConstraints,
     iter::Integer,
 )
     g!(state.gx, state.x)
+    state.n_eval_g += 1
     fw_linear_maximization_oracle!(state.v, state.gx, constraints)
+    state.n_eval_f += 1
     # In [^P23] the time index starts at t=0 and the open loop stepsize is γ_t = 2 / (2 + t).
     # Since we start to count from iter=1, we have to subtract 1 from t in the stepsize calculation.
     state.stepsize = 2 / (1 + iter)

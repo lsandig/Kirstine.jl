@@ -77,7 +77,8 @@ end
 
 maximizer(state::PsoState) = state.g
 Base.maximum(state::PsoState) = state.fg
-n_eval(state::PsoState) = state.n_eval
+n_eval_f(state::PsoState) = state.n_eval
+n_eval_g(state::PsoState) = 0
 
 # Note: user-visible documentation for this method is attached to `Pso`.
 function optimizer_state(

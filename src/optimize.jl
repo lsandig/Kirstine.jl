@@ -16,9 +16,14 @@ Wrapper for results of particle-based optimization.
 | maximum         | final objective value                                |
 | trace_x         | vector of current maximizer in each iteration        |
 | trace_fx        | vector of current objective value in each iteration  |
+| trace_gx        | vector of current gradient in each iteration         |
 | trace_state     | vector of internal optimizer state in each iteration |
-| n_eval          | total number of objective evaluations                |
+| n\\_eval\\_f    | total number of objective evaluations                |
+| n\\_eval\\_g    | total number of gradient evaluations                 |
 | seconds_elapsed | total runtime                                        |
+
+Note that for a [`ZerothOrderOptimizer`](@ref) `trace_gx` will be empty
+and `n_eval_g == 0`.
 
 See also [`solve`](@ref).
 """
@@ -31,14 +36,16 @@ struct OptimizationResult{
     maximum::Float64
     trace_x::Vector{T}
     trace_fx::Vector{Float64}
+    trace_gx::Vector{Vector{Float64}}
     trace_state::Vector{S}
-    n_eval::Int64
+    n_eval_f::Int64
+    n_eval_g::Int64
     seconds_elapsed::Float64
 end
 
 function optimize(
     f, # x<:AbstractPoint -> Float64
-    optimizer::Optimizer,
+    optimizer::ZerothOrderOptimizer,
     prototypes::AbstractVector{<:AbstractPoint},
     constraints::AbstractConstraints;
     trace_state = false,
@@ -67,7 +74,49 @@ function optimize(
     if !isfinite(fx)
         @warn "maximum is not finite" x fx
     end
-    return OptimizationResult(x, fx, t_x, t_fx, t_state, n_eval(state), twall)
+    t_gx = Vector{Float64}[]
+    nf = n_eval_f(state)
+    ng = 0
+    return OptimizationResult(x, fx, t_x, t_fx, t_gx, t_state, nf, 0, twall)
+end
+
+function optimize(
+    f, # x<:AbstractPoint -> Float64
+    g!, # (g::AbstractVector{<:Real}, x<:AbstractPoint) -> g
+    optimizer::FirstOrderOptimizer,
+    prototypes::AbstractVector{<:AbstractPoint},
+    constraints::AbstractConstraints;
+    trace_state = false,
+)
+    time_start = time()
+    assert_constraints(prototypes, constraints)
+    state = optimizer_state(f, g!, optimizer, prototypes, constraints)
+    t_x = [deepcopy(maximizer(state))]
+    t_fx = [maximum(state)]
+    t_gx = [deepcopy(gradient(state))]
+    t_state = typeof(state)[]
+    if trace_state
+        push!(t_state, deepcopy(state))
+    end
+    for i in 2:iterations(optimizer)
+        tick!(f, g!, state, optimizer, constraints, i)
+        push!(t_x, deepcopy(maximizer(state)))
+        push!(t_fx, maximum(state))
+        push!(t_gx, gradient(state))
+        if trace_state
+            push!(t_state, deepcopy(state))
+        end
+    end
+    time_end = time()
+    twall = time_end - time_start
+    x = maximizer(state)
+    fx = maximum(state)
+    if !isfinite(fx)
+        @warn "maximum is not finite" x fx
+    end
+    nf = n_eval_f(state)
+    ng = n_eval_g(state)
+    return OptimizationResult(x, fx, t_x, t_fx, t_gx, t_state, nf, ng, twall)
 end
 
 function prettydifftime(t)
@@ -91,7 +140,8 @@ function Base.show(
 ) where {T<:AbstractPoint,U<:AbstractPointDifference,S<:OptimizerState{T,U}}
     println(io, "OptimizationResult")
     println(io, "* iterations: ", length(r.trace_fx))
-    println(io, "* evaluations: ", r.n_eval)
+    println(io, "* objective evaluations: ", r.n_eval_f)
+    println(io, "* gradient evaluations: ", r.n_eval_g)
     println(io, "* elapsed time: ", prettydifftime(r.seconds_elapsed))
     println(io, "* traced states: ", length(r.trace_state))
     println(io, "* state type: ", S)

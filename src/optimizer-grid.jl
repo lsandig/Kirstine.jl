@@ -119,7 +119,9 @@ maximizer(s::GridSearchState) = s.x[argmax(s.fx)]
 
 maximum(s::GridSearchState) = maximum(s.fx)
 
-n_eval(s::GridSearchState) = length(s.fx)
+n_eval_f(s::GridSearchState) = length(s.fx)
+
+n_eval_g(s::GridSearchState) = 0
 
 tick!(f, s::GridSearchState, o::GridSearch, c::AbstractConstraints, i::Integer) = s
 

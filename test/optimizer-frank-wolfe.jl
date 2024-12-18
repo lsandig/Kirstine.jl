@@ -39,12 +39,12 @@ end
             # 0   x0=5     10
             x0 = Pnt([5]),
             c = BoxConstraints(Pnt([0]), Pnt([10])),
-            state = Kirstine.optimizer_state((f, g!), opt, [x0], c)
+            state = Kirstine.optimizer_state(f, g!, opt, [x0], c)
 
-            @test_throws "exactly 1" Kirstine.optimizer_state((f, g!), opt, [x0, x0], c)
-            @test_throws "NaN" Kirstine.optimizer_state((f, gnan!), opt, [x0], c)
-            @test_throws "Inf" Kirstine.optimizer_state((f, ginf!), opt, [x0], c)
-            @test_throws "Inf" Kirstine.optimizer_state((f, gninf!), opt, [x0], c)
+            @test_throws "exactly 1" Kirstine.optimizer_state(f, g!, opt, [x0, x0], c)
+            @test_throws "NaN" Kirstine.optimizer_state(f, gnan!, opt, [x0], c)
+            @test_throws "Inf" Kirstine.optimizer_state(f, ginf!, opt, [x0], c)
+            @test_throws "Inf" Kirstine.optimizer_state(f, gninf!, opt, [x0], c)
             @test state isa Kirstine.FrankWolfeState{Pnt,PntDiff}
             # we should not share memory with given arguments
             @test state.x == c.lb
@@ -55,7 +55,8 @@ end
             @test state.stepsize == 1
             @test state.fx == -1
             @test state.gx == [-8]
-            @test state.n_eval == 1
+            @test state.n_eval_f == 1
+            @test state.n_eval_g == 1
         end
     end
 
@@ -66,14 +67,16 @@ end
             f(p) = -sum((p.x .- xstar) .^ 2),
             g!(grad, p) = grad .= -2 .* (p.x .- xstar),
             c = BoxConstraints(Pnt([0, 0]), Pnt([10, 10])),
-            state = Kirstine.optimizer_state((f, g!), opt, [Pnt([5, 0.5])], c),
+            state = Kirstine.optimizer_state(f, g!, opt, [Pnt([5, 0.5])], c),
             iter = 2
 
-            Kirstine.tick!((f, g!), state, opt, c, iter)
+            Kirstine.tick!(f, g!, state, opt, c, iter)
             @test state.gx == [2, -18]
             @test state.v == Pnt([10, 0])
             @test state.stepsize ≈ 2 / 3
             @test state.x.x ≈ [20 / 3, 10 / 3]
+            @test state.n_eval_f == 2
+            @test state.n_eval_g == 2
         end
     end
 
@@ -89,14 +92,18 @@ end
             constr2 = BoxConstraints(Pnt(fill(-1, n)), Pnt(collect(1:n) ./ 2))
 
             # This solution will be at xstar, inside the constraints...
-            r1 = Kirstine.optimize((f, g!), fw, [prototype], constr1)
+            r1 = Kirstine.optimize(f, g!, fw, [prototype], constr1)
             # ... and this one will be on the boundary at [0.5, 1, 1, ..., 1]
-            r2 = Kirstine.optimize((f, g!), fw, [prototype], constr2; trace_state = true)
+            r2 = Kirstine.optimize(f, g!, fw, [prototype], constr2; trace_state = true)
 
             @test r1.maximizer.x ≈ xstar rtol = 1e-4
             @test r1.maximum ≈ 0.0 atol = 1e-4
+            @test length(r1.trace_gx) == 2000
+            @test r1.trace_gx[end] ≈ zeros(n) atol = 1e-2 # local maximum
             @test r2.maximizer.x ≈ [0.5; xstar[2:end]] rtol = 1e-4
             @test r2.maximum ≈ -0.25 rtol = 1e-4
+            @test length(r2.trace_gx) == 2000
+            @test r2.trace_gx[end] ≈ [1, 0, 0, 0] rtol = 1e-2 # not a local maximum
         end
     end
 end
