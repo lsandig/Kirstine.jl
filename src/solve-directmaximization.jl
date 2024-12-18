@@ -79,7 +79,7 @@ end
 
 function solve_with(
     adp::AbstractDesignProblem,
-    strategy::DirectMaximization,
+    strategy::DirectMaximization{<:ZerothOrderOptimizer},
     trace_state::Bool,
 )
     constraints = DesignConstraints(

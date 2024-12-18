@@ -56,6 +56,8 @@ and are used as part of a `ProblemSolvingStrategy`.
 
 ```@docs
 Optimizer
+Kirstine.ZerothOrderOptimizer
+Kirstine.FirstOrderOptimizer
 OptimizationResult
 Pso
 Pso()

@@ -107,6 +107,20 @@ Supertype for particle-based optimization algorithms.
 See also [`Pso`](@ref), [`GridSearch`](@ref), [`FrankWolfe`](@ref).
 """
 abstract type Optimizer end
+
+"""
+    ZerothOrderOptimizer <: Optimizer
+
+Supertype for optimization algorithms that only use the objective function.
+"""
+abstract type ZerothOrderOptimizer <: Optimizer end
+
+"""
+    FirstOrderOptimizer <: Optimizer
+
+Supertype for optimization algorithms that use the objective function and its gradient.
+"""
+abstract type FirstOrderOptimizer <: Optimizer end
 abstract type OptimizerState{T<:AbstractPoint,U<:AbstractPointDifference} end
 
 abstract type AbstractConstraints end

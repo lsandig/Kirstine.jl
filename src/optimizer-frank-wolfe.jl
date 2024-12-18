@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """
-    FrankWolfe <: Optimizer
+    FrankWolfe <: FirstOrderOptimizer
 
 A basic Frank-Wolfe algorithm.
 
@@ -11,7 +11,7 @@ and uses the open-loop step size ``γ(t) = 2 / (2 + t)`` in step ``t=0,1,…``.
 
 [^P23]: S. Pokutta (2023). The Frank-Wolfe algorithm: a short introduction. Jahresbericht der Deutschen Mathematiker-Vereinigung, 126(1), 3–35. [doi:10.1365/s13291-023-00275-x](http://dx.doi.org/10.1365/s13291-023-00275-x)
 """
-@kwdef struct FrankWolfe <: Optimizer
+@kwdef struct FrankWolfe <: FirstOrderOptimizer
     iterations::Int64
     @doc """
         FrankWolfe(; iterations)

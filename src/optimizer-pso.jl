@@ -4,7 +4,7 @@
 ## generic particle swarm optimizer ##
 
 """
-    Pso <: Optimizer
+    Pso <: ZerothOrderOptimizer
 
 A constricted particle swarm optimizer.
 
@@ -26,7 +26,7 @@ Construction from the vector of `prototypes` proceeds as follows:
 [^CK02]: M. Clerc and J. Kennedy (2002). The particle swarm - explosion, stability, and convergence in a multidimensional complex space. IEEE Transactions on Evolutionary Computation, 6(1), 58–73. [doi:10.1109/4235.985692](http://dx.doi.org/10.1109/4235.985692)
 [^ES00]: R.C. Eberhardt and Y. Shi (2000). Comparing inertia weights and constriction factors in particle swarm optimization. Proceedings of the 2000 Congress on Evolutionary Computation. [doi: 10.1109/CEC.2000.870279](https://doi.org/10.1109/CEC.2000.870279)
 """
-struct Pso <: Optimizer
+struct Pso <: ZerothOrderOptimizer
     iterations::Int64
     swarmsize::Int64
     c1::Float64
