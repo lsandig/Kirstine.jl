@@ -44,6 +44,19 @@ end
         end
     end
 
+    @testset "stepsize(::ConstNumIter)" begin
+        let s3 = FrankWolfe(9, Kirstine.ConstNumIter()),
+            s4 = FrankWolfe(16, Kirstine.ConstNumIter())
+
+            @test Kirstine.stepsize(s3, 0) == 1 / 3
+            @test Kirstine.stepsize(s4, 0) == 1 / 4
+            @test Kirstine.stepsize(s3, 2) == 1 / 3
+            @test Kirstine.stepsize(s4, 3) == 1 / 4
+
+            @test_throws "past maximum" Kirstine.stepsize(s3, 10)
+        end
+    end
+
     @testset "optimizer_state" begin
         let f(p) = -(p.x[1] - 1)^2,
             g!(grad, p) = grad[1] = -2 * (p.x[1] - 1),

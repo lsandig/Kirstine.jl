@@ -29,6 +29,13 @@ Frank-Wolfe step-size strategy ``γ(t) = l / (t + l)`` for ``t=0,1,2,…`` with 
 end
 
 """
+    ConstNumIter <: StepSizeStrategy
+
+Frank-Wolfe step-size strategy ``γ(t) = 1 / \\sqrt{T}`` for a run with ``T`` iterations ``t=0,…,T-1``.
+"""
+struct ConstNumIter <: StepSizeStrategy end
+
+"""
     FrankWolfe <: FirstOrderOptimizer
 
 A basic Frank-Wolfe algorithm.
@@ -80,6 +87,11 @@ n_eval_g(s::FrankWolfeState) = s.n_eval_g
 
 function stepsize(o::FrankWolfe{OpenLoop}, t::Integer)
     return o.step.shift / (t + o.step.shift)
+end
+
+function stepsize(o::FrankWolfe{ConstNumIter}, t::Integer)
+    t > o.iterations && error("can't iterate past maximum number of iterations")
+    return 1 / sqrt(o.iterations)
 end
 
 # note: location of prototype only determines which boundary vertex is chosen first

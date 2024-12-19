@@ -69,6 +69,7 @@ FrankWolfe
 FrankWolfe(::Integer, ::Kirstine.StepSizeStrategy)
 Kirstine.StepSizeStrategy
 Kirstine.OpenLoop
+Kirstine.ConstNumIter
 ```
 
 ## Design Criteria
