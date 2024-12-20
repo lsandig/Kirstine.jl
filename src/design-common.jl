@@ -82,6 +82,10 @@ function gateaux_integrand(A::AbstractMatrix, nim_direction::AbstractMatrix, tr_
     return tr_prod(A, nim_direction, :U) - tr_B
 end
 
+function sensitivity_integrand(A::AbstractMatrix, nim_direction::AbstractMatrix)
+    return tr_prod(A, nim_direction, :U)
+end
+
 ## normalized information matrix for θ ##
 
 # In the simplest case, the normalized information is just the Fisher information matrix

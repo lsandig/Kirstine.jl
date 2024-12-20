@@ -143,6 +143,24 @@ function gateauxderivative!(
     return acc
 end
 
+function sensitivity!(
+    cwg::CDPWorkspace,
+    direction::DesignMeasure,
+    cdp::CompositeDesignProblem,
+    cdc::CDPDerivativeConstants,
+)
+    acc = 0.0
+    map(
+        cwg.component_workspaces,
+        problems(cdp),
+        weights(cdp),
+        cdc.component_constants,
+    ) do wg, p, w, dc
+        acc += w * sensitivity!(wg, direction, p, dc)
+    end
+    return acc
+end
+
 """
     simplify(d::DesignMeasure, cdp::CompositeDesignProblem; maxweight = 0, maxdist = 0, uargs...)
 

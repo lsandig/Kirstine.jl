@@ -294,6 +294,20 @@ include("example-compartment.jl")
         end
     end
 
+    @testset "sensitivity_integrand" begin
+        # This should compute tr(A * B), using only upper triangles from A and B. A is taken
+        # from the GateauxConstants, B is the normalized information matrix corresponding to
+        # the direction. Both matrices have size (r, r). Here we test an example with r = 2.
+        let A = [2.0 3.0; 0.0 7.0],
+            B = [0.4 1.0; 0.0 0.5],
+            si = Kirstine.sensitivity_integrand
+
+            @test si(A, B) == tr(Symmetric(A) * Symmetric(B))
+            # rule out unintentionally symmetric input
+            @test si(A, B) != tr(A * B)
+        end
+    end
+
     @testset "solve" begin
         # check that solution is sorted and simplified
         let dp = DesignProblem(;

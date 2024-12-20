@@ -320,6 +320,25 @@ function gateauxderivative!(
     return acc
 end
 
+function sensitivity!(
+    w::DPWorkspace,
+    direction::DesignMeasure,
+    dp::DesignProblem,
+    dc::DPDerivativeConstants,
+)
+    update_covariates!(w.c, direction, model(dp), covariate_parameterization(dp))
+    update_model_workspace!(w.mw, model(dp), w.c)
+    pk_w, pk_p = weights(prior_knowledge(dp)), parameters(prior_knowledge(dp))
+    acc = 0.0
+    dir_w = weights(direction)
+    for i in 1:length(pk_p)
+        average_fishermatrix!(w.nw.r_x_r, w.mw, dir_w, model(dp), w.c, pk_p[i])
+        informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
+        acc += pk_w[i] * sensitivity_integrand(dc.gc.A[i], w.nw.r_x_r)
+    end
+    return acc
+end
+
 """
     simplify(d::DesignMeasure, dp::DesignProblem; maxweight = 0, maxdist = 0, uargs...)
 

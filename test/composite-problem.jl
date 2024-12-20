@@ -278,6 +278,39 @@ include("example-compartment.jl")
         end
     end
 
+    @testset "sensitivity!" begin
+        # Indirectly check sensitivity function by comparing to the gateaux derivative.
+        # Also check for spurious memory allocations.
+        let dc = DCriterion(),
+            dr = DesignInterval(:dose => (0, 10)),
+            cp = CopyDose(),
+            pk = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            dp1 = DesignProblem(;
+                criterion = dc,
+                region = dr,
+                model = EmaxModel(1),
+                covariate_parameterization = cp,
+                prior_knowledge = pk,
+            ),
+            dp2 = DesignProblem(dp1; model = EmaxModel(2)),
+            cdp = CompositeDesignProblem([dp1, dp2], [3, 4]),
+            at = equidistant_design(region(dp1), 4),
+            dir = one_point_design([0.5]),
+            ws = Kirstine.allocate_workspace(dir, cdp),
+            dcon = Kirstine.derivative_constants(at, cdp)
+
+            s = Kirstine.sensitivity!(ws, dir, cdp, dcon)
+            @test s == only(gateauxderivative(at, [dir], cdp)) + 3 * (3 + 4)
+
+            ba = @ballocated(
+                Kirstine.gateauxderivative!($ws, $dir, $cdp, $dcon),
+                evals = 1,
+                samples = 1
+            )
+            @test ba == 0
+        end
+    end
+
     @testset "gateauxderivative(::CompositeDesignProblem)" begin
         # Note: we're essentially testing gateauxderivative!() here.
         let dc = DCriterion(),
