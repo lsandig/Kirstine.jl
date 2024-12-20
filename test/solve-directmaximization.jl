@@ -9,7 +9,7 @@ using Kirstine
 include("example-emax.jl")
 
 @testset "solve-directmaximization.jl" begin
-    @testset "solve_with" begin
+    @testset "solve_with(::Pso)" begin
         let dp = DesignProblem(;
                 criterion = DCriterion(),
                 region = DesignInterval(:dose => (0, 10)),
@@ -115,6 +115,27 @@ include("example-emax.jl")
                 match_mode = :any,
                 sws(fw = [1, 2, 5], fp = Int64[])
             )
+        end
+    end
+
+    @testset "solve_with(::FrankWolfe)" begin
+        let guess = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
+            dp = DesignProblem(;
+                criterion = DCriterion(),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([guess]),
+                region = DesignInterval(:dose => (0, 10)),
+            ),
+            exact_solution = emax_solution(guess, region(dp)),
+            fw = DirectMaximization(;
+                optimizer = FrankWolfe(10000, Kirstine.ConstNumIter()),
+                prototype = DesignMeasure(points(exact_solution), [0.1, 0.85, 0.05]),
+                fixedpoints = 1:3,
+            )
+
+            s, r = solve(dp, fw)
+            @test weights(s) ≈ [1 / 3, 1 / 3, 1 / 3] rtol = 1e-2
         end
     end
 end
