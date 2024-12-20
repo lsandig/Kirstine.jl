@@ -66,7 +66,9 @@ GridSearch()
 GridSpec
 ProductGrid
 FrankWolfe
-FrankWolfe(::Integer)
+FrankWolfe(::Integer, ::Kirstine.StepSizeStrategy)
+Kirstine.StepSizeStrategy
+Kirstine.OpenLoop
 ```
 
 ## Design Criteria

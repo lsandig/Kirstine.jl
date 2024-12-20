@@ -2,17 +2,49 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """
+    StepSizeStrategy
+
+Supertype for Frank-Wolfe step-size strategies.
+"""
+abstract type StepSizeStrategy end
+
+"""
+    OpenLoop <: StepSizeStrategy
+
+Frank-Wolfe step-size strategy ``γ(t) = l / (t + l)`` for ``t=0,1,2,…`` with shift ``l∈ℕ, l≥1``.
+
+!!! note
+
+    With `OpenLoop`, the algorithm will always land on a vertex of the feasible set at ``t=1``.
+    For a probability simplex, these vertices are the one-point designs.
+    As a consequence, `OpenLoop` is _not_ suitable for the re-weighting step of [`Exchange`](@ref)
+    for design problems where one-point designs are singular.
+"""
+@kwdef struct OpenLoop <: StepSizeStrategy
+    shift::Int64
+    function OpenLoop(shift::Integer)
+        shift < 1 && throw(ArgumentError("shift must be >= 1"))
+        return new(shift)
+    end
+end
+
+"""
     FrankWolfe <: FirstOrderOptimizer
 
 A basic Frank-Wolfe algorithm.
 
-This version is taken from [^P23]
-and uses the open-loop step size ``γ(t) = 2 / (2 + t)`` in step ``t=0,1,…``.
+This version is taken from [^P23].
+
+# Initialization
+
+Frank-Wolfe can only be initialized with a single prototype.
+This prototype will be used as the starting value.
 
 [^P23]: S. Pokutta (2023). The Frank-Wolfe algorithm: a short introduction. Jahresbericht der Deutschen Mathematiker-Vereinigung, 126(1), 3–35. [doi:10.1365/s13291-023-00275-x](http://dx.doi.org/10.1365/s13291-023-00275-x)
 """
-@kwdef struct FrankWolfe <: FirstOrderOptimizer
+@kwdef struct FrankWolfe{T<:StepSizeStrategy} <: FirstOrderOptimizer
     iterations::Int64
+    step::StepSizeStrategy
     @doc """
         FrankWolfe(; iterations)
         FrankWolfe(iterations)
@@ -21,9 +53,9 @@ and uses the open-loop step size ``γ(t) = 2 / (2 + t)`` in step ``t=0,1,…``.
 
     This type has both a positional constructor and a keyword-based constructor.
     """
-    function FrankWolfe(iterations::Integer)
+    function FrankWolfe(iterations::Integer, s::StepSizeStrategy)
         iterations <= 0 && throw(ArgumentError("number of iterations must be positive"))
-        return new(iterations)
+        return new{typeof(s)}(iterations, s)
     end
 end
 
@@ -46,11 +78,15 @@ gradient(s::FrankWolfeState) = s.gx
 n_eval_f(s::FrankWolfeState) = s.n_eval_f
 n_eval_g(s::FrankWolfeState) = s.n_eval_g
 
+function stepsize(o::FrankWolfe{OpenLoop}, t::Integer)
+    return o.step.shift / (t + o.step.shift)
+end
+
 # note: location of prototype only determines which boundary vertex is chosen first
 function Kirstine.optimizer_state(
     f,
     g!,
-    o::FrankWolfe,
+    optimizer::FrankWolfe,
     prototypes::AbstractVector{<:AbstractPoint},
     constraints::AbstractConstraints,
 )
@@ -60,18 +96,23 @@ function Kirstine.optimizer_state(
     end
     x = deepcopy(only(prototypes))
     v = deepcopy(x)
+    x_diff = deepcopy(ap_as_difference(v))
     gx = zeros(fw_gradient_length(x, constraints))
     g!(gx, x)
     any(isnan, gx) && error("gradient must be finite but contains NaN")
     any(isinf, gx) && error("gradient must be finite but contains Inf or -Inf")
     # Here we perform the update corresponding to step t=0 in [^P23].
-    # This always gives an x1 that is on the boundary of the compact convex set
+    # With OpenLoop this always gives an x1 that is on the boundary of the compact convex set
     # since the initial step size is 1.
     fw_linear_maximization_oracle!(v, gx, constraints)
-    ap_copy!(x, v)
-    x_diff = deepcopy(ap_as_difference(v))
+
+    step = stepsize(optimizer, 0)
+    ap_diff!(x_diff, v, x)
+    ap_mul!(x_diff, step)
+    ap_add!(x, x_diff, constraints)
+
     fx = f(x)
-    state = FrankWolfeState{typeof(x),typeof(x_diff)}(x, v, x_diff, 1, fx, gx, 1, 1)
+    state = FrankWolfeState(x, v, x_diff, step, fx, gx, 1, 1)
     return state
 end
 
@@ -87,9 +128,10 @@ function Kirstine.tick!(
     state.n_eval_g += 1
     fw_linear_maximization_oracle!(state.v, state.gx, constraints)
     state.n_eval_f += 1
-    # In [^P23] the time index starts at t=0 and the open loop stepsize is γ_t = 2 / (2 + t).
-    # Since we start to count from iter=1, we have to subtract 1 from t in the stepsize calculation.
-    state.stepsize = 2 / (1 + iter)
+    # In [^P23] the time index starts at t=0.
+    # Since we start to count from iter=1,
+    # we have to subtract 1 from it in the stepsize computation.
+    state.stepsize = stepsize(optimizer, iter - 1)
     ap_diff!(state.diff, state.v, state.x)
     ap_mul!(state.diff, state.stepsize)
     ap_add!(state.x, state.diff, constraints)

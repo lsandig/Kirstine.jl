@@ -22,10 +22,26 @@ function Kirstine.fw_gradient_length(p::Pnt, c::BoxConstraints)
 end
 
 @testset "optimizer-frank-wolfe.jl" begin
+    @testset "OpenLoop" begin
+        @test_throws ">= 1" Kirstine.OpenLoop(0)
+    end
+
     @testset "FrankWolfe" begin
         # check both positional and keyword-based constructor
-        @test_throws "must be positive" FrankWolfe(-1)
-        @test_throws "must be positive" FrankWolfe(; iterations = -1)
+        msg = "must be positive"
+        @test_throws msg FrankWolfe(-1, Kirstine.OpenLoop(2))
+        @test_throws msg FrankWolfe(; iterations = -1, step = Kirstine.OpenLoop(2))
+    end
+
+    @testset "stepsize(::OpenLoop)" begin
+        let s2 = FrankWolfe(1, Kirstine.OpenLoop(2)),
+            s5 = FrankWolfe(1, Kirstine.OpenLoop(5))
+
+            @test Kirstine.stepsize(s2, 0) == 1
+            @test Kirstine.stepsize(s5, 0) == 1
+            @test Kirstine.stepsize(s2, 3) == 0.4
+            @test Kirstine.stepsize(s5, 5) == 0.5
+        end
     end
 
     @testset "optimizer_state" begin
@@ -34,7 +50,7 @@ end
             gnan!(grad, p) = grad[1] = NaN,
             ginf!(grad, p) = grad[1] = Inf,
             gninf!(grad, p) = grad[1] = -Inf,
-            opt = FrankWolfe(5),
+            opt = FrankWolfe(5, Kirstine.OpenLoop(2)),
             # |------|------|
             # 0   x0=5     10
             x0 = Pnt([5]),
@@ -51,7 +67,7 @@ end
             @test state.x !== c.lb
             @test state.x !== x0
             @test state.v == c.lb
-            @test state.diff.v == [0] # note: always initialized at 0
+            @test state.diff.v == [-5]
             @test state.stepsize == 1
             @test state.fx == -1
             @test state.gx == [-8]
@@ -61,7 +77,7 @@ end
     end
 
     @testset "tick!" begin
-        let opt = FrankWolfe(2),
+        let opt = FrankWolfe(2, Kirstine.OpenLoop(2)),
             n = 2,
             xstar = ones(n),
             f(p) = -sum((p.x .- xstar) .^ 2),
@@ -85,7 +101,7 @@ end
             xstar = ones(n),
             f(p) = -sum((p.x .- xstar) .^ 2),
             g!(grad, p) = grad .= -2 .* (p.x .- xstar),
-            fw = FrankWolfe(; iterations = 2000),
+            fw = FrankWolfe(; iterations = 2000, step = Kirstine.OpenLoop(2)),
             prototype = Pnt(zeros(n)),
             outside = Pnt([-1, -1, 5, -1]),
             constr1 = BoxConstraints(Pnt(fill(-1, n)), Pnt(fill(2, n))),
