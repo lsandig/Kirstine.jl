@@ -132,6 +132,28 @@ function construct_grid(
     return g
 end
 
+function fw_gradient_length(d::DesignMeasure, c::DesignConstraints)
+    K = numpoints(d)
+    dim = length(first(points(d)))
+    return (K - sum(c.fixp)) * dim + K - sum(c.fixw)
+end
+
+# Since we're only optimizing weights, our convex region is a probability simplex.
+# For a K-point design, its vertices v_1, ..., v_K are the unit basis vectors of ℝ^K.
+# In Frank-Wolfe notation, to maximize v_k' * g,
+# we just need to find the index of the largest element of g
+# and return the corresponding v_k.
+function fw_linear_maximization_oracle!(
+    v::DesignMeasure,
+    gx::AbstractVector{<:Real},
+    c::DesignConstraints,
+)
+    !all(c.fixp) && error("only implemented for fixed points")
+    v.weights .= 0
+    v.weights[argmax(gx)] = 1
+    return v
+end
+
 function ap_rand!(d::DesignMeasure, c::DesignConstraints)
     K = numpoints(d)
     pts = points(d)

@@ -149,6 +149,37 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
         end
     end
 
+    @testset "fw_gradient_length" begin
+        let d = uniform_design([[0, 0], [1, 1], [2, 3]]),
+            dr = DesignInterval(:a => (0, 5), :b => (0, 5)),
+            c1 = Kirstine.DesignConstraints(dr, fill(false, 3), fill(false, 3)),
+            c2 = Kirstine.DesignConstraints(dr, fill(false, 3), fill(true, 3)),
+            c3 = Kirstine.DesignConstraints(dr, [true, false, false], [false, true, true])
+
+            @test Kirstine.fw_gradient_length(d, c1) == 9
+            @test Kirstine.fw_gradient_length(d, c2) == 3
+            @test Kirstine.fw_gradient_length(d, c3) == 4
+        end
+    end
+
+    @testset "fw_linear_maximization_oracle" begin
+        let lmo! = Kirstine.fw_linear_maximization_oracle!,
+            dr = DesignInterval(:a => (0, 5), :b => (0, 5)),
+            v = random_design(dr, 3), # will be overwritten
+            v_copy = deepcopy(v),
+            g = [1, 42, -1],
+            c1 = Kirstine.DesignConstraints(dr, fill(false, 3), fill(false, 3)),
+            c2 = Kirstine.DesignConstraints(dr, fill(false, 3), fill(true, 3))
+
+            lmo!(v, g, c2)
+            @test weights(v) == [0, 1, 0]
+            @test points(v) == points(v_copy) # don't touch the points
+            bytes_allocated = @allocated lmo!(v, g, c2)
+            @test bytes_allocated == 0
+            @test_throws "fixed points" lmo!(v, g, c1)
+        end
+    end
+
     @testset "ap_rand!(DesignPoint)" begin
         # check that constraints are handled correctly
         let dr = DesignInterval(:a => (0, 5)),
