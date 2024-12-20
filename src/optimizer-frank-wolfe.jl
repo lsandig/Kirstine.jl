@@ -94,7 +94,6 @@ function stepsize(o::FrankWolfe{ConstNumIter}, t::Integer)
     return 1 / sqrt(o.iterations)
 end
 
-# note: location of prototype only determines which boundary vertex is chosen first
 function Kirstine.optimizer_state(
     f,
     g!,
@@ -109,22 +108,14 @@ function Kirstine.optimizer_state(
     x = deepcopy(only(prototypes))
     v = deepcopy(x)
     x_diff = deepcopy(ap_as_difference(v))
-    gx = zeros(fw_gradient_length(x, constraints))
-    g!(gx, x)
-    any(isnan, gx) && error("gradient must be finite but contains NaN")
-    any(isinf, gx) && error("gradient must be finite but contains Inf or -Inf")
+    gx = fill(NaN, fw_gradient_length(x, constraints))
+    state = FrankWolfeState(x, v, x_diff, NaN, NaN, gx, 0, 0)
     # Here we perform the update corresponding to step t=0 in [^P23].
     # With OpenLoop this always gives an x1 that is on the boundary of the compact convex set
     # since the initial step size is 1.
-    fw_linear_maximization_oracle!(v, gx, constraints)
-
-    step = stepsize(optimizer, 0)
-    ap_diff!(x_diff, v, x)
-    ap_mul!(x_diff, step)
-    ap_add!(x, x_diff, constraints)
-
-    fx = f(x)
-    state = FrankWolfeState(x, v, x_diff, step, fx, gx, 1, 1)
+    tick!(f, g!, state, optimizer, constraints, 1)
+    any(isnan, state.gx) && error("gradient must be finite but contains NaN")
+    any(isinf, state.gx) && error("gradient must be finite but contains Inf or -Inf")
     return state
 end
 
