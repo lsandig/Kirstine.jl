@@ -308,6 +308,42 @@ include("example-compartment.jl")
         end
     end
 
+    @testset "objective_gradient_weights!" begin
+        let ogw! = Kirstine.objective_gradient_weights!,
+            p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
+            dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([p]),
+            ),
+            d = emax_solution(p, region(dp)),
+            g = zeros(3),
+            opd = one_point_design([0]),
+            wg = Kirstine.allocate_workspace(opd, dp),
+            wf = Kirstine.allocate_workspace(d, dp),
+            dc = Kirstine.derivative_constants(d, dp),
+            oc = Kirstine.objective_constants(dp)
+
+            # manually zero out the derivative constants to see whether they are updated
+            dc.gc.A[1] .= 0
+            dc.gc.tr_B[1] = 0
+
+            # gradient == sensitivity function at points(d) == dim of parameter
+            ogw!(g, opd, wg, wf, d, dp, dc, oc)
+            @test g ≈ [3, 3, 3]
+
+            bytes_allocated = @allocated ogw!(g, opd, wg, wf, d, dp, dc, oc)
+            @test bytes_allocated == 0
+
+            # make the design singular by effectively dropping a point
+            # (without changing numpoints(d)).
+            weights(d) .= [weights(d)[1:2]; 0] ./ sum(weights(d)[1:2])
+            @test_throws SingularException ogw!(g, opd, wg, wf, d, dp, dc, oc)
+        end
+    end
+
     @testset "solve" begin
         # check that solution is sorted and simplified
         let dp = DesignProblem(;

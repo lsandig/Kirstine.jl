@@ -342,6 +342,24 @@ function objective(d::DesignMeasure, adp::AbstractDesignProblem)
     return objective!(w, d, adp, oc)
 end
 
+function objective_gradient_weights!(
+    g::AbstractVector{<:Real},
+    opd::DesignMeasure, # temporary variable for each of points(d)
+    wg::AbstractWorkspace,
+    wf::AbstractWorkspace,
+    d::DesignMeasure,
+    adp::AbstractDesignProblem,
+    dc::DerivativeConstants,
+    oc::ObjectiveConstants,
+)
+    derivative_constants!(dc, wf, d, adp, oc)
+    for k in 1:numpoints(d)
+        points(opd)[1] .= points(d)[k]
+        g[k] = sensitivity!(wg, opd, adp, dc)
+    end
+    return g
+end
+
 """
     gateauxderivative(
         at::DesignMeasure,
