@@ -12,11 +12,8 @@ This is a variant of the basic idea in [^YBT13].
 
 [^YBT13]: Min Yang, Stefanie Biedermann, Elina Tang (2013). On optimal designs for nonlinear models: a general and efficient algorithm. Journal of the American Statistical Association, 108(504), 1411–1420. [doi:10.1080/01621459.2013.806268](http://dx.doi.org/10.1080/01621459.2013.806268)
 """
-struct Exchange{
-    Tod<:ZerothOrderOptimizer,
-    Tow<:ZerothOrderOptimizer,
-    Td<:AbstractDict{Symbol,<:Any},
-} <: ProblemSolvingStrategy
+struct Exchange{Tod<:ZerothOrderOptimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,<:Any}} <:
+       ProblemSolvingStrategy
     optimizer_direction::Tod
     optimizer_weight::Tow
     steps::Int64
@@ -25,7 +22,7 @@ struct Exchange{
     @doc """
         Exchange(;
             optimizer_direction::ZerothOrderOptimizer,
-            optimizer_weight::ZerothOrderOptimizer,
+            optimizer_weight::Optimizer,
             steps::Integer,
             candidate::DesignMeasure,
             simplify_args = Dict{Symbol,Any}(),
