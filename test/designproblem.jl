@@ -116,6 +116,28 @@ include("example-compartment.jl")
         end
     end
 
+    @testset "derivative_constants!" begin
+        let dp = DesignProblem(;
+                criterion = ACriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            at = equidistant_design(region(dp), 4),
+            somewhere_else = DesignMeasure([[1], [2], [3], [4]], [0.1, 0.2, 0.3, 0.4]),
+            w = Kirstine.allocate_workspace(at, dp),
+            oc = Kirstine.objective_constants(dp),
+            dc = Kirstine.derivative_constants(at, dp),
+            dc_copy = deepcopy(dc)
+
+            Kirstine.derivative_constants!(dc, w, somewhere_else, dp, oc)
+
+            @test dc.gc.A[1] != dc_copy.gc.A[1]
+            @test dc.gc.tr_B[1] != dc_copy.gc.tr_B[1]
+        end
+    end
+
     @testset "objective!" begin
         # The correct implementation of the criteria is checked in criterion-{a,d}.jl.
         # Here we test whether there are spurious memory allocations

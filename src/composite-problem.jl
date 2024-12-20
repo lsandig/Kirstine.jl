@@ -89,6 +89,24 @@ function derivative_constants(at::DesignMeasure, cdp::CompositeDesignProblem)
     return CDPDerivativeConstants(map(p -> derivative_constants(at, p), problems(cdp)))
 end
 
+function derivative_constants!(
+    cdc::CDPDerivativeConstants,
+    w::CDPWorkspace,
+    d::DesignMeasure,
+    cdp::CompositeDesignProblem,
+    oc::CDPObjectiveConstants,
+)
+    map(
+        cdc.component_constants,
+        w.component_workspaces,
+        problems(cdp),
+        oc.component_constants,
+    ) do dc, w, p, oc
+        derivative_constants!(dc, w, d, p, oc)
+    end
+    return cdc
+end
+
 function objective!(
     wsp::CDPWorkspace,
     d::DesignMeasure,

@@ -245,6 +245,21 @@ function derivative_constants(at::DesignMeasure, dp::DesignProblem)
     return DPDerivativeConstants(gc)
 end
 
+function derivative_constants!(
+    dc::DPDerivativeConstants,
+    w::DPWorkspace,
+    d::DesignMeasure,
+    dp::DesignProblem,
+    oc::DPObjectiveConstants,
+)
+    cpar = covariate_parameterization(dp)
+    pk = prior_knowledge(dp)
+    cr = criterion(dp)
+    na = normal_approximation(dp)
+    gateaux_constants!(dc.gc, w.mw, w.nw, w.c, cr, d, model(dp), cpar, pk, oc.tc, na)
+    return dc
+end
+
 function objective!(
     w::DPWorkspace,
     d::DesignMeasure,
