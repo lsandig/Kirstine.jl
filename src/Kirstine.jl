@@ -21,7 +21,7 @@ using LinearAlgebra:
     rank,
     tr
 using Random: rand, rand!
-using RecipesBase
+using RecipesBase: RecipesBase, @layout, @recipe, @series
 using Statistics: quantile
 
 import Base: maximum
