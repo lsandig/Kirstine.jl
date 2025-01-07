@@ -20,6 +20,14 @@ end
 # analogous accessor to points(d::DesignMeasure)
 atoms(s::SignedMeasure) = eachcol(s.atoms)
 
+function Base.:(==)(s1::SignedMeasure, s2::SignedMeasure)
+    return s1.weights == s2.weights && s1.atoms == s2.atoms
+end
+
+function Base.hash(s::SignedMeasure, h::UInt)
+    return hash(s.atoms, hash(s.weights, h))
+end
+
 struct DesignConstraints{N,T<:DesignRegion{N}} <: AbstractConstraints
     dr::T
     fixw::Vector{Bool}

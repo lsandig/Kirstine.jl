@@ -22,6 +22,25 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
         end
     end
 
+    @testset "==" begin
+        let d1 = Kirstine.SignedMeasure([1 3; 2 4], [0.1, 0.9]),
+            d2 = Kirstine.SignedMeasure([1 3; 2 4], [0.1, 0.9])
+
+            @test d1 == d2
+            @test d1 !== d2
+        end
+    end
+
+    @testset "hash" begin
+        let d1 = Kirstine.SignedMeasure([1.0;;], [1.0]),
+            d2 = Kirstine.SignedMeasure([2.0;;], [1.0]),
+            d3 = Kirstine.SignedMeasure([1.0;;], [1.0])
+
+            # implicitly constructs a Set, which calls hash()
+            @test unique([d1, d2, d3]) == [d1, d2]
+        end
+    end
+
     @testset "DesignConstraints" begin
         # inner constructor
         let dr = DesignInterval(:a => (0, 1)), dcon = Kirstine.DesignConstraints
