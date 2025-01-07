@@ -8,6 +8,8 @@ Supertype for Frank-Wolfe step-size strategies.
 """
 abstract type StepSizeStrategy end
 
+abstract type FWWorkspace end
+
 """
     OpenLoop <: StepSizeStrategy
 
@@ -28,12 +30,22 @@ Frank-Wolfe step-size strategy ``γ(t) = l / (t + l)`` for ``t=0,1,2,…`` with 
     end
 end
 
+struct FWDummyWorkspace <: FWWorkspace end
+
+function fw_workspace(step::OpenLoop, x::AbstractPoint, gradient_length::Integer)
+    return FWDummyWorkspace()
+end
+
 """
     ConstNumIter <: StepSizeStrategy
 
 Frank-Wolfe step-size strategy ``γ(t) = 1 / \\sqrt{T}`` for a run with ``T`` iterations ``t=0,…,T-1``.
 """
 struct ConstNumIter <: StepSizeStrategy end
+
+function fw_workspace(step::ConstNumIter, x::AbstractPoint, gradient_length::Integer)
+    return FWDummyWorkspace()
+end
 
 """
     FrankWolfe <: FirstOrderOptimizer
@@ -68,13 +80,14 @@ end
 
 iterations(o::FrankWolfe) = o.iterations
 
-mutable struct FrankWolfeState{T,U} <: OptimizerState{T,U}
+mutable struct FrankWolfeState{T,U,V} <: OptimizerState{T,U}
     x::T
     v::T
     diff::U
     stepsize::Float64
     fx::Float64
     gx::Vector{<:Float64}
+    work::V
     n_eval_f::Int64
     n_eval_g::Int64
 end
@@ -85,13 +98,33 @@ gradient(s::FrankWolfeState) = s.gx
 n_eval_f(s::FrankWolfeState) = s.n_eval_f
 n_eval_g(s::FrankWolfeState) = s.n_eval_g
 
-function stepsize(o::FrankWolfe{OpenLoop}, t::Integer)
-    return o.step.shift / (t + o.step.shift)
+function stepsize_openloop(shift::Integer, t::Integer)
+    return shift / (t + shift)
 end
 
-function stepsize(o::FrankWolfe{ConstNumIter}, t::Integer)
-    t > o.iterations && error("can't iterate past maximum number of iterations")
-    return 1 / sqrt(o.iterations)
+function stepsize!(
+    g!,
+    state::FrankWolfeState,
+    o::FrankWolfe{OpenLoop},
+    c::AbstractConstraints,
+    t::Integer,
+)
+    return stepsize_openloop(o.step.shift, t)
+end
+
+function stepsize_constnumiter(iterations::Integer, t::Integer)
+    t > iterations && error("can't iterate past maximum number of iterations")
+    return 1 / sqrt(iterations)
+end
+
+function stepsize!(
+    g!,
+    state::FrankWolfeState,
+    o::FrankWolfe{ConstNumIter},
+    c::AbstractConstraints,
+    t::Integer,
+)
+    return stepsize_constnumiter(o.iterations, t)
 end
 
 function Kirstine.optimizer_state(
@@ -108,8 +141,10 @@ function Kirstine.optimizer_state(
     x = deepcopy(only(prototypes))
     v = deepcopy(x)
     x_diff = deepcopy(ap_as_difference(v))
-    gx = fill(NaN, fw_gradient_length(x, constraints))
-    state = FrankWolfeState(x, v, x_diff, NaN, NaN, gx, 0, 0)
+    grad_length = fw_gradient_length(x, constraints)
+    gx = fill(NaN, grad_length)
+    work = fw_workspace(optimizer.step, x, grad_length)
+    state = FrankWolfeState(x, v, x_diff, NaN, NaN, gx, work, 0, 0)
     # Here we perform the update corresponding to step t=0 in [^P23].
     # With OpenLoop this always gives an x1 that is on the boundary of the compact convex set
     # since the initial step size is 1.
@@ -134,8 +169,8 @@ function Kirstine.tick!(
     # In [^P23] the time index starts at t=0.
     # Since we start to count from iter=1,
     # we have to subtract 1 from it in the stepsize computation.
-    state.stepsize = stepsize(optimizer, iter - 1)
     ap_diff!(state.diff, state.v, state.x)
+    state.stepsize = stepsize!(g!, state, optimizer, constraints, iter - 1)
     ap_mul!(state.diff, state.stepsize)
     ap_add!(state.x, state.diff, constraints)
     state.fx = f(state.x)

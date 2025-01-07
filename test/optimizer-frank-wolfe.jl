@@ -33,27 +33,29 @@ end
         @test_throws msg FrankWolfe(; iterations = -1, step = Kirstine.OpenLoop(2))
     end
 
-    @testset "stepsize(::OpenLoop)" begin
-        let s2 = FrankWolfe(1, Kirstine.OpenLoop(2)),
-            s5 = FrankWolfe(1, Kirstine.OpenLoop(5))
-
-            @test Kirstine.stepsize(s2, 0) == 1
-            @test Kirstine.stepsize(s5, 0) == 1
-            @test Kirstine.stepsize(s2, 3) == 0.4
-            @test Kirstine.stepsize(s5, 5) == 0.5
-        end
+    @testset "stepsize_openloop" begin
+        @test Kirstine.stepsize_openloop(2, 0) == 1
+        @test Kirstine.stepsize_openloop(5, 0) == 1
+        @test Kirstine.stepsize_openloop(2, 3) == 0.4
+        @test Kirstine.stepsize_openloop(5, 5) == 0.5
     end
 
-    @testset "stepsize(::ConstNumIter)" begin
-        let s3 = FrankWolfe(9, Kirstine.ConstNumIter()),
-            s4 = FrankWolfe(16, Kirstine.ConstNumIter())
+    @testset "stepsize_constnumiter" begin
+        @test Kirstine.stepsize_constnumiter(9, 0) == 1 / 3
+        @test Kirstine.stepsize_constnumiter(16, 0) == 1 / 4
+        @test Kirstine.stepsize_constnumiter(9, 2) == 1 / 3
+        @test Kirstine.stepsize_constnumiter(16, 3) == 1 / 4
 
-            @test Kirstine.stepsize(s3, 0) == 1 / 3
-            @test Kirstine.stepsize(s4, 0) == 1 / 4
-            @test Kirstine.stepsize(s3, 2) == 1 / 3
-            @test Kirstine.stepsize(s4, 3) == 1 / 4
+        @test_throws "past maximum" Kirstine.stepsize_constnumiter(9, 10)
+    end
 
-            @test_throws "past maximum" Kirstine.stepsize(s3, 10)
+    @testset "fw_workspace" begin
+        let ol = Kirstine.OpenLoop(2), cni = Kirstine.ConstNumIter()
+            w_ol = Kirstine.fw_workspace(ol, Pnt([0]), 1)
+            w_cni = Kirstine.fw_workspace(cni, Pnt([0]), 1)
+
+            @test w_ol isa Kirstine.FWDummyWorkspace
+            @test w_cni isa Kirstine.FWDummyWorkspace
         end
     end
 
