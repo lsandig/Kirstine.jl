@@ -80,3 +80,8 @@ function Kirstine.ap_add!(d1::PntDiff, d2::PntDiff)
     d1.v .+= d2.v
     return d1
 end
+
+function Kirstine.ap_copy!(d1::PntDiff, d2::PntDiff)
+    d1.v .= d2.v
+    return d1
+end

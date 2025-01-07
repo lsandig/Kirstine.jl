@@ -287,6 +287,17 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
             # check that first argument is returned
             @test r === to
         end
+
+        let from = Kirstine.SignedMeasure([1 2], [0.1, 0.9]),
+            to = Kirstine.SignedMeasure([3 4], [0.2, 0.8]),
+            ref = deepcopy(from),
+            r = Kirstine.ap_copy!(to, from)
+
+            @test from == ref
+            @test to == from
+            @test to !== from
+            @test r === to
+        end
     end
 
     @testset "ap_as_difference" begin

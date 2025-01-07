@@ -210,6 +210,12 @@ function ap_copy!(to::DesignMeasure, from::DesignMeasure)
     return to
 end
 
+function ap_copy!(to::SignedMeasure, from::SignedMeasure)
+    to.weights .= from.weights
+    to.atoms .= from.atoms
+    return to
+end
+
 function ap_as_difference(p::DesignMeasure)
     return SignedMeasure(deepcopy(p.points), deepcopy(p.weights))
 end
