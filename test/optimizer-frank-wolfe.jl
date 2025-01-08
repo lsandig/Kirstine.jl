@@ -71,6 +71,26 @@ end
         @test_throws "past maximum" Kirstine.stepsize_constnumiter(9, 10)
     end
 
+    @testset "fw_estimate_initial_smoothness!" begin
+        let n = 4,
+            xstar = ones(n),
+            g!(grad, p) = grad .= -2 .* (p.x .- xstar),
+            x = Pnt(3:6),
+            x_tmp = Pnt(fill(NaN, 4)),
+            d = PntDiff([1, -1, 1, -2]),
+            d_tmp = PntDiff(fill(NaN, 4)),
+            gx = g!(zeros(4), x),
+            gx_tmp = fill(NaN, 4),
+            c = BoxConstraints(Pnt(fill(-1, n)), Pnt(fill(10, n))),
+            w = Kirstine.AdaptiveWorkspace(NaN, x_tmp, d_tmp, gx_tmp)
+
+            res = Kirstine.fw_estimate_initial_smoothness!(g!, w, x, gx, d, c)
+
+            @test w.smoothness_estimate ≈ 2
+            @test res == w
+        end
+    end
+
     @testset "fw_workspace" begin
         let ol = Kirstine.OpenLoop(2),
             cni = Kirstine.ConstNumIter(),

@@ -186,6 +186,30 @@ function stepsize!(
     return stepsize_constnumiter(o.iterations, t)
 end
 
+function fw_estimate_initial_smoothness!(
+    g!,
+    w::AdaptiveWorkspace,
+    x::AbstractPoint,
+    gx::AbstractVector{<:Real},
+    v_minus_x::AbstractPointDifference,
+    c::AbstractConstraints,
+)
+    # in-place initial estimate for Lipschitz constant of the gradient,
+    # norm(g!(x) - g!(x + ε*v_minus_x)) / (ε * norm(v_minus_x))
+    epsilon = 1e-3
+    ap_copy!(w.x_tmp, x)
+    ap_copy!(w.d_tmp, v_minus_x)
+    ap_mul!(w.d_tmp, epsilon)
+    ap_add!(w.x_tmp, w.d_tmp, c)
+    g!(w.gx_tmp, w.x_tmp)
+    w.gx_tmp .-= gx
+    # Note: norm(v_minus_x) does not need to be subject to constraints.
+    # For a DesignMeasure with some fixed elements,
+    # the difference of these elements will always be zero.
+    w.smoothness_estimate = norm(w.gx_tmp) / (epsilon * fw_norm(v_minus_x))
+    return w
+end
+
 function Kirstine.optimizer_state(
     f,
     g!,
