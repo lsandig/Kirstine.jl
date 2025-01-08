@@ -181,6 +181,12 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
         end
     end
 
+    @testset "fw_norm" begin
+        let s = Kirstine.SignedMeasure([1 2 3], [-0.1, 0.2, 0.3])
+            @test Kirstine.fw_norm(s) ≈ sqrt(14.14)
+        end
+    end
+
     @testset "fw_linear_maximization_oracle" begin
         let lmo! = Kirstine.fw_linear_maximization_oracle!,
             dr = DesignInterval(:a => (0, 5), :b => (0, 5)),

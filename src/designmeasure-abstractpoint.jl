@@ -140,6 +140,19 @@ function construct_grid(
     return g
 end
 
+# Note: in contrast to ap_diff(p, q), this does _not_ consider the last weight to be specified implicitly.
+# For Frank-Wolfe it is more convenient to use the full K-dimensional weights vector.
+function fw_norm(s::SignedMeasure)
+    acc = 0.0
+    for i in 1:length(s.atoms)
+        acc += s.atoms[i]^2
+    end
+    for k in 1:length(s.weights)
+        acc += s.weights[k]^2
+    end
+    return sqrt(acc)
+end
+
 function fw_gradient_length(d::DesignMeasure, c::DesignConstraints)
     K = numpoints(d)
     dim = length(first(points(d)))

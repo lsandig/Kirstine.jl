@@ -30,6 +30,10 @@ function Kirstine.fw_gradient_length(p::Pnt, c::BoxConstraints)
     return length(p.x)
 end
 
+function Kirstine.fw_norm(d::PntDiff)
+    return norm(d.v)
+end
+
 @testset "optimizer-frank-wolfe.jl" begin
     @testset "OpenLoop" begin
         @test_throws ">= 1" Kirstine.OpenLoop(0)
