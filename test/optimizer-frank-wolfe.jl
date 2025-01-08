@@ -3,7 +3,6 @@
 
 module FrankWolfeTests
 using Kirstine, Test
-using Plots
 using LinearAlgebra
 
 include("example-pnt.jl")
