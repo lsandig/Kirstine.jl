@@ -48,6 +48,51 @@ function fw_workspace(step::ConstNumIter, x::AbstractPoint, gradient_length::Int
 end
 
 """
+    Adaptive <: StepSizeStrategy
+    Adaptive(; eta = 0.9, tau = 2.0, initial_smoothness_estimate = Inf, smoothness_threshold = 1e10)
+
+Adaptive Frank-Wolfe step-size strategy that uses a smoothness property of the objective function.
+
+Since we typically do not know the smoothness constant of the objective function ``f``,
+i.e. a real number ``L`` such that
+``⟨∇f(y) - ∇f(x), y - x⟩ ≤ L\\lVert y-x\\rVert^2``
+for all ``x`` and ``y`` in the convex domain of ``f``,
+the constant is dynamically approximated via multiplicative search with parameters `eta ≤ 1` and `tau > 1`.
+When `initial_smoothness_estimate = Inf`,
+the initial estimate is computed from a local approximation at the starting value.
+
+If at any point during the search the smoothness estimate exceeds `smoothness_threshold`,
+this is interpreted as the divergence of the multiplicative search,
+and the current (non-optimal) step size is returned.
+
+This strategy is an implementation of Algorithm 5 from [^P23],
+and the defaults of the parameters are taken from the adaptive line search in
+[FrankWolfe.jl](https://doi.org/10.5281/zenodo.14565428).
+"""
+@kwdef struct Adaptive <: StepSizeStrategy
+    eta::Float64 = 0.9
+    tau::Float64 = 2.0
+    initial_smoothness_estimate::Float64 = Inf
+    smoothness_threshold::Float64 = 1e10
+    function Adaptive(
+        eta::Real,
+        tau::Real,
+        initial_smoothness_estimate::Real,
+        smoothness_threshold::Real,
+    )
+        eta <= 1 || throw(ArgumentError("eta must be <= 1"))
+        tau > 1 || throw(ArgumentError("tau must be > 1"))
+        smoothness_threshold > 0 || throw(ArgumentError("smoothness threshold must be > 0"))
+        if initial_smoothness_estimate != Inf &&
+           !(0 < initial_smoothness_estimate <= smoothness_threshold)
+            msg = "initial smoothness estimate must be Inf or in (0, threshold]"
+            throw(ArgumentError(msg))
+        end
+        return new(eta, tau, initial_smoothness_estimate, smoothness_threshold)
+    end
+end
+
+"""
     FrankWolfe <: FirstOrderOptimizer
 
 A basic Frank-Wolfe algorithm.

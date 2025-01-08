@@ -35,6 +35,15 @@ end
         @test_throws ">= 1" Kirstine.OpenLoop(0)
     end
 
+    @testset "Adaptive" begin
+        Adaptive = Kirstine.Adaptive
+        @test_throws "eta must be <= 1" Adaptive(; eta = 2)
+        @test_throws "tau must be > 1" Adaptive(; tau = 1)
+        @test_throws "threshold must be > 0" Adaptive(; smoothness_threshold = 0)
+        @test_throws "(0, threshold]" Adaptive(; initial_smoothness_estimate = 2e10)
+        @test_throws "(0, threshold]" Adaptive(; initial_smoothness_estimate = -1)
+    end
+
     @testset "FrankWolfe" begin
         # check both positional and keyword-based constructor
         msg = "must be positive"
