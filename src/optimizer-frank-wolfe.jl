@@ -142,7 +142,7 @@ iterations(o::FrankWolfe) = o.iterations
 mutable struct FrankWolfeState{T,U,V} <: OptimizerState{T,U}
     x::T
     v::T
-    diff::U
+    v_minus_x::U
     stepsize::Float64
     fx::Float64
     gx::Vector{<:Float64}
@@ -213,11 +213,11 @@ end
 # This is modeled after the adaptive line search in the FrankWolfe.jl package.
 #
 # It assumes that the following fields of the state have been updated for the current x
-# before the call: x, gx, v, diff
+# before the call: x, gx, v, v_minus_x
 #
 # In [^P23], the objective function is minimized, and the difference x - v is used in the
 # Frank-Wolfe gap and v - x in the acceptance test. In contrast, we maximize our function
-# and have the difference diff = v - x. Hence the two implied negations cancel each other
+# and have the difference v_minus_x. Hence the two implied negations cancel each other
 # and we can compute the fwgap without an additional sign change, and we can accept the
 # smoothness estimate with the same expression as in the paper.
 function stepsize!(
@@ -229,22 +229,22 @@ function stepsize!(
 )
     w = state.work
     if isinf(w.smoothness_estimate)
-        fw_estimate_initial_smoothness!(g!, w, state.x, state.gx, state.diff, c)
+        fw_estimate_initial_smoothness!(g!, w, state.x, state.gx, state.v_minus_x, c)
         state.n_eval_g += 1
     end
     M = o.step.eta * w.smoothness_estimate
-    fwgap = fw_evaluate_linearization(state.gx, state.diff, c)
+    fwgap = fw_evaluate_linearization(state.gx, state.v_minus_x, c)
     while true
-        gamma = min(fwgap / (M * fw_norm(state.diff)^2), 1)
+        gamma = min(fwgap / (M * fw_norm(state.v_minus_x)^2), 1)
         gamma < 0 && error("gamma should not become negative")
-        # in-place computation of g!(x + gamma * diff)
-        ap_copy!(w.d_tmp, state.diff)
+        # in-place computation of g!(x + gamma * v_minus_x)
+        ap_copy!(w.d_tmp, state.v_minus_x)
         ap_mul!(w.d_tmp, gamma)
         ap_copy!(w.x_tmp, state.x)
         ap_add!(w.x_tmp, w.d_tmp, c)
         g!(w.gx_tmp, w.x_tmp)
         state.n_eval_g += 1
-        if fw_evaluate_linearization(w.gx_tmp, state.diff, c) >= 0
+        if fw_evaluate_linearization(w.gx_tmp, state.v_minus_x, c) >= 0
             w.smoothness_estimate = M
             return gamma
         end
@@ -295,13 +295,13 @@ function Kirstine.tick!(
     state.n_eval_g += 1
     fw_linear_maximization_oracle!(state.v, state.gx, constraints)
     state.n_eval_f += 1
+    ap_diff!(state.v_minus_x, state.v, state.x)
     # In [^P23] the time index starts at t=0.
     # Since we start to count from iter=1,
     # we have to subtract 1 from it in the stepsize computation.
-    ap_diff!(state.diff, state.v, state.x)
     state.stepsize = stepsize!(g!, state, optimizer, constraints, iter - 1)
-    ap_mul!(state.diff, state.stepsize)
-    ap_add!(state.x, state.diff, constraints)
+    ap_mul!(state.v_minus_x, state.stepsize)
+    ap_add!(state.x, state.v_minus_x, constraints)
     state.fx = f(state.x)
     return state
 end
