@@ -91,6 +91,48 @@ end
         end
     end
 
+    @testset "stepsize!(::Adaptive)" begin
+        let n = 4,
+            xstar = ones(n),
+            f(p) = -sum((p.x .- xstar) .^ 2),
+            g!(grad, p) = grad .= -2 .* (p.x .- xstar),
+            c = BoxConstraints(Pnt(fill(-1, n)), Pnt(fill(10, n))),
+            x = Pnt(3:6),
+            gx = g!(zeros(4), x),
+            v = Kirstine.fw_linear_maximization_oracle!(Pnt(fill(NaN, 4)), gx, c),
+            original_diff = v.x - x.x,
+            d = PntDiff(fill(NaN, 4))
+
+            # We can only test stepsize() indirectly, since building the optimizer state already
+            # performs the first full tick!().
+            a1 = Kirstine.Adaptive(; initial_smoothness_estimate = 1, eta = 0.8, tau = 1.5)
+            s1 = Kirstine.optimizer_state(f, g!, FrankWolfe(1, a1), [x], c)
+            # To get from 0.8 * 1 to over 2, we need to multiply by 1.5 3 times and get 2.7
+            @test s1.work.smoothness_estimate ≈ 2.7
+            # 1 from first tick!(), 4 from while loop in stepsize!()
+            @test s1.n_eval_g == 5
+            @test s1.stepsize == dot(gx, original_diff) / (2.7 * norm(original_diff)^2)
+
+            # Since step-size computation depends only on the smoothness estimate and constants,
+            # the other cases do not differ in this respect.
+            # For them we only check the bookkeeping of the number of gradient evaluations.
+            a2 = Kirstine.Adaptive(; initial_smoothness_estimate = 3, eta = 0.8, tau = 1.5)
+            s2 = Kirstine.optimizer_state(f, g!, FrankWolfe(1, a2), [x], c)
+            # 0.8 * 3 = 2.4 is already larger than 2, so this is the estimate
+            @test s2.work.smoothness_estimate ≈ 2.4
+            # 1 from first tick!(), 1 from while loop in stepsize!()
+            @test s2.n_eval_g == 2
+
+            a3 = Kirstine.Adaptive(; initial_smoothness_estimate = Inf, eta = 0.9, tau = 2)
+            s3 = Kirstine.optimizer_state(f, g!, FrankWolfe(1, a3), [x], c)
+            # the initial estimate is ≈ 2, which becomes too small as 2 * 0.9 = 1.8,
+            # but doubling once again is sufficient
+            @test s3.work.smoothness_estimate ≈ 3.6
+            # 1 from first tick!(), 1 from initial estimation, 2 from while loop in stepsize!()
+            @test s3.n_eval_g == 4
+        end
+    end
+
     @testset "fw_workspace" begin
         let ol = Kirstine.OpenLoop(2),
             cni = Kirstine.ConstNumIter(),

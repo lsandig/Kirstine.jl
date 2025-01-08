@@ -210,6 +210,52 @@ function fw_estimate_initial_smoothness!(
     return w
 end
 
+# This is modeled after the adaptive line search in the FrankWolfe.jl package.
+#
+# It assumes that the following fields of the state have been updated for the current x
+# before the call: x, gx, v, diff
+#
+# In [^P23], the objective function is minimized, and the difference x - v is used in the
+# Frank-Wolfe gap and v - x in the acceptance test. In contrast, we maximize our function
+# and have the difference diff = v - x. Hence the two implied negations cancel each other
+# and we can compute the fwgap without an additional sign change, and we can accept the
+# smoothness estimate with the same expression as in the paper.
+function stepsize!(
+    g!,
+    state::FrankWolfeState,
+    o::FrankWolfe{Adaptive},
+    c::AbstractConstraints,
+    t::Integer,
+)
+    w = state.work
+    if isinf(w.smoothness_estimate)
+        fw_estimate_initial_smoothness!(g!, w, state.x, state.gx, state.diff, c)
+        state.n_eval_g += 1
+    end
+    M = o.step.eta * w.smoothness_estimate
+    fwgap = fw_evaluate_linearization(state.gx, state.diff, c)
+    while true
+        gamma = min(fwgap / (M * fw_norm(state.diff)^2), 1)
+        gamma < 0 && error("gamma should not become negative")
+        # in-place computation of g!(x + gamma * diff)
+        ap_copy!(w.d_tmp, state.diff)
+        ap_mul!(w.d_tmp, gamma)
+        ap_copy!(w.x_tmp, state.x)
+        ap_add!(w.x_tmp, w.d_tmp, c)
+        g!(w.gx_tmp, w.x_tmp)
+        state.n_eval_g += 1
+        if fw_evaluate_linearization(w.gx_tmp, state.diff, c) >= 0
+            w.smoothness_estimate = M
+            return gamma
+        end
+        if M > o.step.smoothness_threshold
+            @warn "smoothness estimate seems to diverge, terminating step size search"
+            return gamma
+        end
+        M *= o.step.tau
+    end
+end
+
 function Kirstine.optimizer_state(
     f,
     g!,
