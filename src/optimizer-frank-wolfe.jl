@@ -177,12 +177,16 @@ function Kirstine.tick!(
     return state
 end
 
-# Methods that need to be implemented for T <: AbstractPoint, C <: AbstractConstraints are:
+# Methods that need to be implemented for T <: AbstractPoint, U <: AbstractPointDifference, C <: AbstractConstraints are:
 # * fw_linear_maximization_oracle!(v::T, gx::AbstractVector{<:Real}, c::C) is the linear maximization oracle,
 #   where gx contains the gradient of the objective evaluated at x,
 #   c are the constraints defining the compact convex region,
 #   and v must be overwritten with the point of the boundary of the region that maximizes 〈v, gx〉
 #   (given a suitable vector representation of v).
+# * fw_evaluate_linearization(gx::AbstractVector{<:Real}, y::U, c::C) is the inner product
+#   between the gradient of the objective evaluated at x and the vector representation of y.
+#   In order to know how to compute this we also need the constraints c here.
 # * fw_gradient_length(x::T, c::C)::Integer should compute length(gx).
 function fw_linear_maximization_oracle! end
+function fw_evaluate_linearization end
 function fw_gradient_length end

@@ -17,6 +17,7 @@ using LinearAlgebra:
     cond,
     diagind,
     diagm,
+    dot,
     mul!,
     norm,
     rank,

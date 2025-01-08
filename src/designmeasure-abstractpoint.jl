@@ -162,6 +162,15 @@ function fw_linear_maximization_oracle!(
     return v
 end
 
+function fw_evaluate_linearization(
+    gx::AbstractVector{<:Real},
+    s::SignedMeasure,
+    c::DesignConstraints,
+)
+    !all(c.fixp) && error("only implemented for fixed points")
+    return dot(gx, s.weights)
+end
+
 function ap_rand!(d::DesignMeasure, c::DesignConstraints)
     K = numpoints(d)
     pts = points(d)

@@ -199,6 +199,22 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
         end
     end
 
+    @testset "fw_evaluate_linearization" begin
+        let gx = [1.0, -2.0, 3.0],
+            s = Kirstine.SignedMeasure([5 4 6], [-0.1, 0.2, 0.4]),
+            dr = DesignInterval(:a => (0, 10)),
+            c1 = Kirstine.DesignConstraints(dr, fill(false, 3), fill(false, 3)),
+            c2 = Kirstine.DesignConstraints(dr, fill(false, 3), fill(true, 3)),
+            fel = Kirstine.fw_evaluate_linearization
+
+            res = fel(gx, s, c2)
+            @test res ≈ 0.7
+            bytes_allocated = @allocated fel(gx, s, c2)
+            @test_broken bytes_allocated == 0
+            @test_throws "fixed points" fel(gx, s, c1)
+        end
+    end
+
     @testset "ap_rand!(DesignPoint)" begin
         # check that constraints are handled correctly
         let dr = DesignInterval(:a => (0, 5)),

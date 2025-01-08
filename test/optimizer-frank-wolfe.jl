@@ -4,6 +4,7 @@
 module FrankWolfeTests
 using Kirstine, Test
 using Plots
+using LinearAlgebra
 
 include("example-pnt.jl")
 
@@ -15,6 +16,14 @@ function Kirstine.fw_linear_maximization_oracle!(
     box_corners = Iterators.product(Iterators.zip(c.lb.x, c.ub.x)...)
     v.x .= argmax(corner -> mapreduce(*, +, gx, corner), box_corners)
     return v
+end
+
+function Kirstine.fw_evaluate_linearization(
+    gx::AbstractVector{<:Real},
+    p::PntDiff,
+    c::BoxConstraints,
+)
+    return dot(gx, p.v)
 end
 
 function Kirstine.fw_gradient_length(p::Pnt, c::BoxConstraints)
