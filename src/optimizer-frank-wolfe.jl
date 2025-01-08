@@ -92,6 +92,20 @@ and the defaults of the parameters are taken from the adaptive line search in
     end
 end
 
+mutable struct AdaptiveWorkspace{T<:AbstractPoint,U<:AbstractPointDifference} <: FWWorkspace
+    smoothness_estimate::Float64
+    x_tmp::T
+    d_tmp::U
+    gx_tmp::Vector{Float64}
+end
+
+function fw_workspace(step::Adaptive, x::AbstractPoint, gradient_length::Integer)
+    d_tmp = ap_as_difference(deepcopy(x))
+    x_tmp = deepcopy(x)
+    gx_tmp = fill(NaN, gradient_length)
+    return AdaptiveWorkspace(step.initial_smoothness_estimate, x_tmp, d_tmp, gx_tmp)
+end
+
 """
     FrankWolfe <: FirstOrderOptimizer
 

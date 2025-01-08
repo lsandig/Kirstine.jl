@@ -68,12 +68,21 @@ end
     end
 
     @testset "fw_workspace" begin
-        let ol = Kirstine.OpenLoop(2), cni = Kirstine.ConstNumIter()
+        let ol = Kirstine.OpenLoop(2),
+            cni = Kirstine.ConstNumIter(),
+            ad = Kirstine.Adaptive()
+
             w_ol = Kirstine.fw_workspace(ol, Pnt([0]), 1)
             w_cni = Kirstine.fw_workspace(cni, Pnt([0]), 1)
+            w_ad = Kirstine.fw_workspace(ad, Pnt([0, 1, 2]), 3)
 
             @test w_ol isa Kirstine.FWDummyWorkspace
             @test w_cni isa Kirstine.FWDummyWorkspace
+            @test w_ad isa Kirstine.AdaptiveWorkspace
+            @test w_ad.x_tmp isa Pnt
+            @test w_ad.d_tmp isa PntDiff
+            @test length(w_ad.gx_tmp) == 3
+            @test all(isnan, w_ad.gx_tmp)
         end
     end
 
