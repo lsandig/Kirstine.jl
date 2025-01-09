@@ -12,6 +12,7 @@ abstract type FWWorkspace end
 
 """
     OpenLoop <: StepSizeStrategy
+    OpenLoop(; shift = 2)
 
 Frank-Wolfe step-size strategy ``γ(t) = l / (t + l)`` for ``t=0,1,2,…`` with shift ``l∈ℕ, l≥1``.
 
@@ -23,7 +24,7 @@ Frank-Wolfe step-size strategy ``γ(t) = l / (t + l)`` for ``t=0,1,2,…`` with 
     for design problems where one-point designs are singular.
 """
 @kwdef struct OpenLoop <: StepSizeStrategy
-    shift::Int64
+    shift::Int64=2
     function OpenLoop(shift::Integer)
         shift < 1 && throw(ArgumentError("shift must be >= 1"))
         return new(shift)
