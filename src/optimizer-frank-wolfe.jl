@@ -144,6 +144,7 @@ mutable struct FrankWolfeState{T,U,V} <: OptimizerState{T,U}
     stepsize::Float64
     fx::Float64
     gx::Vector{<:Float64}
+    frank_wolfe_gap::Float64
     work::V
     n_eval_f::Int64
     n_eval_g::Int64
@@ -211,7 +212,7 @@ end
 # This is modeled after the adaptive line search in the FrankWolfe.jl package.
 #
 # It assumes that the following fields of the state have been updated for the current x
-# before the call: x, gx, v, v_minus_x
+# before the call: x, gx, v, v_minus_x, frank_wolfe_gap
 #
 # In [^P23], the objective function is minimized, and the difference x - v is used in the
 # Frank-Wolfe gap and v - x in the acceptance test. In contrast, we maximize our function
@@ -231,9 +232,8 @@ function stepsize!(
         state.n_eval_g += 1
     end
     M = o.stepsize.eta * w.smoothness_estimate
-    fwgap = fw_evaluate_linearization(state.gx, state.v_minus_x, c)
     while true
-        gamma = min(fwgap / (M * fw_norm(state.v_minus_x)^2), 1)
+        gamma = min(state.frank_wolfe_gap / (M * fw_norm(state.v_minus_x)^2), 1)
         gamma < 0 && error("gamma should not become negative")
         # in-place computation of g!(x + gamma * v_minus_x)
         ap_copy!(w.d_tmp, state.v_minus_x)
@@ -271,7 +271,7 @@ function Kirstine.optimizer_state(
     grad_length = fw_gradient_length(x, constraints)
     gx = fill(NaN, grad_length)
     work = fw_workspace(optimizer.stepsize, x, grad_length)
-    state = FrankWolfeState(x, v, x_diff, NaN, NaN, gx, work, 0, 0)
+    state = FrankWolfeState(x, v, x_diff, NaN, NaN, gx, NaN, work, 0, 0)
     # Here we perform the update corresponding to step t=0 in [^P23].
     # With OpenLoop this always gives an x1 that is on the boundary of the compact convex set
     # since the initial step size is 1.
@@ -294,6 +294,8 @@ function Kirstine.tick!(
     fw_linear_maximization_oracle!(state.v, state.gx, constraints)
     state.n_eval_f += 1
     ap_diff!(state.v_minus_x, state.v, state.x)
+    state.frank_wolfe_gap =
+        fw_evaluate_linearization(state.gx, state.v_minus_x, constraints)
     # In [^P23] the time index starts at t=0.
     # Since we start to count from iter=1,
     # we have to subtract 1 from it in the stepsize computation.
