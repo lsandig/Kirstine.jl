@@ -170,6 +170,7 @@ function fw_linear_maximization_oracle!(
     c::DesignConstraints,
 )
     !all(c.fixp) && error("only implemented for fixed points")
+    any(c.fixw) && error("only implemented for all weights non-fixed")
     v.weights .= 0
     v.weights[argmax(gx)] = 1
     return v

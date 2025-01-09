@@ -194,6 +194,7 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
             v_copy = deepcopy(v),
             g = [1, 42, -1],
             c1 = Kirstine.DesignConstraints(dr, fill(false, 3), fill(false, 3)),
+            c3 = Kirstine.DesignConstraints(dr, [false, false, true], fill(true, 3)),
             c2 = Kirstine.DesignConstraints(dr, fill(false, 3), fill(true, 3))
 
             lmo!(v, g, c2)
@@ -202,6 +203,7 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
             bytes_allocated = @allocated lmo!(v, g, c2)
             @test bytes_allocated == 0
             @test_throws "fixed points" lmo!(v, g, c1)
+            @test_throws "weights non-fixed" lmo!(v, g, c3)
         end
     end
 
