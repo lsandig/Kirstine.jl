@@ -24,7 +24,7 @@ Frank-Wolfe step-size strategy ``γ(t) = l / (t + l)`` for ``t=0,1,2,…`` with 
     for design problems where one-point designs are singular.
 """
 @kwdef struct OpenLoop <: StepSizeStrategy
-    shift::Int64=2
+    shift::Int64 = 2
     function OpenLoop(shift::Integer)
         shift < 1 && throw(ArgumentError("shift must be >= 1"))
         return new(shift)
@@ -123,14 +123,11 @@ This prototype will be used as the starting value.
 """
 @kwdef struct FrankWolfe{T<:StepSizeStrategy} <: FirstOrderOptimizer
     iterations::Int64
-    step::StepSizeStrategy
+    stepsize::StepSizeStrategy
     @doc """
-        FrankWolfe(; iterations)
-        FrankWolfe(iterations)
+        FrankWolfe(; iterations::Integer, stepsize::StepSizeStrategy)
 
     Set up parameters for the Frank-Wolfe algorithm.
-
-    This type has both a positional constructor and a keyword-based constructor.
     """
     function FrankWolfe(iterations::Integer, s::StepSizeStrategy)
         iterations <= 0 && throw(ArgumentError("number of iterations must be positive"))
@@ -169,7 +166,7 @@ function stepsize!(
     c::AbstractConstraints,
     t::Integer,
 )
-    return stepsize_openloop(o.step.shift, t)
+    return stepsize_openloop(o.stepsize.shift, t)
 end
 
 function stepsize_constnumiter(iterations::Integer, t::Integer)
@@ -233,7 +230,7 @@ function stepsize!(
         fw_estimate_initial_smoothness!(g!, w, state.x, state.gx, state.v_minus_x, c)
         state.n_eval_g += 1
     end
-    M = o.step.eta * w.smoothness_estimate
+    M = o.stepsize.eta * w.smoothness_estimate
     fwgap = fw_evaluate_linearization(state.gx, state.v_minus_x, c)
     while true
         gamma = min(fwgap / (M * fw_norm(state.v_minus_x)^2), 1)
@@ -249,11 +246,11 @@ function stepsize!(
             w.smoothness_estimate = M
             return gamma
         end
-        if M > o.step.smoothness_threshold
+        if M > o.stepsize.smoothness_threshold
             @warn "smoothness estimate seems to diverge, terminating step size search"
             return gamma
         end
-        M *= o.step.tau
+        M *= o.stepsize.tau
     end
 end
 
@@ -273,7 +270,7 @@ function Kirstine.optimizer_state(
     x_diff = deepcopy(ap_as_difference(v))
     grad_length = fw_gradient_length(x, constraints)
     gx = fill(NaN, grad_length)
-    work = fw_workspace(optimizer.step, x, grad_length)
+    work = fw_workspace(optimizer.stepsize, x, grad_length)
     state = FrankWolfeState(x, v, x_diff, NaN, NaN, gx, work, 0, 0)
     # Here we perform the update corresponding to step t=0 in [^P23].
     # With OpenLoop this always gives an x1 that is on the boundary of the compact convex set

@@ -51,7 +51,7 @@ end
         # check both positional and keyword-based constructor
         msg = "must be positive"
         @test_throws msg FrankWolfe(-1, Kirstine.OpenLoop(2))
-        @test_throws msg FrankWolfe(; iterations = -1, step = Kirstine.OpenLoop(2))
+        @test_throws msg FrankWolfe(; iterations = -1, stepsize = Kirstine.OpenLoop(2))
     end
 
     @testset "stepsize_openloop" begin
@@ -208,7 +208,7 @@ end
             xstar = ones(n),
             f(p) = -sum((p.x .- xstar) .^ 2),
             g!(grad, p) = grad .= -2 .* (p.x .- xstar),
-            fw = FrankWolfe(; iterations = 2000, step = Kirstine.OpenLoop(2)),
+            fw = FrankWolfe(; iterations = 2000, stepsize = Kirstine.OpenLoop(2)),
             prototype = Pnt(zeros(n)),
             outside = Pnt([-1, -1, 5, -1]),
             constr1 = BoxConstraints(Pnt(fill(-1, n)), Pnt(fill(2, n))),
