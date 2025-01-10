@@ -70,19 +70,21 @@ end
     end
 
     @testset "stepsize_openloop" begin
-        @test Kirstine.stepsize_openloop(2, 0) == 1
-        @test Kirstine.stepsize_openloop(5, 0) == 1
-        @test Kirstine.stepsize_openloop(2, 3) == 0.4
-        @test Kirstine.stepsize_openloop(5, 5) == 0.5
+        @test Kirstine.stepsize_openloop(2, 0, 1) == 1
+        @test Kirstine.stepsize_openloop(5, 0, 1) == 1
+        @test Kirstine.stepsize_openloop(2, 3, 1) == 0.4
+        @test Kirstine.stepsize_openloop(5, 5, 1) == 0.5
+        @test Kirstine.stepsize_openloop(5, 5, 0.2) == 0.2
     end
 
     @testset "stepsize_constnumiter" begin
-        @test Kirstine.stepsize_constnumiter(9, 0) == 1 / 3
-        @test Kirstine.stepsize_constnumiter(16, 0) == 1 / 4
-        @test Kirstine.stepsize_constnumiter(9, 2) == 1 / 3
-        @test Kirstine.stepsize_constnumiter(16, 3) == 1 / 4
+        @test Kirstine.stepsize_constnumiter(9, 0, 1) == 1 / 3
+        @test Kirstine.stepsize_constnumiter(16, 0, 1) == 1 / 4
+        @test Kirstine.stepsize_constnumiter(9, 2, 1) == 1 / 3
+        @test Kirstine.stepsize_constnumiter(16, 3, 1) == 1 / 4
+        @test Kirstine.stepsize_constnumiter(16, 3, 0.2) == 0.2
 
-        @test_throws "past maximum" Kirstine.stepsize_constnumiter(9, 10)
+        @test_throws "past maximum" Kirstine.stepsize_constnumiter(9, 10, 1)
     end
 
     @testset "fw_estimate_initial_smoothness!" begin
@@ -98,7 +100,7 @@ end
             c = BoxConstraints(Pnt(fill(-1, n)), Pnt(fill(10, n))),
             w = Kirstine.AdaptiveWorkspace(NaN, x_tmp, d_tmp, gx_tmp)
 
-            res = Kirstine.fw_estimate_initial_smoothness!(g!, w, x, gx, d, c)
+            res = Kirstine.fw_estimate_initial_smoothness!(g!, w, x, gx, d, c, 1)
 
             @test w.smoothness_estimate ≈ 2
             @test res == w

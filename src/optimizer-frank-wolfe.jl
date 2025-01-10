@@ -161,8 +161,8 @@ gradient(s::FrankWolfeState) = s.gx
 n_eval_f(s::FrankWolfeState) = s.n_eval_f
 n_eval_g(s::FrankWolfeState) = s.n_eval_g
 
-function stepsize_openloop(shift::Integer, t::Integer)
-    return shift / (t + shift)
+function stepsize_openloop(shift::Integer, t::Integer, gamma_max::Real)
+    return min(shift / (t + shift), gamma_max)
 end
 
 function stepsize!(
@@ -171,13 +171,14 @@ function stepsize!(
     o::FrankWolfe{OpenLoop},
     c::AbstractConstraints,
     t::Integer,
+    gamma_max::Real,
 )
-    return stepsize_openloop(o.stepsize.shift, t)
+    return stepsize_openloop(o.stepsize.shift, t, gamma_max)
 end
 
-function stepsize_constnumiter(iterations::Integer, t::Integer)
+function stepsize_constnumiter(iterations::Integer, t::Integer, gamma_max::Real)
     t > iterations && error("can't iterate past maximum number of iterations")
-    return 1 / sqrt(iterations)
+    return min(1 / sqrt(iterations), gamma_max)
 end
 
 function stepsize!(
@@ -186,8 +187,9 @@ function stepsize!(
     o::FrankWolfe{ConstNumIter},
     c::AbstractConstraints,
     t::Integer,
+    gamma_max::Real,
 )
-    return stepsize_constnumiter(o.iterations, t)
+    return stepsize_constnumiter(o.iterations, t, gamma_max)
 end
 
 function fw_estimate_initial_smoothness!(
@@ -195,59 +197,74 @@ function fw_estimate_initial_smoothness!(
     w::AdaptiveWorkspace,
     x::AbstractPoint,
     gx::AbstractVector{<:Real},
-    v_minus_x::AbstractPointDifference,
+    direction::AbstractPointDifference,
     c::AbstractConstraints,
+    gamma_max::Real,
 )
     # in-place initial estimate for Lipschitz constant of the gradient,
-    # norm(g!(x) - g!(x + ε*v_minus_x)) / (ε * norm(v_minus_x))
-    epsilon = 1e-3
+    # norm(g!(x) - g!(x + ε*direction)) / (ε * norm(direction))
+    epsilon = min(1e-3, gamma_max)
     ap_copy!(w.x_tmp, x)
-    ap_copy!(w.d_tmp, v_minus_x)
+    ap_copy!(w.d_tmp, direction)
     ap_mul!(w.d_tmp, epsilon)
     ap_add!(w.x_tmp, w.d_tmp, c)
     g!(w.gx_tmp, w.x_tmp)
     w.gx_tmp .-= gx
-    # Note: norm(v_minus_x) does not need to be subject to constraints.
+    # Note: norm(direction) does not need to be subject to constraints.
     # For a DesignMeasure with some fixed elements,
     # the difference of these elements will always be zero.
-    w.smoothness_estimate = norm(w.gx_tmp) / (epsilon * fw_norm(v_minus_x))
+    w.smoothness_estimate = norm(w.gx_tmp) / (epsilon * fw_norm(direction))
     return w
 end
 
 # This is modeled after the adaptive line search in the FrankWolfe.jl package.
 #
 # It assumes that the following fields of the state have been updated for the current x
-# before the call: x, gx, v, v_minus_x, frank_wolfe_gap
+# before the call: x, gx, direction
 #
-# In [^P23], the objective function is minimized, and the difference x - v is used in the
-# Frank-Wolfe gap and v - x in the acceptance test. In contrast, we maximize our function
-# and have the difference v_minus_x. Hence the two implied negations cancel each other
-# and we can compute the fwgap without an additional sign change, and we can accept the
-# smoothness estimate with the same expression as in the paper.
+# Notable differences from how the stepsize computation is described in [^P23]:
+#
+# (1) In [^P23] the short step estimation has an inner product with the opposite of our
+#     direction. However, since we maximize the objective function, the two sign switches
+#     cancel out.
+# (2) The same holds for the acceptance test.
+# (3) In [^P23] they have gamma_max := 1 and -direction := v - x, this version can have more
+#     general 0 < gamma_max <= 1 and other directions. This is necessary for the pairwise
+#     algorithm variant as in [^LJ15] and in the FrankWolfe.jl package.
 function stepsize!(
     g!,
     state::FrankWolfeState,
     o::FrankWolfe{Adaptive},
     c::AbstractConstraints,
     t::Integer,
+    gamma_max::Real,
 )
     w = state.work
     if isinf(w.smoothness_estimate)
-        fw_estimate_initial_smoothness!(g!, w, state.x, state.gx, state.v_minus_x, c)
+        fw_estimate_initial_smoothness!(
+            g!,
+            w,
+            state.x,
+            state.gx,
+            state.direction,
+            c,
+            gamma_max,
+        )
         state.n_eval_g += 1
     end
     M = o.stepsize.eta * w.smoothness_estimate
+    dd_direction = fw_evaluate_linearization(state.gx, state.direction, c)
     while true
-        gamma = min(state.frank_wolfe_gap / (M * fw_norm(state.v_minus_x)^2), 1)
+        gamma = min(dd_direction / (M * fw_norm(state.direction)^2), gamma_max)
         gamma < 0 && error("gamma should not become negative")
-        # in-place computation of g!(x + gamma * v_minus_x)
-        ap_copy!(w.d_tmp, state.v_minus_x)
+        # in-place computation of g!(x + gamma * direction)
+        ap_copy!(w.d_tmp, state.direction)
         ap_mul!(w.d_tmp, gamma)
         ap_copy!(w.x_tmp, state.x)
         ap_add!(w.x_tmp, w.d_tmp, c)
         g!(w.gx_tmp, w.x_tmp)
         state.n_eval_g += 1
-        if fw_evaluate_linearization(w.gx_tmp, state.v_minus_x, c) >= 0
+        if fw_evaluate_linearization(w.gx_tmp, state.direction, c) >= 0
             w.smoothness_estimate = M
             return gamma
         end
@@ -300,12 +317,13 @@ function Kirstine.tick!(
     state.n_eval_g += 1
     fw_linear_maximization_oracle!(state.v, state.gx, constraints)
     ap_diff!(state.v_minus_x, state.v, state.x)
+    ap_copy!(state.direction, state.v_minus_x)
     state.frank_wolfe_gap =
         fw_evaluate_linearization(state.gx, state.v_minus_x, constraints)
     # In [^P23] the time index starts at t=0.
     # Since we start to count from iter=1,
     # we have to subtract 1 from it in the stepsize computation.
-    state.stepsize = stepsize!(g!, state, optimizer, constraints, iter - 1)
+    state.stepsize = stepsize!(g!, state, optimizer, constraints, iter - 1, 1)
     state.alpha .*= (1 - state.stepsize)
     if !(state.v in state.active_set)
         state.active_points_added += 1
