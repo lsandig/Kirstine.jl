@@ -281,7 +281,7 @@ function stepsize!(
     end
 end
 
-function Kirstine.optimizer_state(
+function optimizer_state(
     f,
     g!,
     optimizer::FrankWolfe,
@@ -309,7 +309,7 @@ function Kirstine.optimizer_state(
     return state
 end
 
-function Kirstine.tick!(
+function tick!(
     f,
     g!,
     state::FrankWolfeState,
