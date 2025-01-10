@@ -73,8 +73,8 @@ end
     @testset "FrankWolfe" begin
         # check both positional and keyword-based constructor
         msg = "must be positive"
-        @test_throws msg FrankWolfe(-1, Kirstine.OpenLoop(2), false)
-        @test_throws msg FrankWolfe(;
+        @test_throws msg Kirstine.FrankWolfe(-1, Kirstine.OpenLoop(2), false)
+        @test_throws msg Kirstine.FrankWolfe(;
             iterations = -1,
             stepsize = Kirstine.OpenLoop(2),
             pairwise = false,
@@ -134,7 +134,7 @@ end
             # We can only test stepsize() indirectly, since building the optimizer state already
             # performs the first full tick!().
             a1 = Kirstine.Adaptive(; initial_smoothness_estimate = 1, eta = 0.8, tau = 1.5)
-            s1 = Kirstine.optimizer_state(f, g!, FrankWolfe(1, a1, false), [x], c)
+            s1 = Kirstine.optimizer_state(f, g!, Kirstine.FrankWolfe(1, a1, false), [x], c)
             # To get from 0.8 * 1 to over 2, we need to multiply by 1.5 3 times and get 2.7
             @test s1.work.smoothness_estimate ≈ 2.7
             # 1 from first tick!(), 4 from while loop in stepsize!()
@@ -145,14 +145,14 @@ end
             # the other cases do not differ in this respect.
             # For them we only check the bookkeeping of the number of gradient evaluations.
             a2 = Kirstine.Adaptive(; initial_smoothness_estimate = 3, eta = 0.8, tau = 1.5)
-            s2 = Kirstine.optimizer_state(f, g!, FrankWolfe(1, a2, false), [x], c)
+            s2 = Kirstine.optimizer_state(f, g!, Kirstine.FrankWolfe(1, a2, false), [x], c)
             # 0.8 * 3 = 2.4 is already larger than 2, so this is the estimate
             @test s2.work.smoothness_estimate ≈ 2.4
             # 1 from first tick!(), 1 from while loop in stepsize!()
             @test s2.n_eval_g == 2
 
             a3 = Kirstine.Adaptive(; initial_smoothness_estimate = Inf, eta = 0.9, tau = 2)
-            s3 = Kirstine.optimizer_state(f, g!, FrankWolfe(1, a3, false), [x], c)
+            s3 = Kirstine.optimizer_state(f, g!, Kirstine.FrankWolfe(1, a3, false), [x], c)
             # the initial estimate is ≈ 2, which becomes too small as 2 * 0.9 = 1.8,
             # but doubling once again is sufficient
             @test s3.work.smoothness_estimate ≈ 3.6
@@ -186,7 +186,7 @@ end
             gnan!(grad, p) = grad[1] = NaN,
             ginf!(grad, p) = grad[1] = Inf,
             gninf!(grad, p) = grad[1] = -Inf,
-            opt = FrankWolfe(5, Kirstine.OpenLoop(2), false),
+            opt = Kirstine.FrankWolfe(5, Kirstine.OpenLoop(2), false),
             # |------|------|
             # 0   x0=5     10
             x0 = Pnt([5]),
@@ -216,7 +216,7 @@ end
     end
 
     @testset "tick!" begin
-        let opt = FrankWolfe(2, Kirstine.OpenLoop(2), false),
+        let opt = Kirstine.FrankWolfe(2, Kirstine.OpenLoop(2), false),
             n = 2,
             xstar = ones(n),
             f(p) = -sum((p.x .- xstar) .^ 2),
@@ -240,8 +240,8 @@ end
             xstar = ones(n),
             f(p) = -sum((p.x .- xstar) .^ 2),
             g!(grad, p) = grad .= -2 .* (p.x .- xstar),
-            fw = FrankWolfe(2000, Kirstine.OpenLoop(2), false),
-            pfw = FrankWolfe(
+            fw = Kirstine.FrankWolfe(2000, Kirstine.OpenLoop(2), false),
+            pfw = Kirstine.FrankWolfe(
                 2000,
                 Kirstine.Adaptive(; initial_smoothness_estimate = 2),
                 true,
