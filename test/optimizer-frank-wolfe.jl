@@ -25,6 +25,14 @@ function Kirstine.fw_evaluate_linearization(
     return dot(gx, p.v)
 end
 
+function Kirstine.fw_evaluate_linearization(
+    gx::AbstractVector{<:Real},
+    p::Pnt,
+    c::BoxConstraints,
+)
+    return dot(gx, p.x)
+end
+
 function Kirstine.fw_gradient_length(p::Pnt, c::BoxConstraints)
     return length(p.x)
 end
@@ -233,6 +241,11 @@ end
             f(p) = -sum((p.x .- xstar) .^ 2),
             g!(grad, p) = grad .= -2 .* (p.x .- xstar),
             fw = FrankWolfe(2000, Kirstine.OpenLoop(2), false),
+            pfw = FrankWolfe(
+                2000,
+                Kirstine.Adaptive(; initial_smoothness_estimate = 2),
+                true,
+            ),
             prototype = Pnt(zeros(n)),
             outside = Pnt([-1, -1, 5, -1]),
             constr1 = BoxConstraints(Pnt(fill(-1, n)), Pnt(fill(2, n))),
@@ -242,6 +255,8 @@ end
             r1 = Kirstine.optimize(f, g!, fw, [prototype], constr1)
             # ... and this one will be on the boundary at [0.5, 1, 1, ..., 1]
             r2 = Kirstine.optimize(f, g!, fw, [prototype], constr2; trace_state = true)
+            # paired steps will be better at going to the boundary
+            r3 = Kirstine.optimize(f, g!, pfw, [prototype], constr2; trace_state = true)
 
             @test r1.maximizer.x ≈ xstar rtol = 1e-4
             @test r1.maximum ≈ 0.0 atol = 1e-4
@@ -251,6 +266,13 @@ end
             @test r2.maximum ≈ -0.25 rtol = 1e-4
             @test length(r2.trace_gx) == 2000
             @test r2.trace_gx[end] ≈ [1, 0, 0, 0] rtol = 1e-2 # not a local maximum
+            # pairwise steps converge faster:
+            @test r3.maximum > r2.maximum
+            @test r3.trace_state[end].frank_wolfe_gap < r2.trace_state[end].frank_wolfe_gap
+            @test norm(r3.maximizer.x .- xstar) < norm(r2.maximizer.x .- xstar)
+            @test r3.trace_state[end].active_points_added == 7
+            @test r3.trace_state[end].active_points_removed == 3
+            @test r3.trace_state[end].frank_wolfe_gap == 0
         end
     end
 end

@@ -318,22 +318,49 @@ function Kirstine.tick!(
     state.n_eval_g += 1
     fw_linear_maximization_oracle!(state.v, state.gx, constraints)
     ap_diff!(state.v_minus_x, state.v, state.x)
-    ap_copy!(state.direction, state.v_minus_x)
     state.frank_wolfe_gap =
         fw_evaluate_linearization(state.gx, state.v_minus_x, constraints)
+    away = -1
+    if optimizer.pairwise
+        _, away = findmin(state.active_set) do a
+            fw_evaluate_linearization(state.gx, a, constraints)
+        end
+        ap_diff!(state.direction, state.v, state.active_set[away])
+    else
+        ap_copy!(state.direction, state.v_minus_x)
+    end
+    gamma_max = optimizer.pairwise ? state.alpha[away] : 1.0
     # In [^P23] the time index starts at t=0.
     # Since we start to count from iter=1,
     # we have to subtract 1 from it in the stepsize computation.
-    state.stepsize = stepsize!(g!, state, optimizer, constraints, iter - 1, 1)
-    state.alpha .*= (1 - state.stepsize)
-    if !(state.v in state.active_set)
-        state.active_points_added += 1
-        push!(state.active_set, deepcopy(state.v))
-        push!(state.alpha, state.stepsize)
+    state.stepsize = stepsize!(g!, state, optimizer, constraints, iter - 1, gamma_max)
+    if !optimizer.pairwise
+        state.alpha .*= (1 - state.stepsize)
+        if !(state.v in state.active_set)
+            state.active_points_added += 1
+            push!(state.active_set, deepcopy(state.v))
+            push!(state.alpha, state.stepsize)
+        else
+            idx = findfirst(==(state.v), state.active_set)
+            state.alpha[idx] += state.stepsize
+            state.alpha[idx] = min(state.alpha[idx], 1.0)
+        end
     else
-        idx = findfirst(==(state.v), state.active_set)
-        state.alpha[idx] += state.stepsize
-        state.alpha[idx] = min(state.alpha[idx], 1.0)
+        if !(state.v in state.active_set)
+            state.active_points_added += 1
+            push!(state.active_set, deepcopy(state.v))
+            push!(state.alpha, state.stepsize)
+            state.alpha[away] = max(state.alpha[away] - state.stepsize, 0)
+        else
+            idx = findfirst(==(state.v), state.active_set)
+            state.alpha[away] = max(state.alpha[away] - state.stepsize, 0)
+            state.alpha[idx] = min(state.alpha[idx] + state.stepsize, 1)
+        end
+        if state.alpha[away] == 0
+            state.active_points_removed += 1
+            deleteat!(state.alpha, away)
+            deleteat!(state.active_set, away)
+        end
     end
     ap_convex_combination!(state.x, state.alpha, state.active_set, constraints)
     state.fx = f(state.x)
@@ -347,8 +374,10 @@ end
 #   c are the constraints defining the compact convex region,
 #   and v must be overwritten with the point of the boundary of the region that maximizes 〈v, gx〉
 #   (given a suitable vector representation of v).
-# * fw_evaluate_linearization(gx::AbstractVector{<:Real}, y::U, c::C) is the inner product
-#   between the gradient of the objective evaluated at x and the vector representation of y.
+# * fw_evaluate_linearization(gx::AbstractVector{<:Real}, y::T, c::C) and
+#   fw_evaluate_linearization(gx::AbstractVector{<:Real}, y::U, c::C)
+#   is the inner product between the gradient of the objective evaluated at x
+#   and the vector representation of y.
 #   In order to know how to compute this we also need the constraints c here.
 # * fw_gradient_length(x::T, c::C)::Integer should compute length(gx).
 function fw_linear_maximization_oracle! end

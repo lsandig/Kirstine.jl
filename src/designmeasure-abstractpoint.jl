@@ -185,6 +185,15 @@ function fw_evaluate_linearization(
     return dot(gx, s.weights)
 end
 
+function fw_evaluate_linearization(
+    gx::AbstractVector{<:Real},
+    d::DesignMeasure,
+    c::DesignConstraints,
+)
+    !all(c.fixp) && error("only implemented for fixed points")
+    return dot(gx, d.weights)
+end
+
 # Note: assumes that any fixed entries are identical for all design measures in qs.
 # This does _not_ handle non-convex design regions,
 # and does _not_ correct for numerical errors that might move the point outside of the region.
