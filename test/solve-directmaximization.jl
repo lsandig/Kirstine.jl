@@ -128,14 +128,26 @@ include("example-emax.jl")
                 region = DesignInterval(:dose => (0, 10)),
             ),
             exact_solution = emax_solution(guess, region(dp)),
-            fw = DirectMaximization(;
-                optimizer = FrankWolfe(10000, Kirstine.ConstNumIter(), false),
-                prototype = DesignMeasure(points(exact_solution), [0.1, 0.85, 0.05]),
-                fixedpoints = 1:3,
-            )
+            pro = DesignMeasure(points(exact_solution), [0.1, 0.85, 0.05]),
+            fw1 = FrankWolfe(10000, Kirstine.ConstNumIter(), false),
+            a2 = Kirstine.Adaptive(; initial_smoothness_estimate = 100),
+            fw2 = FrankWolfe(50, a2, true),
+            a3 = Kirstine.Adaptive(; initial_smoothness_estimate = Inf),
+            fw3 = FrankWolfe(1, a3, true),
+            st1 = DirectMaximization(; optimizer = fw1, prototype = pro, fixedpoints = 1:3),
+            st2 = DirectMaximization(; optimizer = fw2, prototype = pro, fixedpoints = 1:3),
+            st3 = DirectMaximization(; optimizer = fw3, prototype = pro, fixedpoints = 1:3)
 
-            s, r = solve(dp, fw)
-            @test weights(s) ≈ [1 / 3, 1 / 3, 1 / 3] rtol = 1e-2
+            s1, r1 = solve(dp, st1)
+            @test weights(s1) ≈ [1 / 3, 1 / 3, 1 / 3] rtol = 1e-2
+
+            s2, r2 = solve(dp, st2)
+            @test weights(s2) ≈ [1 / 3, 1 / 3, 1 / 3]
+
+            _, r3 = solve(dp, st3; trace_state = true)
+            # this should fail if we change something about the initial estimate
+            L_est = optimization_result(r3).trace_state[1].work.smoothness_estimate
+            @test L_est ≈ 262.573934
         end
     end
 end
