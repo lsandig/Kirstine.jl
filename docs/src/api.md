@@ -65,8 +65,8 @@ GridSearch
 GridSearch()
 GridSpec
 ProductGrid
-FrankWolfe
-FrankWolfe(::Integer, ::Kirstine.StepSizeStrategy, ::Bool)
+Kirstine.FrankWolfe
+Kirstine.FrankWolfe(::Integer, ::Kirstine.StepSizeStrategy, ::Bool)
 Kirstine.StepSizeStrategy
 Kirstine.OpenLoop
 Kirstine.ConstNumIter

@@ -112,6 +112,13 @@ end
 
 A Frank-Wolfe optimizer.
 
+!!! warning "Experimental Feature"
+
+    This optimizer is experimental.
+    It is not to be considered part of the API yet,
+    hence it is not exported and may be subject to breaking changes
+    even in minor or patch version updates.
+
 Two variants are implemented:
 a basic one that always moves towards the best vertex for the linearized problem
 (see Algorithm 4 in [^P23]),
