@@ -110,15 +110,20 @@ end
 """
     FrankWolfe <: FirstOrderOptimizer
 
-A basic Frank-Wolfe algorithm.
+A Frank-Wolfe optimizer.
 
-This version is taken from [^P23].
+Two variants are implemented:
+a basic one that always moves towards the best vertex for the linearized problem
+(see Algorithm 4 in [^P23]),
+and a version with pairwise steps (see Algorithm 2 in [^LJ15])
+that is better at finding an optimum on the boundary.
 
 # Initialization
 
 Frank-Wolfe can only be initialized with a single prototype.
 This prototype will be used as the starting value.
 
+[^LJ15]: Simon Lacoste-Julien and Martin Jaggi (2015). On the Global Linear Convergence of Frank-Wolfe Optimization Variants. [arXiv:1511.05932](https://arxiv.org/abs/1511.05932v1)
 [^P23]: S. Pokutta (2023). The Frank-Wolfe algorithm: a short introduction. Jahresbericht der Deutschen Mathematiker-Vereinigung, 126(1), 3–35. [doi:10.1365/s13291-023-00275-x](http://dx.doi.org/10.1365/s13291-023-00275-x)
 """
 @kwdef struct FrankWolfe{T<:StepSizeStrategy} <: FirstOrderOptimizer
