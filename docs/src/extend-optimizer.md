@@ -164,8 +164,11 @@ For `O = Ica` and `S = IcaState` we must implement the following methods:
     accessor for the best candidate seen so far
   - `maximum(state::IcaState)`:
     accessor for the best objective value seen so far
-  - `n_eval(state::IcaState)`:
+  - `n_eval_f(state::IcaState)`:
     accessor for the cumulative number of evaluations of the objective function
+  - `n_eval_g(state::IcaState)`:
+    accessor for the cumulative number of evaluations of the gradient of the objective function
+    (always 0 since ICA does not use gradients)
   - `optimizer_state(f, o::Ica, prototypes::Vector{AbstractPoint}, constraints::AbstractConstraints)`:
     constructor of an `IcaState` for the objective function `f` and parameters `o`.
     It should use the given `prototypes` for initialization
@@ -174,11 +177,21 @@ For `O = Ica` and `S = IcaState` we must implement the following methods:
     update the optimizers state once.
     The number of the current iteration is passed in `iter`.
 
+!!! note
+    
+    The `Optimizer` type has two abstract subtypes:
+    A [`Kirstine.ZerothOrderOptimizer`](@ref) only works with the objective function itself,
+    while a [`Kirstine.FirstOrderOptimizer`](@ref) also requires its gradient.
+    ICA is of order zero.
+    If you want to implement a first-order optimizer,
+    you need versions of `optimizer_state(f, g!, ...)` and of `tick!(f, g!, ...)`
+    that additionally take a mutating gradient `g!(g::AbstractVector, x::AbstractPoint) -> g`.
+
 ```@example main
 using Kirstine
 using Statistics: mean
 
-struct Ica <: Kirstine.Optimizer
+struct Ica <: Kirstine.ZerothOrderOptimizer
     iterations::Int64
     num_countries::Int64
     num_initial_empires::Int64
@@ -249,7 +262,8 @@ end
 
 Kirstine.maximizer(state::IcaState) = state.country[argmax(state.val[state.imperialist])]
 Kirstine.maximum(state::IcaState) = maximum(state.val[state.imperialist])
-Kirstine.n_eval(state::IcaState) = state.n_eval
+Kirstine.n_eval_f(state::IcaState) = state.n_eval
+Kirstine.n_eval_g(state::IcaState) = 0
 
 function Kirstine.optimizer_state(
     f,

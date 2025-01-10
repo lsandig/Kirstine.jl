@@ -89,6 +89,24 @@ function derivative_constants(at::DesignMeasure, cdp::CompositeDesignProblem)
     return CDPDerivativeConstants(map(p -> derivative_constants(at, p), problems(cdp)))
 end
 
+function derivative_constants!(
+    cdc::CDPDerivativeConstants,
+    w::CDPWorkspace,
+    d::DesignMeasure,
+    cdp::CompositeDesignProblem,
+    oc::CDPObjectiveConstants,
+)
+    map(
+        cdc.component_constants,
+        w.component_workspaces,
+        problems(cdp),
+        oc.component_constants,
+    ) do dc, w, p, oc
+        derivative_constants!(dc, w, d, p, oc)
+    end
+    return cdc
+end
+
 function objective!(
     wsp::CDPWorkspace,
     d::DesignMeasure,
@@ -121,6 +139,24 @@ function gateauxderivative!(
     wk = wsp.component_workspaces
     for i in 1:numprobs
         acc += ws[i] * gateauxderivative!(wk[i], direction, ps[i], cc[i])
+    end
+    return acc
+end
+
+function sensitivity!(
+    cwg::CDPWorkspace,
+    direction::DesignMeasure,
+    cdp::CompositeDesignProblem,
+    cdc::CDPDerivativeConstants,
+)
+    acc = 0.0
+    map(
+        cwg.component_workspaces,
+        problems(cdp),
+        weights(cdp),
+        cdc.component_constants,
+    ) do wg, p, w, dc
+        acc += w * sensitivity!(wg, direction, p, dc)
     end
     return acc
 end

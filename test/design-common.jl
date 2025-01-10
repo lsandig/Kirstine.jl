@@ -5,7 +5,7 @@ module DesignCommonTests
 using Test
 using Kirstine
 using Random: seed!
-using LinearAlgebra: SingularException, Symmetric, UpperTriangular, tr, det, diagm
+using LinearAlgebra: SingularException, Symmetric, UpperTriangular, tr, det, diagm, opnorm
 
 include("example-testpar.jl")
 include("example-emax.jl")
@@ -33,6 +33,24 @@ include("example-compartment.jl")
             @test tr(Symmetric(A, :L) * Symmetric(B, :L)) == Kirstine.tr_prod(A, B, :L)
             @test_throws "identical size" Kirstine.tr_prod(A, C, :U)
             @test_throws "either :U or :L" Kirstine.tr_prod(A, B, :F)
+        end
+    end
+
+    @testset "mirror_to_lower_triangle!" begin
+        let m1 = [1;;], m2 = [1 2; 0 3], m3 = [1 2 3; 0 4 5; 0 0 6]
+            Kirstine.mirror_to_lower_triangle!(m1)
+            Kirstine.mirror_to_lower_triangle!(m2)
+            Kirstine.mirror_to_lower_triangle!(m3)
+
+            @test m1 == [1;;]
+            @test m2 == [1 2; 2 3]
+            @test m3 == [1 2 3; 2 4 5; 3 5 6]
+        end
+    end
+
+    @testset "opnorm1_sym_u" begin
+        let A = randn(3, 3)
+            @test opnorm(Symmetric(A), 1) == Kirstine.opnorm1_sym_u(A)
         end
     end
 
@@ -273,6 +291,56 @@ include("example-compartment.jl")
             @test gi(A, B, d) == tr(Symmetric(A) * Symmetric(B)) - d
             # rule out unintentionally symmetric input
             @test gi(A, B, d) != tr(A * B) - d
+        end
+    end
+
+    @testset "sensitivity_integrand" begin
+        # This should compute tr(A * B), using only upper triangles from A and B. A is taken
+        # from the GateauxConstants, B is the normalized information matrix corresponding to
+        # the direction. Both matrices have size (r, r). Here we test an example with r = 2.
+        let A = [2.0 3.0; 0.0 7.0],
+            B = [0.4 1.0; 0.0 0.5],
+            si = Kirstine.sensitivity_integrand
+
+            @test si(A, B) == tr(Symmetric(A) * Symmetric(B))
+            # rule out unintentionally symmetric input
+            @test si(A, B) != tr(A * B)
+        end
+    end
+
+    @testset "objective_gradient_weights!" begin
+        let ogw! = Kirstine.objective_gradient_weights!,
+            p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
+            dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([p]),
+            ),
+            d = emax_solution(p, region(dp)),
+            g = zeros(3),
+            opd = one_point_design([0]),
+            wg = Kirstine.allocate_workspace(opd, dp),
+            wf = Kirstine.allocate_workspace(d, dp),
+            dc = Kirstine.derivative_constants(d, dp),
+            oc = Kirstine.objective_constants(dp)
+
+            # manually zero out the derivative constants to see whether they are updated
+            dc.gc.A[1] .= 0
+            dc.gc.tr_B[1] = 0
+
+            # gradient == sensitivity function at points(d) == dim of parameter
+            ogw!(g, opd, wg, wf, d, dp, dc, oc)
+            @test g ≈ [3, 3, 3]
+
+            bytes_allocated = @allocated ogw!(g, opd, wg, wf, d, dp, dc, oc)
+            @test bytes_allocated == 0
+
+            # make the design singular by effectively dropping a point
+            # (without changing numpoints(d)).
+            weights(d) .= [weights(d)[1:2]; 0] ./ sum(weights(d)[1:2])
+            @test_throws SingularException ogw!(g, opd, wg, wf, d, dp, dc, oc)
         end
     end
 

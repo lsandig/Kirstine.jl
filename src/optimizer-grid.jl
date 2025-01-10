@@ -52,7 +52,7 @@ end
 ProductGrid(n_points::Integer...) = ProductGrid{length(n_points)}(n_points)
 
 """
-    GridSearch <: Optimizer
+    GridSearch <: ZerothOrderOptimizer
 
 A grid search optimizer.
 
@@ -76,7 +76,7 @@ that is constructed from the [`GridSpec`](@ref).
 This set of points is then merged with the vector of prototypes
 and used for maximization.
 """
-struct GridSearch{T<:GridSpec} <: Optimizer
+struct GridSearch{T<:GridSpec} <: ZerothOrderOptimizer
     gs::T
 end
 
@@ -119,7 +119,9 @@ maximizer(s::GridSearchState) = s.x[argmax(s.fx)]
 
 maximum(s::GridSearchState) = maximum(s.fx)
 
-n_eval(s::GridSearchState) = length(s.fx)
+n_eval_f(s::GridSearchState) = length(s.fx)
+
+n_eval_g(s::GridSearchState) = 0
 
 tick!(f, s::GridSearchState, o::GridSearch, c::AbstractConstraints, i::Integer) = s
 

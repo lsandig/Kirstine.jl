@@ -20,6 +20,14 @@ end
 # analogous accessor to points(d::DesignMeasure)
 atoms(s::SignedMeasure) = eachcol(s.atoms)
 
+function Base.:(==)(s1::SignedMeasure, s2::SignedMeasure)
+    return s1.weights == s2.weights && s1.atoms == s2.atoms
+end
+
+function Base.hash(s::SignedMeasure, h::UInt)
+    return hash(s.atoms, hash(s.weights, h))
+end
+
 struct DesignConstraints{N,T<:DesignRegion{N}} <: AbstractConstraints
     dr::T
     fixw::Vector{Bool}
@@ -132,6 +140,98 @@ function construct_grid(
     return g
 end
 
+# Note: in contrast to ap_diff(p, q), this does _not_ consider the last weight to be specified implicitly.
+# For Frank-Wolfe it is more convenient to use the full K-dimensional weights vector.
+function fw_norm(s::SignedMeasure)
+    acc = 0.0
+    for i in 1:length(s.atoms)
+        acc += s.atoms[i]^2
+    end
+    for k in 1:length(s.weights)
+        acc += s.weights[k]^2
+    end
+    return sqrt(acc)
+end
+
+function fw_gradient_length(d::DesignMeasure, c::DesignConstraints)
+    K = numpoints(d)
+    dim = length(first(points(d)))
+    return (K - sum(c.fixp)) * dim + K - sum(c.fixw)
+end
+
+# Since we're only optimizing weights, our convex region is a probability simplex.
+# For a K-point design, its vertices v_1, ..., v_K are the unit basis vectors of ℝ^K.
+# In Frank-Wolfe notation, to maximize v_k' * g,
+# we just need to find the index of the largest element of g
+# and return the corresponding v_k.
+function fw_linear_maximization_oracle!(
+    v::DesignMeasure,
+    gx::AbstractVector{<:Real},
+    c::DesignConstraints,
+)
+    !all(c.fixp) && error("only implemented for fixed points")
+    any(c.fixw) && error("only implemented for all weights non-fixed")
+    v.weights .= 0
+    v.weights[argmax(gx)] = 1
+    return v
+end
+
+function fw_evaluate_linearization(
+    gx::AbstractVector{<:Real},
+    s::SignedMeasure,
+    c::DesignConstraints,
+)
+    !all(c.fixp) && error("only implemented for fixed points")
+    return dot(gx, s.weights)
+end
+
+function fw_evaluate_linearization(
+    gx::AbstractVector{<:Real},
+    d::DesignMeasure,
+    c::DesignConstraints,
+)
+    !all(c.fixp) && error("only implemented for fixed points")
+    return dot(gx, d.weights)
+end
+
+# Note: assumes that any fixed entries are identical for all design measures in qs.
+# This does _not_ handle non-convex design regions,
+# and does _not_ correct for numerical errors that might move the point outside of the region.
+function ap_convex_combination!(
+    p::DesignMeasure,
+    alpha::AbstractVector{<:Real},
+    qs::AbstractVector{DesignMeasure},
+    c::DesignConstraints,
+)
+    if length(alpha) != length(qs)
+        throw(ArgumentError("not the same number of points and weights"))
+    end
+    sum(alpha) ≈ 1.0 || throw(ArgumentError("sum(alpha) must be ≈ 1"))
+    for k in 1:length(p.weights)
+        if c.fixw[k]
+            p.weights[k] = qs[1].weights[k]
+        else
+            p.weights[k] = 0
+            for i in 1:length(alpha)
+                p.weights[k] += alpha[i] * qs[i].weights[k]
+                p.weights[k] = min(p.weights[k], 1.0)
+            end
+        end
+    end
+    p.weights ./= sum(p.weights)
+    for k in 1:numpoints(p)
+        if c.fixp[k]
+            points(p)[k] .= points(qs[1])[k]
+        else
+            points(p)[k] .= 0
+            for i in 1:length(alpha)
+                points(p)[k] .+= alpha[i] .* points(qs[i])[k]
+            end
+        end
+    end
+    return p
+end
+
 function ap_rand!(d::DesignMeasure, c::DesignConstraints)
     K = numpoints(d)
     pts = points(d)
@@ -177,6 +277,12 @@ end
 function ap_copy!(to::DesignMeasure, from::DesignMeasure)
     to.weights .= from.weights
     to.points .= from.points
+    return to
+end
+
+function ap_copy!(to::SignedMeasure, from::SignedMeasure)
+    to.weights .= from.weights
+    to.atoms .= from.atoms
     return to
 end
 

@@ -81,10 +81,12 @@ end
             @test length(r1.trace_state) == 1
             @test r1.trace_x[1].x == xstar
             @test r1.trace_fx[1] == 0
-            @test r1.n_eval == 121
+            @test r1.n_eval_f == 121
+            @test length(r1.trace_gx) == 0
 
             @test r2.maximizer.x == [1.5, 1.5]
             @test r2.maximum == -0.5
+            @test length(r2.trace_gx) == 0
         end
     end
 end

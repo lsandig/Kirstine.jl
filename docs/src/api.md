@@ -56,6 +56,8 @@ and are used as part of a `ProblemSolvingStrategy`.
 
 ```@docs
 Optimizer
+Kirstine.ZerothOrderOptimizer
+Kirstine.FirstOrderOptimizer
 OptimizationResult
 Pso
 Pso()
@@ -63,6 +65,12 @@ GridSearch
 GridSearch()
 GridSpec
 ProductGrid
+Kirstine.FrankWolfe
+Kirstine.FrankWolfe(::Integer, ::Kirstine.StepSizeStrategy, ::Bool)
+Kirstine.StepSizeStrategy
+Kirstine.OpenLoop
+Kirstine.ConstNumIter
+Kirstine.Adaptive
 ```
 
 ## Design Criteria

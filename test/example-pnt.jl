@@ -80,3 +80,12 @@ function Kirstine.ap_add!(d1::PntDiff, d2::PntDiff)
     d1.v .+= d2.v
     return d1
 end
+
+function Kirstine.ap_dist(p1::Pnt, p2::Pnt)
+    return sqrt(sum((p1.x .- p2.x) .^ 2))
+end
+
+function Kirstine.ap_copy!(d1::PntDiff, d2::PntDiff)
+    d1.v .= d2.v
+    return d1
+end

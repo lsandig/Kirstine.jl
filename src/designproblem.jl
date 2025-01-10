@@ -245,6 +245,21 @@ function derivative_constants(at::DesignMeasure, dp::DesignProblem)
     return DPDerivativeConstants(gc)
 end
 
+function derivative_constants!(
+    dc::DPDerivativeConstants,
+    w::DPWorkspace,
+    d::DesignMeasure,
+    dp::DesignProblem,
+    oc::DPObjectiveConstants,
+)
+    cpar = covariate_parameterization(dp)
+    pk = prior_knowledge(dp)
+    cr = criterion(dp)
+    na = normal_approximation(dp)
+    gateaux_constants!(dc.gc, w.mw, w.nw, w.c, cr, d, model(dp), cpar, pk, oc.tc, na)
+    return dc
+end
+
 function objective!(
     w::DPWorkspace,
     d::DesignMeasure,
@@ -301,6 +316,25 @@ function gateauxderivative!(
         average_fishermatrix!(w.nw.r_x_r, w.mw, weights(direction), m, w.c, pk_p[i])
         informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
         acc += pk_w[i] * gateaux_integrand(dc.gc.A[i], w.nw.r_x_r, dc.gc.tr_B[i])
+    end
+    return acc
+end
+
+function sensitivity!(
+    w::DPWorkspace,
+    direction::DesignMeasure,
+    dp::DesignProblem,
+    dc::DPDerivativeConstants,
+)
+    update_covariates!(w.c, direction, model(dp), covariate_parameterization(dp))
+    update_model_workspace!(w.mw, model(dp), w.c)
+    pk_w, pk_p = weights(prior_knowledge(dp)), parameters(prior_knowledge(dp))
+    acc = 0.0
+    dir_w = weights(direction)
+    for i in 1:length(pk_p)
+        average_fishermatrix!(w.nw.r_x_r, w.mw, dir_w, model(dp), w.c, pk_p[i])
+        informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
+        acc += pk_w[i] * sensitivity_integrand(dc.gc.A[i], w.nw.r_x_r)
     end
     return acc
 end

@@ -22,6 +22,25 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
         end
     end
 
+    @testset "==" begin
+        let d1 = Kirstine.SignedMeasure([1 3; 2 4], [0.1, 0.9]),
+            d2 = Kirstine.SignedMeasure([1 3; 2 4], [0.1, 0.9])
+
+            @test d1 == d2
+            @test d1 !== d2
+        end
+    end
+
+    @testset "hash" begin
+        let d1 = Kirstine.SignedMeasure([1.0;;], [1.0]),
+            d2 = Kirstine.SignedMeasure([2.0;;], [1.0]),
+            d3 = Kirstine.SignedMeasure([1.0;;], [1.0])
+
+            # implicitly constructs a Set, which calls hash()
+            @test unique([d1, d2, d3]) == [d1, d2]
+        end
+    end
+
     @testset "DesignConstraints" begin
         # inner constructor
         let dr = DesignInterval(:a => (0, 1)), dcon = Kirstine.DesignConstraints
@@ -149,6 +168,91 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
         end
     end
 
+    @testset "fw_gradient_length" begin
+        let d = uniform_design([[0, 0], [1, 1], [2, 3]]),
+            dr = DesignInterval(:a => (0, 5), :b => (0, 5)),
+            c1 = Kirstine.DesignConstraints(dr, fill(false, 3), fill(false, 3)),
+            c2 = Kirstine.DesignConstraints(dr, fill(false, 3), fill(true, 3)),
+            c3 = Kirstine.DesignConstraints(dr, [true, false, false], [false, true, true])
+
+            @test Kirstine.fw_gradient_length(d, c1) == 9
+            @test Kirstine.fw_gradient_length(d, c2) == 3
+            @test Kirstine.fw_gradient_length(d, c3) == 4
+        end
+    end
+
+    @testset "fw_norm" begin
+        let s = Kirstine.SignedMeasure([1 2 3], [-0.1, 0.2, 0.3])
+            @test Kirstine.fw_norm(s) ≈ sqrt(14.14)
+        end
+    end
+
+    @testset "fw_linear_maximization_oracle" begin
+        let lmo! = Kirstine.fw_linear_maximization_oracle!,
+            dr = DesignInterval(:a => (0, 5), :b => (0, 5)),
+            v = random_design(dr, 3), # will be overwritten
+            v_copy = deepcopy(v),
+            g = [1, 42, -1],
+            c1 = Kirstine.DesignConstraints(dr, fill(false, 3), fill(false, 3)),
+            c3 = Kirstine.DesignConstraints(dr, [false, false, true], fill(true, 3)),
+            c2 = Kirstine.DesignConstraints(dr, fill(false, 3), fill(true, 3))
+
+            lmo!(v, g, c2)
+            @test weights(v) == [0, 1, 0]
+            @test points(v) == points(v_copy) # don't touch the points
+            bytes_allocated = @allocated lmo!(v, g, c2)
+            @test bytes_allocated == 0
+            @test_throws "fixed points" lmo!(v, g, c1)
+            @test_throws "weights non-fixed" lmo!(v, g, c3)
+        end
+    end
+
+    @testset "fw_evaluate_linearization" begin
+        let gx = [1.0, -2.0, 3.0],
+            s = Kirstine.SignedMeasure([5 4 6], [-0.1, 0.2, 0.4]),
+            d = DesignMeasure([5 4 6], [0.4, 0.1, 0.5]),
+            dr = DesignInterval(:a => (0, 10)),
+            c1 = Kirstine.DesignConstraints(dr, fill(false, 3), fill(false, 3)),
+            c2 = Kirstine.DesignConstraints(dr, fill(false, 3), fill(true, 3)),
+            fel = Kirstine.fw_evaluate_linearization
+
+            # on signed measure
+            res = fel(gx, s, c2)
+            @test res ≈ 0.7
+            bytes_allocated = @allocated fel(gx, s, c2)
+            @test_broken bytes_allocated == 0
+            @test_throws "fixed points" fel(gx, s, c1)
+
+            # on design measure
+            @test fel(gx, d, c2) ≈ 1.7
+            @test_throws "fixed points" fel(gx, d, c1)
+        end
+    end
+
+    @testset "ap_convex_combination" begin
+        let d1 = DesignMeasure([[1, 2], [3, 4], [5, 6]], [0.1, 0.2, 0.7]),
+            d2 = DesignMeasure([[4, 2], [3, 4], [-2, 3]], [0.1, 0.4, 0.5]),
+            d3 = DesignMeasure([[4, 2], [3, 4], [7, 1]], [0.1, 0.3, 0.6]),
+            fixw = [true, false, false],
+            fixp = [false, true, false],
+            dr = DesignInterval(:a => (-10, 10), :b => (-10, 10)),
+            out = random_design(dr, 3),
+            alpha = [0.3, 0.2, 0.5],
+            con = Kirstine.DesignConstraints(dr, fixw, fixp),
+            apc! = Kirstine.ap_convex_combination!
+
+            apc!(out, alpha, [d1, d2, d3], con)
+
+            @test weights(out) ≈ [0.1, 0.29, 0.61]
+            @test points(out)[1] == [3.1, 2]
+            @test points(out)[2] == [3, 4]
+            @test points(out)[3] == [4.6, 2.9]
+
+            @test_throws "same number" apc!(out, alpha[1:2], [d1, d2, d3], con)
+            @test_throws "≈ 1" apc!(out, [0.1, 0.1, 0.87], [d1, d2, d3], con)
+        end
+    end
+
     @testset "ap_rand!(DesignPoint)" begin
         # check that constraints are handled correctly
         let dr = DesignInterval(:a => (0, 5)),
@@ -235,6 +339,17 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
             # ... but non-egality
             @test to !== from
             # check that first argument is returned
+            @test r === to
+        end
+
+        let from = Kirstine.SignedMeasure([1 2], [0.1, 0.9]),
+            to = Kirstine.SignedMeasure([3 4], [0.2, 0.8]),
+            ref = deepcopy(from),
+            r = Kirstine.ap_copy!(to, from)
+
+            @test from == ref
+            @test to == from
+            @test to !== from
             @test r === to
         end
     end

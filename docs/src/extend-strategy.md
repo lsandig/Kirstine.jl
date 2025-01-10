@@ -32,10 +32,12 @@ we can also implement a [type recipe](https://docs.juliaplots.org/latest/recipes
 When it comes to plotting a Vector of [`OptimizationResult`](@ref)s,
 Kirstine.jl already provides a basic recipe that we can reuse.
 
+For simplicity we require the low-level optimizer to be of order zero.
+
 ```@example main
 using Kirstine, RecipesBase, Plots
 
-struct MultipleRuns{T<:Optimizer} <: ProblemSolvingStrategy
+struct MultipleRuns{T<:Kirstine.ZerothOrderOptimizer} <: ProblemSolvingStrategy
     optimizer::T
     prototype::DesignMeasure
     steps::Int64
@@ -47,7 +49,7 @@ struct MultipleRuns{T<:Optimizer} <: ProblemSolvingStrategy
         steps::Integer,
         fixedweights::AbstractVector{<:Integer} = Int64[],
         fixedpoints::AbstractVector{<:Integer} = Int64[],
-    ) where T<:Optimizer
+    ) where T<:Kirstine.ZerothOrderOptimizer
         new{T}(optimizer, prototype, steps, fixedweights, fixedpoints)
     end
 end

@@ -79,7 +79,7 @@ end
 
 function solve_with(
     adp::AbstractDesignProblem,
-    strategy::DirectMaximization,
+    strategy::DirectMaximization{<:ZerothOrderOptimizer},
     trace_state::Bool,
 )
     constraints = DesignConstraints(
@@ -97,5 +97,25 @@ function solve_with(
         constraints;
         trace_state = trace_state,
     )
+    return DirectMaximizationResult(or)
+end
+
+function solve_with(
+    adp::AbstractDesignProblem,
+    strategy::DirectMaximization{<:FirstOrderOptimizer},
+    trace_state::Bool,
+)
+    (; optimizer, prototype, fixedpoints, fixedweights) = strategy
+    K = numpoints(prototype)
+    constraints = DesignConstraints(prototype, region(adp), fixedweights, fixedpoints)
+    !all(constraints.fixp) && error("only implemented for fixed points")
+    oc = objective_constants(adp)
+    dc = derivative_constants(prototype, adp)
+    opd = one_point_design(first(points(prototype)))
+    wf = allocate_workspace(prototype, adp)
+    wg = allocate_workspace(opd, adp)
+    f = d -> objective!(wf, d, adp, oc)
+    g! = (g, d) -> objective_gradient_weights!(g, opd, wg, wf, d, adp, dc, oc)
+    or = optimize(f, g!, optimizer, [prototype], constraints; trace_state = trace_state)
     return DirectMaximizationResult(or)
 end

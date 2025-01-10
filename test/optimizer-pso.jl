@@ -136,6 +136,7 @@ include("example-pnt.jl")
             @test (mean_speed[end] / mean_speed[2])^(1 / (pso.iterations - 1)) < 1
             # number of iterations requested is not off by 1 (initial state is iteration 1)
             @test length(r1.trace_fx) == 100
+            @test length(r1.trace_gx) == 0
             @test length(r1.trace_x) == 100
             @test length(r2.trace_state) == 100
 

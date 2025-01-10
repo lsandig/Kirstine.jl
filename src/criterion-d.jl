@@ -40,48 +40,83 @@ end
 
 ## Gateaux derivative: Identity ##
 
-function gateaux_constants(
+function gateaux_constants!(
+    gc::GCPriorSample,
+    mw::ModelWorkspace,
+    nw::NIMWorkspace,
+    c::AbstractVector{<:Covariate},
     dc::DCriterion,
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
-    trafo::Identity,
+    tc::TCIdentity,
     na::NormalApproximation,
 )
-    A = inv_informationmatrices(d, m, cp, pk, na)
-    tr_B = fill(parameter_dimension(pk), length(parameters(pk)))
-    return GCPriorSample(A, tr_B)
+    ps = parameters(pk)
+    update_covariates!(c, d, m, cp)
+    update_model_workspace!(mw, m, c)
+    for i in 1:length(ps)
+        average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, ps[i])
+        informationmatrix!(nw.r_x_r, na)
+        mnorm = opnorm1_sym_u(nw.r_x_r)
+        potrf!('U', nw.r_x_r)
+        potri!('U', nw.r_x_r)
+        invmnorm = opnorm1_sym_u(nw.r_x_r)
+        # Test via reciprocal 1-norm condition number whether we consider M to be
+        # numerically singular (same criterion that solve() uses in R).
+        # Computing it as product of operator norms is from LinerAlgebra.cond(),
+        # the -1 is a dummy value, we don't actually know the singular value's index.
+        inv(mnorm * invmnorm) < eps(Float64) && throw(SingularException(-1))
+        gc.A[i] .= nw.r_x_r # only upper triangle
+        gc.tr_B[i] = parameter_dimension(pk)
+    end
+    return gc
 end
 
 ## Gateaux derivative: DeltaMethod ##
 
-function gateaux_constants(
+function gateaux_constants!(
+    gc::GCPriorSample,
+    mw::ModelWorkspace,
+    nw::NIMWorkspace,
+    c::AbstractVector{<:Covariate},
     dc::DCriterion,
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
-    trafo::DeltaMethod,
+    tc::TCDeltaMethod,
     na::NormalApproximation,
 )
-    # This computes Symmetric versions of of M(ζ,θ)^{-1}.
-    iim = inv_informationmatrices(d, m, cp, pk, na)
-    tc = trafo_constants(trafo, pk)
-    nw = NIMWorkspace(parameter_dimension(pk), codomain_dimension(trafo, pk))
-
-    # Note that A will be dense.
-    A = map(iim, tc.jm) do iM, DT
-        # compute (Q(ζ,θ))^{-1} from M(ζ,θ)^{-1}.
-        # since typeof(trafo) == DeltaMethod, we know that the result will be inverted
-        nw.r_x_r .= iM
-        nw.r_is_inv = true
-        apply_transformation!(nw, trafo, DT)
-        # Now, nw.t_x_t contains the upper triangle of (Q(ζ,θ))^{-1}.
-        # Instead of an explicit inversion, we solve (Q(ζ,θ))^{-1} X = DT for X.
-        C = DT' * (Symmetric(nw.t_x_t) \ DT)
-        return iM * C * iM
+    ps = parameters(pk)
+    update_covariates!(c, d, m, cp)
+    update_model_workspace!(mw, m, c)
+    for i in 1:length(ps)
+        average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, ps[i])
+        informationmatrix!(nw.r_x_r, na)
+        mnorm = opnorm1_sym_u(nw.r_x_r)
+        gc.A[i] .= nw.r_x_r
+        potrf!('U', gc.A[i])
+        potri!('U', gc.A[i])
+        invmnorm = opnorm1_sym_u(gc.A[i])
+        # check for numerical singularity, see Identity method
+        inv(mnorm * invmnorm) < eps(Float64) && throw(SingularException(-1))
+        gc.A[i] .= nw.r_x_r # store it temporarily here, apply_transformation!() will overwrite it
+        # nw.t_x_t := inv(Q)
+        nw.r_is_inv = false
+        _apply_transformation_delta!(nw, tc.jm[i])
+        # nw.r_x_t := inv(M) * DT'
+        nw.r_x_t .= tc.jm[i]'
+        posv!('U', gc.A[i], nw.r_x_t)
+        # nw.t_x_r := DT * inv(M)
+        nw.t_x_r .= nw.r_x_t'
+        # nw.t_x_r := Q * DT * inv(M)
+        posv!('U', nw.t_x_t, nw.t_x_r)
+        # nw.r_x_r := inv(M) * DT' * Q * DT * inv(M)
+        gemm!('N', 'N', 1.0, nw.r_x_t, nw.t_x_r, 0.0, nw.r_x_r)
+        gc.A[i] .= nw.r_x_r # dense
+        gc.tr_B[i] = size(nw.t_x_t, 1)
     end
-    tr_B = fill(codomain_dimension(trafo, pk), length(parameters(pk)))
-    return GCPriorSample(A, tr_B)
+    return gc
 end

@@ -83,7 +83,7 @@ include("example-compartment.jl")
         end
     end
 
-    @testset "gateaux_constants" begin
+    @testset "gateaux_constants!" begin
         # Identity transformation
         #
         # The GateauxConstants wrap the square and the trace of the inverse of the
@@ -106,23 +106,30 @@ include("example-compartment.jl")
             g2 = TPCParameter(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
             pk = PriorSample([g1, g2]),
             trafo = Identity(),
+            tc = Kirstine.trafo_constants(trafo, pk),
             na = FisherMatrix(),
             pgc = Kirstine.gateaux_constants,
+            pgc! = Kirstine.gateaux_constants!,
             # reference information matrices, already wrapped in Symmetric()
             m1 = informationmatrix(a1, m, cp, g1, na),
             m2 = informationmatrix(a1, m, cp, g2, na),
-            gc = pgc(dc, a1, m, cp, pk, trafo, na)
+            gc = Kirstine.GCPriorSample([zeros(3, 3), zeros(3, 3)], zeros(2)),
+            mw = Kirstine.NRWorkspace(numpoints(a1), 1, 3),
+            nw = Kirstine.NIMWorkspace(3, 3),
+            c = implied_covariates(a1, m, cp)
+
+            pgc!(gc, mw, nw, c, dc, a1, m, cp, pk, tc, na)
 
             # Singular designs should raise an exception. It will be caught by the caller.
             @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
             @test_throws "SingularException" pgc(dc, a4_ni, m, cp, pk, trafo, na)
-            @test isa(gc, Kirstine.GCPriorSample)
-            @test length(gc.A) == 2
-            @test length(gc.tr_B) == 2
             @test Symmetric(gc.A[1]) ≈ inv(m1)^2
             @test Symmetric(gc.A[2]) ≈ inv(m2)^2
             @test gc.tr_B[1] ≈ tr(inv(m1))
             @test gc.tr_B[2] ≈ tr(inv(m2))
+            # Note: needs to be tested after pgc! was already called once
+            bytes_allocated = @allocated pgc!(gc, mw, nw, c, dc, a1, m, cp, pk, tc, na)
+            @test bytes_allocated == 0
         end
 
         # DeltaMethod transformation
@@ -148,23 +155,30 @@ include("example-compartment.jl")
             pk = PriorSample([g1, g2]),
             J = [Dauc(g1), Dauc(g2)],
             trafo = DeltaMethod(Dauc),
+            tc = Kirstine.trafo_constants(trafo, pk),
             na = FisherMatrix(),
             pgc = Kirstine.gateaux_constants,
+            pgc! = Kirstine.gateaux_constants!,
             # reference information matrices, already wrapped in Symmetric()
             m1 = informationmatrix(a1, m, cp, g1, na),
             m2 = informationmatrix(a1, m, cp, g2, na),
-            gc = pgc(dc, a1, m, cp, pk, trafo, na)
+            gc = Kirstine.GCPriorSample([zeros(3, 3), zeros(3, 3)], zeros(2)),
+            mw = Kirstine.NRWorkspace(numpoints(a1), 1, 3),
+            nw = Kirstine.NIMWorkspace(3, 1),
+            c = implied_covariates(a1, m, cp)
+
+            pgc!(gc, mw, nw, c, dc, a1, m, cp, pk, tc, na)
 
             # Singular designs should raise an exception. It will be caught by the caller.
             @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
             @test_throws "SingularException" pgc(dc, a4_ni, m, cp, pk, trafo, na)
-            @test isa(gc, Kirstine.GCPriorSample)
-            @test length(gc.A) == 2
-            @test length(gc.tr_B) == 2
             @test Symmetric(gc.A[1]) ≈ inv(m1) * J[1]' * J[1] * inv(m1)
             @test Symmetric(gc.A[2]) ≈ inv(m2) * J[2]' * J[2] * inv(m2)
             @test gc.tr_B[1] ≈ tr(J[1] * inv(m1) * J[1]')
             @test gc.tr_B[2] ≈ tr(J[2] * inv(m2) * J[2]')
+            # Note: needs to be tested after pgc! was already called once
+            bytes_allocated = @allocated pgc!(gc, mw, nw, c, dc, a1, m, cp, pk, tc, na)
+            @test bytes_allocated == 0
         end
     end
 

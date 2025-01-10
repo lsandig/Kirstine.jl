@@ -25,6 +25,27 @@ struct GCPriorSample <: GateauxConstants
     tr_B::Vector{Float64}
 end
 
+function gateaux_constants(
+    dc::DesignCriterion,
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample,
+    trafo::Transformation,
+    na::NormalApproximation,
+)
+    t = codomain_dimension(trafo, pk)
+    r = parameter_dimension(pk)
+    numdraws = length(parameters(pk))
+    gc = GCPriorSample([zeros(r, r) for _ in 1:numdraws], zeros(numdraws))
+    mw = allocate_model_workspace(numpoints(d), m, pk)
+    nw = NIMWorkspace(r, t)
+    c = implied_covariates(d, m, cp)
+    tc = trafo_constants(trafo, pk)
+    gateaux_constants!(gc, mw, nw, c, dc, d, m, cp, pk, tc, na)
+    return gc
+end
+
 """
     implied_covariates(d::DesignMeasure, m::M, cp::Cp)
 
@@ -59,6 +80,10 @@ end
 # But producing a dense matrix does not hurt either.
 function gateaux_integrand(A::AbstractMatrix, nim_direction::AbstractMatrix, tr_B::Real)
     return tr_prod(A, nim_direction, :U) - tr_B
+end
+
+function sensitivity_integrand(A::AbstractMatrix, nim_direction::AbstractMatrix)
+    return tr_prod(A, nim_direction, :U)
 end
 
 ## normalized information matrix for θ ##
@@ -181,7 +206,7 @@ function apply_transformation!(nw::NIMWorkspace, trafo::Identity, _)
     return nw
 end
 
-function apply_transformation!(nw::NIMWorkspace, trafo::DeltaMethod, jm::Matrix{Float64})
+function _apply_transformation_delta!(nw::NIMWorkspace, jm::Matrix{Float64})
     # Denote the Jacobian matrix of T by J and the normalized information matrix by M. We
     # want to efficiently calculate J * inv(M) * J'.
     #
@@ -222,6 +247,10 @@ function apply_transformation!(nw::NIMWorkspace, trafo::DeltaMethod, jm::Matrix{
     # Note that for this method, the result is not just an upper triangle, but always a
     # dense matrix.
     return nw
+end
+
+function apply_transformation!(nw::NIMWorkspace, trafo::DeltaMethod, jm::Matrix{Float64})
+    return _apply_transformation_delta!(nw, jm)
 end
 
 ## linear algebra shortcuts ##
@@ -267,6 +296,30 @@ function tr_prod(A::AbstractMatrix, B::AbstractMatrix, uplo::Symbol)
     return acc
 end
 
+function mirror_to_lower_triangle!(m::AbstractMatrix)
+    n = size(m, 1) # Note: we assume m to be square
+    for j in 1:(n - 1)
+        for i in (j + 1):n
+            m[i, j] = m[j, i]
+        end
+    end
+    return m
+end
+
+function opnorm1_sym_u(A::AbstractMatrix{Float64})
+    # modeled after LinearAlgebra.opnorm1()
+    m, n = size(A)
+    nrm = 0.0
+    for j in 1:n
+        nrmj = 0.0
+        for i in 1:m
+            nrmj += i <= j ? abs(A[i, j]) : abs(A[j, i])
+        end
+        nrm = max(nrm, nrmj)
+    end
+    return nrm
+end
+
 ## abstract design problem interface ##
 
 function region end
@@ -287,6 +340,24 @@ function objective(d::DesignMeasure, adp::AbstractDesignProblem)
     oc = objective_constants(adp)
     w = allocate_workspace(d, adp)
     return objective!(w, d, adp, oc)
+end
+
+function objective_gradient_weights!(
+    g::AbstractVector{<:Real},
+    opd::DesignMeasure, # temporary variable for each of points(d)
+    wg::AbstractWorkspace,
+    wf::AbstractWorkspace,
+    d::DesignMeasure,
+    adp::AbstractDesignProblem,
+    dc::DerivativeConstants,
+    oc::ObjectiveConstants,
+)
+    derivative_constants!(dc, wf, d, adp, oc)
+    for k in 1:numpoints(d)
+        points(opd)[1] .= points(d)[k]
+        g[k] = sensitivity!(wg, opd, adp, dc)
+    end
+    return g
 end
 
 """
