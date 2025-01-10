@@ -141,7 +141,6 @@ iterations(o::FrankWolfe) = o.iterations
 mutable struct FrankWolfeState{T,U,V} <: OptimizerState{T,U}
     x::T
     v::T
-    v_minus_x::U
     direction::U
     stepsize::Float64
     fx::Float64
@@ -290,13 +289,12 @@ function Kirstine.optimizer_state(
     end
     x = deepcopy(only(prototypes))
     v = deepcopy(x)
-    vmx = deepcopy(ap_as_difference(v))
     dir = deepcopy(ap_as_difference(v))
     grad_length = fw_gradient_length(x, constraints)
     gx = fill(NaN, grad_length)
     as = [deepcopy(x)]
     work = fw_workspace(optimizer.stepsize, x, grad_length)
-    state = FrankWolfeState(x, v, vmx, dir, NaN, NaN, gx, NaN, [1.0], as, work, 0, 0, 0, 0)
+    state = FrankWolfeState(x, v, dir, NaN, NaN, gx, NaN, [1.0], as, work, 0, 0, 0, 0)
     # Here we perform the update corresponding to step t=0 in [^P23].
     # With OpenLoop this always gives an x1 that is on the boundary of the compact convex set
     # since the initial step size is 1.
@@ -317,17 +315,16 @@ function Kirstine.tick!(
     g!(state.gx, state.x)
     state.n_eval_g += 1
     fw_linear_maximization_oracle!(state.v, state.gx, constraints)
-    ap_diff!(state.v_minus_x, state.v, state.x)
+    ap_diff!(state.direction, state.v, state.x)
+    # Note: this is the gap for x from the previous iteration!
     state.frank_wolfe_gap =
-        fw_evaluate_linearization(state.gx, state.v_minus_x, constraints)
+        fw_evaluate_linearization(state.gx, state.direction, constraints)
     away = -1
     if optimizer.pairwise
         _, away = findmin(state.active_set) do a
             fw_evaluate_linearization(state.gx, a, constraints)
         end
         ap_diff!(state.direction, state.v, state.active_set[away])
-    else
-        ap_copy!(state.direction, state.v_minus_x)
     end
     gamma_max = optimizer.pairwise ? state.alpha[away] : 1.0
     # In [^P23] the time index starts at t=0.

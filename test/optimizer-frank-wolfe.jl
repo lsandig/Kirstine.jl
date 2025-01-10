@@ -203,7 +203,7 @@ end
             @test state.x !== c.lb
             @test state.x !== x0
             @test state.v == c.lb
-            @test state.v_minus_x.v == [-5]
+            @test state.direction.v == [-5]
             @test state.stepsize == 1
             @test state.fx == -1
             @test state.gx == [-8]
