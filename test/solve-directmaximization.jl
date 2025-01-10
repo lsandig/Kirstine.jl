@@ -129,7 +129,7 @@ include("example-emax.jl")
             ),
             exact_solution = emax_solution(guess, region(dp)),
             fw = DirectMaximization(;
-                optimizer = FrankWolfe(10000, Kirstine.ConstNumIter()),
+                optimizer = FrankWolfe(10000, Kirstine.ConstNumIter(), false),
                 prototype = DesignMeasure(points(exact_solution), [0.1, 0.85, 0.05]),
                 fixedpoints = 1:3,
             )

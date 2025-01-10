@@ -124,14 +124,15 @@ This prototype will be used as the starting value.
 @kwdef struct FrankWolfe{T<:StepSizeStrategy} <: FirstOrderOptimizer
     iterations::Int64
     stepsize::StepSizeStrategy
+    pairwise::Bool
     @doc """
-        FrankWolfe(; iterations::Integer, stepsize::StepSizeStrategy)
+        FrankWolfe(; iterations::Integer, stepsize::StepSizeStrategy, pairwise::Bool)
 
     Set up parameters for the Frank-Wolfe algorithm.
     """
-    function FrankWolfe(iterations::Integer, s::StepSizeStrategy)
+    function FrankWolfe(iterations::Integer, s::StepSizeStrategy, pairwise::Bool)
         iterations <= 0 && throw(ArgumentError("number of iterations must be positive"))
-        return new{typeof(s)}(iterations, s)
+        return new{typeof(s)}(iterations, s, pairwise)
     end
 end
 
