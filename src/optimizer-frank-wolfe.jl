@@ -141,11 +141,16 @@ mutable struct FrankWolfeState{T,U,V} <: OptimizerState{T,U}
     x::T
     v::T
     v_minus_x::U
+    direction::U
     stepsize::Float64
     fx::Float64
     gx::Vector{<:Float64}
     frank_wolfe_gap::Float64
+    alpha::Vector{Float64}
+    active_set::Vector{T}
     work::V
+    active_points_added::Int64
+    active_points_removed::Int64
     n_eval_f::Int64
     n_eval_g::Int64
 end
@@ -267,11 +272,13 @@ function Kirstine.optimizer_state(
     end
     x = deepcopy(only(prototypes))
     v = deepcopy(x)
-    x_diff = deepcopy(ap_as_difference(v))
+    vmx = deepcopy(ap_as_difference(v))
+    dir = deepcopy(ap_as_difference(v))
     grad_length = fw_gradient_length(x, constraints)
     gx = fill(NaN, grad_length)
+    as = [deepcopy(x)]
     work = fw_workspace(optimizer.stepsize, x, grad_length)
-    state = FrankWolfeState(x, v, x_diff, NaN, NaN, gx, NaN, work, 0, 0)
+    state = FrankWolfeState(x, v, vmx, dir, NaN, NaN, gx, NaN, [1.0], as, work, 0, 0, 0, 0)
     # Here we perform the update corresponding to step t=0 in [^P23].
     # With OpenLoop this always gives an x1 that is on the boundary of the compact convex set
     # since the initial step size is 1.
@@ -292,7 +299,6 @@ function Kirstine.tick!(
     g!(state.gx, state.x)
     state.n_eval_g += 1
     fw_linear_maximization_oracle!(state.v, state.gx, constraints)
-    state.n_eval_f += 1
     ap_diff!(state.v_minus_x, state.v, state.x)
     state.frank_wolfe_gap =
         fw_evaluate_linearization(state.gx, state.v_minus_x, constraints)
@@ -300,9 +306,19 @@ function Kirstine.tick!(
     # Since we start to count from iter=1,
     # we have to subtract 1 from it in the stepsize computation.
     state.stepsize = stepsize!(g!, state, optimizer, constraints, iter - 1)
-    ap_mul!(state.v_minus_x, state.stepsize)
-    ap_add!(state.x, state.v_minus_x, constraints)
+    state.alpha .*= (1 - state.stepsize)
+    if !(state.v in state.active_set)
+        state.active_points_added += 1
+        push!(state.active_set, deepcopy(state.v))
+        push!(state.alpha, state.stepsize)
+    else
+        idx = findfirst(==(state.v), state.active_set)
+        state.alpha[idx] += state.stepsize
+        state.alpha[idx] = min(state.alpha[idx], 1.0)
+    end
+    ap_convex_combination!(state.x, state.alpha, state.active_set, constraints)
     state.fx = f(state.x)
+    state.n_eval_f += 1
     return state
 end
 

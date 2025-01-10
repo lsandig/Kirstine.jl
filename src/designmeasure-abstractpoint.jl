@@ -185,6 +185,44 @@ function fw_evaluate_linearization(
     return dot(gx, s.weights)
 end
 
+# Note: assumes that any fixed entries are identical for all design measures in qs.
+# This does _not_ handle non-convex design regions,
+# and does _not_ correct for numerical errors that might move the point outside of the region.
+function ap_convex_combination!(
+    p::DesignMeasure,
+    alpha::AbstractVector{<:Real},
+    qs::AbstractVector{DesignMeasure},
+    c::DesignConstraints,
+)
+    if length(alpha) != length(qs)
+        throw(ArgumentError("not the same number of points and weights"))
+    end
+    sum(alpha) ≈ 1.0 || throw(ArgumentError("sum(alpha) must be ≈ 1"))
+    for k in 1:length(p.weights)
+        if c.fixw[k]
+            p.weights[k] = qs[1].weights[k]
+        else
+            p.weights[k] = 0
+            for i in 1:length(alpha)
+                p.weights[k] += alpha[i] * qs[i].weights[k]
+                p.weights[k] = min(p.weights[k], 1.0)
+            end
+        end
+    end
+    p.weights ./= sum(p.weights)
+    for k in 1:numpoints(p)
+        if c.fixp[k]
+            points(p)[k] .= points(qs[1])[k]
+        else
+            points(p)[k] .= 0
+            for i in 1:length(alpha)
+                points(p)[k] .+= alpha[i] .* points(qs[i])[k]
+            end
+        end
+    end
+    return p
+end
+
 function ap_rand!(d::DesignMeasure, c::DesignConstraints)
     K = numpoints(d)
     pts = points(d)

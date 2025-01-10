@@ -33,6 +33,21 @@ function Kirstine.fw_norm(d::PntDiff)
     return norm(d.v)
 end
 
+function Kirstine.ap_convex_combination!(
+    p::Pnt,
+    as::AbstractVector{<:Real},
+    qs::AbstractVector{Pnt},
+    c::BoxConstraints,
+)
+    p.x .= 0
+    for i in 1:length(as)
+        p.x .+= as[i] .* qs[i].x
+    end
+    p.x .= max.(c.lb.x, p.x)
+    p.x .= min.(c.ub.x, p.x)
+    return p
+end
+
 @testset "optimizer-frank-wolfe.jl" begin
     @testset "OpenLoop" begin
         @test_throws ">= 1" Kirstine.OpenLoop(0)
@@ -180,6 +195,9 @@ end
             @test state.gx == [-8]
             @test state.n_eval_f == 1
             @test state.n_eval_g == 1
+            @test state.active_points_added == 1
+            @test state.active_points_removed == 0
+            @test state.active_set == [x0, c.lb]
         end
     end
 

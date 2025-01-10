@@ -223,6 +223,30 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
         end
     end
 
+    @testset "ap_convex_combination" begin
+        let d1 = DesignMeasure([[1, 2], [3, 4], [5, 6]], [0.1, 0.2, 0.7]),
+            d2 = DesignMeasure([[4, 2], [3, 4], [-2, 3]], [0.1, 0.4, 0.5]),
+            d3 = DesignMeasure([[4, 2], [3, 4], [7, 1]], [0.1, 0.3, 0.6]),
+            fixw = [true, false, false],
+            fixp = [false, true, false],
+            dr = DesignInterval(:a => (-10, 10), :b => (-10, 10)),
+            out = random_design(dr, 3),
+            alpha = [0.3, 0.2, 0.5],
+            con = Kirstine.DesignConstraints(dr, fixw, fixp),
+            apc! = Kirstine.ap_convex_combination!
+
+            apc!(out, alpha, [d1, d2, d3], con)
+
+            @test weights(out) ≈ [0.1, 0.29, 0.61]
+            @test points(out)[1] == [3.1, 2]
+            @test points(out)[2] == [3, 4]
+            @test points(out)[3] == [4.6, 2.9]
+
+            @test_throws "same number" apc!(out, alpha[1:2], [d1, d2, d3], con)
+            @test_throws "≈ 1" apc!(out, [0.1, 0.1, 0.87], [d1, d2, d3], con)
+        end
+    end
+
     @testset "ap_rand!(DesignPoint)" begin
         # check that constraints are handled correctly
         let dr = DesignInterval(:a => (0, 5)),
