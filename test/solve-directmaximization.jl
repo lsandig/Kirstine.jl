@@ -4,6 +4,7 @@
 module SolveDirectmaximizationTests
 using Test
 using Random: seed!
+using LinearAlgebra: SingularException
 using Kirstine
 
 include("example-emax.jl")
@@ -134,9 +135,14 @@ include("example-emax.jl")
             fw2 = Kirstine.FrankWolfe(50, a2, true),
             a3 = Kirstine.Adaptive(; initial_smoothness_estimate = Inf),
             fw3 = Kirstine.FrankWolfe(1, a3, true),
+            a4 = Kirstine.Adaptive(; initial_smoothness_estimate = 1),
+            fw4 = Kirstine.FrankWolfe(1, a4, true),
+            fw5 = Kirstine.FrankWolfe(2, Kirstine.OpenLoop(2), false),
             st1 = DirectMaximization(; optimizer = fw1, prototype = pro, fixedpoints = 1:3),
             st2 = DirectMaximization(; optimizer = fw2, prototype = pro, fixedpoints = 1:3),
-            st3 = DirectMaximization(; optimizer = fw3, prototype = pro, fixedpoints = 1:3)
+            st3 = DirectMaximization(; optimizer = fw3, prototype = pro, fixedpoints = 1:3),
+            st4 = DirectMaximization(; optimizer = fw4, prototype = pro, fixedpoints = 1:3),
+            st5 = DirectMaximization(; optimizer = fw5, prototype = pro, fixedpoints = 1:3)
 
             s1, r1 = solve(dp, st1)
             @test weights(s1) ≈ [1 / 3, 1 / 3, 1 / 3] rtol = 1e-2
@@ -148,6 +154,18 @@ include("example-emax.jl")
             # this should fail if we change something about the initial estimate
             L_est = optimization_result(r3).trace_state[1].work.smoothness_estimate
             @test L_est ≈ 262.573934
+
+            @test_logs(
+                (:error, r"increase the initial smoothness"),
+                match_mode = :any,
+                (@test_throws SingularException solve(dp, st4))
+            )
+
+            @test_logs(
+                (:error, "current design is singular"),
+                match_mode = :any,
+                (@test_throws SingularException solve(dp, st5))
+            )
         end
     end
 end

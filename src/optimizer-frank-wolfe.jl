@@ -274,7 +274,16 @@ function stepsize!(
         ap_mul!(w.d_tmp, gamma)
         ap_copy!(w.x_tmp, state.x)
         ap_add!(w.x_tmp, w.d_tmp, c)
-        g!(w.gx_tmp, w.x_tmp)
+        try
+            g!(w.gx_tmp, w.x_tmp)
+        catch e
+            if e isa SingularException
+                msg = """singular intermediate design in adaptive step-size computation,
+               it might help to increase the initial smoothness estimate"""
+                @error msg o.stepsize.initial_smoothness_estimate M gamma w.x_tmp
+            end
+            rethrow(e)
+        end
         state.n_eval_g += 1
         if fw_evaluate_linearization(w.gx_tmp, state.direction, c) >= 0
             w.smoothness_estimate = M
@@ -324,7 +333,12 @@ function tick!(
     constraints::AbstractConstraints,
     iter::Integer,
 )
-    g!(state.gx, state.x)
+    try
+        g!(state.gx, state.x)
+    catch e
+        @error "current design is singular" iter state.v state.x
+        rethrow(e)
+    end
     state.n_eval_g += 1
     fw_linear_maximization_oracle!(state.v, state.gx, constraints)
     ap_diff!(state.direction, state.v, state.x)
