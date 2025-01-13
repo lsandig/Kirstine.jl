@@ -119,6 +119,10 @@ A Frank-Wolfe optimizer.
     hence it is not exported and may be subject to breaking changes
     even in minor or patch version updates.
 
+    It is currently intended to be used for the re-weighting step of [`Exchange`](@ref).
+    For [`DirectMaximization`](@ref) it can currently only be used
+    when all design points are fixed.
+
 Two variants are implemented:
 a basic one that always moves towards the best vertex for the linearized problem
 (see Algorithm 4 in [^P23]),
