@@ -162,6 +162,8 @@ using Kirstine
             # return unchanged copy if nothing is dropped
             @test simplify_drop(d, 1e-7) == d
             @test simplify_drop(d, 1e-7) !== d
+            @test_throws "< 1" simplify_drop(d, 1)
+            @test_throws "< 1" simplify_drop(d, 1.5)
         end
 
         # One-point-designs should be returned as an unchanged copy.

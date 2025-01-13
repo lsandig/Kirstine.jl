@@ -398,6 +398,7 @@ Construct a new `DesignMeasure` where all design points with weights smaller tha
 The vector of remaining weights is re-normalized.
 """
 function simplify_drop(d::DesignMeasure, maxweight::Real)
+    maxweight < 1 || throw(ArgumentError("maxweight must be < 1"))
     if numpoints(d) == 1 # nothing to do for one-point-designs
         return deepcopy(d) # return a copy for consistency
     end
