@@ -31,7 +31,6 @@ import Base: maximum
 export @simple_model,
     @simple_parameter,
     ACriterion,
-    ProductGrid,
     CompositeDesignProblem,
     DCriterion,
     DeltaMethod,

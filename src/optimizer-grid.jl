@@ -23,7 +23,7 @@ abstract type GridSpec end
 function construct_grid end
 
 """
-    ProductGrid <: Kirstine.GridSpec
+    Kirstine.ProductGrid <: Kirstine.GridSpec
 
 A Cartesian product with the given number of grid points in each dimension.
 
@@ -32,8 +32,8 @@ A Cartesian product with the given number of grid points in each dimension.
 A 2-dimensional grid with 5×11 points:
 
 ```jldoctest
-julia> ProductGrid(5, 11)
-ProductGrid{2}((5, 11))
+julia> Kirstine.ProductGrid(5, 11)
+Kirstine.ProductGrid{2}((5, 11))
 ```
 """
 struct ProductGrid{N} <: GridSpec
@@ -98,8 +98,8 @@ so the dimensions of both must be equal.
 # Examples
 
 ```jldoctest
-julia> Kirstine.GridSearch(; gridspec = ProductGrid(11, 11))
-Kirstine.GridSearch{ProductGrid{2}}(ProductGrid{2}((11, 11)))
+julia> Kirstine.GridSearch(; gridspec = Kirstine.ProductGrid(11, 11))
+Kirstine.GridSearch{Kirstine.ProductGrid{2}}(Kirstine.ProductGrid{2}((11, 11)))
 ```
 """
 GridSearch(; gridspec::GridSpec) = GridSearch(gridspec)

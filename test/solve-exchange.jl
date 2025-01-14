@@ -109,23 +109,25 @@ include("example-emax.jl")
             ),
             exact_solution = emax_solution(guess, region(dp)),
             # grid that contains the points of the solution [[0], [2.5], [10]]
+            pg101 = Kirstine.ProductGrid(101),
             str1 = Exchange(;
                 optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
-                optimizer_direction = Kirstine.GridSearch(; gridspec = ProductGrid(101)),
+                optimizer_direction = Kirstine.GridSearch(; gridspec = pg101),
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 5,
             ),
             # grid that does not contain [2.5]
+            pg11 = Kirstine.ProductGrid(11),
             str2 = Exchange(;
                 optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
-                optimizer_direction = Kirstine.GridSearch(; gridspec = ProductGrid(11)),
+                optimizer_direction = Kirstine.GridSearch(; gridspec = pg11),
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 5,
             )
             # grid does not contain [2.5], but a prototype point is off-grid, single step
             str3 = Exchange(;
                 optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
-                optimizer_direction = Kirstine.GridSearch(; gridspec = ProductGrid(11)),
+                optimizer_direction = Kirstine.GridSearch(; gridspec = pg11),
                 candidate = uniform_design([[2.9], [0], [10]]),
                 steps = 1,
             )
