@@ -78,7 +78,7 @@ and the [mathematical background](math.md#Objective-Function).
 abstract type Transformation end
 
 """
-    DesignCriterion
+    Kirstine.DesignCriterion
 
 Supertype for optimal experimental design criteria.
 

@@ -76,7 +76,7 @@ Kirstine.Adaptive
 ## Design Criteria
 
 ```@docs
-DesignCriterion
+Kirstine.DesignCriterion
 DCriterion
 ACriterion
 objective

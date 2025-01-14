@@ -74,7 +74,7 @@ for the special case ``\Transformation(\Parameter)=\Parameter``.
 
 ## Implementation
 
-When a new `T <: DesignCriterion` is going to be used,
+When a new `T <: Kirstine.DesignCriterion` is going to be used,
 it needs a corresponding `U <: GateauxConstants`
 which wraps precomputed values for all expressions
 that do not depend on the direction of the Gateaux derivative.

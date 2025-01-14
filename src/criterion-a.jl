@@ -18,7 +18,7 @@
 #   tr[B(ζ,θ)] = tr[DT'(θ) DT(θ) M(ζ,θ)^{-1}].
 
 """
-    ACriterion <: DesignCriterion
+    ACriterion <: Kirstine.DesignCriterion
 
 Criterion for A-optimal experimental design.
 

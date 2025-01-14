@@ -44,7 +44,7 @@ Construct a design problem with some sensible defaults.
 
 # Arguments
 
-  - `criterion::DesignCriterion`
+  - `criterion::Kirstine.DesignCriterion`
   - `region::DesignRegion`
   - `model::Model`
   - `covariate_parameterization::CovariateParameterization`

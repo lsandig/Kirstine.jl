@@ -18,7 +18,7 @@
 #   tr[B(ζ,θ)] = t
 
 @doc raw"""
-    DCriterion
+    DCriterion <: Kirstine.DesignCriterion
 
 Criterion for D-optimal experimental design.
 
