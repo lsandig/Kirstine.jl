@@ -84,7 +84,7 @@ but also the [other necessary methods](api.md#Implementing-a-Nonlinear-Regressio
 ```@example main
 using Kirstine, Random, Plots
 
-@kwdef struct DTRMod <: NonlinearRegression
+@kwdef struct DTRMod <: Kirstine.NonlinearRegression
     sigma::Float64
     m::Int64
 end

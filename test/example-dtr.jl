@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-@kwdef struct DTRMod <: NonlinearRegression
+@kwdef struct DTRMod <: Kirstine.NonlinearRegression
     sigma::Float64
     m::Int64
 end

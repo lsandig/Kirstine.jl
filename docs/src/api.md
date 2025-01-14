@@ -109,7 +109,7 @@ See the [tutorial](tutorial.md) for a hands-on example.
 
 ```@docs
 Kirstine.Model
-NonlinearRegression
+Kirstine.NonlinearRegression
 Covariate
 CovariateParameterization
 Parameter
@@ -119,7 +119,7 @@ Parameter
 
 Suppose the following subtypes have been defined:
 
-  - `M <: NonlinearRegression`
+  - `M <: Kirstine.NonlinearRegression`
   - `C <: Covariate`
   - `Cp <: CovariateParameterization`
   - `P <: Parameter`
@@ -137,7 +137,7 @@ dimension
 
 !!! note
     
-    Some of these methods only require `M <: Kirstine.Model` and not `M <: NonlinearRegression`.
+    Some of these methods only require `M <: Kirstine.Model` and not `M <: Kirstine.NonlinearRegression`.
     This is intentional.
     These methods can in principle also be implemented for `M <: Ma`
     where `abstract type Ma <: Kirstine.Model end` is also user-defined.

@@ -3,7 +3,7 @@
 
 # model and covariate subtypes for tests where we do not need a full design problem
 
-struct TestMod <: NonlinearRegression end
+struct TestMod <: Kirstine.NonlinearRegression end
 
 mutable struct TestCovar2 <: Covariate
     a::Float64

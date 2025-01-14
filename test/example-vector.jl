@@ -6,7 +6,7 @@
 # This is a modification of `example-compartment.jl`, and not necessarily meaningful
 # biologically.
 
-struct VUMod <: NonlinearRegression
+struct VUMod <: Kirstine.NonlinearRegression
     sigma_squared::Float64
     m::Int64
 end

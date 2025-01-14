@@ -39,7 +39,7 @@ Compute Jacobian matrix of the mean function at `p`.
 
 # Implementation
 
-For user types `M <: NonlinearRegression`, `C <: Covariate`, and `P <: Parameter`,
+For user types `M <: Kirstine.NonlinearRegression`, `C <: Covariate`, and `P <: Parameter`,
 this should fill in the elements of the pre-allocated Jacobian matrix `jm`,
 and finally return `jm`.
 
@@ -75,7 +75,7 @@ for one unit of observation.
 
 # Implementation
 
-For user types `C <: Covariate` and `M <: NonlinearRegression`,
+For user types `C <: Covariate` and `M <: Kirstine.NonlinearRegression`,
 this should fill in the elements of `Sigma`
 for a unit of observation with covariate `c`.
 The `size` of the matrix is `(unit_length(m), unit_length(m))`.

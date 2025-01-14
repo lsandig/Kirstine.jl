@@ -4,7 +4,7 @@
 ## code specific for nonlinear regression models ##
 
 """
-    NonlinearRegression
+    Kirstine.NonlinearRegression
 
 Supertype for user-defined nonlinear regression models.
 """

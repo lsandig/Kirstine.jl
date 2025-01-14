@@ -116,7 +116,7 @@ i.e. with the interval above as its bounding box.
 ```@example main
 using Random, Plots
 
-@kwdef struct DTRMod <: NonlinearRegression
+@kwdef struct DTRMod <: Kirstine.NonlinearRegression
     sigma::Float64
     m::Int64
 end

@@ -155,7 +155,7 @@ which misuses the model type.
     and then call `gradient!` with the saved closure.
 
 ```@example main
-struct HackySigEmaxModel{T<:Function} <: NonlinearRegression
+struct HackySigEmaxModel{T<:Function} <: Kirstine.NonlinearRegression
     sigma::Float64
     cfg::ForwardDiff.GradientConfig
     c::SigEmaxCovariate

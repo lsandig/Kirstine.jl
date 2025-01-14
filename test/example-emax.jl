@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-struct EmaxModel <: NonlinearRegression
+struct EmaxModel <: Kirstine.NonlinearRegression
     sigma_squared::Float64
 end
 

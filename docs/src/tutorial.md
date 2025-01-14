@@ -89,7 +89,7 @@ now would be a good time to refresh it.
 ### Model and Design Region
 
 In `Kirstine.jl`, the regression model [is defined](api.md#Implementing-a-Nonlinear-Regression-Model) by subtyping
-[`NonlinearRegression`](@ref),
+[`Kirstine.NonlinearRegression`](@ref),
 [`Covariate`](@ref),
 [`Parameter`](@ref),
 and [`CovariateParameterization`](@ref),
