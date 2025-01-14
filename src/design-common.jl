@@ -398,7 +398,7 @@ end
 """
     solve(
         adp::Kirstine.AbstractDesignProblem,
-        strategy::ProblemSolvingStrategy;
+        strategy::Kirstine.ProblemSolvingStrategy;
         trace_state = false,
         sargs...,
     )

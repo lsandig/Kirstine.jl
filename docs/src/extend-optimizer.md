@@ -7,7 +7,7 @@ check_results = true
 Kirstine.jl comes with a simple particle swarm optimizer.
 This document describes how to implement a custom particle-based optimizer
 that seamlessly plugs into the rest of the package,
-such that it can be used with any [`ProblemSolvingStrategy`](@ref).
+such that it can be used with any [`Kirstine.ProblemSolvingStrategy`](@ref).
 
 Our example we will be a simplified version of the
 [Imperialist-Competitive Algorithm (ICA)](https://en.wikipedia.org/wiki/Imperialist_competitive_algorithm)

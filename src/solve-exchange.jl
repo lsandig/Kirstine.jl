@@ -4,7 +4,7 @@
 ## solve design problem with exchange algorithm ##
 
 """
-    Exchange <: ProblemSolvingStrategy
+    Exchange <: Kirstine.ProblemSolvingStrategy
 
 Find an optimal design by ascending the Gateaux derivative of the objective function.
 

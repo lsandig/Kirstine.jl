@@ -4,7 +4,7 @@
 ## solve design problem by directly maximizing the objective function ##
 
 """
-    DirectMaximization <: ProblemSolvingStrategy
+    DirectMaximization <: Kirstine.ProblemSolvingStrategy
 
 Find an optimal design by directly maximizing a criterion's objective function.
 """

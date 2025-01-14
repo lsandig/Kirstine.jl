@@ -230,7 +230,7 @@ This is why we simply set it to `1` here.
 
 ## Optimal Design
 
-`Kirstine.jl` provides several high-level [`ProblemSolvingStrategy`](@ref) types
+`Kirstine.jl` provides several high-level [`Kirstine.ProblemSolvingStrategy`](@ref) types
 for solving the design problem `dp`.
 A very simple, but often quite effective one,
 is direct maximization with a [particle swarm optimizer](https://en.wikipedia.org/wiki/Particle_swarm_optimization).

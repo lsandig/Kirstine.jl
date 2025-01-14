@@ -139,7 +139,7 @@ abstract type AbstractDesignProblem end
 abstract type AbstractWorkspace end
 
 """
-    ProblemSolvingStrategy
+    Kirstine.ProblemSolvingStrategy
 
 Supertype for algorithms for solving an [`AbstractDesignProblem`](@ref).
 """

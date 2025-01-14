@@ -4,7 +4,7 @@
 check_results = true
 ```
 
-On a high level, Kirstine.jl can use different [`ProblemSolvingStrategy`](@ref)s
+On a high level, Kirstine.jl can use different [`Kirstine.ProblemSolvingStrategy`](@ref)s
 to find the solution to a design problem.
 The package implements [`DirectMaximization`](@ref) and a version of Fedorov's [`Exchange`](@ref) algorithm.
 This vignette shows how to implement a custom strategy.
@@ -18,7 +18,7 @@ for early stopping.
 
 ## Implementation
 
-For a `Ts <: ProblemSolvingStrategy` we need a corresponding `Tr <: ProblemSolvingResult`,
+For a `Ts <: Kirstine.ProblemSolvingStrategy` we need a corresponding `Tr <: ProblemSolvingResult`,
 plus methods for the following functions:
 
   - `solve_with(adp::AbstractDesignProblem, strategy::Ts, trace_state::Bool)`
@@ -37,7 +37,7 @@ For simplicity we require the low-level optimizer to be of order zero.
 ```@example main
 using Kirstine, RecipesBase, Plots
 
-struct MultipleRuns{T<:Kirstine.ZerothOrderOptimizer} <: ProblemSolvingStrategy
+struct MultipleRuns{T<:Kirstine.ZerothOrderOptimizer} <: Kirstine.ProblemSolvingStrategy
     optimizer::T
     prototype::DesignMeasure
     steps::Int64

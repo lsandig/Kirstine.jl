@@ -36,7 +36,7 @@ Different high-level strategies are available for trying to solve any `AbstractD
 
 ```@docs
 solve
-ProblemSolvingStrategy
+Kirstine.ProblemSolvingStrategy
 ProblemSolvingResult
 DirectMaximization
 DirectMaximization()
@@ -52,7 +52,7 @@ optimization_results_weight
 ```
 
 Particle-based optimizers are operating on a lower level,
-and are used as part of a `ProblemSolvingStrategy`.
+and are used as part of a `Kirstine.ProblemSolvingStrategy`.
 
 ```@docs
 Kirstine.Optimizer
