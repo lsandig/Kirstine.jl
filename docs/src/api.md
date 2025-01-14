@@ -61,8 +61,8 @@ Kirstine.FirstOrderOptimizer
 Kirstine.OptimizationResult
 Pso
 Pso()
-GridSearch
-GridSearch()
+Kirstine.GridSearch
+Kirstine.GridSearch()
 GridSpec
 ProductGrid
 Kirstine.FrankWolfe

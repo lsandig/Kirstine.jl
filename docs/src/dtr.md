@@ -594,7 +594,7 @@ we can hope that it gives us the solution after a few steps.
 
 For part 1,
 we will not use PSO,
-but a [`GridSearch`](@ref) over the design region $\DesignRegion$.
+but a [`Kirstine.GridSearch`](@ref) over the design region $\DesignRegion$.
 This has the advantage
 that grid search is deterministic and will always find the maximum (on the grid),
 while Pso may sometimes get stuck in a local maximum
@@ -615,7 +615,7 @@ the grid has 51 different values at ``Δt=0,0.04,…,2``.
 st4b = Exchange(
     candidate = s4a,
     steps = 1,
-    optimizer_direction = GridSearch(gridspec = ProductGrid(2, 51)),
+    optimizer_direction = Kirstine.GridSearch(gridspec = ProductGrid(2, 51)),
     optimizer_weight = Pso(swarmsize = 25, iterations = 50),
 )
 

@@ -52,7 +52,7 @@ end
 ProductGrid(n_points::Integer...) = ProductGrid{length(n_points)}(n_points)
 
 """
-    GridSearch <: ZerothOrderOptimizer
+    Kirstine.GridSearch <: ZerothOrderOptimizer
 
 A grid search optimizer.
 
@@ -88,7 +88,7 @@ struct GridSearch{T<:GridSpec} <: ZerothOrderOptimizer
 end
 
 """
-    GridSearch(; gridspec::GridSpec)
+    Kirstine.GridSearch(; gridspec::GridSpec)
 
 Set up parameters for a grid search.
 
@@ -98,8 +98,8 @@ so the dimensions of both must be equal.
 # Examples
 
 ```jldoctest
-julia> GridSearch(; gridspec = ProductGrid(11, 11))
-GridSearch{ProductGrid{2}}(ProductGrid{2}((11, 11)))
+julia> Kirstine.GridSearch(; gridspec = ProductGrid(11, 11))
+Kirstine.GridSearch{ProductGrid{2}}(ProductGrid{2}((11, 11)))
 ```
 """
 GridSearch(; gridspec::GridSpec) = GridSearch(gridspec)
