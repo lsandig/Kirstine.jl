@@ -213,7 +213,7 @@ simplify_unique
 simplify_merge
 Kirstine.informationmatrix
 Kirstine.apply_transformation
-implied_covariates
+Kirstine.implied_covariates
 ```
 
 ## Plotting

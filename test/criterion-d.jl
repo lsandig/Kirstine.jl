@@ -107,7 +107,7 @@ include("example-compartment.jl")
             gc = Kirstine.GCPriorSample([zeros(3, 3), zeros(3, 3)], zeros(2)),
             mw = Kirstine.NRWorkspace(numpoints(a1), 1, 3),
             nw = Kirstine.NIMWorkspace(3, 3),
-            c = implied_covariates(a1, m, cp)
+            c = Kirstine.implied_covariates(a1, m, cp)
 
             pgc!(gc, mw, nw, c, dc, a1, m, cp, pk, tc, na)
 
@@ -157,7 +157,7 @@ include("example-compartment.jl")
             gc = Kirstine.GCPriorSample([zeros(3, 3), zeros(3, 3)], zeros(2)),
             mw = Kirstine.NRWorkspace(numpoints(a1), 1, 3),
             nw = Kirstine.NIMWorkspace(3, 1),
-            c = implied_covariates(a1, m, cp),
+            c = Kirstine.implied_covariates(a1, m, cp),
             # Note: the informationmatrix return value is already wrapped in Symmetric()
             M1 = Kirstine.informationmatrix(a1, m, cp, g1, na),
             M2 = Kirstine.informationmatrix(a1, m, cp, g2, na),

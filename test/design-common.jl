@@ -254,7 +254,7 @@ include("example-compartment.jl")
         let d = DesignMeasure([[0], [1], [2]], [0.2, 0.3, 0.5]),
             m = EmaxModel(1),
             cp = CopyDose(),
-            c = implied_covariates(d, m, cp)
+            c = Kirstine.implied_covariates(d, m, cp)
 
             @test length(c) == numpoints(d)
             @test c[1].dose == points(d)[1][1]
@@ -268,7 +268,7 @@ include("example-compartment.jl")
             d2 = DesignMeasure([[3], [4], [5]], [0.4, 0.4, 0.2]),
             m = EmaxModel(1),
             cp = CopyDose(),
-            c = implied_covariates(d1, m, cp),
+            c = Kirstine.implied_covariates(d1, m, cp),
             res = Kirstine.update_covariates!(c, d2, m, cp)
 
             @test res === c
