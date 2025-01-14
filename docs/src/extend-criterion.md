@@ -135,7 +135,7 @@ function Kirstine.gateaux_constants(
     r = Kirstine.codomain_dimension(trafo, pk)
     # Compute M^{-1} as Symmetric matrices.
     # The following unexported function basically computes
-    #   [inv(informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
+    #   [inv(Kirstine.informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
     # but throws a SingularException when the rank of the information matrix is not dimension(p).
     # This exception is caught inside gateauxderivative()
     # and makes it return a NaN array.

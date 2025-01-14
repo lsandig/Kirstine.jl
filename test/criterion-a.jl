@@ -111,8 +111,8 @@ include("example-compartment.jl")
             pgc = Kirstine.gateaux_constants,
             pgc! = Kirstine.gateaux_constants!,
             # reference information matrices, already wrapped in Symmetric()
-            m1 = informationmatrix(a1, m, cp, g1, na),
-            m2 = informationmatrix(a1, m, cp, g2, na),
+            m1 = Kirstine.informationmatrix(a1, m, cp, g1, na),
+            m2 = Kirstine.informationmatrix(a1, m, cp, g2, na),
             gc = Kirstine.GCPriorSample([zeros(3, 3), zeros(3, 3)], zeros(2)),
             mw = Kirstine.NRWorkspace(numpoints(a1), 1, 3),
             nw = Kirstine.NIMWorkspace(3, 3),
@@ -160,8 +160,8 @@ include("example-compartment.jl")
             pgc = Kirstine.gateaux_constants,
             pgc! = Kirstine.gateaux_constants!,
             # reference information matrices, already wrapped in Symmetric()
-            m1 = informationmatrix(a1, m, cp, g1, na),
-            m2 = informationmatrix(a1, m, cp, g2, na),
+            m1 = Kirstine.informationmatrix(a1, m, cp, g1, na),
+            m2 = Kirstine.informationmatrix(a1, m, cp, g2, na),
             gc = Kirstine.GCPriorSample([zeros(3, 3), zeros(3, 3)], zeros(2)),
             mw = Kirstine.NRWorkspace(numpoints(a1), 1, 3),
             nw = Kirstine.NIMWorkspace(3, 1),

@@ -211,7 +211,7 @@ simplify(::DesignMeasure, ::CompositeDesignProblem)
 simplify_drop
 simplify_unique
 simplify_merge
-informationmatrix
+Kirstine.informationmatrix
 apply_transformation
 implied_covariates
 ```

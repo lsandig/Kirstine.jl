@@ -115,8 +115,8 @@ include("example-compartment.jl")
             @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
             @test_throws "SingularException" pgc(dc, a4_ni, m, cp, pk, trafo, na)
             # Note: the informationmatrix return value is already wrapped in Symmetric()
-            @test Symmetric(gc.A[1]) ≈ inv(informationmatrix(a1, m, cp, g1, na))
-            @test Symmetric(gc.A[2]) ≈ inv(informationmatrix(a1, m, cp, g2, na))
+            @test Symmetric(gc.A[1]) ≈ inv(Kirstine.informationmatrix(a1, m, cp, g1, na))
+            @test Symmetric(gc.A[2]) ≈ inv(Kirstine.informationmatrix(a1, m, cp, g2, na))
             @test all(gc.tr_B .== 3)
             # Note: needs to be tested after pgc! was already called once
             bytes_allocated = @allocated pgc!(gc, mw, nw, c, dc, a1, m, cp, pk, tc, na)
@@ -159,8 +159,8 @@ include("example-compartment.jl")
             nw = Kirstine.NIMWorkspace(3, 1),
             c = implied_covariates(a1, m, cp),
             # Note: the informationmatrix return value is already wrapped in Symmetric()
-            M1 = informationmatrix(a1, m, cp, g1, na),
-            M2 = informationmatrix(a1, m, cp, g2, na),
+            M1 = Kirstine.informationmatrix(a1, m, cp, g1, na),
+            M2 = Kirstine.informationmatrix(a1, m, cp, g2, na),
             B1 = J[1]' * inv(J[1] * inv(M1) * J[1]') * J[1],
             B2 = J[2]' * inv(J[2] * inv(M2) * J[2]') * J[2]
 

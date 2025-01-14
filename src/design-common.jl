@@ -97,7 +97,7 @@ end
 # For debugging purposes, one will typically want to look at an information matrix
 # corresponding to a single parameter value, not to all thousands of them in a prior sample.
 """
-    informationmatrix(
+    Kirstine.informationmatrix(
         d::DesignMeasure,
         m::Model,
         cp::Kirstine.CovariateParameterization,

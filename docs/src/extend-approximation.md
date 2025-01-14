@@ -185,7 +185,7 @@ This is also reflected in the rank of the information matrix:
 
 ```@example main
 function infomat(d::DesignMeasure, dp::DesignProblem)
-    informationmatrix(
+    Kirstine.informationmatrix(
         d,
         model(dp),
         covariate_parameterization(dp),

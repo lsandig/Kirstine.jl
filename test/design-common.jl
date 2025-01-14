@@ -74,7 +74,7 @@ include("example-compartment.jl")
             cp = CopyDose(),
             p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
             na = FisherMatrix(),
-            res = informationmatrix(d, m, cp, p, na)
+            res = Kirstine.informationmatrix(d, m, cp, p, na)
 
             ref = [16 6 -6; 6 3 -3; -6 -3 3] ./ 16
 
@@ -87,7 +87,7 @@ include("example-compartment.jl")
             cp = EquiTime(),
             p = VUParameter(; a = 4.298, e = 0.05884, s = 21.80),
             na = FisherMatrix(),
-            res = informationmatrix(d, m, cp, p, na),
+            res = Kirstine.informationmatrix(d, m, cp, p, na),
             # recreate by hand
             c = [VUCovariate([0, 5, 10]), VUCovariate([0, 20, 40])],
             jm = Kirstine.jacobianmatrix!.([zeros(3, 3), zeros(3, 3)], [m], c, [p]),
@@ -118,7 +118,7 @@ include("example-compartment.jl")
             na = FisherMatrix(),
             iim = Kirstine.inv_informationmatrices
 
-            im = [informationmatrix(a1, m, cp, g, na) for g in [g1, g2]]
+            im = [Kirstine.informationmatrix(a1, m, cp, g, na) for g in [g1, g2]]
             inv_im = iim(a1, m, cp, pk, na)
             id_mat = map(*, im, inv_im)
 
