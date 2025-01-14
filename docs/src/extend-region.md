@@ -15,7 +15,7 @@ This vignette describes how to implement your own subtype of [`Kirstine.DesignRe
 
 Our example will be axis-parallel ellipsoidal subsets of ``\Reals^{\DimDesignRegion}``.
 (Note that this could alternatively be achieved with a [`DesignInterval`](@ref)
-and a suitable coordinate transformation in the [`CovariateParameterization`](@ref).)
+and a suitable coordinate transformation in the [`Kirstine.CovariateParameterization`](@ref).)
 
 ## Implementation
 
@@ -175,7 +175,7 @@ end
 Random.seed!(4711)
 prior = draw_from_prior(1000)
 
-struct CopyBoth <: CovariateParameterization end
+struct CopyBoth <: Kirstine.CovariateParameterization end
 
 function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::CopyBoth)
     c.dose = dp[1]

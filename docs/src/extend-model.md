@@ -146,7 +146,7 @@ end
 
 Kirstine.dimension(p::LLRParameter) = length(p.beta_rest) + 1
 
-struct CopyVector <: CovariateParameterization end
+struct CopyVector <: Kirstine.CovariateParameterization end
 
 function Kirstine.map_to_covariate!(c::LLRCovariate, dp, m::LinLogReg, cp::CopyVector)
     if length(dp) != length(c.x)

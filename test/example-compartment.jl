@@ -9,7 +9,7 @@
 
 @simple_parameter TPC a e s
 
-struct CopyTime <: CovariateParameterization end
+struct CopyTime <: Kirstine.CovariateParameterization end
 
 function Kirstine.jacobianmatrix!(jm, m::TPCModel, c::TPCCovariate, p::TPCParameter)
     A = exp(-p.a * c.time)

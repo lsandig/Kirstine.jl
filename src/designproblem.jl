@@ -47,7 +47,7 @@ Construct a design problem with some sensible defaults.
   - `criterion::Kirstine.DesignCriterion`
   - `region::Kirstine.DesignRegion`
   - `model::Kirstine.Model`
-  - `covariate_parameterization::CovariateParameterization`
+  - `covariate_parameterization::Kirstine.CovariateParameterization`
   - `prior_knowledge::Kirstine.PriorKnowledge`
   - `transformation::Kirstine.Transformation = Identity()`
   - `normal_approximation::Kirstine.NormalApproximation = FisherMatrix()`

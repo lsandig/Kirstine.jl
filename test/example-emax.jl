@@ -17,7 +17,7 @@ end
 
 Kirstine.dimension(p::EmaxPar) = 3
 
-struct CopyDose <: CovariateParameterization end
+struct CopyDose <: Kirstine.CovariateParameterization end
 
 Kirstine.unit_length(m::EmaxModel) = 1
 

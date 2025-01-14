@@ -59,7 +59,7 @@ Map a design point to a model covariate.
 # Implementation
 
 For user types `C <: Covariate`, `M <: Kirstine.Model`, and
-`Cp <: CovariateParameterization` this should set the fields of the single covariate `c`
+`Cp <: Kirstine.CovariateParameterization` this should set the fields of the single covariate `c`
 according to the single design point `dp`. Finally, this method should return `c`.
 
 See also [`implied_covariates`](@ref)
@@ -100,7 +100,7 @@ function dimension end
 ## generic identity covariate parameterization ##
 
 """
-    JustCopy <: CovariateParameterization
+    JustCopy <: Kirstine.CovariateParameterization
 
 A convenience type to use when design variables and model covariates are identical.
 """
@@ -162,7 +162,7 @@ for the `FooModel` and `FooCovariate` types.
 Note however that the equivalent manual version
 
 ```jldoctest justcopy
-julia> struct CopyBoth <: CovariateParameterization end
+julia> struct CopyBoth <: Kirstine.CovariateParameterization end
 
 julia> function Kirstine.map_to_covariate!(c::FooCovariate, dp, m::FooModel, cp::CopyBoth)
            c.a = dp[1]

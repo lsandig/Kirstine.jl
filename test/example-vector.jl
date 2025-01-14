@@ -40,7 +40,7 @@ function Kirstine.jacobianmatrix!(jm, m::VUMod, c::VUCovariate, p::VUParameter)
     return jm
 end
 
-struct EquiTime <: CovariateParameterization end
+struct EquiTime <: Kirstine.CovariateParameterization end
 
 function Kirstine.map_to_covariate!(c::VUCovariate, dp, m::VUMod, cp::EquiTime)
     for j in 1:(m.m)

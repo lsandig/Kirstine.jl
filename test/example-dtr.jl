@@ -46,7 +46,7 @@ function Kirstine.jacobianmatrix!(jm, m::DTRMod, c::DoseTimeCovariate, p::DTRPar
     return jm
 end
 
-struct CopyBoth <: CovariateParameterization end
+struct CopyBoth <: Kirstine.CovariateParameterization end
 
 function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::CopyBoth)
     c.dose = dp[1]

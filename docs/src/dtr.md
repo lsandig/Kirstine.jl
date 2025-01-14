@@ -191,7 +191,7 @@ In terms of our model and the design problem this means
 i.e. the design region is identical to the covariate set.
 
 ```@example main
-struct CopyBoth <: CovariateParameterization end
+struct CopyBoth <: Kirstine.CovariateParameterization end
 
 function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::CopyBoth)
     c.dose = dp[1]
@@ -335,7 +335,7 @@ and the implementation is straightforward.
 Note how the `DesignProblem` differs from `dp1` only in its design region and its covariate parameterization.
 
 ```@example main
-struct FixedDose <: CovariateParameterization
+struct FixedDose <: Kirstine.CovariateParameterization
     dose::Float64
 end
 
@@ -403,7 +403,7 @@ m &= 13 \\
 ```
 
 ```@example main
-struct FixedTimes <: CovariateParameterization
+struct FixedTimes <: Kirstine.CovariateParameterization
     time::Vector{Float64}
 end
 
@@ -485,7 +485,7 @@ For this setup we need to think about uniqueness again.
     Here we also set the design point to ``(0, 2)``.
 
 ```@example main
-struct EquidistantTimes <: CovariateParameterization end
+struct EquidistantTimes <: Kirstine.CovariateParameterization end
 
 function Kirstine.map_to_covariate!(
     c::DoseTimeCovariate,
@@ -678,7 +678,7 @@ m &= 13 \\
 In the following example we take ``b=\sqrt{2}``.
 
 ```@example main
-struct LogEquidistantTimes <: CovariateParameterization
+struct LogEquidistantTimes <: Kirstine.CovariateParameterization
     b::Float64
 end
 

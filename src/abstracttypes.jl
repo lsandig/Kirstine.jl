@@ -30,7 +30,7 @@ necessary for being able to modify them in [`map_to_covariate!`](@ref).
 abstract type Covariate end
 
 """
-    CovariateParameterization
+    Kirstine.CovariateParameterization
 
 Supertype for user-defined mappings from design points to model covariates.
 

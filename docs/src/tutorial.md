@@ -92,7 +92,7 @@ In `Kirstine.jl`, the regression model [is defined](api.md#Implementing-a-Nonlin
 [`Kirstine.NonlinearRegression`](@ref),
 [`Covariate`](@ref),
 [`Kirstine.Parameter`](@ref),
-and [`CovariateParameterization`](@ref),
+and [`Kirstine.CovariateParameterization`](@ref),
 and implementing a handful of methods for them.
 
 In the sigmoid Emax model,
@@ -177,7 +177,7 @@ Here, the design region is simply the interval of possible doses.
 This means that we can just copy the only element of the design point
 into the covariate's `dose` field.
 For this we can use [`JustCopy`](@ref),
-which is a subtype of [`CovariateParameterization`](@ref).
+which is a subtype of [`Kirstine.CovariateParameterization`](@ref).
 
 ```@example main
 cp = JustCopy(:dose)
