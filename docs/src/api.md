@@ -37,7 +37,7 @@ Different high-level strategies are available for trying to solve any `AbstractD
 ```@docs
 solve
 Kirstine.ProblemSolvingStrategy
-ProblemSolvingResult
+Kirstine.ProblemSolvingResult
 DirectMaximization
 DirectMaximization()
 DirectMaximizationResult

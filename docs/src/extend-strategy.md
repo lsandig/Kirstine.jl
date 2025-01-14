@@ -18,7 +18,7 @@ for early stopping.
 
 ## Implementation
 
-For a `Ts <: Kirstine.ProblemSolvingStrategy` we need a corresponding `Tr <: ProblemSolvingResult`,
+For a `Ts <: Kirstine.ProblemSolvingStrategy` we need a corresponding `Tr <: Kirstine.ProblemSolvingResult`,
 plus methods for the following functions:
 
   - `solve_with(adp::AbstractDesignProblem, strategy::Ts, trace_state::Bool)`
@@ -56,7 +56,7 @@ end
 
 struct MultipleRunsResult{
     S<:Kirstine.OptimizerState{DesignMeasure,Kirstine.SignedMeasure},
-} <: ProblemSolvingResult
+} <: Kirstine.ProblemSolvingResult
     ors::Vector{Kirstine.OptimizationResult{DesignMeasure,Kirstine.SignedMeasure,S}}
 end
 

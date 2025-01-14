@@ -48,7 +48,7 @@ struct DirectMaximization{To<:Optimizer} <: ProblemSolvingStrategy
 end
 
 """
-    DirectMaximizationResult <: ProblemSolvingResult
+    DirectMaximizationResult <: Kirstine.ProblemSolvingResult
 
 Wraps the [`OptimizationResult`](@ref) from direct maximization.
 

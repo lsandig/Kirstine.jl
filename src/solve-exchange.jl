@@ -69,7 +69,7 @@ struct Exchange{Tod<:ZerothOrderOptimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol
 end
 
 """
-    ExchangeResult <: ProblemSolvingResult
+    ExchangeResult <: Kirstine.ProblemSolvingResult
 
 Wraps the [`OptimizationResult`](@ref)s from the individual steps.
 

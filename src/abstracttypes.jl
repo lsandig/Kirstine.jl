@@ -146,7 +146,7 @@ Supertype for algorithms for solving an [`AbstractDesignProblem`](@ref).
 abstract type ProblemSolvingStrategy end
 
 """
-    ProblemSolvingResult
+    Kirstine.ProblemSolvingResult
 
 Supertype for results of a [`ProblemSolvingStrategy`](@ref).
 """
