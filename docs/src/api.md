@@ -63,7 +63,7 @@ Pso
 Pso()
 Kirstine.GridSearch
 Kirstine.GridSearch()
-GridSpec
+Kirstine.GridSpec
 ProductGrid
 Kirstine.FrankWolfe
 Kirstine.FrankWolfe(::Integer, ::Kirstine.StepSizeStrategy, ::Bool)

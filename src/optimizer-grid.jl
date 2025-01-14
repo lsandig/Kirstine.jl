@@ -4,7 +4,7 @@
 ## generic grid search ##
 
 """
-    GridSpec
+    Kirstine.GridSpec
 
 Supertype for grid specifications.
 
@@ -23,7 +23,7 @@ abstract type GridSpec end
 function construct_grid end
 
 """
-    ProductGrid <: GridSpec
+    ProductGrid <: Kirstine.GridSpec
 
 A Cartesian product with the given number of grid points in each dimension.
 
@@ -79,7 +79,7 @@ but it uses the same internal infrastructure.)
 Similar to optimization with [`Pso`](@ref),
 the optimizer state is initialized internally with a vector of prototype points.
 The first prototype determines the structure of each grid point
-that is constructed from the [`GridSpec`](@ref).
+that is constructed from the [`Kirstine.GridSpec`](@ref).
 This set of points is then merged with the vector of prototypes
 and used for maximization.
 """
@@ -88,7 +88,7 @@ struct GridSearch{T<:GridSpec} <: ZerothOrderOptimizer
 end
 
 """
-    Kirstine.GridSearch(; gridspec::GridSpec)
+    Kirstine.GridSearch(; gridspec::Kirstine.GridSpec)
 
 Set up parameters for a grid search.
 
