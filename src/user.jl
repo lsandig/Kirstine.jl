@@ -39,7 +39,7 @@ Compute Jacobian matrix of the mean function at `p`.
 
 # Implementation
 
-For user types `M <: Kirstine.NonlinearRegression`, `C <: Covariate`, and `P <: Parameter`,
+For user types `M <: Kirstine.NonlinearRegression`, `C <: Covariate`, and `P <: Kirstine.Parameter`,
 this should fill in the elements of the pre-allocated Jacobian matrix `jm`,
 and finally return `jm`.
 
@@ -91,7 +91,7 @@ Return dimension of the parameter space.
 
 # Implementation
 
-For a user type `P <: Parameter`, this should return the dimension of the parameter space.
+For a user type `P <: Kirstine.Parameter`, this should return the dimension of the parameter space.
 
 See also the [mathematical background](math.md#Design-Problems).
 """

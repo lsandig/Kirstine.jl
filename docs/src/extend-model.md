@@ -91,7 +91,7 @@ function Kirstine.average_fishermatrix!(
     w::AbstractVector,
     m::LogisticRegression,
     c::AbstractVector{<:Covariate},
-    p::Parameter,
+    p::Kirstine.Parameter,
 )
     fill!(afm, 0.0)
     for k in 1:length(w)
@@ -139,7 +139,7 @@ end
 
 Kirstine.allocate_covariate(m::LinLogReg) = LLRCovariate(zeros(m.dim_covariate))
 
-struct LLRParameter <: Parameter
+struct LLRParameter <: Kirstine.Parameter
     beta_0::Float64
     beta_rest::Vector{Float64}
 end

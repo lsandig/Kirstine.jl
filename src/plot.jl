@@ -353,7 +353,7 @@ end
 Plot a graph of the pointwise expected value of a function
 and design points on that graph.
 
-For user types `C<:Covariate` and `p<:Parameter`,
+For user types `C<:Covariate` and `p<:Kirstine.Parameter`,
 the functions `f`, `g`, and `h` should have the following signatures:
 
   - `f(x::Real, c::C, p::P)::Real`.

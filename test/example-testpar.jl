@@ -3,12 +3,12 @@
 
 # concrete parameter subtypes for tests where we do not need a full design problem
 
-struct TestPar2 <: Parameter
+struct TestPar2 <: Kirstine.Parameter
     a::Float64
     b::Float64
 end
 
-struct TestPar3 <: Parameter
+struct TestPar3 <: Kirstine.Parameter
     a::Float64
     b::Float64
     c::Float64

@@ -91,7 +91,7 @@ now would be a good time to refresh it.
 In `Kirstine.jl`, the regression model [is defined](api.md#Implementing-a-Nonlinear-Regression-Model) by subtyping
 [`Kirstine.NonlinearRegression`](@ref),
 [`Covariate`](@ref),
-[`Parameter`](@ref),
+[`Kirstine.Parameter`](@ref),
 and [`CovariateParameterization`](@ref),
 and implementing a handful of methods for them.
 

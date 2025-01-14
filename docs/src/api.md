@@ -101,7 +101,7 @@ lowerbound
 ## Nonlinear Regression Models
 
 Regression models are implemented
-by first subtyping `Kirstine.Model`, `Covariate`, `CovariateParameterization`, and `Parameter`,
+by first subtyping `Kirstine.Model`, `Covariate`, `CovariateParameterization`, and `Kirstine.Parameter`,
 and then defining several helper methods on them.
 See the [tutorial](tutorial.md) for a hands-on example.
 
@@ -112,7 +112,7 @@ Kirstine.Model
 Kirstine.NonlinearRegression
 Covariate
 CovariateParameterization
-Parameter
+Kirstine.Parameter
 ```
 
 ### Implementing a Nonlinear Regression Model
@@ -122,7 +122,7 @@ Suppose the following subtypes have been defined:
   - `M <: Kirstine.NonlinearRegression`
   - `C <: Covariate`
   - `Cp <: CovariateParameterization`
-  - `P <: Parameter`
+  - `P <: Kirstine.Parameter`
 
 Then methods need to be added for the following package-internal functions:
 
@@ -166,7 +166,7 @@ JustCopy()
 ```@docs
 PriorKnowledge
 PriorSample
-PriorSample(::AbstractVector{T}, ::AbstractVector{<:Real}) where T <: Parameter
+PriorSample(::AbstractVector{T}, ::AbstractVector{<:Real}) where T <: Kirstine.Parameter
 Base.:(==)(::PriorSample, ::PriorSample)
 parameters(::PriorSample)
 weights(::PriorSample)

@@ -9,7 +9,7 @@ mutable struct Dose <: Covariate
     dose::Float64
 end
 
-@kwdef struct EmaxPar <: Parameter
+@kwdef struct EmaxPar <: Kirstine.Parameter
     e0::Float64
     emax::Float64
     ec50::Float64

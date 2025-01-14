@@ -101,7 +101,7 @@ end
         d::DesignMeasure,
         m::Model,
         cp::CovariateParameterization,
-        p::Parameter,
+        p::Kirstine.Parameter,
         na::NormalApproximation,
     )
 
@@ -157,7 +157,7 @@ function inv_informationmatrices(
 end
 
 """
-    apply_transformation(nim::AbstractMatrix{<:Real}, p::Parameter, trafo::Transformation)
+    apply_transformation(nim::AbstractMatrix{<:Real}, p::Kirstine.Parameter, trafo::Transformation)
 
 Compute the information matrix for the transformed `Parameter`.
 

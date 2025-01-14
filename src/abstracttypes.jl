@@ -11,7 +11,7 @@ Supertype for statistical models.
 abstract type Model end
 
 """
-    Parameter
+    Kirstine.Parameter
 
 Supertype for [`Model`](@ref) parameters.
 """
@@ -52,7 +52,7 @@ See also [`DesignInterval`](@ref), [`dimnames`](@ref).
 abstract type DesignRegion{N} end
 
 """
-    PriorKnowledge{T<:Parameter}
+    PriorKnowledge{T<:Kirstine.Parameter}
 
 Supertype for representing prior knowledge of the model [`Parameter`](@ref).
 

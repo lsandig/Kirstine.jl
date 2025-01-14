@@ -29,7 +29,7 @@ struct PriorSample{T} <: PriorKnowledge{T}
 end
 
 """
-    PriorSample(p::AbstractVector{<:Parameter} [, weights::AbstractVector{<:Real}])
+    PriorSample(p::AbstractVector{<:Kirstine.Parameter} [, weights::AbstractVector{<:Real}])
 
 Construct a weighted prior sample on the given parameter draws.
 

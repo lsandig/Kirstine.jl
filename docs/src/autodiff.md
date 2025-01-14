@@ -19,10 +19,10 @@ using BenchmarkTools: @benchmark
 ```
 
 Since ForwardDiff can only compute the derivative with respect to a `Vector` argument,
-we define a [`Parameter`](@ref) subtype that wraps a `Vector`.
+we define a [`Kirstine.Parameter`](@ref) subtype that wraps a `Vector`.
 
 ```@example main
-struct SigEmaxVectorParameter <: Parameter
+struct SigEmaxVectorParameter <: Kirstine.Parameter
     θ::Vector{Float64} # θ = (e0, emax, ed50, h)
 end
 
