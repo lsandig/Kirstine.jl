@@ -68,7 +68,7 @@ Supertype for different possible normal approximations to the posterior distribu
 abstract type NormalApproximation end
 
 @doc raw"""
-    Transformation
+    Kirstine.Transformation
 
 Supertype of posterior transformations.
 

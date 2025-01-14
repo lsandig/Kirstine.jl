@@ -217,7 +217,7 @@ s3 == s1
 ## Transformations
 
 A place where autodiff does not incur a noticeable performance hit
-is the computation of a [`Transformation`](@ref)'s Jacobian matrix
+is the computation of a [`Kirstine.Transformation`](@ref)'s Jacobian matrix
 at the parameter values in the prior sample,
 since these are computed only once for a design problem.
 

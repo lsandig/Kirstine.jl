@@ -175,7 +175,7 @@ weights(::PriorSample)
 ## Transformations
 
 ```@docs
-Transformation
+Kirstine.Transformation
 Identity
 DeltaMethod
 ```

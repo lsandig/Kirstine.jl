@@ -4,14 +4,14 @@
 ## concrete types for posterior transformations ##
 
 """
-    Identity <: Transformation
+    Identity <: Kirstine.Transformation
 
 The [`Transformation`](@ref) that maps a parameter to itself.
 """
 struct Identity <: Transformation end
 
 @doc raw"""
-    DeltaMethod <: Transformation
+    DeltaMethod <: Kirstine.Transformation
     DeltaMethod(jacobian_matrix::Function)
 
 A nonlinear [`Transformation`](@ref) of the model parameter.
@@ -56,7 +56,7 @@ DeltaMethod(jm2)
 DeltaMethod{typeof(jm2)}(jm2)
 ```
 """
-struct DeltaMethod{T<:Function} <: Transformation
+struct DeltaMethod{T<:Function} <: Kirstine.Transformation
     jacobian_matrix::T # parameter -> Matrix{Float64}
 end
 
