@@ -84,6 +84,10 @@ export @simple_model,
     upperbound,
     weights
 
+if VERSION >= v"1.11.0-DEV.469"
+    include("public.jl")
+end
+
 include("abstracttypes.jl")
 include("optimize.jl")
 include("optimizer-pso.jl")

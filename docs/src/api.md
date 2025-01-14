@@ -6,6 +6,8 @@
     (except for things that are explicitly declared experimental),
     including the names
     that are not exported but do have docstrings.
+    In Julia versions that support the `public` keyword,
+    those unexported but public names are marked explicitly.
 
 ## Design Problems
 
