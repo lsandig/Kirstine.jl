@@ -65,7 +65,7 @@ function Kirstine.solution(mrr::MultipleRunsResult)
 end
 
 function Kirstine.solve_with(
-    adp::AbstractDesignProblem,
+    adp::Kirstine.AbstractDesignProblem,
     strategy::MultipleRuns,
     trace_state::Bool,
 )

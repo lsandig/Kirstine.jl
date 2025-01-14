@@ -4,7 +4,7 @@
 ## implement AbstractDesignProblem interface for DesignProblem ##
 
 """
-    DesignProblem <: AbstractDesignProblem
+    DesignProblem <: Kirstine.AbstractDesignProblem
 
 A `DesignProblem` has 7 components:
 

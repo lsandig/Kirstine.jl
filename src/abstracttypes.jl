@@ -128,7 +128,7 @@ abstract type AbstractConstraints end
 ## types related to defining and solving design problems ##
 
 """
-    AbstractDesignProblem
+    Kirstine.AbstractDesignProblem
 
 Supertype for all kinds of design problems.
 

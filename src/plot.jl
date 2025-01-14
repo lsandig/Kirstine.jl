@@ -153,7 +153,7 @@ end
 end
 
 """
-    plot_gateauxderivative(d::DesignMeasure, adp::AbstractDesignProblem; <keyword arguments>)
+    plot_gateauxderivative(d::DesignMeasure, adp::Kirstine.AbstractDesignProblem; <keyword arguments>)
 
 Plot the [`gateauxderivative`](@ref) in directions from a grid on `region(adp)`,
 overlaid with the design points of `d`.

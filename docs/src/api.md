@@ -5,7 +5,7 @@
 ### Specifying and Composing Design Problems
 
 ```@docs
-AbstractDesignProblem
+Kirstine.AbstractDesignProblem
 DesignProblem
 DesignProblem()
 DesignProblem(::DesignProblem)
@@ -24,7 +24,7 @@ Composite design problems can be nested within each other.
 
 ```@docs
 CompositeDesignProblem
-CompositeDesignProblem(::AbstractVector{<:AbstractDesignProblem}, ::AbstractVector{<:Real})
+CompositeDesignProblem(::AbstractVector{<:Kirstine.AbstractDesignProblem}, ::AbstractVector{<:Real})
 problems(::CompositeDesignProblem)
 weights(::CompositeDesignProblem)
 region(::CompositeDesignProblem)

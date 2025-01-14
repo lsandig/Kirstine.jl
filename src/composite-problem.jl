@@ -4,7 +4,7 @@
 ## implement AbstractDesignProblem interface for CompositeDesignProblem ##
 
 """
-    CompositeDesignProblem <: AbstractDesignProblem
+    CompositeDesignProblem <: Kirstine.AbstractDesignProblem
 
 A weighted construct of other abstract design problems.
 

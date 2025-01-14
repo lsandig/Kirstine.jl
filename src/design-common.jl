@@ -330,7 +330,7 @@ function objective! end
 function gateauxderivative! end
 
 """
-    objective(d::DesignMeasure, adp::AbstractDesignProblem)
+    objective(d::DesignMeasure, adp::Kirstine.AbstractDesignProblem)
 
 Evaluate the objective function.
 
@@ -397,7 +397,7 @@ end
 
 """
     solve(
-        adp::AbstractDesignProblem,
+        adp::Kirstine.AbstractDesignProblem,
         strategy::ProblemSolvingStrategy;
         trace_state = false,
         sargs...,
