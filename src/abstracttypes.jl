@@ -41,7 +41,7 @@ abstract type CovariateParameterization end
 ## abstract types for package code ##
 
 @doc raw"""
-    DesignRegion{N}
+    Kirstine.DesignRegion{N}
 
 Supertype for design regions. A design region is a compact subset of ``\Reals^N``.
 

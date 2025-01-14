@@ -171,7 +171,7 @@ end
 
 # Note: docstring for abstract type, implementation for subtypes
 """
-    random_design(dr::DesignRegion, K::Integer)
+    random_design(dr::Kirstine.DesignRegion, K::Integer)
 
 Construct a random [`DesignMeasure`](@ref).
 
@@ -413,7 +413,7 @@ function simplify_drop(d::DesignMeasure, maxweight::Real)
 end
 
 """
-    simplify_unique(d::DesignMeasure, dr::DesignRegion, m::M, cp::C; uargs...)
+    simplify_unique(d::DesignMeasure, dr::Kirstine.DesignRegion, m::M, cp::C; uargs...)
 
 Construct a new [`DesignMeasure`](@ref) that corresponds uniquely to its implied normalized
 information matrix.
@@ -456,7 +456,7 @@ function simplify_unique(
 end
 
 """
-    simplify_merge(d::DesignMeasure, dr::DesignRegion, maxdist::Real)
+    simplify_merge(d::DesignMeasure, dr::Kirstine.DesignRegion, maxdist::Real)
 
 Merge designpoints with a normalized distance smaller or equal to `maxdist`.
 

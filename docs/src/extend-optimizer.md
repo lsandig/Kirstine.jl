@@ -141,7 +141,7 @@ shown here for `T = DesignMeasure` and `U = SignedMeasure`:
     
     The `DesignConstraints <: AbstractConstraints` object has the following fields:
     
-      - `dr <: DesignRegion` the [`DesignRegion`](@ref) of the current design problem
+      - `dr <: Kirstine.DesignRegion` the [`Kirstine.DesignRegion`](@ref) of the current design problem
       - `fixw::Vector{Bool}` true elements correspond to design weights that should not move
       - `fixp::Vector{Bool}` true elements correspond to design points that should not move
     

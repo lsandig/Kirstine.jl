@@ -82,7 +82,7 @@ is supported with the [`CompositeDesignProblem`](@ref) type.
 ### Can a design region have more than 2 dimensions?
 
 Yes.
-A [`DesignRegion`](@ref) can have an arbitrary number of dimensions.
+A [`Kirstine.DesignRegion`](@ref) can have an arbitrary number of dimensions.
 However,
 plotting is currently only implemented for one- and two-dimensional regions.
 

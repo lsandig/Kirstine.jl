@@ -4,7 +4,7 @@
 ## functions on the supertype
 
 """
-    dimension(dr::DesignRegion{N})
+    dimension(dr::Kirstine.DesignRegion{N})
 
 Return the dimension `N` of the design region.
 """
@@ -20,7 +20,7 @@ end
 ## concrete design regions and constraints for optimization ##
 
 @doc raw"""
-    DesignInterval{N} <: DesignRegion{N}
+    DesignInterval{N} <: Kirstine.DesignRegion{N}
 
 A (hyper)rectangular subset of ``\Reals^N``.
 
@@ -83,7 +83,7 @@ upperbound(dr::DesignInterval) = dr.upperbound
 
 # Note: docstring for the supertype, implementation for the subtypes
 """
-    dimnames(dr::DesignRegion)
+    dimnames(dr::Kirstine.DesignRegion)
 
 Return the names of the design region's dimensions.
 """

@@ -88,11 +88,11 @@ shannon_information
 ## Design Regions
 
 ```@docs
-DesignRegion
+Kirstine.DesignRegion
 DesignInterval
 DesignInterval(::Any, ::Any, ::Any)
 DesignInterval()
-dimension(::DesignRegion)
+dimension(::Kirstine.DesignRegion)
 dimnames
 upperbound
 lowerbound
@@ -225,7 +225,7 @@ For Gateaux derivatives and expected functions there are separate methods.
 
 ```julia
 plot(d::DesignMeasure)
-plot(d::DesignMeasure, dr::DesignRegion)
+plot(d::DesignMeasure, dr::Kirstine.DesignRegion)
 plot(r::OptimizationResult)
 plot(rs::AbstractVector{<:OptimizationResult})
 plot(r::DirectMaximizationResult)
