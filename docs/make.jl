@@ -109,6 +109,7 @@ makedocs(modules = [Kirstine],
          # doctest = :fix,
          # draft = true,
          # warnonly = true,
+         # pagesonly = true,
          format = Documenter.HTML(
              prettyurls = false,
              edit_link = nothing,
