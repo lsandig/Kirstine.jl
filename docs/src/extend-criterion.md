@@ -84,7 +84,7 @@ Additionally, the following methods must be implemented.
     The function ``\DesignCriterion`` in the mathematical notation.
     This function should be fast.
     Ideally, it should not allocate new memory.
-  - `gateaux_constants(dc::T, d::DesignMeasure, m::Kirstine.Model, cp::CovariateParameterization, pk::PriorSample, trafo::Transformation, na::NormalApproximation)`:
+  - `gateaux_constants(dc::T, d::DesignMeasure, m::Kirstine.Model, cp::CovariateParameterization, pk::PriorSample, trafo::Transformation, na::Kirstine.NormalApproximation)`:
     Compute the value of all expensive expressions in the Gateaux derivative
     that do not depend on ``\NIMatrix(\DesignMeasureDirection,\Parameter)``
     for every parameter value in the Monte-Carlo sample.
@@ -126,7 +126,7 @@ function Kirstine.gateaux_constants(
     cp::CovariateParameterization,
     pk::PriorSample,
     trafo::Identity,
-    na::NormalApproximation,
+    na::Kirstine.NormalApproximation,
 )
     tc = Kirstine.trafo_constants(trafo, pk)
     # For M(ζ,θ) ∈ S_+^r we need
@@ -155,7 +155,7 @@ function Kirstine.gateaux_constants(
     cp::CovariateParameterization,
     pk::PriorSample,
     trafo::DeltaMethod,
-    na::NormalApproximation,
+    na::Kirstine.NormalApproximation,
 )
     # For the
     #  * original NIM M(ζ,θ) ∈ S_+^r,

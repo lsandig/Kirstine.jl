@@ -183,7 +183,7 @@ DeltaMethod
 ## Normal Approximations
 
 ```@docs
-NormalApproximation
+Kirstine.NormalApproximation
 FisherMatrix
 ```
 

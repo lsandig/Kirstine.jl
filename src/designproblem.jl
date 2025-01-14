@@ -50,7 +50,7 @@ Construct a design problem with some sensible defaults.
   - `covariate_parameterization::CovariateParameterization`
   - `prior_knowledge::Kirstine.PriorKnowledge`
   - `transformation::Transformation = Identity()`
-  - `normal_approximation::NormalApproximation = FisherMatrix()`
+  - `normal_approximation::Kirstine.NormalApproximation = FisherMatrix()`
 """
 function DesignProblem(;
     criterion::Tdc,

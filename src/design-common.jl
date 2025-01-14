@@ -102,7 +102,7 @@ end
         m::Model,
         cp::CovariateParameterization,
         p::Kirstine.Parameter,
-        na::NormalApproximation,
+        na::Kirstine.NormalApproximation,
     )
 
 Compute the normalized information matrix for a single `Parameter` value `p`.

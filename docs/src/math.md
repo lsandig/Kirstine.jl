@@ -101,7 +101,7 @@ with the following elements:
 
 !!! info
     
-    The [`DesignProblem`](@ref) type has an additional seventh field for a [`NormalApproximation`](@ref).
+    The [`DesignProblem`](@ref) type has an additional seventh field for a [`Kirstine.NormalApproximation`](@ref).
     This is because the precision matrix of the underlying posterior normal approximation
     can be obtained in different ways
     (see e.g. p. 224 in Berger[^B85]).

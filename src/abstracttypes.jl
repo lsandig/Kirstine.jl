@@ -61,7 +61,7 @@ See also [`PriorSample`](@ref).
 abstract type PriorKnowledge{T<:Parameter} end
 
 """
-    NormalApproximation
+    Kirstine.NormalApproximation
 
 Supertype for different possible normal approximations to the posterior distribution.
 """

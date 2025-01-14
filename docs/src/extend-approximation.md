@@ -57,7 +57,7 @@ let's look at the implementation.
 
 ## Implementation
 
-We define a new subtype of [`NormalApproximation`](@ref)
+We define a new subtype of [`Kirstine.NormalApproximation`](@ref)
 and a corresponding method for the internal `informationmatrix!` function.
 In its first argument it receives the average Fisher information matrix
 which it should overwrite with the normalized information matrix.
