@@ -56,6 +56,13 @@ ProductGrid(n_points::Integer...) = ProductGrid{length(n_points)}(n_points)
 
 A grid search optimizer.
 
+!!! warning "Experimental Feature"
+
+    This optimizer is experimental.
+    It is not to be considered part of the API yet,
+    hence it is not exported and may be subject to breaking changes
+    even in minor or patch version updates.
+
 This optimizer is particularly useful for the direction-finding step in [`Exchange`](@ref),
 but can also be used for [`DirectMaximization`](@ref)
 as long as all weights of the candidate are fixed,
