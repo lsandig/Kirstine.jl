@@ -58,7 +58,7 @@ and are used as part of a `ProblemSolvingStrategy`.
 Kirstine.Optimizer
 Kirstine.ZerothOrderOptimizer
 Kirstine.FirstOrderOptimizer
-OptimizationResult
+Kirstine.OptimizationResult
 Pso
 Pso()
 GridSearch
@@ -226,7 +226,7 @@ For Gateaux derivatives and expected functions there are separate methods.
 ```julia
 plot(d::DesignMeasure)
 plot(d::DesignMeasure, dr::Kirstine.DesignRegion)
-plot(r::OptimizationResult)
+plot(r::Kirstine.OptimizationResult)
 plot(rs::AbstractVector{<:OptimizationResult})
 plot(r::DirectMaximizationResult)
 plot(r::ExchangeResult)

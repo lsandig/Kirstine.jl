@@ -29,7 +29,7 @@ plus methods for the following functions:
 Optionally,
 for producing a plot of the optimization progress,
 we can also implement a [type recipe](https://docs.juliaplots.org/latest/recipes/#Type-Recipes:-Easy-drop-in-replacement-of-data-types) for `Tr`.
-When it comes to plotting a Vector of [`OptimizationResult`](@ref)s,
+When it comes to plotting a Vector of [`Kirstine.OptimizationResult`](@ref)s,
 Kirstine.jl already provides a basic recipe that we can reuse.
 
 For simplicity we require the low-level optimizer to be of order zero.
@@ -57,7 +57,7 @@ end
 struct MultipleRunsResult{
     S<:Kirstine.OptimizerState{DesignMeasure,Kirstine.SignedMeasure},
 } <: ProblemSolvingResult
-    ors::Vector{OptimizationResult{DesignMeasure,Kirstine.SignedMeasure,S}}
+    ors::Vector{Kirstine.OptimizationResult{DesignMeasure,Kirstine.SignedMeasure,S}}
 end
 
 function Kirstine.solution(mrr::MultipleRunsResult)

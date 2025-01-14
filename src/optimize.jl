@@ -4,11 +4,11 @@
 ## abstract particle based optimization ##
 
 """
-    OptimizationResult
+    Kirstine.OptimizationResult
 
 Wrapper for results of particle-based optimization.
 
-# `OptimizationResult` fields
+# `Kirstine.OptimizationResult` fields
 
 | Field           | Description                                          |
 |:--------------- |:---------------------------------------------------- |

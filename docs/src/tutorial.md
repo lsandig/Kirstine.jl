@@ -263,7 +263,7 @@ The [`solve`](@ref) function returns two objects:
   - `r1`: a [`DirectMaximizationResult`](@ref)
     that contains diagnostic information about the optimization run.
 
-We can access the lower-level [`OptimizationResult`](@ref)
+We can access the lower-level [`Kirstine.OptimizationResult`](@ref)
 by calling [`optimization_result`](@ref) on `r1`,
 which will show some statistics when printed:
 
