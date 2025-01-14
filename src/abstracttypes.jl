@@ -4,7 +4,7 @@
 ## abstract types for user-supplied models ##
 
 """
-    Model
+    Kirstine.Model
 
 Supertype for statistical models.
 """

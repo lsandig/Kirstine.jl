@@ -344,7 +344,7 @@ end
         h,
         xrange::AbstractVector{<:Real},
         d::DesignMeasure,
-        m::Model,
+        m::Kirstine.Model,
         cp::CovariateParameterization,
         pk::PriorSample;
         <keyword arguments>

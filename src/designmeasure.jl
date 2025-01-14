@@ -426,7 +426,7 @@ When called via [`simplify`](@ref), user-model specific keyword arguments will b
 
 # Implementation
 
-Users can specialize this method for their concrete subtypes `M <: Model` and
+Users can specialize this method for their concrete subtypes `M <: Kirstine.Model` and
 `C <: CovariateParameterization`. It is intended for cases where the mapping from design measure
 to normalized information matrix is not one-to-one. This depends on the model and covariate
 parameterization used. In such a case, `simplify_unique` should be implemented to select a

@@ -101,14 +101,14 @@ lowerbound
 ## Nonlinear Regression Models
 
 Regression models are implemented
-by first subtyping `Model`, `Covariate`, `CovariateParameterization`, and `Parameter`,
+by first subtyping `Kirstine.Model`, `Covariate`, `CovariateParameterization`, and `Parameter`,
 and then defining several helper methods on them.
 See the [tutorial](tutorial.md) for a hands-on example.
 
 ### Supertypes
 
 ```@docs
-Model
+Kirstine.Model
 NonlinearRegression
 Covariate
 CovariateParameterization
@@ -137,10 +137,10 @@ dimension
 
 !!! note
     
-    Some of these methods only require `M <: Model` and not `M <: NonlinearRegression`.
+    Some of these methods only require `M <: Kirstine.Model` and not `M <: NonlinearRegression`.
     This is intentional.
     These methods can in principle also be implemented for `M <: Ma`
-    where `abstract type Ma <: Model end` is also user-defined.
+    where `abstract type Ma <: Kirstine.Model end` is also user-defined.
 
 ### Helpers
 

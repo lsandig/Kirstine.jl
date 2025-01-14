@@ -56,7 +56,7 @@ Yes, with a bit of work.
 or [multilevel models](https://en.wikipedia.org/wiki/Multilevel_model)
 are not supported out of the box.
 However,
-you can define your own arbitrary abstract `Model` subtype
+you can define your own arbitrary abstract `Kirstine.Model` subtype
 as long as you can figure out its (approximate) Fisher information matrix.
 Take a look a the [logistic regression example](extend-model.md)
 to see what needs to be implemented.

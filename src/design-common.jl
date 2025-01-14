@@ -50,7 +50,7 @@ end
     implied_covariates(d::DesignMeasure, m::M, cp::Cp)
 
 Return covariates that are implied by `d`
-for instances of user types `M <: Model` and `Cp <: CovariateParameterization`.
+for instances of user types `M <: Kirstine.Model` and `Cp <: CovariateParameterization`.
 
 This function is useful for debugging.
 
