@@ -52,7 +52,7 @@ See also [`DesignInterval`](@ref), [`dimnames`](@ref).
 abstract type DesignRegion{N} end
 
 """
-    PriorKnowledge{T<:Kirstine.Parameter}
+    Kirstine.PriorKnowledge{T<:Kirstine.Parameter}
 
 Supertype for representing prior knowledge of the model [`Parameter`](@ref).
 

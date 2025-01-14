@@ -4,7 +4,7 @@
 ## concrete types for prior knowledge ##
 
 """
-    PriorSample{T} <: PriorKnowledge{T}
+    PriorSample{T} <: Kirstine.PriorKnowledge{T}
 
 A sample from a prior distribution, or a discrete prior distribution with finite support.
 """

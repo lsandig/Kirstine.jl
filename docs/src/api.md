@@ -164,7 +164,7 @@ JustCopy()
 ## Prior Knowledge
 
 ```@docs
-PriorKnowledge
+Kirstine.PriorKnowledge
 PriorSample
 PriorSample(::AbstractVector{T}, ::AbstractVector{<:Real}) where T <: Kirstine.Parameter
 Base.:(==)(::PriorSample, ::PriorSample)
