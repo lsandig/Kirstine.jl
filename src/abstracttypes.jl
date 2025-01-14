@@ -18,13 +18,13 @@ Supertype for [`Model`](@ref) parameters.
 abstract type Parameter end
 
 """
-    Covariate
+    Kirstine.Covariate
 
 Supertype for user-defined model covariates.
 
 # Implementation
 
-Subtypes of `Covariate` should be mutable, or have at least a mutable field. This is
+Subtypes of `Kirstine.Covariate` should be mutable, or have at least a mutable field. This is
 necessary for being able to modify them in [`map_to_covariate!`](@ref).
 """
 abstract type Covariate end

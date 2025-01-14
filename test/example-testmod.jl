@@ -5,12 +5,12 @@
 
 struct TestMod <: Kirstine.NonlinearRegression end
 
-mutable struct TestCovar2 <: Covariate
+mutable struct TestCovar2 <: Kirstine.Covariate
     a::Float64
     b::Float64
 end
 
-mutable struct TestCovarNonFloat <: Covariate
+mutable struct TestCovarNonFloat <: Kirstine.Covariate
     a::Int64
     b::Vector{Float64}
 end

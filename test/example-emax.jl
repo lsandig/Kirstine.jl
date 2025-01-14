@@ -5,7 +5,7 @@ struct EmaxModel <: Kirstine.NonlinearRegression
     sigma_squared::Float64
 end
 
-mutable struct Dose <: Covariate
+mutable struct Dose <: Kirstine.Covariate
     dose::Float64
 end
 

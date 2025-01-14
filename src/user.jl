@@ -20,11 +20,11 @@ function unit_length end
 """
     Kirstine.allocate_covariate(m::M) -> c::C
 
-Construct a single `Covariate` for the model.
+Construct a single covariate for the model.
 
 # Implementation
 
-For user types `M <: Kirstine.Model` and a corresponding `C <: Covariate`,
+For user types `M <: Kirstine.Model` and a corresponding `C <: Kirstine.Covariate`,
 this should construct a single instance `c` of `C`
 with some (model-specific) sensible initial value.
 
@@ -39,7 +39,7 @@ Compute Jacobian matrix of the mean function at `p`.
 
 # Implementation
 
-For user types `M <: Kirstine.NonlinearRegression`, `C <: Covariate`, and `P <: Kirstine.Parameter`,
+For user types `M <: Kirstine.NonlinearRegression`, `C <: Kirstine.Covariate`, and `P <: Kirstine.Parameter`,
 this should fill in the elements of the pre-allocated Jacobian matrix `jm`,
 and finally return `jm`.
 
@@ -58,7 +58,7 @@ Map a design point to a model covariate.
 
 # Implementation
 
-For user types `C <: Covariate`, `M <: Kirstine.Model`, and
+For user types `C <: Kirstine.Covariate`, `M <: Kirstine.Model`, and
 `Cp <: Kirstine.CovariateParameterization` this should set the fields of the single covariate `c`
 according to the single design point `dp`. Finally, this method should return `c`.
 
@@ -75,7 +75,7 @@ for one unit of observation.
 
 # Implementation
 
-For user types `C <: Covariate` and `M <: Kirstine.NonlinearRegression`,
+For user types `C <: Kirstine.Covariate` and `M <: Kirstine.NonlinearRegression`,
 this should fill in the elements of `Sigma`
 for a unit of observation with covariate `c`.
 The `size` of the matrix is `(unit_length(m), unit_length(m))`.

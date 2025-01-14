@@ -78,7 +78,7 @@ end
 function Kirstine.update_model_workspace!(
     mw::LRWorkspace,
     m::LogisticRegression,
-    c::AbstractVector{<:Covariate},
+    c::AbstractVector{<:Kirstine.Covariate},
 )
     return mw
 end
@@ -90,7 +90,7 @@ function Kirstine.average_fishermatrix!(
     mw::LRWorkspace,
     w::AbstractVector,
     m::LogisticRegression,
-    c::AbstractVector{<:Covariate},
+    c::AbstractVector{<:Kirstine.Covariate},
     p::Kirstine.Parameter,
 )
     fill!(afm, 0.0)
@@ -133,7 +133,7 @@ struct LinLogReg <: LogisticRegression
     dim_covariate::Int64
 end
 
-mutable struct LLRCovariate <: Covariate
+mutable struct LLRCovariate <: Kirstine.Covariate
     x::Vector{Float64}
 end
 
@@ -336,7 +336,7 @@ We are interested in estimating all of ``\Parameter``.
 ```@example main
 struct SinLogReg <: LogisticRegression end
 
-mutable struct Time <: Covariate
+mutable struct Time <: Kirstine.Covariate
     t::Float64
 end
 

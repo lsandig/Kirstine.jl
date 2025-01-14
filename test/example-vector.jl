@@ -11,7 +11,7 @@ struct VUMod <: Kirstine.NonlinearRegression
     m::Int64
 end
 
-mutable struct VUCovariate <: Covariate
+mutable struct VUCovariate <: Kirstine.Covariate
     time::Vector{Float64}
 end
 

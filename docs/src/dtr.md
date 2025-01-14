@@ -89,7 +89,7 @@ using Kirstine, Random, Plots
     m::Int64
 end
 
-mutable struct DoseTimeCovariate <: Covariate
+mutable struct DoseTimeCovariate <: Kirstine.Covariate
     dose::Float64
     time::Vector{Float64}
 end
