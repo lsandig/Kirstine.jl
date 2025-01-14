@@ -45,8 +45,8 @@ solution(::Kirstine.DirectMaximizationResult)
 optimization_result
 Exchange
 Exchange()
-ExchangeResult
-solution(::ExchangeResult)
+Kirstine.ExchangeResult
+solution(::Kirstine.ExchangeResult)
 optimization_results_direction
 optimization_results_weight
 ```
@@ -229,7 +229,7 @@ plot(d::DesignMeasure, dr::Kirstine.DesignRegion)
 plot(r::Kirstine.OptimizationResult)
 plot(rs::AbstractVector{<:OptimizationResult})
 plot(r::Kirstine.DirectMaximizationResult)
-plot(r::ExchangeResult)
+plot(r::Kirstine.ExchangeResult)
 ```
 
 The method for plotting `DesignMeasure`s has several options.

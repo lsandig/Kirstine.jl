@@ -79,8 +79,8 @@ include("example-emax.jl")
             # singular candidate design
             @test_throws "step 1: candidate design is singular" solve(dp, str5)
             # result type
-            @test isa(r1, ExchangeResult)
-            @test isa(r2, ExchangeResult)
+            @test isa(r1, Kirstine.ExchangeResult)
+            @test isa(r2, Kirstine.ExchangeResult)
             # traced state
             @test all(
                 or -> length(or.trace_state) == 20,

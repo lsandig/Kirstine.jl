@@ -69,7 +69,7 @@ struct Exchange{Tod<:ZerothOrderOptimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol
 end
 
 """
-    ExchangeResult <: Kirstine.ProblemSolvingResult
+    Kirstine.ExchangeResult <: Kirstine.ProblemSolvingResult
 
 Wraps the [`OptimizationResult`](@ref)s from the individual steps.
 
@@ -87,7 +87,7 @@ struct ExchangeResult{
 end
 
 """
-    solution(er::ExchangeResult)
+    solution(er::Kirstine.ExchangeResult)
 
 Return the best candidate found.
 """
@@ -96,7 +96,7 @@ function solution(er::ExchangeResult)
 end
 
 """
-    optimization_results_direction(er::ExchangeResult)
+    optimization_results_direction(er::Kirstine.ExchangeResult)
 
 Get the vector of [`OptimizationResult`](@ref)s from the direction steps.
 """
@@ -105,7 +105,7 @@ function optimization_results_direction(er::ExchangeResult)
 end
 
 """
-    optimization_results_weight(er::ExchangeResult)
+    optimization_results_weight(er::Kirstine.ExchangeResult)
 
 Get the full [`OptimizationResult`](@ref)s from the re-weighting steps.
 """
