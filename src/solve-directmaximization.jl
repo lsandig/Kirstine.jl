@@ -48,7 +48,7 @@ struct DirectMaximization{To<:Optimizer} <: ProblemSolvingStrategy
 end
 
 """
-    DirectMaximizationResult <: Kirstine.ProblemSolvingResult
+    Kirstine.DirectMaximizationResult <: Kirstine.ProblemSolvingResult
 
 Wraps the [`OptimizationResult`](@ref) from direct maximization.
 
@@ -60,7 +60,7 @@ struct DirectMaximizationResult{S<:OptimizerState{DesignMeasure,SignedMeasure}} 
 end
 
 """
-    solution(dmr::DirectMaximizationResult)
+    solution(dmr::Kirstine.DirectMaximizationResult)
 
 Return the best candidate found.
 """
@@ -69,7 +69,7 @@ function solution(dmr::DirectMaximizationResult)
 end
 
 """
-    optimization_result(dmr::DirectMaximizationResult)
+    optimization_result(dmr::Kirstine.DirectMaximizationResult)
 
 Get the full [`OptimizationResult`](@ref).
 """

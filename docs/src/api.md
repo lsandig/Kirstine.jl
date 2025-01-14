@@ -40,8 +40,8 @@ Kirstine.ProblemSolvingStrategy
 Kirstine.ProblemSolvingResult
 DirectMaximization
 DirectMaximization()
-DirectMaximizationResult
-solution(::DirectMaximizationResult)
+Kirstine.DirectMaximizationResult
+solution(::Kirstine.DirectMaximizationResult)
 optimization_result
 Exchange
 Exchange()
@@ -228,7 +228,7 @@ plot(d::DesignMeasure)
 plot(d::DesignMeasure, dr::Kirstine.DesignRegion)
 plot(r::Kirstine.OptimizationResult)
 plot(rs::AbstractVector{<:OptimizationResult})
-plot(r::DirectMaximizationResult)
+plot(r::Kirstine.DirectMaximizationResult)
 plot(r::ExchangeResult)
 ```
 

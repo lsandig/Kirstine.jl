@@ -260,7 +260,7 @@ nothing # hide
 The [`solve`](@ref) function returns two objects:
 
   - `s1`: a slightly post-processed [`DesignMeasure`](@ref)
-  - `r1`: a [`DirectMaximizationResult`](@ref)
+  - `r1`: a [`Kirstine.DirectMaximizationResult`](@ref)
     that contains diagnostic information about the optimization run.
 
 We can access the lower-level [`Kirstine.OptimizationResult`](@ref)

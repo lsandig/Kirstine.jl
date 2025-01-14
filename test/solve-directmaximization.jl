@@ -55,8 +55,8 @@ include("example-emax.jl")
             @test_throws "outside design region" (@test_warn "dp =" solve(dp, str3))
             @test_throws "must match" solve(dp, str4)
             # result type
-            @test isa(r1, DirectMaximizationResult)
-            @test isa(r2, DirectMaximizationResult)
+            @test isa(r1, Kirstine.DirectMaximizationResult)
+            @test isa(r2, Kirstine.DirectMaximizationResult)
             # traced state
             @test length(optimization_result(r1).trace_state) == 0
             @test length(optimization_result(r2).trace_state) == 20
