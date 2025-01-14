@@ -110,7 +110,7 @@ are valid for a design measure.
     as implied by ``f^{-1}``.
 
 Now, from a software engineering point of view,
-an [`Optimizer`](@ref) should not have to know anything about the nature of the points it works with.
+an [`Kirstine.Optimizer`](@ref) should not have to know anything about the nature of the points it works with.
 It only sees objects of a type `T <: AbstractPoint`,
 and a corresponding type `U <: AbstractPointDifference`
 that can store a representation of the difference between two `T`s.
@@ -145,14 +145,14 @@ shown here for `T = DesignMeasure` and `U = SignedMeasure`:
       - `fixw::Vector{Bool}` true elements correspond to design weights that should not move
       - `fixp::Vector{Bool}` true elements correspond to design points that should not move
     
-    When you implement a general `Optimizer`,
+    When you implement a general `Kirstine.Optimizer`,
     you will not need to use this information
     since it is specific to the `DesignMeasure` subtype of `AbstractPoint`.
 
 ## Implementation
 
 The internal optimization interface consists of functions
-that operate on objects of a type `O <: Optimizer`,
+that operate on objects of a type `O <: Kirstine.Optimizer`,
 which holds the algorithm's parameters,
 and a type `S <: OptimizerState`
 which holds the state of the optimizer in the current iteration.
@@ -179,7 +179,7 @@ For `O = Ica` and `S = IcaState` we must implement the following methods:
 
 !!! note
     
-    The `Optimizer` type has two abstract subtypes:
+    The `Kirstine.Optimizer` type has two abstract subtypes:
     A [`Kirstine.ZerothOrderOptimizer`](@ref) only works with the objective function itself,
     while a [`Kirstine.FirstOrderOptimizer`](@ref) also requires its gradient.
     ICA is of order zero.

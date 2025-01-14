@@ -10,7 +10,7 @@ The package implements [`DirectMaximization`](@ref) and a version of Fedorov's [
 This vignette shows how to implement a custom strategy.
 
 Our example will be a variant of direct maximization
-that runs the given [`Optimizer`](@ref) multiple times,
+that runs the given [`Kirstine.Optimizer`](@ref) multiple times,
 using the best candidate from the current iteration
 as the prototype for initializing the next one.
 A further extension of this example could also include a check of the Gateaux derivative
@@ -23,7 +23,7 @@ plus methods for the following functions:
 
   - `solve_with(adp::AbstractDesignProblem, strategy::Ts, trace_state::Bool)`
     which does the actual work and returns a `Tr`.
-    The flag `trace_state` should passed to the low-level [`Optimizer`](@ref).
+    The flag `trace_state` should passed to the low-level [`Kirstine.Optimizer`](@ref).
   - `solution(res::Tr)` to extract the best solution that was found.
 
 Optionally,

@@ -14,10 +14,10 @@ and it will seamlessly blend in.
 Such is the magic of multiple dispatch.
 This does not only work with the parts of a `DesignProblem`,
 but also with the optimization algorithms.
-They are represented by subtypes of `Optimizer` (for the low-level work)
+They are represented by subtypes of `Kirstine.Optimizer` (for the low-level work)
 and `ProblemSolvingStrategy` (for high-level design-specific stuff).
 Moreover, the finicky logic for moving around `DesignMeasures` is encapsulated,
-so your custom `Optimizer` subtype will only have to deal with `AbstractPoints`.
+so your custom `Kirstine.Optimizer` subtype will only have to deal with `AbstractPoints`.
 The following example vignettes will show you how to implement
 
   - a non-logarithmized determinant [design criterion](extend-criterion.md)

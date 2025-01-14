@@ -17,7 +17,7 @@ struct DirectMaximization{To<:Optimizer} <: ProblemSolvingStrategy
     # AbstractVector, and esp. also a unit range
     @doc """
         DirectMaximization(;
-            optimizer::Optimizer,
+            optimizer::Kirstine.Optimizer,
             prototype::DesignMeasure,
             fixedweights = [],
             fixedpoints = [],

@@ -100,7 +100,7 @@ abstract type AbstractPoint end
 abstract type AbstractPointDifference end
 
 """
-    Optimizer
+    Kirstine.Optimizer
 
 Supertype for particle-based optimization algorithms.
 
@@ -109,14 +109,14 @@ See also [`Pso`](@ref), [`GridSearch`](@ref), [`FrankWolfe`](@ref).
 abstract type Optimizer end
 
 """
-    ZerothOrderOptimizer <: Optimizer
+    ZerothOrderOptimizer <: Kirstine.Optimizer
 
 Supertype for optimization algorithms that only use the objective function.
 """
 abstract type ZerothOrderOptimizer <: Optimizer end
 
 """
-    FirstOrderOptimizer <: Optimizer
+    FirstOrderOptimizer <: Kirstine.Optimizer
 
 Supertype for optimization algorithms that use the objective function and its gradient.
 """

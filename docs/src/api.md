@@ -55,7 +55,7 @@ Particle-based optimizers are operating on a lower level,
 and are used as part of a `ProblemSolvingStrategy`.
 
 ```@docs
-Optimizer
+Kirstine.Optimizer
 Kirstine.ZerothOrderOptimizer
 Kirstine.FirstOrderOptimizer
 OptimizationResult

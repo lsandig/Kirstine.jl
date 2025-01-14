@@ -22,7 +22,7 @@ struct Exchange{Tod<:ZerothOrderOptimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol
     @doc """
         Exchange(;
             optimizer_direction::ZerothOrderOptimizer,
-            optimizer_weight::Optimizer,
+            optimizer_weight::Kirstine.Optimizer,
             steps::Integer,
             candidate::DesignMeasure,
             simplify_args = Dict{Symbol,Any}(),
