@@ -212,7 +212,7 @@ simplify_drop
 simplify_unique
 simplify_merge
 Kirstine.informationmatrix
-apply_transformation
+Kirstine.apply_transformation
 implied_covariates
 ```
 

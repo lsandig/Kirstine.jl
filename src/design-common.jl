@@ -157,7 +157,7 @@ function inv_informationmatrices(
 end
 
 """
-    apply_transformation(nim::AbstractMatrix{<:Real}, p::Kirstine.Parameter, trafo::Kirstine.Transformation)
+    Kirstine.apply_transformation(nim::AbstractMatrix{<:Real}, p::Kirstine.Parameter, trafo::Kirstine.Transformation)
 
 Compute the information matrix for the transformed `Parameter`.
 

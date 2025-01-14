@@ -140,9 +140,9 @@ include("example-compartment.jl")
             t1 = Identity(),
             t2 = DeltaMethod(p -> [0 1]), # p -> p.b
             t3 = DeltaMethod(p -> [2*p.a 0; -1 1]), # p -> [p.a^2, p[2] - p[1]]
-            MT1 = apply_transformation(M, p, t1),
-            MT2 = apply_transformation(M, p, t2),
-            MT3 = apply_transformation(M, p, t3)
+            MT1 = Kirstine.apply_transformation(M, p, t1),
+            MT2 = Kirstine.apply_transformation(M, p, t2),
+            MT3 = Kirstine.apply_transformation(M, p, t3)
 
             @test MT1 isa Symmetric
             @test MT1 == M
