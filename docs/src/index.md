@@ -43,6 +43,12 @@ you can get it directly from sourcehut:
 Pkg.add(url = "https://git.sr.ht/~lsandig/Kirstine.jl")
 ```
 
+To install the development branch:
+
+```julia
+Pkg.add(url = "https://git.sr.ht/~lsandig/Kirstine.jl", rev = "develop")
+```
+
 ## Documentation
 
 To get started, read the [tutorial](tutorial.md).
