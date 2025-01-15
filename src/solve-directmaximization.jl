@@ -84,6 +84,15 @@ Get the total time spent during optimization.
 """
 total_runtime(dmr::DirectMaximizationResult) = dmr.or.seconds_elapsed
 
+function Base.show(io::IO, ::MIME"text/plain", dmr::DirectMaximizationResult)
+    println(io, "DirectMaximizationResult")
+    println(io, "* final objective: ", dmr.or.maximum)
+    println(io, "* runtime total: ", prettydifftime(total_runtime(dmr)))
+    println(io, "* raw solution: ")
+    show(io, MIME("text/plain"), solution(dmr))
+    print(io, "\n* diagnostic information: optimization_result(<this object>)")
+end
+
 function solve_with(
     adp::AbstractDesignProblem,
     strategy::DirectMaximization{<:ZerothOrderOptimizer},

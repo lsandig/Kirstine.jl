@@ -140,6 +140,20 @@ function total_runtime_weight(er::ExchangeResult)
     return mapreduce(or -> or.seconds_elapsed, +, er.orw)
 end
 
+function Base.show(io::IO, ::MIME"text/plain", er::ExchangeResult)
+    println(io, "DirectMaximizationResult")
+    println(io, "* final objective: ", er.orw[end].maximum)
+    println(io, "* final max Gateaux derivative: ", er.ord[end].maximum)
+    println(io, "* runtime total: ", prettydifftime(total_runtime(er)))
+    println(io, "      direction: ", prettydifftime(total_runtime_direction(er)))
+    println(io, "         weight: ", prettydifftime(total_runtime_weight(er)))
+    println(io, "* raw solution: ")
+    show(io, MIME("text/plain"), solution(er))
+    println(io, "\n* diagnostic information:")
+    println(io, "    optimization_results_direction(<this object>)")
+    print(io, "    optimization_results_weight(<this object>)")
+end
+
 function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state::Bool)
     check_compatible(strategy.candidate, region(adp))
     # The workspaces and the constraints are independent of the current candidate.
