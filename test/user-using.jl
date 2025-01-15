@@ -116,7 +116,7 @@ include("example-testmod.jl")
             # design point is not modified
             @test dp == [42.0, 3.14]
             # covariate parameterization is not modified
-            @test jc1.field_names == (:a, :b)
+            @test jc1.covariate_field_names == (:a, :b)
 
             @test_throws "dimension of design point" mtc!(c1, [1.0], m, jc1)
             @test_throws "don't match field names of covariate" mtc!(c1, dp, m, jc2)

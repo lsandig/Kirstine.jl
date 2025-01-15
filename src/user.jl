@@ -105,11 +105,24 @@ function dimension end
 A convenience type to use when design variables and model covariates are identical.
 """
 struct JustCopy{N} <: CovariateParameterization
-    field_names::NTuple{N,Symbol}
+    # Note that we have to give the field names of the _covariate_ explicitly
+    # since map_to_covariate!() does not have access to the design region,
+    # hence also not to the dimnames() of the design region.
+    # The region's dimnames are only used for axis labels in graphics.
+    # However, the _order_ of the field names here is arbitrary
+    # as long as it matches what the user intends to do with the design region.
+    # I.e. the following would work, but be a bit confusing:
+    # struct FooCovariate <: Kirstine.Covariate
+    #     a::Float64
+    #     b::Float64
+    # end
+    # dr = DesignInterval(:b => (1, 2), :a => (3, 4))
+    # JustCopy(:b, :a)
+    covariate_field_names::NTuple{N,Symbol}
 end
 
 function Base.show(io::IO, cp::JustCopy)
-    args = map(fn -> ':' * string(fn), cp.field_names)
+    args = map(fn -> ':' * string(fn), cp.covariate_field_names)
     print(io, "JustCopy(" * join(args, ", "), ")")
 end
 
@@ -188,12 +201,12 @@ function JustCopy(names::Symbol...)
 end
 
 function map_to_covariate!(c::Covariate, dp::AbstractVector{<:Real}, m::Model, cp::JustCopy)
-    dimc = length(cp.field_names)
+    dimc = length(cp.covariate_field_names)
     cnames = fieldnames(typeof(c))
     msg = "names of $(cp) don't match field names of covariate $(cnames)"
     err = ArgumentError(msg)
     length(cnames) == dimc || throw(err)
-    for fn in cp.field_names
+    for fn in cp.covariate_field_names
         if !(fn in cnames)
             throw(err)
         end
@@ -202,7 +215,7 @@ function map_to_covariate!(c::Covariate, dp::AbstractVector{<:Real}, m::Model, c
         throw(DimensionMismatch("dimension of design point must match that of covariate"))
     end
     for i in 1:dimc
-        fn = cp.field_names[i]
+        fn = cp.covariate_field_names[i]
         # The next call allocates memory
         # since the field names and their types are not know at compile time.
         # As a consequence, `map_to_covariate` is slowed down by a factor of 10
