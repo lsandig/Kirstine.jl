@@ -95,6 +95,12 @@ include("example-emax.jl")
             # no new point, but last one of the candidate
             @test numpoints(optimization_results_weight(r2)[1].maximizer) == 3
             @test points(optimization_results_weight(r2)[1].maximizer)[1] == [10]
+            # test that runtimes can be accessed
+            rt_direction = total_runtime_direction(r1)
+            rt_weight = total_runtime_weight(r1)
+            @test rt_direction > 0
+            @test rt_weight > 0
+            @test total_runtime(r1) == rt_direction + rt_weight
         end
     end
 

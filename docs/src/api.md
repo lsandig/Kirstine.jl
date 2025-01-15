@@ -57,6 +57,9 @@ Exchange
 Exchange()
 Kirstine.ExchangeResult
 solution(::Kirstine.ExchangeResult)
+total_runtime(::Kirstine.ExchangeResult)
+total_runtime_direction(::Kirstine.ExchangeResult)
+total_runtime_weight(::Kirstine.ExchangeResult)
 optimization_results_direction
 optimization_results_weight
 ```

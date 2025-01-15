@@ -113,6 +113,33 @@ function optimization_results_weight(er::ExchangeResult)
     return er.orw
 end
 
+"""
+    total_runtime(er::Kirstine.ExchangeResult)
+
+Get the total time spent during optimization.
+"""
+function total_runtime(er::ExchangeResult)
+    return total_runtime_direction(er) + total_runtime_weight(er)
+end
+
+"""
+    total_runtime_direction(er::Kirstine.ExchangeResult)
+
+Get the total time spent during the direction steps.
+"""
+function total_runtime_direction(er::ExchangeResult)
+    return mapreduce(or -> or.seconds_elapsed, +, er.ord)
+end
+
+"""
+    total_runtime_weight(er::Kirstine.ExchangeResult)
+
+Get the total time spent during the re-weighting steps.
+"""
+function total_runtime_weight(er::ExchangeResult)
+    return mapreduce(or -> or.seconds_elapsed, +, er.orw)
+end
+
 function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state::Bool)
     check_compatible(strategy.candidate, region(adp))
     # The workspaces and the constraints are independent of the current candidate.
