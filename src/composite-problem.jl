@@ -65,6 +65,30 @@ function region(cdp::CompositeDesignProblem)
     return region(first(problems(cdp)))
 end
 
+function pretty_lines_cdp(cdp::CompositeDesignProblem, depth::Integer)
+    lines = ["CompositeDesignProblem"]
+    indent = "  "
+    depth == 0 && push!(lines, indent * "with region: " * string(region(cdp)))
+    iob = IOBuffer()
+    ioc = IOContext(iob, :limit => false)
+    pretty = String[]
+    map(problems(cdp), weights(cdp)) do dp, w
+        if dp isa CompositeDesignProblem
+            pretty = pretty_lines_cdp(dp, depth + 1)
+        else
+            show(ioc, "text/plain", dp)
+            pretty = split(String(take!(iob)), '\n')
+        end
+        push!(lines, indent * "* " * popfirst!(pretty) * " (weight: $w)")
+        append!(lines, indent .* pretty)
+    end
+    return lines
+end
+
+function Base.show(io::IO, ::MIME"text/plain", cdp::CompositeDesignProblem)
+    print(io, join(pretty_lines_cdp(cdp, 0), '\n'))
+end
+
 struct CDPWorkspace{T<:AbstractWorkspace} <: AbstractWorkspace
     component_workspaces::Vector{T}
 end
