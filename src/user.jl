@@ -254,7 +254,7 @@ with constant measurement variance.
 This macro will define the two types `\$(name)Model` and `\$(name)Covariate`,
 hence `name` should start with a capital letter.
 The model constructor will have the measurement standard deviation `sigma` as a mandatory
-keyword argument.
+argument.
 
 # Examples
 
@@ -267,9 +267,12 @@ The call
 is equivalent to manually spelling out
 
 ```julia
-struct EmaxModel <: Kirstine.NonlinearRegression
+@kwdef struct EmaxModel <: Kirstine.NonlinearRegression
     sigma::Float64
-    function EmaxModel(; sigma::Real)
+    function EmaxModel(sigma::Real)
+        if sigma <= 0
+            throw(ArgumentError("sigma must be positive"))
+        end
         return new(sigma)
     end
 end
@@ -314,9 +317,12 @@ macro simple_model(name, covariate_field_names...)
     # module. This has the nice side effect of not replacing `m` with a gensym.
     return esc(
         quote
-            struct $model_name <: $module_name.NonlinearRegression
+            @kwdef struct $model_name <: $module_name.NonlinearRegression
                 sigma::Float64
-                function $model_name(; sigma::Real)
+                function $model_name(sigma::Real)
+                    if sigma <= 0
+                        throw(ArgumentError("sigma must be positive"))
+                    end
                     return new(sigma)
                 end
             end

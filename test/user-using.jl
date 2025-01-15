@@ -14,12 +14,17 @@ include("example-testmod.jl")
         let ex = @macroexpand(@simple_model(Foo, bar, baz)),
             _ = Base.remove_linenums!(ex),
             (a, b, c, d, e) = ex.args,
-            aref = :(struct FooModel <: Kirstine.NonlinearRegression
-                sigma::Float64
-                function FooModel(; sigma::Real)
-                    return new(sigma)
+            aref = @macroexpand(
+                @kwdef struct FooModel <: Kirstine.NonlinearRegression
+                    sigma::Float64
+                    function FooModel(sigma::Real)
+                        if sigma <= 0
+                            throw(ArgumentError("sigma must be positive"))
+                        end
+                        return new(sigma)
+                    end
                 end
-            end),
+            ),
             bref = :(mutable struct FooCovariate <: Kirstine.Covariate
                 bar::Float64
                 baz::Float64

@@ -12,12 +12,17 @@ import Kirstine as Smith
         let ex = @macroexpand(Smith.@simple_model(Foo, bar, baz)),
             _ = Base.remove_linenums!(ex),
             (a, b, c, d, e) = ex.args,
-            aref = :(struct FooModel <: Smith.NonlinearRegression
-                sigma::Float64
-                function FooModel(; sigma::Real)
-                    return new(sigma)
+            aref = @macroexpand(
+                @kwdef struct FooModel <: Smith.NonlinearRegression
+                    sigma::Float64
+                    function FooModel(sigma::Real)
+                        if sigma <= 0
+                            throw(ArgumentError("sigma must be positive"))
+                        end
+                        return new(sigma)
+                    end
                 end
-            end),
+            ),
             bref = :(mutable struct FooCovariate <: Smith.Covariate
                 bar::Float64
                 baz::Float64
