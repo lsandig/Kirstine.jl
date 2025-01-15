@@ -116,6 +116,6 @@ function solve_with(
     wg = allocate_workspace(opd, adp)
     f = d -> objective!(wf, d, adp, oc)
     g! = (g, d) -> objective_gradient_weights!(g, opd, wg, wf, d, adp, dc, oc)
-    or = optimize(f, g!, optimizer, [prototype], constraints; trace_state = trace_state)
+    or = optimize((f, g!), optimizer, [prototype], constraints; trace_state = trace_state)
     return DirectMaximizationResult(or)
 end

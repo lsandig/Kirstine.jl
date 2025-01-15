@@ -184,7 +184,7 @@ For `O = Ica` and `S = IcaState` we must implement the following methods:
     while a [`Kirstine.FirstOrderOptimizer`](@ref) also requires its gradient.
     ICA is of order zero.
     If you want to implement a first-order optimizer,
-    you need versions of `optimizer_state(f, g!, ...)` and of `tick!(f, g!, ...)`
+    you need versions of `optimizer_state((f, g!), ...)` and of `tick!((f, g!), ...)`
     that additionally take a mutating gradient `g!(g::AbstractVector, x::AbstractPoint) -> g`.
 
 ```@example main

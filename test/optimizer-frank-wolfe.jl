@@ -134,7 +134,8 @@ end
             # We can only test stepsize() indirectly, since building the optimizer state already
             # performs the first full tick!().
             a1 = Kirstine.Adaptive(; initial_smoothness_estimate = 1, eta = 0.8, tau = 1.5)
-            s1 = Kirstine.optimizer_state(f, g!, Kirstine.FrankWolfe(1, a1, false), [x], c)
+            fw1 = Kirstine.FrankWolfe(1, a1, false)
+            s1 = Kirstine.optimizer_state((f, g!), fw1, [x], c)
             # To get from 0.8 * 1 to over 2, we need to multiply by 1.5 3 times and get 2.7
             @test s1.work.smoothness_estimate ≈ 2.7
             # 1 from first tick!(), 4 from while loop in stepsize!()
@@ -145,14 +146,16 @@ end
             # the other cases do not differ in this respect.
             # For them we only check the bookkeeping of the number of gradient evaluations.
             a2 = Kirstine.Adaptive(; initial_smoothness_estimate = 3, eta = 0.8, tau = 1.5)
-            s2 = Kirstine.optimizer_state(f, g!, Kirstine.FrankWolfe(1, a2, false), [x], c)
+            fw2 = Kirstine.FrankWolfe(1, a2, false)
+            s2 = Kirstine.optimizer_state((f, g!), fw2, [x], c)
             # 0.8 * 3 = 2.4 is already larger than 2, so this is the estimate
             @test s2.work.smoothness_estimate ≈ 2.4
             # 1 from first tick!(), 1 from while loop in stepsize!()
             @test s2.n_eval_g == 2
 
             a3 = Kirstine.Adaptive(; initial_smoothness_estimate = Inf, eta = 0.9, tau = 2)
-            s3 = Kirstine.optimizer_state(f, g!, Kirstine.FrankWolfe(1, a3, false), [x], c)
+            fw3 = Kirstine.FrankWolfe(1, a3, false)
+            s3 = Kirstine.optimizer_state((f, g!), fw3, [x], c)
             # the initial estimate is ≈ 2, which becomes too small as 2 * 0.9 = 1.8,
             # but doubling once again is sufficient
             @test s3.work.smoothness_estimate ≈ 3.6
@@ -191,12 +194,12 @@ end
             # 0   x0=5     10
             x0 = Pnt([5]),
             c = BoxConstraints(Pnt([0]), Pnt([10])),
-            state = Kirstine.optimizer_state(f, g!, opt, [x0], c)
+            state = Kirstine.optimizer_state((f, g!), opt, [x0], c)
 
-            @test_throws "exactly 1" Kirstine.optimizer_state(f, g!, opt, [x0, x0], c)
-            @test_throws "NaN" Kirstine.optimizer_state(f, gnan!, opt, [x0], c)
-            @test_throws "Inf" Kirstine.optimizer_state(f, ginf!, opt, [x0], c)
-            @test_throws "Inf" Kirstine.optimizer_state(f, gninf!, opt, [x0], c)
+            @test_throws "exactly 1" Kirstine.optimizer_state((f, g!), opt, [x0, x0], c)
+            @test_throws "NaN" Kirstine.optimizer_state((f, gnan!), opt, [x0], c)
+            @test_throws "Inf" Kirstine.optimizer_state((f, ginf!), opt, [x0], c)
+            @test_throws "Inf" Kirstine.optimizer_state((f, gninf!), opt, [x0], c)
             @test state isa Kirstine.FrankWolfeState{Pnt,PntDiff}
             # we should not share memory with given arguments
             @test state.x == c.lb
@@ -222,10 +225,10 @@ end
             f(p) = -sum((p.x .- xstar) .^ 2),
             g!(grad, p) = grad .= -2 .* (p.x .- xstar),
             c = BoxConstraints(Pnt([0, 0]), Pnt([10, 10])),
-            state = Kirstine.optimizer_state(f, g!, opt, [Pnt([5, 0.5])], c),
+            state = Kirstine.optimizer_state((f, g!), opt, [Pnt([5, 0.5])], c),
             iter = 2
 
-            Kirstine.tick!(f, g!, state, opt, c, iter)
+            Kirstine.tick!((f, g!), state, opt, c, iter)
             @test state.gx == [2, -18]
             @test state.v == Pnt([10, 0])
             @test state.stepsize ≈ 2 / 3
@@ -252,20 +255,23 @@ end
             constr2 = BoxConstraints(Pnt(fill(-1, n)), Pnt(collect(1:n) ./ 2))
 
             # This solution will be at xstar, inside the constraints...
-            r1 = Kirstine.optimize(f, g!, fw, [prototype], constr1)
+            r1 = Kirstine.optimize((f, g!), fw, [prototype], constr1)
             # ... and this one will be on the boundary at [0.5, 1, 1, ..., 1]
-            r2 = Kirstine.optimize(f, g!, fw, [prototype], constr2; trace_state = true)
+            r2 = Kirstine.optimize((f, g!), fw, [prototype], constr2; trace_state = true)
             # paired steps will be better at going to the boundary
-            r3 = Kirstine.optimize(f, g!, pfw, [prototype], constr2; trace_state = true)
+            r3 = Kirstine.optimize((f, g!), pfw, [prototype], constr2; trace_state = true)
 
             @test r1.maximizer.x ≈ xstar rtol = 1e-4
             @test r1.maximum ≈ 0.0 atol = 1e-4
             @test length(r1.trace_gx) == 2000
+            @test r1.n_eval_g == 2000
             @test r1.trace_gx[end] ≈ zeros(n) atol = 1e-2 # local maximum
             @test r2.maximizer.x ≈ [0.5; xstar[2:end]] rtol = 1e-4
             @test r2.maximum ≈ -0.25 rtol = 1e-4
             @test length(r2.trace_gx) == 2000
             @test r2.trace_gx[end] ≈ [1, 0, 0, 0] rtol = 1e-2 # not a local maximum
+            # adaptive has more gradient evaluations
+            @test r3.n_eval_g > length(r3.trace_gx)
             # pairwise steps converge faster:
             @test r3.maximum > r2.maximum
             @test r3.trace_state[end].frank_wolfe_gap < r2.trace_state[end].frank_wolfe_gap
