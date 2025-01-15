@@ -119,8 +119,8 @@ include("example-testmod.jl")
             @test jc1.field_names == (:a, :b)
 
             @test_throws "dimension of design point" mtc!(c1, [1.0], m, jc1)
-            @test_throws "field names of covariate" mtc!(c1, dp, m, jc2)
-            @test_throws "field names of covariate" mtc!(c1, dp, m, jc3)
+            @test_throws "don't match field names of covariate" mtc!(c1, dp, m, jc2)
+            @test_throws "don't match field names of covariate" mtc!(c1, dp, m, jc3)
             @test_throws TypeError mtc!(c2, dp, m, jc1)
         end
     end

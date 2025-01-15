@@ -190,12 +190,9 @@ end
 function map_to_covariate!(c::Covariate, dp::AbstractVector{<:Real}, m::Model, cp::JustCopy)
     dimc = length(cp.field_names)
     cnames = fieldnames(typeof(c))
-    err = ArgumentError(
-        "field names of covariate must match names of JustCopy parameterization",
-    )
-    if length(cnames) != dimc
-        throw(err)
-    end
+    msg = "names of $(cp) don't match field names of covariate $(cnames)"
+    err = ArgumentError(msg)
+    length(cnames) == dimc || throw(err)
     for fn in cp.field_names
         if !(fn in cnames)
             throw(err)
