@@ -79,6 +79,19 @@ include("example-testmod.jl")
         end
     end
 
+    @testset "show(::JustCopy)" begin
+        # check that pretty representation is parseable
+        let x = JustCopy(:a, :b, :c),
+            io = IOBuffer(),
+            ioc = IOContext(io, :limit => false),
+            _ = show(ioc, "text/plain", x),
+            str_pretty = String(take!(io)),
+            x_pretty = eval(Meta.parse(str_pretty))
+
+            @test x == x_pretty
+        end
+    end
+
     @testset "map_to_covariate!(JustCopy)" begin
         let mtc! = Kirstine.map_to_covariate!,
             c1 = TestCovar2(0, 0),

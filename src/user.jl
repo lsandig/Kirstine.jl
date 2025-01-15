@@ -108,6 +108,11 @@ struct JustCopy{N} <: CovariateParameterization
     field_names::NTuple{N,Symbol}
 end
 
+function Base.show(io::IO, cp::JustCopy)
+    args = map(fn -> ':' * string(fn), cp.field_names)
+    print(io, "JustCopy(" * join(args, ", "), ")")
+end
+
 """
     JustCopy(names::Symbol...)
 
@@ -140,7 +145,7 @@ we can define
 
 ```jldoctest justcopy
 julia> cp = JustCopy(:a, :b)
-JustCopy{2}((:a, :b))
+JustCopy(:a, :b)
 ```
 
 and then solve
