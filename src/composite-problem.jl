@@ -42,6 +42,14 @@ struct CompositeDesignProblem{T<:AbstractDesignProblem} <: AbstractDesignProblem
     end
 end
 
+function Base.:(==)(cdp1::CompositeDesignProblem, cdp2::CompositeDesignProblem)
+    return problems(cdp1) == problems(cdp2) && weights(cdp1) == weights(cdp2)
+end
+
+function Base.hash(cdp::CompositeDesignProblem, h::UInt)
+    return hash(problems(cdp), hash(weights(cdp), h))
+end
+
 """
     problems(cdp::CompositeDesignProblem)
 

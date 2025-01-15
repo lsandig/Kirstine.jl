@@ -55,6 +55,40 @@ include("example-compartment.jl")
         end
     end
 
+    @testset "==" begin
+        let dp1 = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            dp2 = deepcopy(dp1),
+            cdp1 = CompositeDesignProblem([dp1, dp2], [1, 2]),
+            cdp2 = deepcopy(cdp1)
+
+            @test cdp1 == cdp2
+        end
+    end
+
+    @testset "hash" begin
+        let dp1 = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            dp2 = DesignProblem(dp1; criterion = ACriterion()),
+            cdp1 = CompositeDesignProblem([dp1, dp2], [1, 2]),
+            cdp2 = CompositeDesignProblem([dp1, dp2], [1, 3]),
+            cdp3 = CompositeDesignProblem([dp1, dp2], [1, 3])
+
+            # implicitly constructs a Set, which calls hash()
+            @test unique([cdp1, cdp2, cdp3]) == [cdp1, cdp2]
+        end
+    end
+
     @testset "allocate_workspace(::CompositeDesignProblem)" begin
         let dc = DCriterion(),
             dr = DesignInterval(:dose => (0, 10)),
