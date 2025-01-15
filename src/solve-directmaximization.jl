@@ -77,6 +77,13 @@ function optimization_result(dmr::DirectMaximizationResult)
     return dmr.or
 end
 
+"""
+    total_runtime(dmr::Kirstine.DirectMaximizationResult)
+
+Get the total time spent during optimization.
+"""
+total_runtime(dmr::DirectMaximizationResult) = dmr.or.seconds_elapsed
+
 function solve_with(
     adp::AbstractDesignProblem,
     strategy::DirectMaximization{<:ZerothOrderOptimizer},

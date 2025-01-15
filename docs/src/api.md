@@ -51,6 +51,7 @@ DirectMaximization
 DirectMaximization()
 Kirstine.DirectMaximizationResult
 solution(::Kirstine.DirectMaximizationResult)
+total_runtime(::Kirstine.DirectMaximizationResult)
 optimization_result
 Exchange
 Exchange()

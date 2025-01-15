@@ -69,6 +69,8 @@ include("example-emax.jl")
             @test all(upper_dp_vals .== upperbound(region(dp))[1])
             # non-fixed design point converges to 2.5
             @test issorted(middle_dp_dists, rev = true)
+            # total runtime can be accessed
+            @test total_runtime(r1) > 0
         end
 
         # DirectMaximization, but with fixed weights / design points that we know are not
