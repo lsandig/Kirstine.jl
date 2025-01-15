@@ -25,6 +25,7 @@ plus methods for the following functions:
     which does the actual work and returns a `Tr`.
     The flag `trace_state` should passed to the low-level [`Kirstine.Optimizer`](@ref).
   - `solution(res::Tr)` to extract the best solution that was found.
+  - `total_runtime(res::Tr)` to extract the total runtime in seconds.
 
 Optionally,
 for producing a plot of the optimization progress,
@@ -62,6 +63,10 @@ end
 
 function Kirstine.solution(mrr::MultipleRunsResult)
     return mrr.ors[end].maximizer
+end
+
+function Kirstine.total_runtime(mrr::MultipleRunsResult)
+    return mapreduce(or -> or.seconds_elapsed, +, mrr.ors)
 end
 
 function Kirstine.solve_with(
@@ -168,6 +173,10 @@ s == DesignMeasure(
 ```
 
 ![](extend-strategy-gd.png)
+
+```@example main
+total_runtime(r)
+```
 
 ```@example main
 pr = plot(r)
