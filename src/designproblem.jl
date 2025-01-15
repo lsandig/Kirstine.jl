@@ -203,6 +203,19 @@ Get the [`NormalApproximation`](@ref) of `dp`.
 """
 normal_approximation(dp::DesignProblem) = dp.na
 
+function Base.show(io::IO, ::MIME"text/plain", dp::DesignProblem)
+    println(io, "DesignProblem")
+    println(io, " - criterion: ", criterion(dp))
+    println(io, " - region: ", region(dp))
+    println(io, " - model: ", model(dp))
+    println(io, " - covariate parameterization: ", covariate_parameterization(dp))
+    print(io, " - prior knowledge: ")
+    show(io, MIME("text/plain"), prior_knowledge(dp))
+    println(io)
+    println(io, " - transformation: ", transformation(dp))
+    print(io, " - normal approximation: ", normal_approximation(dp))
+end
+
 struct DPWorkspace{Tmw<:ModelWorkspace,Tc<:Covariate} <: AbstractWorkspace
     nw::NIMWorkspace
     mw::Tmw
