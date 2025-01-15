@@ -92,3 +92,13 @@ end
 function Base.hash(pk::PriorSample, h::UInt)
     return hash(parameters(pk), hash(weights(pk), h))
 end
+
+function Base.show(io::IO, ::MIME"text/plain", pk::PriorSample)
+    partype = typeof(first(parameters(pk)))
+    ndraw = length(parameters(pk))
+    if ndraw > 1
+        print(io, "$(ndraw) draws of $(partype)")
+    else
+        print(io, "one-point distribution at $(only(parameters(pk)))")
+    end
+end
