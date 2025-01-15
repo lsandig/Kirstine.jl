@@ -42,10 +42,18 @@ using Random
             @test all(ref.lowerbound .== dr.lowerbound)
             @test all(ref.upperbound .== dr.upperbound)
         end
+    end
 
-        # inner constructor and round trip via textual representation
-        let dr = DesignInterval([:a, :b], [0, 0], [1, 2])
-            @test dr == eval(Meta.parse(repr(dr)))
+    @testset "show(::DesignInterval)" begin
+        # check that pretty representation is parseable
+        let x = DesignInterval(:dose => (0, 300), :time => (0, 20)),
+            io = IOBuffer(),
+            ioc = IOContext(io, :limit => false),
+            _ = show(ioc, "text/plain", x),
+            str_pretty = String(take!(io)),
+            x_pretty = eval(Meta.parse(str_pretty))
+
+            @test x == x_pretty
         end
     end
 

@@ -51,7 +51,7 @@ Construct a design interval.
 
 ```jldoctest
 julia> DesignInterval([:dose, :time], [0, 0], [300, 20])
-DesignInterval{2}((:dose, :time), (0.0, 0.0), (300.0, 20.0))
+DesignInterval(:dose => (0.0, 300.0), :time => (0.0, 20.0))
 ```
 """
 function DesignInterval(name, lowerbound, upperbound)
@@ -102,7 +102,7 @@ for your `Model` and `Covariate` subtypes.
 
 ```jldoctest
 julia> DesignInterval(:dose => (0, 300), :time => (0, 20))
-DesignInterval{2}((:dose, :time), (0.0, 0.0), (300.0, 20.0))
+DesignInterval(:dose => (0.0, 300.0), :time => (0.0, 20.0))
 ```
 """
 function DesignInterval(name_bounds::Pair...)
@@ -110,6 +110,13 @@ function DesignInterval(name_bounds::Pair...)
     lb = [p[2][1] for p in name_bounds]
     ub = [p[2][2] for p in name_bounds]
     return DesignInterval(name, lb, ub)
+end
+
+function Base.show(io::IO, dr::DesignInterval)
+    args = map(dimnames(dr), lowerbound(dr), upperbound(dr)) do n, l, u
+        return ':' * string(n) * " => " * string((l, u))
+    end
+    print(io, "DesignInterval(" * join(args, ", "), ")")
 end
 
 # internal method for testing whether a design point is inside the interval
