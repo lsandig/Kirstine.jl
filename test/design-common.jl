@@ -217,6 +217,11 @@ include("example-compartment.jl")
             @test r3 === nw3
             @test r4 === nw4
             @test det(Symmetric(nw3.t_x_t)) ≈ 4^2 * det(Symmetric(inv_nim))
+
+            # we only need to test cases for both values of r_is_inv,
+            # the entries of the diagm() are not important
+            @test_noalloc Kirstine.apply_transformation!($nw1, $tid, $(ctid.jm[1]))
+            @test_noalloc Kirstine.apply_transformation!($nw2, $tid, $(ctid.jm[1]))
         end
 
         # The Identity transformation simply passes through the input matrix and its
@@ -248,6 +253,9 @@ include("example-compartment.jl")
             @test r2 === nw2
             @test r2.t_is_inv == true
             @test r2.r_is_inv == true
+
+            @test_noalloc Kirstine.apply_transformation!($nw1, $trafo, $(diagm(ones(3)))),
+            @test_noalloc Kirstine.apply_transformation!($nw2, $trafo, $(diagm(ones(3))))
         end
     end
 
