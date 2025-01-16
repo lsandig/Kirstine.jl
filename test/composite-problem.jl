@@ -5,8 +5,8 @@ module CompositeDesignProblemTests
 using Test
 using Kirstine
 using Random: seed!
-using BenchmarkTools: @ballocated
 
+include("test-noalloc.jl")
 include("example-emax.jl")
 include("example-compartment.jl")
 
@@ -270,8 +270,7 @@ include("example-compartment.jl")
             ws = Kirstine.allocate_workspace(d, cdp),
             oc = Kirstine.objective_constants(cdp)
 
-            ba = @ballocated Kirstine.objective!($ws, $d, $cdp, $oc) evals = 1 samples = 1
-            @test ba == 0
+            @test_noalloc Kirstine.objective!($ws, $d, $cdp, $oc)
         end
     end
 
@@ -303,12 +302,7 @@ include("example-compartment.jl")
             ws = Kirstine.allocate_workspace(dir, cdp),
             dcon = Kirstine.derivative_constants(at, cdp)
 
-            ba = @ballocated(
-                Kirstine.gateauxderivative!($ws, $dir, $cdp, $dcon),
-                evals = 1,
-                samples = 1
-            )
-            @test ba == 0
+            @test_noalloc Kirstine.gateauxderivative!($ws, $dir, $cdp, $dcon)
         end
     end
 
@@ -335,13 +329,7 @@ include("example-compartment.jl")
 
             s = Kirstine.sensitivity!(ws, dir, cdp, dcon)
             @test s == only(gateauxderivative(at, [dir], cdp)) + 3 * (3 + 4)
-
-            ba = @ballocated(
-                Kirstine.gateauxderivative!($ws, $dir, $cdp, $dcon),
-                evals = 1,
-                samples = 1
-            )
-            @test ba == 0
+            @test_noalloc Kirstine.gateauxderivative!($ws, $dir, $cdp, $dcon)
         end
     end
 

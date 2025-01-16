@@ -5,7 +5,8 @@ module DesignmeasureAbstractpointTests
 using Test
 using Random
 using Kirstine
-using BenchmarkTools: @ballocated
+
+include("test-noalloc.jl")
 
 # not a full implementenation (cf. extend-region.md),
 # but just enough for testing construct_grid()
@@ -220,8 +221,7 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
             # on signed measure
             res = fel(gx, s, c2)
             @test res ≈ 0.7
-            bytes_allocated = @ballocated $fel($gx, $s, $c2) evals = 1 samples = 1
-            @test bytes_allocated == 0
+            @test_noalloc $fel($gx, $s, $c2)
             @test_throws "fixed points" fel(gx, s, c1)
 
             # on design measure
