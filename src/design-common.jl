@@ -367,9 +367,7 @@ end
         dp::DesignProblem,
     )
 
-Evaluate the Gateaux derivative for each direction.
-
-Directions must be one-point design measures.
+The directions are allowed to have different numbers of points.
 
 See also the [mathematical background](math.md#Gateaux-Derivative).
 """
@@ -378,10 +376,7 @@ function gateauxderivative(
     directions::AbstractArray{DesignMeasure},
     adp::AbstractDesignProblem,
 )
-    if any(d -> numpoints(d) != 1, directions)
-        throw(ErrorException("derivative only implemented for one-point directions"))
-    end
-    w = allocate_workspace(directions[1], adp)
+    ws = map(d -> allocate_workspace(d, adp), directions)
     dc = try
         derivative_constants(at, adp)
     catch e
@@ -391,7 +386,7 @@ function gateauxderivative(
             rethrow(e)
         end
     end
-    gd = map(d -> gateauxderivative!(w, d, adp, dc), directions)
+    gd = map((w, d) -> gateauxderivative!(w, d, adp, dc), ws, directions)
     return gd
 end
 

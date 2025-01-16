@@ -308,6 +308,31 @@ include("example-compartment.jl")
         end
     end
 
+    @testset "gateauxderivative" begin
+        # check that gateauxderivative works for multi-point directions
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            at = emax_solution(only(parameters(prior_knowledge(dp))), region(dp)),
+            dir = DesignMeasure([[1], [3], [9]], [0.3, 0.2, 0.5]),
+            opdir = map(one_point_design, points(dir))
+
+            g0 = gateauxderivative(at, [dir], dp)
+            g1 = gateauxderivative(at, opdir[1:1], dp)
+            g2 = gateauxderivative(at, opdir[2:2], dp)
+            g3 = gateauxderivative(at, opdir[3:3], dp)
+            @test g0 ≈ sum([g1, g2, g3] .* weights(dir))
+
+            # directions with different numbers of points
+            h = gateauxderivative(at, [dir, opdir[1]], dp)
+            @test h ≈ [g0; g1]
+        end
+    end
+
     @testset "objective_gradient_weights!" begin
         let ogw! = Kirstine.objective_gradient_weights!,
             p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
