@@ -61,6 +61,7 @@ struct DeltaMethod{T<:Function} <: Kirstine.Transformation
 end
 
 struct TCIdentity <: TrafoConstants
+    # note: this is a dummy for the third argument in a call to apply_transformation!()
     idmat::Matrix{Float64}
 end
 
