@@ -101,6 +101,13 @@ include("example-compartment.jl")
         end
     end
 
+    @testset "is_numerically_singular" begin
+        # Julia can invert this really badly conditioned matrix...
+        @test inv([1 0; 1 1e-16]) ≈ [1 0; -1e16 1e16]
+        # ... but we want the behavior of solve(matrix(c(1, 0, 1, 1e-16), 2)) in R:
+        @test Kirstine.is_numerically_singular([1 0; 1 1e-16])
+    end
+
     @testset "inv_informationmatrix" begin
         # Atkinson compartmental example
         let a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),

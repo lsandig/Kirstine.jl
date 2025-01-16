@@ -130,6 +130,13 @@ function informationmatrix(
     return Symmetric(nw.r_x_r)
 end
 
+# We compare the reciprocal 1-norm condition number to machine epsilon.
+# This is also what the solve() function in R is doing with its default tol argument.
+# Note: this implicitly computes an SVD, so it is relatively expensive!
+function is_numerically_singular(m::AbstractMatrix)
+    return inv(cond(m, 1)) < eps(Float64)
+end
+
 function inv_informationmatrices(
     d::DesignMeasure,
     m::Model,
@@ -142,13 +149,11 @@ function inv_informationmatrices(
     # where n is the index of one of the singular values.
     # However, there are nearly singular matrices where inv() does not throw an exception,
     # but produces huge and unstable results.
-    # To be more strict,
-    # we compare the reciprocal 1-norm condition number to machine epsilon.
-    # This is also what the solve() function in R is doing with its default tol argument.
+    # So we are more strict here.
     # Note that we don't know the index of the singular value,
     # so we supply a dummy -1 to the exception constructor.
     for im in imat
-        if inv(cond(im, 1)) < eps(Float64)
+        if is_numerically_singular(im)
             throw(SingularException(-1))
         end
     end
