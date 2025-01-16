@@ -352,7 +352,14 @@ function objective_gradient_weights!(
     dc::DerivativeConstants,
     oc::ObjectiveConstants,
 )
-    derivative_constants!(dc, wf, d, adp, oc)
+    try
+        derivative_constants!(dc, wf, d, adp, oc)
+    catch e
+        if e isa SingularException
+            @warn "current design is singular" d
+        end
+        rethrow(e)
+    end
     for k in 1:numpoints(d)
         points(opd)[1] .= points(d)[k]
         g[k] = sensitivity!(wg, opd, adp, dc)

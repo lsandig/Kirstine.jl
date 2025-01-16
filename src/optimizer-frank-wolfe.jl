@@ -333,12 +333,7 @@ function tick!(
     constraints::AbstractConstraints,
     iter::Integer,
 )
-    try
-        g!(state.gx, state.x)
-    catch e
-        @error "current design is singular" iter state.v state.x
-        rethrow(e)
-    end
+    g!(state.gx, state.x)
     state.n_eval_g += 1
     fw_linear_maximization_oracle!(state.v, state.gx, constraints)
     ap_diff!(state.direction, state.v, state.x)

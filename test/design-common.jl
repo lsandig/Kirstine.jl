@@ -373,7 +373,11 @@ include("example-compartment.jl")
             # make the design singular by effectively dropping a point
             # (without changing numpoints(d)).
             weights(d) .= [weights(d)[1:2]; 0] ./ sum(weights(d)[1:2])
-            @test_throws SingularException ogw!(g, opd, wg, wf, d, dp, dc, oc)
+            @test_logs(
+                (:warn, "current design is singular"),
+                match_mode = :any,
+                (@test_throws SingularException ogw!(g, opd, wg, wf, d, dp, dc, oc))
+            )
         end
     end
 
