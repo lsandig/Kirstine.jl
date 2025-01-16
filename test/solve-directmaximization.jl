@@ -163,11 +163,7 @@ include("example-emax.jl")
                 (@test_throws SingularException solve(dp, st4))
             )
 
-            @test_logs(
-                (:error, "current design is singular"),
-                match_mode = :any,
-                (@test_throws SingularException solve(dp, st5))
-            )
+            @test_throws "not finite: -Inf" solve(dp, st5)
         end
     end
 end

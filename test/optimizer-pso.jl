@@ -23,13 +23,14 @@ include("example-pnt.jl")
         let fconst(p) = 42,
             finf(p) = p.x[1] > 3 ? Inf : p.x[1],
             fnan(p) = NaN,
+            h(state) = Kirstine.check_objective(state; only_warn = false),
             o3 = Pso(; swarmsize = 3, iterations = 10),
             o5 = Pso(; swarmsize = 5, iterations = 10),
             ps = [Pnt([i]) for i in 1:5],
             c = BoxConstraints(Pnt([0]), Pnt([10]))
 
             @test_throws ">= number" Kirstine.optimizer_state(fconst, o3, ps, c)
-            @test_throws "infinite objective" Kirstine.optimizer_state(finf, o5, ps, c)
+            @test_throws "Inf" h(Kirstine.optimizer_state(finf, o5, ps, c))
             @test_throws "NaN on all" Kirstine.optimizer_state(fnan, o5, ps, c)
         end
 

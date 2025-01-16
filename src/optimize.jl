@@ -43,6 +43,30 @@ struct OptimizationResult{
     seconds_elapsed::Float64
 end
 
+function check_objective(state::OptimizerState; only_warn::Bool, prefix = "")
+    msg = ""
+    if isnan(maximum(state))
+        msg = prefix * "maximum is NaN"
+    elseif isinf(maximum(state))
+        msg = prefix * "maximum is not finite: $(maximum(state))"
+    end
+    x = maximizer(state)
+    !isempty(msg) && (only_warn ? @warn(msg, x) : error(msg * ", x = " * string(x)))
+    return nothing
+end
+
+function check_gradient(state::OptimizerState; only_warn::Bool, prefix = "")
+    msg = ""
+    if any(isnan, gradient(state))
+        msg = prefix * "gradient contains NaN: $(gradient(state))"
+    elseif any(isinf, gradient(state))
+        msg = prefix * "gradient contains infinities: $(gradient(state))"
+    end
+    x = maximizer(state)
+    !isempty(msg) && (only_warn ? @warn(msg, x) : error(msg * ", x = " * string(x)))
+    return nothing
+end
+
 # The first argument is either a function AbstractPoint -> Float64
 # or a tuple with a function AbstractPoint -> Float64
 # and its mutating gradient (Vector{Float64}, AbstractPoint) -> Vector{Float64}
@@ -56,10 +80,15 @@ function optimize(
     time_start = time()
     assert_constraints(prototypes, constraints)
     state = optimizer_state(f_or_f_g!, optimizer, prototypes, constraints)
+    check_objective(state; only_warn = false, prefix = "iteration 1: ")
     t_x = [deepcopy(maximizer(state))]
     t_fx = [maximum(state)]
+    t_gx = Vector{Float64}[]
     is_first_order = optimizer isa FirstOrderOptimizer
-    t_gx = is_first_order ? [deepcopy(gradient(state))] : Vector{Float64}[]
+    if is_first_order
+        check_gradient(state; only_warn = false, prefix = "iteration 1: ")
+        push!(t_gx, gradient(state))
+    end
     t_state = typeof(state)[]
     trace_state && push!(t_state, deepcopy(state))
     for i in 2:iterations(optimizer)
@@ -69,11 +98,12 @@ function optimize(
         is_first_order && push!(t_gx, gradient(state))
         trace_state && push!(t_state, deepcopy(state))
     end
+    check_objective(state; only_warn = true, prefix = "final iteration: ")
+    is_first_order && check_gradient(state; only_warn = true, prefix = "final iteration: ")
     time_end = time()
     twall = time_end - time_start
     x = maximizer(state)
     fx = maximum(state)
-    isfinite(fx) || @warn("maximum is not finite", x, fx)
     nf = n_eval_f(state)
     ng = n_eval_g(state)
     return OptimizationResult(x, fx, t_x, t_fx, t_gx, t_state, nf, ng, twall)

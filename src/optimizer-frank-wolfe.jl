@@ -323,8 +323,6 @@ function optimizer_state(
     # With OpenLoop this always gives an x1 that is on the boundary of the compact convex set
     # since the initial step size is 1.
     tick!((f, g!), state, optimizer, constraints, 1)
-    any(isnan, state.gx) && error("gradient must be finite but contains NaN")
-    any(isinf, state.gx) && error("gradient must be finite but contains Inf or -Inf")
     return state
 end
 

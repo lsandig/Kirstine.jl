@@ -189,6 +189,7 @@ end
             gnan!(grad, p) = grad[1] = NaN,
             ginf!(grad, p) = grad[1] = Inf,
             gninf!(grad, p) = grad[1] = -Inf,
+            h(state) = Kirstine.check_gradient(state; only_warn = false),
             opt = Kirstine.FrankWolfe(5, Kirstine.OpenLoop(2), false),
             # |------|------|
             # 0   x0=5     10
@@ -197,9 +198,9 @@ end
             state = Kirstine.optimizer_state((f, g!), opt, [x0], c)
 
             @test_throws "exactly 1" Kirstine.optimizer_state((f, g!), opt, [x0, x0], c)
-            @test_throws "NaN" Kirstine.optimizer_state((f, gnan!), opt, [x0], c)
-            @test_throws "Inf" Kirstine.optimizer_state((f, ginf!), opt, [x0], c)
-            @test_throws "Inf" Kirstine.optimizer_state((f, gninf!), opt, [x0], c)
+            @test_throws "NaN" h(Kirstine.optimizer_state((f, gnan!), opt, [x0], c))
+            @test_throws "Inf" h(Kirstine.optimizer_state((f, ginf!), opt, [x0], c))
+            @test_throws "Inf" h(Kirstine.optimizer_state((f, gninf!), opt, [x0], c))
             @test state isa Kirstine.FrankWolfeState{Pnt,PntDiff}
             # we should not share memory with given arguments
             @test state.x == c.lb
