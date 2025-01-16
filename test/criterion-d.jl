@@ -7,6 +7,7 @@ using Kirstine
 using Random: seed!
 using LinearAlgebra: Symmetric, diagm, tr
 
+include("test-noalloc.jl")
 include("example-compartment.jl")
 
 @testset "criterion-d.jl" begin
@@ -118,9 +119,7 @@ include("example-compartment.jl")
             @test Symmetric(gc.A[1]) ≈ inv(Kirstine.informationmatrix(a1, m, cp, g1, na))
             @test Symmetric(gc.A[2]) ≈ inv(Kirstine.informationmatrix(a1, m, cp, g2, na))
             @test all(gc.tr_B .== 3)
-            # Note: needs to be tested after pgc! was already called once
-            bytes_allocated = @allocated pgc!(gc, mw, nw, c, dc, a1, m, cp, pk, tc, na)
-            @test bytes_allocated == 0
+            @test_noalloc $pgc!($gc, $mw, $nw, $c, $dc, $a1, $m, $cp, $pk, $tc, $na)
         end
 
         # DeltaMethod transformation
@@ -175,10 +174,7 @@ include("example-compartment.jl")
             @test Symmetric(gc.A[1]) ≈ inv(M1) * B1 * inv(M1)
             @test Symmetric(gc.A[2]) ≈ inv(M2) * B2 * inv(M2)
             @test all(gc.tr_B .== 1)
-
-            # Note: needs to be tested after pgc! was already called once
-            bytes_allocated = @allocated pgc!(gc, mw, nw, c, dc, a1, m, cp, pk, tc, na)
-            @test bytes_allocated == 0
+            @test_noalloc $pgc!($gc, $mw, $nw, $c, $dc, $a1, $m, $cp, $pk, $tc, $na)
         end
     end
 

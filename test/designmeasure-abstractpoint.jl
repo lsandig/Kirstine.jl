@@ -202,8 +202,7 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
             lmo!(v, g, c2)
             @test weights(v) == [0, 1, 0]
             @test points(v) == points(v_copy) # don't touch the points
-            bytes_allocated = @allocated lmo!(v, g, c2)
-            @test bytes_allocated == 0
+            @test_noalloc $lmo!($v, $g, $c2)
             @test_throws "fixed points" lmo!(v, g, c1)
             @test_throws "weights non-fixed" lmo!(v, g, c3)
         end

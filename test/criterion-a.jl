@@ -6,6 +6,7 @@ using Test
 using Kirstine
 using LinearAlgebra: SingularException, Symmetric, tr, diagm
 
+include("test-noalloc.jl")
 include("example-compartment.jl")
 
 @testset "criterion-a.jl" begin
@@ -127,9 +128,7 @@ include("example-compartment.jl")
             @test Symmetric(gc.A[2]) ≈ inv(m2)^2
             @test gc.tr_B[1] ≈ tr(inv(m1))
             @test gc.tr_B[2] ≈ tr(inv(m2))
-            # Note: needs to be tested after pgc! was already called once
-            bytes_allocated = @allocated pgc!(gc, mw, nw, c, dc, a1, m, cp, pk, tc, na)
-            @test bytes_allocated == 0
+            @test_noalloc $pgc!($gc, $mw, $nw, $c, $dc, $a1, $m, $cp, $pk, $tc, $na)
         end
 
         # DeltaMethod transformation
@@ -176,9 +175,7 @@ include("example-compartment.jl")
             @test Symmetric(gc.A[2]) ≈ inv(m2) * J[2]' * J[2] * inv(m2)
             @test gc.tr_B[1] ≈ tr(J[1] * inv(m1) * J[1]')
             @test gc.tr_B[2] ≈ tr(J[2] * inv(m2) * J[2]')
-            # Note: needs to be tested after pgc! was already called once
-            bytes_allocated = @allocated pgc!(gc, mw, nw, c, dc, a1, m, cp, pk, tc, na)
-            @test bytes_allocated == 0
+            @test_noalloc $pgc!($gc, $mw, $nw, $c, $dc, $a1, $m, $cp, $pk, $tc, $na)
         end
     end
 

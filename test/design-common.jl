@@ -7,6 +7,7 @@ using Kirstine
 using Random: seed!
 using LinearAlgebra: SingularException, Symmetric, UpperTriangular, tr, det, diagm, opnorm
 
+include("test-noalloc.jl")
 include("example-testpar.jl")
 include("example-emax.jl")
 include("example-vector.jl")
@@ -359,8 +360,7 @@ include("example-compartment.jl")
             ogw!(g, opd, wg, wf, d, dp, dc, oc)
             @test g ≈ [3, 3, 3]
 
-            bytes_allocated = @allocated ogw!(g, opd, wg, wf, d, dp, dc, oc)
-            @test bytes_allocated == 0
+            @test_noalloc $ogw!($g, $opd, $wg, $wf, $d, $dp, $dc, $oc)
 
             # make the design singular by effectively dropping a point
             # (without changing numpoints(d)).
