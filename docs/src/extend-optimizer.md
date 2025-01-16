@@ -173,9 +173,12 @@ For `O = Ica` and `S = IcaState` we must implement the following methods:
     constructor of an `IcaState` for the objective function `f` and parameters `o`.
     It should use the given `prototypes` for initialization
     and take the `constraints` into account for randomization.
+    Setting up the state is counted as the first iteration of the algorithm.
   - `tick!(f, state::IcaState, optimizer::Ica, constraints::AbstractConstraints, iter::Integer)`:
     update the optimizers state once.
-    The number of the current iteration is passed in `iter`.
+    This function is called internally `iterations() - 1` times.
+    The number of the current iteration is passed in `iter`,
+    it goes from 2 to `iterations()`.
 
 !!! note
     
