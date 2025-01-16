@@ -30,9 +30,10 @@ struct ACriterion <: DesignCriterion end
 
 function criterion_functional!(tnim::AbstractMatrix, is_inv::Bool, dc::ACriterion)
     if is_inv
-        # Note: In this branch there won't be an exception if `tnim` is singular. But as this
-        # branch is called with the DeltaMethod transformation, an exception will already
-        # have been thrown in `apply_transformation!`.
+        # Note: this branch is taken when tnim was obtained by a DeltaMethod transformation.
+        # Hence it could be singular without having thrown an error,
+        # since we have never explicitly inverted it.
+        # Taking the trace here then produces something non-positive.
         return -tr(tnim)
     else
         potrf!('U', tnim) # Cholesky factor
