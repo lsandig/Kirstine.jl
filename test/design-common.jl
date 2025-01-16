@@ -426,10 +426,7 @@ include("example-compartment.jl")
 
             # Warn on too strong simplification. An example with finite objective afterwards
             # would be nicer, but is difficult to construct with this model and prior.
-            @test_logs(
-                (:warn, "simplification may have been too eager"),
-                solve(dp, str; maxdist = 5)
-            )
+            @test_logs((:warn, r"oversimplified"), solve(dp, str; maxdist = 5))
         end
     end
 end

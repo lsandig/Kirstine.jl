@@ -402,6 +402,21 @@ function gateauxderivative(
     return gd
 end
 
+function check_oversimplified(
+    raw_solution::DesignMeasure,
+    simplified_solution::DesignMeasure,
+    adp::AbstractDesignProblem,
+)
+    objective_before = objective(raw_solution, adp)
+    objective_after = objective(simplified_solution, adp)
+    rel_diff = (objective_after - objective_before) / abs(objective_before)
+    diff_numpoints = numpoints(raw_solution) - numpoints(simplified_solution)
+    if rel_diff < -0.01
+        msg = "design may have been oversimplified"
+        @warn msg objective_before objective_after rel_diff diff_numpoints
+    end
+end
+
 """
     solve(
         adp::Kirstine.AbstractDesignProblem,
@@ -429,19 +444,12 @@ function solve(
     trace_state = false,
     sargs...,
 )
-    or = solve_with(adp, strategy, trace_state)
+    psr = solve_with(adp, strategy, trace_state)
+    raw_solution = solution(psr)
     sort_point_kwargs = [:rev, :dimorder]
     sortargs = filter(p -> p.first in sort_point_kwargs, sargs)
     simpargs = setdiff(sargs, sortargs)
-    dopt = sort_points(simplify(solution(or), adp; simpargs...); sortargs...)
-    # check that we did not accidentally simplify too much
-    objective_before = objective(solution(or), adp)
-    objective_after = objective(dopt, adp)
-    rel_diff = (objective_after - objective_before) / abs(objective_before)
-    diff_numpoints = numpoints(solution(or)) - numpoints(dopt)
-    if rel_diff < -0.01
-        msg = "simplification may have been too eager"
-        @warn msg objective_before objective_after rel_diff diff_numpoints
-    end
-    return dopt, or
+    simplified_solution = sort_points(simplify(raw_solution, adp; simpargs...); sortargs...)
+    check_oversimplified(raw_solution, simplified_solution, adp)
+    return simplified_solution, psr
 end
