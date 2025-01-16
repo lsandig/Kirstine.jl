@@ -345,8 +345,8 @@ end
 function objective_gradient_weights!(
     g::AbstractVector{<:Real},
     opd::DesignMeasure, # temporary variable for each of points(d)
-    wg::AbstractWorkspace,
-    wf::AbstractWorkspace,
+    wg::ProblemWorkspace,
+    wf::ProblemWorkspace,
     d::DesignMeasure,
     adp::AbstractDesignProblem,
     dc::DerivativeConstants,

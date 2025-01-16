@@ -97,7 +97,7 @@ function Base.show(io::IO, ::MIME"text/plain", cdp::CompositeDesignProblem)
     print(io, join(pretty_lines_cdp(cdp, 0), '\n'))
 end
 
-struct CDPWorkspace{T<:AbstractWorkspace} <: AbstractWorkspace
+struct CDPWorkspace{T<:ProblemWorkspace} <: ProblemWorkspace
     component_workspaces::Vector{T}
 end
 

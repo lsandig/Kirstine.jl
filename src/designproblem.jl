@@ -216,7 +216,7 @@ function Base.show(io::IO, ::MIME"text/plain", dp::DesignProblem)
     print(io, " - normal approximation: ", normal_approximation(dp))
 end
 
-struct DPWorkspace{Tmw<:ModelWorkspace,Tc<:Covariate} <: AbstractWorkspace
+struct DPWorkspace{Tmw<:ModelWorkspace,Tc<:Covariate} <: ProblemWorkspace
     nw::NIMWorkspace
     mw::Tmw
     c::Vector{Tc}

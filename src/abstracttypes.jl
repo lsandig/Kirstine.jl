@@ -136,7 +136,7 @@ See also [`DesignProblem`](@ref).
 """
 abstract type AbstractDesignProblem end
 
-abstract type AbstractWorkspace end
+abstract type ProblemWorkspace end
 
 """
     Kirstine.ProblemSolvingStrategy
