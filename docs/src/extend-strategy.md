@@ -4,13 +4,13 @@
 check_results = true
 ```
 
-On a high level, Kirstine.jl can use different [`ProblemSolvingStrategy`](@ref)s
+On a high level, Kirstine.jl can use different [`Kirstine.ProblemSolvingStrategy`](@ref)s
 to find the solution to a design problem.
 The package implements [`DirectMaximization`](@ref) and a version of Fedorov's [`Exchange`](@ref) algorithm.
 This vignette shows how to implement a custom strategy.
 
 Our example will be a variant of direct maximization
-that runs the given [`Optimizer`](@ref) multiple times,
+that runs the given [`Kirstine.Optimizer`](@ref) multiple times,
 using the best candidate from the current iteration
 as the prototype for initializing the next one.
 A further extension of this example could also include a check of the Gateaux derivative
@@ -18,24 +18,27 @@ for early stopping.
 
 ## Implementation
 
-For a `Ts <: ProblemSolvingStrategy` we need a corresponding `Tr <: ProblemSolvingResult`,
+For a `Ts <: Kirstine.ProblemSolvingStrategy` we need a corresponding `Tr <: Kirstine.ProblemSolvingResult`,
 plus methods for the following functions:
 
   - `solve_with(adp::AbstractDesignProblem, strategy::Ts, trace_state::Bool)`
     which does the actual work and returns a `Tr`.
-    The flag `trace_state` should passed to the low-level [`Optimizer`](@ref).
+    The flag `trace_state` should passed to the low-level [`Kirstine.Optimizer`](@ref).
   - `solution(res::Tr)` to extract the best solution that was found.
+  - `total_runtime(res::Tr)` to extract the total runtime in seconds.
 
 Optionally,
 for producing a plot of the optimization progress,
 we can also implement a [type recipe](https://docs.juliaplots.org/latest/recipes/#Type-Recipes:-Easy-drop-in-replacement-of-data-types) for `Tr`.
-When it comes to plotting a Vector of [`OptimizationResult`](@ref)s,
+When it comes to plotting a Vector of [`Kirstine.OptimizationResult`](@ref)s,
 Kirstine.jl already provides a basic recipe that we can reuse.
+
+For simplicity we require the low-level optimizer to be of order zero.
 
 ```@example main
 using Kirstine, RecipesBase, Plots
 
-struct MultipleRuns{T<:Optimizer} <: ProblemSolvingStrategy
+struct MultipleRuns{T<:Kirstine.ZerothOrderOptimizer} <: Kirstine.ProblemSolvingStrategy
     optimizer::T
     prototype::DesignMeasure
     steps::Int64
@@ -47,23 +50,27 @@ struct MultipleRuns{T<:Optimizer} <: ProblemSolvingStrategy
         steps::Integer,
         fixedweights::AbstractVector{<:Integer} = Int64[],
         fixedpoints::AbstractVector{<:Integer} = Int64[],
-    ) where T<:Optimizer
+    ) where T<:Kirstine.ZerothOrderOptimizer
         new{T}(optimizer, prototype, steps, fixedweights, fixedpoints)
     end
 end
 
 struct MultipleRunsResult{
     S<:Kirstine.OptimizerState{DesignMeasure,Kirstine.SignedMeasure},
-} <: ProblemSolvingResult
-    ors::Vector{OptimizationResult{DesignMeasure,Kirstine.SignedMeasure,S}}
+} <: Kirstine.ProblemSolvingResult
+    ors::Vector{Kirstine.OptimizationResult{DesignMeasure,Kirstine.SignedMeasure,S}}
 end
 
 function Kirstine.solution(mrr::MultipleRunsResult)
     return mrr.ors[end].maximizer
 end
 
+function Kirstine.total_runtime(mrr::MultipleRunsResult)
+    return mapreduce(or -> or.seconds_elapsed, +, mrr.ors)
+end
+
 function Kirstine.solve_with(
-    adp::AbstractDesignProblem,
+    adp::Kirstine.AbstractDesignProblem,
     strategy::MultipleRuns,
     trace_state::Bool,
 )
@@ -157,15 +164,19 @@ nothing # hide
 
 ```@setup main
 s == DesignMeasure(
- [0.0] => 0.17737208040258384,
- [0.043966654447468785] => 0.09441200054874936,
- [0.25627719942704874] => 0.23990318667725455,
- [0.49521184488138004] => 0.23940518207234693,
- [0.99999937754188] => 0.24890755029906544,
-) || !check_results || error("not the expected result\n", s1a)
+ [0.0] => 0.17737208040258381,
+ [0.043966654447468785] => 0.09441200054874935,
+ [0.25627719942704874] => 0.23990318667725452,
+ [0.49521184488138004] => 0.2394051820723469,
+ [0.99999937754188] => 0.24890755029906542,
+) || !check_results || error("not the expected result\n", s)
 ```
 
 ![](extend-strategy-gd.png)
+
+```@example main
+total_runtime(r)
+```
 
 ```@example main
 pr = plot(r)
@@ -175,4 +186,4 @@ nothing # hide
 
 ![](extend-strategy-pr.png)
 
-We that the solution was found after four steps.
+We see that the solution was found after four steps.

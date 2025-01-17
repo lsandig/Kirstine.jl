@@ -1,12 +1,12 @@
-# SPDX-FileCopyrightText: 2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module CompositeDesignProblemTests
 using Test
 using Kirstine
 using Random: seed!
-using BenchmarkTools: @ballocated
 
+include("test-noalloc.jl")
 include("example-emax.jl")
 include("example-compartment.jl")
 
@@ -52,6 +52,40 @@ include("example-compartment.jl")
             @test_throws "identical regions" CompositeDesignProblem([dp2, cdp1], [42, 3.14])
             @test typeof(problems(cdp1)) <: Vector{<:DesignProblem}
             @test typeof(problems(cdp2)) <: Vector{Kirstine.AbstractDesignProblem}
+        end
+    end
+
+    @testset "==" begin
+        let dp1 = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            dp2 = deepcopy(dp1),
+            cdp1 = CompositeDesignProblem([dp1, dp2], [1, 2]),
+            cdp2 = deepcopy(cdp1)
+
+            @test cdp1 == cdp2
+        end
+    end
+
+    @testset "hash" begin
+        let dp1 = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            dp2 = DesignProblem(dp1; criterion = ACriterion()),
+            cdp1 = CompositeDesignProblem([dp1, dp2], [1, 2]),
+            cdp2 = CompositeDesignProblem([dp1, dp2], [1, 3]),
+            cdp3 = CompositeDesignProblem([dp1, dp2], [1, 3])
+
+            # implicitly constructs a Set, which calls hash()
+            @test unique([cdp1, cdp2, cdp3]) == [cdp1, cdp2]
         end
     end
 
@@ -180,6 +214,35 @@ include("example-compartment.jl")
         end
     end
 
+    @testset "derivative_constants!" begin
+        let dp1 = DesignProblem(;
+                criterion = ACriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            dp2 = DesignProblem(dp1; model = EmaxModel(2)),
+            cdp = CompositeDesignProblem([dp1, dp2], [1, 1]),
+            at = equidistant_design(region(cdp), 4),
+            somewhere_else = DesignMeasure([[1], [2], [3], [4]], [0.1, 0.2, 0.3, 0.4]),
+            w = Kirstine.allocate_workspace(at, cdp),
+            oc = Kirstine.objective_constants(cdp),
+            dc = Kirstine.derivative_constants(at, cdp),
+            dc_copy = deepcopy(dc)
+
+            Kirstine.derivative_constants!(dc, w, somewhere_else, cdp, oc)
+
+            cc = dc.component_constants
+            cc_copy = dc_copy.component_constants
+
+            @test cc[1].gc.A[1] != cc_copy[1].gc.A[1]
+            @test cc[1].gc.tr_B[1] != cc_copy[1].gc.tr_B[1]
+            @test cc[2].gc.A[1] != cc_copy[2].gc.A[1]
+            @test cc[2].gc.tr_B[1] != cc_copy[2].gc.tr_B[1]
+        end
+    end
+
     @testset "objective!" begin
         # The correct implementation of the criteria is checked in criterion-{a,d}.jl.
         # Here we test whether there are spurious memory allocations
@@ -207,8 +270,7 @@ include("example-compartment.jl")
             ws = Kirstine.allocate_workspace(d, cdp),
             oc = Kirstine.objective_constants(cdp)
 
-            ba = @ballocated Kirstine.objective!($ws, $d, $cdp, $oc) evals = 1 samples = 1
-            @test ba == 0
+            @test_noalloc Kirstine.objective!($ws, $d, $cdp, $oc)
         end
     end
 
@@ -240,12 +302,34 @@ include("example-compartment.jl")
             ws = Kirstine.allocate_workspace(dir, cdp),
             dcon = Kirstine.derivative_constants(at, cdp)
 
-            ba = @ballocated(
-                Kirstine.gateauxderivative!($ws, $dir, $cdp, $dcon),
-                evals = 1,
-                samples = 1
-            )
-            @test ba == 0
+            @test_noalloc Kirstine.gateauxderivative!($ws, $dir, $cdp, $dcon)
+        end
+    end
+
+    @testset "sensitivity!" begin
+        # Indirectly check sensitivity function by comparing to the gateaux derivative.
+        # Also check for spurious memory allocations.
+        let dc = DCriterion(),
+            dr = DesignInterval(:dose => (0, 10)),
+            cp = CopyDose(),
+            pk = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            dp1 = DesignProblem(;
+                criterion = dc,
+                region = dr,
+                model = EmaxModel(1),
+                covariate_parameterization = cp,
+                prior_knowledge = pk,
+            ),
+            dp2 = DesignProblem(dp1; model = EmaxModel(2)),
+            cdp = CompositeDesignProblem([dp1, dp2], [3, 4]),
+            at = equidistant_design(region(dp1), 4),
+            dir = one_point_design([0.5]),
+            ws = Kirstine.allocate_workspace(dir, cdp),
+            dcon = Kirstine.derivative_constants(at, cdp)
+
+            s = Kirstine.sensitivity!(ws, dir, cdp, dcon)
+            @test s == only(gateauxderivative(at, [dir], cdp)) + 3 * (3 + 4)
+            @test_noalloc Kirstine.gateauxderivative!($ws, $dir, $cdp, $dcon)
         end
     end
 
@@ -366,7 +450,7 @@ include("example-compartment.jl")
         jm[1, 2] = c.x
     end
 
-    @testset "solve(::CompoundDesignProblem)" begin
+    @testset "solve(::CompositeDesignProblem)" begin
         let dr = DesignInterval(:x => (-1, 1)),
             cp = JustCopy(:x),
             dp1 = DesignProblem(;
@@ -399,6 +483,25 @@ include("example-compartment.jl")
             @test weights(sc)[2] ≈ 0.146 atol = 1e-3
             @test gateauxderivative(sc, opd, cdp) ≈ [0, 0, 0] atol = 1e-4
             @test first(gateauxderivative(sc, [one_point_design([0.5])], cdp)) < 0
+        end
+    end
+
+    @testset "check_numerically_singular" begin
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            dpa = DesignProblem(dp; criterion = ACriterion()),
+            cdp = CompositeDesignProblem([dp, dpa], [3, 4]),
+            s = uniform_design([[0], [5], [10]]),
+            mix = mixture(1e-14, s, one_point_design([2])),
+            cns = Kirstine.check_numerically_singular
+
+            @test_logs cns(s, cdp)
+            @test_logs (:warn, r"numerically singular") match_mode = :any cns(mix, cdp)
         end
     end
 end

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module SolveExchangeTests
@@ -20,7 +20,7 @@ include("example-emax.jl")
         end
     end
 
-    @testset "solve_with" begin
+    @testset "solve_with(::Pso, ::Pso)" begin
         let dp = DesignProblem(;
                 criterion = DCriterion(),
                 model = EmaxModel(1),
@@ -79,8 +79,8 @@ include("example-emax.jl")
             # singular candidate design
             @test_throws "step 1: candidate design is singular" solve(dp, str5)
             # result type
-            @test isa(r1, ExchangeResult)
-            @test isa(r2, ExchangeResult)
+            @test isa(r1, Kirstine.ExchangeResult)
+            @test isa(r2, Kirstine.ExchangeResult)
             # traced state
             @test all(
                 or -> length(or.trace_state) == 20,
@@ -95,6 +95,70 @@ include("example-emax.jl")
             # no new point, but last one of the candidate
             @test numpoints(optimization_results_weight(r2)[1].maximizer) == 3
             @test points(optimization_results_weight(r2)[1].maximizer)[1] == [10]
+            # test that runtimes can be accessed
+            rt_direction = total_runtime_direction(r1)
+            rt_weight = total_runtime_weight(r1)
+            @test rt_direction > 0
+            @test rt_weight > 0
+            @test total_runtime(r1) == rt_direction + rt_weight
+        end
+    end
+
+    @testset "solve_with(::GridSearch, ::Pso)" begin
+        let guess = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
+            dp = DesignProblem(;
+                criterion = DCriterion(),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([guess]),
+                region = DesignInterval(:dose => (0, 10)),
+            ),
+            exact_solution = emax_solution(guess, region(dp)),
+            # grid that contains the points of the solution [[0], [2.5], [10]]
+            pg101 = Kirstine.ProductGrid(101),
+            str1 = Exchange(;
+                optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
+                optimizer_direction = Kirstine.GridSearch(; gridspec = pg101),
+                candidate = uniform_design([[5], [0], [10]]),
+                steps = 5,
+            ),
+            # grid that does not contain [2.5]
+            pg11 = Kirstine.ProductGrid(11),
+            str2 = Exchange(;
+                optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
+                optimizer_direction = Kirstine.GridSearch(; gridspec = pg11),
+                candidate = uniform_design([[5], [0], [10]]),
+                steps = 5,
+            )
+            # grid does not contain [2.5], but a prototype point is off-grid, single step
+            str3 = Exchange(;
+                optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
+                optimizer_direction = Kirstine.GridSearch(; gridspec = pg11),
+                candidate = uniform_design([[2.9], [0], [10]]),
+                steps = 1,
+            )
+
+            seed!(1234)
+            r1 = Kirstine.solve_with(dp, str1, true)
+            sol1 = solution(r1)
+            @test [2.5] in points(sol1)
+            @test efficiency(sol1, exact_solution, dp) > 1 - 1e-10
+            ord_step_1 = first(optimization_results_direction(r1))
+            @test ord_step_1.trace_state isa Vector{<:Kirstine.GridSearchState}
+            @test ord_step_1.maximizer == one_point_design([2.2])
+            @test length(ord_step_1.trace_state[1].fx) == 101
+
+            seed!(1234)
+            r2 = Kirstine.solve_with(dp, str2, true)
+            sol2 = solution(r2)
+            @test points(sort_points(sol2)) == [[0], [2], [3], [10]]
+            @test maximum(last(optimization_results_direction(r2)).trace_state[1].fx) < 1e-3
+
+            seed!(1234)
+            r3 = Kirstine.solve_with(dp, str3, true)
+            sol3 = solution(r3)
+            @test length(first(optimization_results_direction(r3)).trace_state[1].fx) == 12
+            @test [2.9] in points(sol3)
         end
     end
 end

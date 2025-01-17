@@ -1,19 +1,26 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## functions on the supertype
 
 """
-    dimension(dr::DesignRegion{N})
+    dimension(dr::Kirstine.DesignRegion{N})
 
 Return the dimension `N` of the design region.
 """
 dimension(dr::DesignRegion{N}) where N = N
 
+function marginal_grids(dr::DesignRegion{N}, n_points::NTuple{N,Int64}) where N
+    # Note: we assume that all(n_points .>= 2) has been checked by the caller.
+    lb, ub = boundingbox(dr)
+    mg = map((l, u, n) -> collect(range(l, u; length = n)), lb, ub, n_points)
+    return mg
+end
+
 ## concrete design regions and constraints for optimization ##
 
 @doc raw"""
-    DesignInterval{N} <: DesignRegion{N}
+    DesignInterval{N} <: Kirstine.DesignRegion{N}
 
 A (hyper)rectangular subset of ``\Reals^N``.
 
@@ -23,31 +30,41 @@ struct DesignInterval{N} <: DesignRegion{N}
     name::NTuple{N,Symbol}
     lowerbound::NTuple{N,Float64}
     upperbound::NTuple{N,Float64}
-    @doc """
-        DesignInterval(names, lowerbounds, upperbounds)
-
-    Construct a design interval.
-
-    # Examples
-    ```jldoctest
-    julia> DesignInterval([:dose, :time], [0, 0], [300, 20])
-    DesignInterval{2}((:dose, :time), (0.0, 0.0), (300.0, 20.0))
-    ```
-    """
-    function DesignInterval(name, lowerbound, upperbound)
-        n = length(name)
-        if !(n == length(lowerbound) == length(upperbound))
-            throw(ArgumentError("lengths of name and bounds must be identical"))
-        end
+    function DesignInterval{N}(
+        name::NTuple{N,Symbol},
+        lowerbound::NTuple{N,Float64},
+        upperbound::NTuple{N,Float64},
+    ) where N
         if any(upperbound .<= lowerbound)
             throw(ArgumentError("upper bounds must be strictly larger than lower bounds"))
         end
-        new{n}(
-            tuple(name...),
-            tuple(convert.(Float64, lowerbound)...),
-            tuple(convert.(Float64, upperbound)...),
-        )
+        return new{N}(name, lowerbound, upperbound)
     end
+end
+
+"""
+    DesignInterval(names, lowerbounds, upperbounds)
+
+Construct a design interval.
+
+# Examples
+
+```jldoctest
+julia> DesignInterval([:dose, :time], [0, 0], [300, 20])
+DesignInterval(:dose => (0.0, 300.0), :time => (0.0, 20.0))
+```
+"""
+function DesignInterval(name, lowerbound, upperbound)
+    N = length(name)
+    if !(N == length(lowerbound) == length(upperbound))
+        throw(ArgumentError("lengths of name and bounds must be identical"))
+    end
+    dr = DesignInterval{N}(
+        tuple(name...),
+        tuple(convert.(Float64, lowerbound)...),
+        tuple(convert.(Float64, upperbound)...),
+    )
+    return dr
 end
 
 """
@@ -66,7 +83,7 @@ upperbound(dr::DesignInterval) = dr.upperbound
 
 # Note: docstring for the supertype, implementation for the subtypes
 """
-    dimnames(dr::DesignRegion)
+    dimnames(dr::Kirstine.DesignRegion)
 
 Return the names of the design region's dimensions.
 """
@@ -85,7 +102,7 @@ for your `Model` and `Covariate` subtypes.
 
 ```jldoctest
 julia> DesignInterval(:dose => (0, 300), :time => (0, 20))
-DesignInterval{2}((:dose, :time), (0.0, 0.0), (300.0, 20.0))
+DesignInterval(:dose => (0.0, 300.0), :time => (0.0, 20.0))
 ```
 """
 function DesignInterval(name_bounds::Pair...)
@@ -93,6 +110,13 @@ function DesignInterval(name_bounds::Pair...)
     lb = [p[2][1] for p in name_bounds]
     ub = [p[2][2] for p in name_bounds]
     return DesignInterval(name, lb, ub)
+end
+
+function Base.show(io::IO, dr::DesignInterval)
+    args = map(dimnames(dr), lowerbound(dr), upperbound(dr)) do n, l, u
+        return ':' * string(n) * " => " * string((l, u))
+    end
+    print(io, "DesignInterval(" * join(args, ", "), ")")
 end
 
 # internal method for testing whether a design point is inside the interval

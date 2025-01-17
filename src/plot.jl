@@ -1,8 +1,11 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 @recipe function f(r::OptimizationResult)
     niter = length(r.trace_fx)
+    seriestype --> (niter == 1 ? :scatter : :line)
+    xticks --> (niter == 1 ? [1] : :auto)
+    xlims --> (niter == 1 ? (0.5, 1.5) : :auto)
     xguide --> "iteration"
     yguide --> "objective"
     label --> ""
@@ -17,10 +20,12 @@ end
 @recipe function f(rs::AbstractVector{<:OptimizationResult})
     nsteps = length(rs)
     steps = collect(1:nsteps)
+    seriestype --> (nsteps == 1 ? :scatter : :line)
+    xticks --> (nsteps == 1 ? [1] : :auto)
+    xlims --> (nsteps == 1 ? (0.5, 1.5) : (1, nsteps))
     fx = [r.maximum for r in rs]
     xguide --> "step"
     yguide --> "best objective value"
-    xlims --> (1, nsteps)
     label --> ""
     steps, fx
 end
@@ -30,6 +35,8 @@ end
     @series begin
         subplot := 1
         yguide --> "max derivative"
+        ylims --> (0, NaN)
+        widen --> true
         optimization_results_direction(r)
     end
     @series begin
@@ -103,20 +110,19 @@ struct DerivativePlot{N,Tdr<:DesignRegion{N}}
         # Calculate Gateaux derivative on a grid over the bounding box of dr.
         # Evaluate it only on those points that are inside and fill the rest with NaN,
         # which renders transparently in the heatmap.
-        lb, ub = boundingbox(dr)
-        marginal_grids = map((l, u, n) -> collect(range(l, u; length = n)), lb, ub, n_grid)
+        mg = marginal_grids(dr, n_grid)
         if N == 1
-            append!(marginal_grids[1], Iterators.flatten(points(d)))
-            sort!(marginal_grids[1])
+            append!(mg[1], Iterators.flatten(points(d)))
+            sort!(mg[1])
         end
-        product_dp_grid = collect.(Iterators.product(marginal_grids...))
+        product_dp_grid = collect.(Iterators.product(mg...))
         inside_dr = isinside.(product_dp_grid, Ref(dr))
         gd_grid = fill(NaN, size(product_dp_grid))
         # note: indexing and array with another array produces a vector
         directions = [one_point_design(dp) for dp in product_dp_grid[inside_dr]]
         gd = gateauxderivative(d, directions, adp)
         gd_grid[inside_dr] .= gd
-        return new{N,typeof(dr)}(dr, marginal_grids, gd_grid)
+        return new{N,typeof(dr)}(dr, mg, gd_grid)
     end
 end
 
@@ -132,7 +138,8 @@ end
 end
 
 @recipe function f(dplot::DerivativePlot{2,<:DesignRegion{2}})
-    ex = extrema(filter(!isnan, dplot.gd))
+    gd_not_nan = filter(!isnan, dplot.gd)
+    ex = isempty(gd_not_nan) ? (-1.0, 1.0) : extrema(gd_not_nan)
     xguide --> (dimnames(dplot.dr)[1])
     yguide --> (dimnames(dplot.dr)[2])
     # perceptually uniform gradient from blue via white to red
@@ -146,7 +153,7 @@ end
 end
 
 """
-    plot_gateauxderivative(d::DesignMeasure, adp::AbstractDesignProblem; <keyword arguments>)
+    plot_gateauxderivative(d::DesignMeasure, adp::Kirstine.AbstractDesignProblem; <keyword arguments>)
 
 Plot the [`gateauxderivative`](@ref) in directions from a grid on `region(adp)`,
 overlaid with the design points of `d`.
@@ -224,30 +231,28 @@ struct ExpectedFunctionPlot{
     pk::Tpk
 end
 
-@recipe function f(
-    efplot::ExpectedFunctionPlot;
-    label_formatter = (k, dp, w) -> "$(round(100 * w; sigdigits=3))%",
-    minmarkersize = 2,
-    maxmarkersize = 10,
-    bands = false,
-    probability = 0.8,
+function expected_function_graph_data(
+    f::Function,
+    x::AbstractVector{<:Real},
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample,
+    bands::Bool,
+    probability::Real,
 )
-    (; f, g, h, x, d, m, cp, pk) = efplot
-    if minmarkersize > maxmarkersize
-        throw(ArgumentError("minmarkersize must be <= maxmarkersize"))
-    elseif bands && any(weights(pk) .!= first(weights(pk)))
+    if bands && any(weights(pk) .!= first(weights(pk)))
         msg = "credibility bands are only implemented for uniform prior weights"
         throw(ArgumentError(msg))
     elseif probability < 0 || probability > 1
         throw(ArgumentError("probability must be in in interval [0, 1]"))
     end
     K = numpoints(d)
-    # graphs
     num_draws = length(weights(pk))
     fx = zeros(num_draws)
     fxm = zeros(length(x), K)
-    fxl = zeros(length(x), K)
-    fxu = zeros(length(x), K)
+    fxl = fill(NaN, length(x), K)
+    fxu = fill(NaN, length(x), K)
     c = implied_covariates(d, m, cp)
     qprobs = ((1 - probability) / 2, (1 + probability) / 2)
     pars = parameters(pk)
@@ -262,35 +267,71 @@ end
             end
         end
     end
+    unique_fxm = unique(fxm; dims = 2)
+    # lower/upper bounds should be unique as _pairs_
+    unique_pairs = unique(vcat(fxl, fxu); dims = 2)
+    unique_fxl = unique_pairs[1:length(x), :]
+    unique_fxu = unique_pairs[(length(x) + 1):end, :]
+    return unique_fxm, unique_fxl, unique_fxu
+end
+
+function expected_function_point_data(
+    g::Function,
+    h::Function,
+    d::DesignMeasure,
+    m::Model,
+    cp::CovariateParameterization,
+    pk::PriorSample,
+)
+    c = implied_covariates(d, m, cp)
+    gx = mapreduce(g, hcat, c)
+    hx = similar(gx)
+    for k in 1:numpoints(d)
+        hx[:, k] .= mapreduce((w, p) -> w * h(c[k], p), +, weights(pk), parameters(pk))
+    end
+    return gx, hx
+end
+
+@recipe function f(
+    efplot::ExpectedFunctionPlot;
+    label_formatter = (k, dp, w) -> "$(round(100 * w; sigdigits=3))%",
+    minmarkersize = 2,
+    maxmarkersize = 10,
+    bands = false,
+    probability = 0.8,
+)
+    (; f, g, h, x, d, m, cp, pk) = efplot
+    if minmarkersize > maxmarkersize
+        throw(ArgumentError("minmarkersize must be <= maxmarkersize"))
+    end
+    fxm, fxl, fxu = expected_function_graph_data(f, x, d, m, cp, pk, bands, probability)
     if bands
         @series begin
             label --> nothing
             fillcolor --> :black
             fillalpha --> 0.1
             linecolor := nothing
-            # lower/upper bounds should be unique as _pairs_
-            fxlu = unique(vcat(fxl, fxu); dims = 2)
-            fillrange := fxlu[1:length(x), :]
-            x, fxlu[(length(x) + 1):end, :]
+            fillrange := fxl
+            x, fxu
         end
     end
+    # graphs
     @series begin
         linecolor --> :black
         label --> nothing
-        x, unique(fxm; dims = 2)
+        x, fxm
     end
     # points
     pt = points(d)
     wt = weights(d)
-    for k in 1:K
-        gx = g(c[k])
-        hx = mapreduce((w, p) -> w * h(c[k], p), +, weights(pk), parameters(pk))
+    gx, hx = expected_function_point_data(g, h, d, m, cp, pk)
+    for k in 1:numpoints(d)
         @series begin
             label --> (label_formatter(k, pt[k], wt[k]))
             markersize --> max(minmarkersize, maxmarkersize * sqrt(wt[k]))
             markercolor --> k
             seriestype := :scatter
-            gx, hx
+            gx[:, k], hx[:, k]
         end
     end
 end
@@ -300,10 +341,10 @@ end
         f,
         g,
         h,
-        xrange::AbstractVector{<:Real},
+        xgrid::AbstractVector{<:Real},
         d::DesignMeasure,
-        m::Model,
-        cp::CovariateParameterization,
+        m::Kirstine.Model,
+        cp::Kirstine.CovariateParameterization,
         pk::PriorSample;
         <keyword arguments>
     )
@@ -311,7 +352,7 @@ end
 Plot a graph of the pointwise expected value of a function
 and design points on that graph.
 
-For user types `C<:Covariate` and `p<:Parameter`,
+For user types `C<:Kirstine.Covariate` and `p<:Kirstine.Parameter`,
 the functions `f`, `g`, and `h` should have the following signatures:
 
   - `f(x::Real, c::C, p::P)::Real`.
@@ -326,7 +367,8 @@ the functions `f`, `g`, and `h` should have the following signatures:
 For each value of the covariate `c` implied by the design measure `d`,
 the following things will be plotted:
 
-  - A graph of the average of `f` with respect to `pk` as a function of `x` over `xrange`.
+  - A graph of the average of `f` with respect to `pk` as a function of `x`
+    evaluated at the elements of `xgrid`.
     If different `c` result in identical graphs, only one will be plotted.
 
   - Points at `g(c)` and `h(c, p)` averaged with respect to `pk`.
@@ -352,13 +394,13 @@ function plot_expected_function(
     f,
     g,
     h,
-    xrange::AbstractVector{<:Real},
+    xgrid::AbstractVector{<:Real},
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample;
     kw...,
 )
-    efp = ExpectedFunctionPlot(f, g, h, collect(xrange), d, m, cp, pk)
+    efp = ExpectedFunctionPlot(f, g, h, collect(xgrid), d, m, cp, pk)
     return RecipesBase.plot(efp; kw...)
 end

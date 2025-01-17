@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 using Documenter, Kirstine
@@ -109,6 +109,7 @@ makedocs(modules = [Kirstine],
          # doctest = :fix,
          # draft = true,
          # warnonly = true,
+         # pagesonly = true,
          format = Documenter.HTML(
              prettyurls = false,
              edit_link = nothing,

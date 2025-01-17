@@ -1,18 +1,18 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## solve design problem with exchange algorithm ##
 
 """
-    Exchange <: ProblemSolvingStrategy
+    Exchange <: Kirstine.ProblemSolvingStrategy
 
 Find an optimal design by ascending the Gateaux derivative of the objective function.
 
 This is a variant of the basic idea in [^YBT13].
 
-[^YBT13]: Min Yang, Stefanie Biedermann, Elina Tang (2013). On optimal designs for nonlinear models: a general and efficient algorithm. Journal of the American Statistical Association, 108(504), 1411–1420. [doi:10.1080/01621459.2013.806268](http://dx.doi.org/10.1080/01621459.2013.806268)
+[^YBT13]: Min Yang, Stefanie Biedermann, and Elina Tang (2013). On optimal designs for nonlinear models: a general and efficient algorithm. Journal of the American Statistical Association, 108(504), 1411–1420. [doi:10.1080/01621459.2013.806268](http://dx.doi.org/10.1080/01621459.2013.806268)
 """
-struct Exchange{Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,<:Any}} <:
+struct Exchange{Tod<:ZerothOrderOptimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,<:Any}} <:
        ProblemSolvingStrategy
     optimizer_direction::Tod
     optimizer_weight::Tow
@@ -21,8 +21,8 @@ struct Exchange{Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,<:Any}} <:
     simplify_args::Td
     @doc """
         Exchange(;
-            optimizer_direction::Optimizer,
-            optimizer_weight::Optimizer,
+            optimizer_direction::ZerothOrderOptimizer,
+            optimizer_weight::Kirstine.Optimizer,
             steps::Integer,
             candidate::DesignMeasure,
             simplify_args = Dict{Symbol,Any}(),
@@ -69,7 +69,7 @@ struct Exchange{Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,<:Any}} <:
 end
 
 """
-    ExchangeResult <: ProblemSolvingResult
+    Kirstine.ExchangeResult <: Kirstine.ProblemSolvingResult
 
 Wraps the [`OptimizationResult`](@ref)s from the individual steps.
 
@@ -87,7 +87,7 @@ struct ExchangeResult{
 end
 
 """
-    solution(er::ExchangeResult)
+    solution(er::Kirstine.ExchangeResult)
 
 Return the best candidate found.
 """
@@ -96,7 +96,7 @@ function solution(er::ExchangeResult)
 end
 
 """
-    optimization_results_direction(er::ExchangeResult)
+    optimization_results_direction(er::Kirstine.ExchangeResult)
 
 Get the vector of [`OptimizationResult`](@ref)s from the direction steps.
 """
@@ -105,7 +105,7 @@ function optimization_results_direction(er::ExchangeResult)
 end
 
 """
-    optimization_results_weight(er::ExchangeResult)
+    optimization_results_weight(er::Kirstine.ExchangeResult)
 
 Get the full [`OptimizationResult`](@ref)s from the re-weighting steps.
 """
@@ -113,22 +113,56 @@ function optimization_results_weight(er::ExchangeResult)
     return er.orw
 end
 
+"""
+    total_runtime(er::Kirstine.ExchangeResult)
+
+Get the total time spent during optimization.
+"""
+function total_runtime(er::ExchangeResult)
+    return total_runtime_direction(er) + total_runtime_weight(er)
+end
+
+"""
+    total_runtime_direction(er::Kirstine.ExchangeResult)
+
+Get the total time spent during the direction steps.
+"""
+function total_runtime_direction(er::ExchangeResult)
+    return mapreduce(or -> or.seconds_elapsed, +, er.ord)
+end
+
+"""
+    total_runtime_weight(er::Kirstine.ExchangeResult)
+
+Get the total time spent during the re-weighting steps.
+"""
+function total_runtime_weight(er::ExchangeResult)
+    return mapreduce(or -> or.seconds_elapsed, +, er.orw)
+end
+
+function Base.show(io::IO, ::MIME"text/plain", er::ExchangeResult)
+    println(io, "DirectMaximizationResult")
+    println(io, "* final objective: ", er.orw[end].maximum)
+    println(io, "* final max Gateaux derivative: ", er.ord[end].maximum)
+    println(io, "* runtime total: ", prettydifftime(total_runtime(er)))
+    println(io, "      direction: ", prettydifftime(total_runtime_direction(er)))
+    println(io, "         weight: ", prettydifftime(total_runtime_weight(er)))
+    println(io, "* raw solution: ")
+    show(io, MIME("text/plain"), solution(er))
+    println(io, "\n* diagnostic information:")
+    println(io, "    optimization_results_direction(<this object>)")
+    print(io, "    optimization_results_weight(<this object>)")
+end
+
 function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state::Bool)
-    (; candidate, optimizer_weight, optimizer_direction, steps, simplify_args) = strategy
-    check_compatible(candidate, region(adp))
+    check_compatible(strategy.candidate, region(adp))
     # The workspaces and the constraints are independent of the current candidate.
-    workspaces_direction = allocate_workspace(one_point_design(points(candidate)[1]), adp)
+    point_for_dim = first(points(strategy.candidate))
+    workspaces_direction = allocate_workspace(one_point_design(point_for_dim), adp)
     constraints_direction = DesignConstraints(region(adp), [true], [false])
-    ORType = OptimizationResult{
-        DesignMeasure,
-        SignedMeasure,
-        PsoState{DesignMeasure,SignedMeasure},
-    }
-    ors_d = ORType[]
-    ors_w = ORType[]
-    for i in 1:steps
+    function onestep(i::Integer, candidate::DesignMeasure)
         # Simplify the result of the previous iteration.
-        candidate = simplify(candidate, adp; simplify_args...)
+        candidate = simplify(candidate, adp; strategy.simplify_args...)
         # Find the direction in which the Gateaux derivative is largest.
         prototypes_direction = map(one_point_design, points(candidate))
         dc_direction = try
@@ -142,7 +176,7 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
         end
         or_gd = optimize(
             d -> gateauxderivative!(workspaces_direction, d, adp, dc_direction),
-            optimizer_direction,
+            strategy.optimizer_direction,
             prototypes_direction,
             constraints_direction;
             trace_state = trace_state,
@@ -164,16 +198,23 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
         end
         # Re-optimize the weights.
         wstr = DirectMaximization(;
-            optimizer = optimizer_weight,
+            optimizer = strategy.optimizer_weight,
             prototype = candidate,
             fixedpoints = 1:numpoints(candidate),
         )
         # We discard the first return value and simplify manually at the top of the loop
         # since solve() sorts the points, and we don't want this.
         _, rw = solve(adp, wstr; trace_state = trace_state)
-        candidate = solution(rw)
-        push!(ors_d, or_gd)
-        push!(ors_w, optimization_result(rw))
+        return or_gd, optimization_result(rw)
+    end
+    ord, orw = onestep(1, strategy.candidate)
+    ors_d = [ord]
+    ors_w = [orw]
+    for i in 2:(strategy.steps)
+        last_candidate = ors_w[i - 1].maximizer
+        ord, orw = onestep(i, last_candidate)
+        push!(ors_d, ord)
+        push!(ors_w, orw)
     end
     return ExchangeResult(ors_d, ors_w)
 end

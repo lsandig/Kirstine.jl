@@ -1,16 +1,91 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module DesignproblemTests
 using Test
 using Kirstine
 using Random: seed!
-using BenchmarkTools: @ballocated
 
+include("test-noalloc.jl")
 include("example-emax.jl")
 include("example-compartment.jl")
 
 @testset "designproblem.jl" begin
+    @testset "DesignProblem" begin
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            )
+            dp_str = repr(dp)
+            dp_parsed = eval(Meta.parse(dp_str))
+            @test dp == dp_parsed
+        end
+
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            dp_a = DesignProblem(dp; criterion = ACriterion()),
+            dp_copy = DesignProblem(dp)
+
+            # replacement works
+            @test criterion(dp_a) == ACriterion()
+            # other fields are equal (check by substituting back) ...
+            @test dp == DesignProblem(dp_a; criterion = DCriterion())
+            # ... but not identical when they don't refer to singleton objects
+            @test prior_knowledge(dp_a) !== prior_knowledge(dp)
+
+            @test dp_copy == dp
+            @test dp_copy !== dp
+        end
+    end
+
+    @testset "==" begin
+        let dp1 = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            dp2 = deepcopy(dp1)
+
+            @test dp1 == dp2
+        end
+    end
+
+    @testset "hash" begin
+        let dr = DesignInterval(:dose => (0, 10)),
+            m = EmaxModel(1),
+            cp = CopyDose(),
+            pk = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            dp1 = DesignProblem(;
+                criterion = DCriterion(),
+                region = dr,
+                model = m,
+                covariate_parameterization = cp,
+                prior_knowledge = pk,
+            ),
+            dp2 = DesignProblem(;
+                criterion = ACriterion(),
+                region = dr,
+                model = m,
+                covariate_parameterization = cp,
+                prior_knowledge = pk,
+            ),
+            dp3 = deepcopy(dp1)
+
+            # implicitly constructs a Set, which calls hash()
+            @test unique([dp1, dp2, dp3]) == [dp1, dp2]
+        end
+    end
+
     @testset "objective_constants" begin
         let dp = DesignProblem(;
                 criterion = DCriterion(),
@@ -41,6 +116,28 @@ include("example-compartment.jl")
         end
     end
 
+    @testset "derivative_constants!" begin
+        let dp = DesignProblem(;
+                criterion = ACriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            at = equidistant_design(region(dp), 4),
+            somewhere_else = DesignMeasure([[1], [2], [3], [4]], [0.1, 0.2, 0.3, 0.4]),
+            w = Kirstine.allocate_workspace(at, dp),
+            oc = Kirstine.objective_constants(dp),
+            dc = Kirstine.derivative_constants(at, dp),
+            dc_copy = deepcopy(dc)
+
+            Kirstine.derivative_constants!(dc, w, somewhere_else, dp, oc)
+
+            @test dc.gc.A[1] != dc_copy.gc.A[1]
+            @test dc.gc.tr_B[1] != dc_copy.gc.tr_B[1]
+        end
+    end
+
     @testset "objective!" begin
         # The correct implementation of the criteria is checked in criterion-{a,d}.jl.
         # Here we test whether there are spurious memory allocations
@@ -56,9 +153,7 @@ include("example-compartment.jl")
             ws = Kirstine.allocate_workspace(d, dp),
             oc = Kirstine.objective_constants(dp)
 
-            ba = @ballocated Kirstine.objective!($ws, $d, $dp, $oc) evals = 1 samples = 1
-
-            @test ba == 0
+            @test_noalloc Kirstine.objective!($ws, $d, $dp, $oc)
         end
     end
 
@@ -78,13 +173,28 @@ include("example-compartment.jl")
             ws = Kirstine.allocate_workspace(dir, dp),
             dcon = Kirstine.derivative_constants(at, dp)
 
-            ba = @ballocated(
-                Kirstine.gateauxderivative!($ws, $dir, $dp, $dcon);
-                evals = 1,
-                samples = 1
-            )
+            @test_noalloc Kirstine.gateauxderivative!($ws, $dir, $dp, $dcon)
+        end
+    end
 
-            @test ba == 0
+    @testset "sensitivity!" begin
+        # Indirectly check sensitivity function by comparing to the gateaux derivative.
+        # Also check for spurious memory allocations.
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 1)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            at = equidistant_design(region(dp), 4),
+            dir = one_point_design([0.5]),
+            ws = Kirstine.allocate_workspace(dir, dp),
+            dcon = Kirstine.derivative_constants(at, dp)
+
+            s = Kirstine.sensitivity!(ws, dir, dp, dcon)
+            @test s == only(gateauxderivative(at, [dir], dp)) + 3
+            @test_noalloc Kirstine.sensitivity!($ws, $dir, $dp, $dcon)
         end
     end
 
@@ -196,6 +306,23 @@ include("example-compartment.jl")
             @test si(d1, dp, 250) ≈ 3 / 2 * log(250) + c + half_ob atol = 5e-5
             # the criterion of the problem should be ignored
             @test si(d1, dpa, 1) ≈ c + half_ob atol = 5e-5
+        end
+    end
+
+    @testset "check_numerically_singular" begin
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            s = uniform_design([[0], [5], [10]]),
+            mix = mixture(1e-14, s, one_point_design([2])),
+            cns = Kirstine.check_numerically_singular
+
+            @test_logs cns(s, dp)
+            @test_logs (:warn, r"numerically singular") cns(mix, dp)
         end
     end
 end

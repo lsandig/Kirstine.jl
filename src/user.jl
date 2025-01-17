@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## function stubs for user methods ##
@@ -10,7 +10,7 @@ Return the length of one unit of observation.
 
 # Implementation
 
-For a user type `M <: Model` this should return the length ``\DimUnit``
+For a user type `M <: Kirstine.Model` this should return the length ``\DimUnit``
 of one unit of observation ``\Unit``.
 
 See also the [mathematical background](math.md#Design-Problems).
@@ -20,11 +20,11 @@ function unit_length end
 """
     Kirstine.allocate_covariate(m::M) -> c::C
 
-Construct a single `Covariate` for the model.
+Construct a single covariate for the model.
 
 # Implementation
 
-For user types `M <: Model` and a corresponding `C <: Covariate`,
+For user types `M <: Kirstine.Model` and a corresponding `C <: Kirstine.Covariate`,
 this should construct a single instance `c` of `C`
 with some (model-specific) sensible initial value.
 
@@ -39,7 +39,7 @@ Compute Jacobian matrix of the mean function at `p`.
 
 # Implementation
 
-For user types `M <: NonlinearRegression`, `C <: Covariate`, and `P <: Parameter`,
+For user types `M <: Kirstine.NonlinearRegression`, `C <: Kirstine.Covariate`, and `P <: Kirstine.Parameter`,
 this should fill in the elements of the pre-allocated Jacobian matrix `jm`,
 and finally return `jm`.
 
@@ -58,8 +58,8 @@ Map a design point to a model covariate.
 
 # Implementation
 
-For user types `C <: Covariate`, `M <: Model`, and
-`Cp <: CovariateParameterization` this should set the fields of the single covariate `c`
+For user types `C <: Kirstine.Covariate`, `M <: Kirstine.Model`, and
+`Cp <: Kirstine.CovariateParameterization` this should set the fields of the single covariate `c`
 according to the single design point `dp`. Finally, this method should return `c`.
 
 See also [`implied_covariates`](@ref)
@@ -75,7 +75,7 @@ for one unit of observation.
 
 # Implementation
 
-For user types `C <: Covariate` and `M <: NonlinearRegression`,
+For user types `C <: Kirstine.Covariate` and `M <: Kirstine.NonlinearRegression`,
 this should fill in the elements of `Sigma`
 for a unit of observation with covariate `c`.
 The `size` of the matrix is `(unit_length(m), unit_length(m))`.
@@ -91,7 +91,7 @@ Return dimension of the parameter space.
 
 # Implementation
 
-For a user type `P <: Parameter`, this should return the dimension of the parameter space.
+For a user type `P <: Kirstine.Parameter`, this should return the dimension of the parameter space.
 
 See also the [mathematical background](math.md#Design-Problems).
 """
@@ -100,12 +100,30 @@ function dimension end
 ## generic identity covariate parameterization ##
 
 """
-    JustCopy <: CovariateParameterization
+    JustCopy <: Kirstine.CovariateParameterization
 
 A convenience type to use when design variables and model covariates are identical.
 """
 struct JustCopy{N} <: CovariateParameterization
-    field_names::NTuple{N,Symbol}
+    # Note that we have to give the field names of the _covariate_ explicitly
+    # since map_to_covariate!() does not have access to the design region,
+    # hence also not to the dimnames() of the design region.
+    # The region's dimnames are only used for axis labels in graphics.
+    # However, the _order_ of the field names here is arbitrary
+    # as long as it matches what the user intends to do with the design region.
+    # I.e. the following would work, but be a bit confusing:
+    # struct FooCovariate <: Kirstine.Covariate
+    #     a::Float64
+    #     b::Float64
+    # end
+    # dr = DesignInterval(:b => (1, 2), :a => (3, 4))
+    # JustCopy(:b, :a)
+    covariate_field_names::NTuple{N,Symbol}
+end
+
+function Base.show(io::IO, cp::JustCopy)
+    args = map(fn -> ':' * string(fn), cp.covariate_field_names)
+    print(io, "JustCopy(" * join(args, ", "), ")")
 end
 
 """
@@ -140,7 +158,7 @@ we can define
 
 ```jldoctest justcopy
 julia> cp = JustCopy(:a, :b)
-JustCopy{2}((:a, :b))
+JustCopy(:a, :b)
 ```
 
 and then solve
@@ -162,7 +180,7 @@ for the `FooModel` and `FooCovariate` types.
 Note however that the equivalent manual version
 
 ```jldoctest justcopy
-julia> struct CopyBoth <: CovariateParameterization end
+julia> struct CopyBoth <: Kirstine.CovariateParameterization end
 
 julia> function Kirstine.map_to_covariate!(c::FooCovariate, dp, m::FooModel, cp::CopyBoth)
            c.a = dp[1]
@@ -183,15 +201,12 @@ function JustCopy(names::Symbol...)
 end
 
 function map_to_covariate!(c::Covariate, dp::AbstractVector{<:Real}, m::Model, cp::JustCopy)
-    dimc = length(cp.field_names)
+    dimc = length(cp.covariate_field_names)
     cnames = fieldnames(typeof(c))
-    err = ArgumentError(
-        "field names of covariate must match names of JustCopy parameterization",
-    )
-    if length(cnames) != dimc
-        throw(err)
-    end
-    for fn in cp.field_names
+    msg = "names of $(cp) don't match field names of covariate $(cnames)"
+    err = ArgumentError(msg)
+    length(cnames) == dimc || throw(err)
+    for fn in cp.covariate_field_names
         if !(fn in cnames)
             throw(err)
         end
@@ -200,7 +215,7 @@ function map_to_covariate!(c::Covariate, dp::AbstractVector{<:Real}, m::Model, c
         throw(DimensionMismatch("dimension of design point must match that of covariate"))
     end
     for i in 1:dimc
-        fn = cp.field_names[i]
+        fn = cp.covariate_field_names[i]
         # The next call allocates memory
         # since the field names and their types are not know at compile time.
         # As a consequence, `map_to_covariate` is slowed down by a factor of 10
@@ -249,7 +264,7 @@ with constant measurement variance.
 This macro will define the two types `\$(name)Model` and `\$(name)Covariate`,
 hence `name` should start with a capital letter.
 The model constructor will have the measurement standard deviation `sigma` as a mandatory
-keyword argument.
+argument.
 
 # Examples
 
@@ -262,9 +277,12 @@ The call
 is equivalent to manually spelling out
 
 ```julia
-struct EmaxModel <: Kirstine.NonlinearRegression
+@kwdef struct EmaxModel <: Kirstine.NonlinearRegression
     sigma::Float64
-    function EmaxModel(; sigma::Real)
+    function EmaxModel(sigma::Real)
+        if sigma <= 0
+            throw(ArgumentError("sigma must be positive"))
+        end
         return new(sigma)
     end
 end
@@ -309,9 +327,12 @@ macro simple_model(name, covariate_field_names...)
     # module. This has the nice side effect of not replacing `m` with a gensym.
     return esc(
         quote
-            struct $model_name <: $module_name.NonlinearRegression
+            @kwdef struct $model_name <: $module_name.NonlinearRegression
                 sigma::Float64
-                function $model_name(; sigma::Real)
+                function $model_name(sigma::Real)
+                    if sigma <= 0
+                        throw(ArgumentError("sigma must be positive"))
+                    end
                     return new(sigma)
                 end
             end

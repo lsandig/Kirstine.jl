@@ -1,16 +1,16 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # model and covariate subtypes for tests where we do not need a full design problem
 
-struct TestMod <: NonlinearRegression end
+struct TestMod <: Kirstine.NonlinearRegression end
 
-mutable struct TestCovar2 <: Covariate
+mutable struct TestCovar2 <: Kirstine.Covariate
     a::Float64
     b::Float64
 end
 
-mutable struct TestCovarNonFloat <: Covariate
+mutable struct TestCovarNonFloat <: Kirstine.Covariate
     a::Int64
     b::Vector{Float64}
 end

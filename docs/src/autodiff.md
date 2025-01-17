@@ -19,10 +19,10 @@ using BenchmarkTools: @benchmark
 ```
 
 Since ForwardDiff can only compute the derivative with respect to a `Vector` argument,
-we define a [`Parameter`](@ref) subtype that wraps a `Vector`.
+we define a [`Kirstine.Parameter`](@ref) subtype that wraps a `Vector`.
 
 ```@example main
-struct SigEmaxVectorParameter <: Parameter
+struct SigEmaxVectorParameter <: Kirstine.Parameter
     θ::Vector{Float64} # θ = (e0, emax, ed50, h)
 end
 
@@ -155,7 +155,7 @@ which misuses the model type.
     and then call `gradient!` with the saved closure.
 
 ```@example main
-struct HackySigEmaxModel{T<:Function} <: NonlinearRegression
+struct HackySigEmaxModel{T<:Function} <: Kirstine.NonlinearRegression
     sigma::Float64
     cfg::ForwardDiff.GradientConfig
     c::SigEmaxCovariate
@@ -189,17 +189,8 @@ function Kirstine.jacobianmatrix!(
     return ForwardDiff.gradient!(jm, m.mu_closure, p.θ, m.cfg)
 end
 
-dph = DesignProblem(
-    criterion = DCriterion(),
-    region = DesignInterval(:dose => (0, 1)),
-    model = HackySigEmaxModel(
-        sigma = 1,
-        pardim = 4,
-        mu = (c, θ) -> c.dose == 0 ? θ[1] : θ[1] + θ[2] / ((c.dose / θ[3])^(-θ[4]) + 1),
-    ),
-    covariate_parameterization = JustCopy(:dose),
-    prior_knowledge = prior_sample,
-)
+mu(c, θ) = c.dose == 0 ? θ[1] : θ[1] + θ[2] / ((c.dose / θ[3])^(-θ[4]) + 1)
+dph = DesignProblem(dp1; model = HackySigEmaxModel(sigma = 1, pardim = 4, mu = mu))
 
 bm3 = @benchmark Kirstine.jacobianmatrix!($jm, $model(dph), $co, $sep_draws[1])
 ```
@@ -226,7 +217,7 @@ s3 == s1
 ## Transformations
 
 A place where autodiff does not incur a noticeable performance hit
-is the computation of a [`Transformation`](@ref)'s Jacobian matrix
+is the computation of a [`Kirstine.Transformation`](@ref)'s Jacobian matrix
 at the parameter values in the prior sample,
 since these are computed only once for a design problem.
 
@@ -274,14 +265,8 @@ DED_manual(parameters(prior_sample)[1], 10) .- DED_auto(parameters(prior_sample)
 ```
 
 ```@example main
-dp2 = DesignProblem(
-    criterion = DCriterion(),
-    region = DesignInterval(:dose => (0, 1)),
-    model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = JustCopy(:dose),
-    prior_knowledge = prior_sample,
-    transformation = DeltaMethod(p -> DED_auto(p, 90)), # optimal for ED_{90}
-)
+# optimal for ED_{90}
+dp2 = DesignProblem(dp1; transformation = DeltaMethod(p -> DED_auto(p, 90)))
 
 solve(dp2, dummy; maxweight = 1e-3, maxdist = 1e-2)
 Random.seed!(54321)
@@ -290,14 +275,8 @@ nothing # hide
 ```
 
 ```@example main
-dp3 = DesignProblem(
-    criterion = DCriterion(),
-    region = DesignInterval(:dose => (0, 1)),
-    model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = JustCopy(:dose),
-    prior_knowledge = prior_sample,
-    transformation = DeltaMethod(p -> DED_manual(p, 90)),  # optimal for ED_{90}
-)
+# optimal for ED_{90}
+dp3 = DesignProblem(dp1; transformation = DeltaMethod(p -> DED_manual(p, 90)))
 solve(dp3, dummy; maxweight = 1e-3, maxdist = 1e-2)
 Random.seed!(54321)
 @time s4, r4 = solve(dp3, strategy; maxweight = 1e-3, maxdist = 1e-2)

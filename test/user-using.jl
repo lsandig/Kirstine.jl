@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module UserUsingTests
@@ -8,18 +8,23 @@ using Kirstine
 include("example-testmod.jl")
 
 @testset "user.jl (using)" begin
-    @testset "simple_model" begin
+    @testset "@simple_model" begin
         @test_throws "no covariate field names" @macroexpand(@simple_model(Foo))
 
         let ex = @macroexpand(@simple_model(Foo, bar, baz)),
             _ = Base.remove_linenums!(ex),
             (a, b, c, d, e) = ex.args,
-            aref = :(struct FooModel <: Kirstine.NonlinearRegression
-                sigma::Float64
-                function FooModel(; sigma::Real)
-                    return new(sigma)
+            aref = @macroexpand(
+                @kwdef struct FooModel <: Kirstine.NonlinearRegression
+                    sigma::Float64
+                    function FooModel(sigma::Real)
+                        if sigma <= 0
+                            throw(ArgumentError("sigma must be positive"))
+                        end
+                        return new(sigma)
+                    end
                 end
-            end),
+            ),
             bref = :(mutable struct FooCovariate <: Kirstine.Covariate
                 bar::Float64
                 baz::Float64
@@ -49,7 +54,7 @@ include("example-testmod.jl")
         end
     end
 
-    @testset "define_vector_parameter" begin
+    @testset "@simple_parameter" begin
         @test_throws "no field names" @macroexpand(@simple_parameter(Foo))
 
         let ex = @macroexpand(@simple_parameter(Emax, e0, emax, ec50)),
@@ -79,6 +84,19 @@ include("example-testmod.jl")
         end
     end
 
+    @testset "show(::JustCopy)" begin
+        # check that pretty representation is parseable
+        let x = JustCopy(:a, :b, :c),
+            io = IOBuffer(),
+            ioc = IOContext(io, :limit => false),
+            _ = show(ioc, "text/plain", x),
+            str_pretty = String(take!(io)),
+            x_pretty = eval(Meta.parse(str_pretty))
+
+            @test x == x_pretty
+        end
+    end
+
     @testset "map_to_covariate!(JustCopy)" begin
         let mtc! = Kirstine.map_to_covariate!,
             c1 = TestCovar2(0, 0),
@@ -98,11 +116,11 @@ include("example-testmod.jl")
             # design point is not modified
             @test dp == [42.0, 3.14]
             # covariate parameterization is not modified
-            @test jc1.field_names == (:a, :b)
+            @test jc1.covariate_field_names == (:a, :b)
 
             @test_throws "dimension of design point" mtc!(c1, [1.0], m, jc1)
-            @test_throws "field names of covariate" mtc!(c1, dp, m, jc2)
-            @test_throws "field names of covariate" mtc!(c1, dp, m, jc3)
+            @test_throws "don't match field names of covariate" mtc!(c1, dp, m, jc2)
+            @test_throws "don't match field names of covariate" mtc!(c1, dp, m, jc3)
             @test_throws TypeError mtc!(c2, dp, m, jc1)
         end
     end

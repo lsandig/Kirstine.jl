@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module UserImportTests
@@ -6,18 +6,23 @@ using Test
 import Kirstine as Smith
 
 @testset "user.jl (import)" begin
-    @testset "simple_model" begin
+    @testset "@simple_model" begin
         @test_throws "no covariate field names" @macroexpand(Smith.@simple_model(Foo))
 
         let ex = @macroexpand(Smith.@simple_model(Foo, bar, baz)),
             _ = Base.remove_linenums!(ex),
             (a, b, c, d, e) = ex.args,
-            aref = :(struct FooModel <: Smith.NonlinearRegression
-                sigma::Float64
-                function FooModel(; sigma::Real)
-                    return new(sigma)
+            aref = @macroexpand(
+                @kwdef struct FooModel <: Smith.NonlinearRegression
+                    sigma::Float64
+                    function FooModel(sigma::Real)
+                        if sigma <= 0
+                            throw(ArgumentError("sigma must be positive"))
+                        end
+                        return new(sigma)
+                    end
                 end
-            end),
+            ),
             bref = :(mutable struct FooCovariate <: Smith.Covariate
                 bar::Float64
                 baz::Float64
@@ -47,7 +52,7 @@ import Kirstine as Smith
         end
     end
 
-    @testset "define_vector_parameter" begin
+    @testset "@simple_parameter" begin
         @test_throws "no field names" @macroexpand(Smith.@simple_parameter(Foo))
 
         let ex = @macroexpand(Smith.@simple_parameter(Emax, e0, emax, ec50)),

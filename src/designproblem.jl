@@ -1,10 +1,10 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## implement AbstractDesignProblem interface for DesignProblem ##
 
 """
-    DesignProblem <: AbstractDesignProblem
+    DesignProblem <: Kirstine.AbstractDesignProblem
 
 A `DesignProblem` has 7 components:
 
@@ -35,47 +35,123 @@ struct DesignProblem{
     pk::Tpk
     trafo::Tt
     na::Tna
-    @doc """
-        DesignProblem(<keyword arguments>)
+end
 
-    Construct a design problem with some sensible defaults.
+"""
+    DesignProblem(<keyword arguments>)
 
-    # Arguments
-    - `criterion::DesignCriterion`
-    - `region::DesignRegion`
-    - `model::Model`
-    - `covariate_parameterization::CovariateParameterization`
-    - `prior_knowledge::PriorKnowledge`
-    - `transformation::Transformation = Identity()`
-    - `normal_approximation::NormalApproximation = FisherMatrix()`
-    """
-    function DesignProblem(;
-        criterion::Tdc,
-        region::Tdr,
-        model::Tm,
-        covariate_parameterization::Tcp,
-        prior_knowledge::Tpk,
-        transformation::Tt = Identity(),
-        normal_approximation::Tna = FisherMatrix(),
-    ) where {
-        Tdc<:DesignCriterion,
-        Tdr<:DesignRegion,
-        Tm<:Model,
-        Tcp<:CovariateParameterization,
-        Tpk<:PriorKnowledge,
-        Tt<:Transformation,
-        Tna<:NormalApproximation,
-    }
-        new{Tdc,Tdr,Tm,Tcp,Tpk,Tt,Tna}(
-            criterion,
-            region,
-            model,
-            covariate_parameterization,
-            prior_knowledge,
-            transformation,
-            normal_approximation,
-        )
-    end
+Construct a design problem with some sensible defaults.
+
+# Arguments
+
+  - `criterion::Kirstine.DesignCriterion`
+  - `region::Kirstine.DesignRegion`
+  - `model::Kirstine.Model`
+  - `covariate_parameterization::Kirstine.CovariateParameterization`
+  - `prior_knowledge::Kirstine.PriorKnowledge`
+  - `transformation::Kirstine.Transformation = Identity()`
+  - `normal_approximation::Kirstine.NormalApproximation = FisherMatrix()`
+"""
+function DesignProblem(;
+    criterion::Tdc,
+    region::Tdr,
+    model::Tm,
+    covariate_parameterization::Tcp,
+    prior_knowledge::Tpk,
+    transformation::Tt = Identity(),
+    normal_approximation::Tna = FisherMatrix(),
+) where {
+    Tdc<:DesignCriterion,
+    Tdr<:DesignRegion,
+    Tm<:Model,
+    Tcp<:CovariateParameterization,
+    Tpk<:PriorKnowledge,
+    Tt<:Transformation,
+    Tna<:NormalApproximation,
+}
+    dp = DesignProblem{Tdc,Tdr,Tm,Tcp,Tpk,Tt,Tna}(
+        criterion,
+        region,
+        model,
+        covariate_parameterization,
+        prior_knowledge,
+        transformation,
+        normal_approximation,
+    )
+    return dp
+end
+
+"""
+    DesignProblem(prototype::DesignProblem; <keyword arguments>)
+
+Construct a design problem with defaults from `prototype`.
+
+All explicitly given keyword arguments will be part of the new design problem.
+For every missing keyword argument,
+the corresponding field from `prototype` is copied instead.
+Note that the result does not share memory with `prototype`.
+
+This function is useful for constructing variations of a given problem
+without having to re-type a lot of code
+or having to write helper functions.
+
+# Examples
+
+Consider some design problem
+
+```julia
+dp = DesignProblem(; criterion = DCriterion(), other_keyword_arguments...)
+```
+
+This constructs a similar problem where only the criterion differs:
+
+```julia
+DesignProblem(dp; criterion = ACriterion())
+```
+"""
+function DesignProblem(
+    dp::DesignProblem;
+    criterion = deepcopy(criterion(dp)),
+    region = deepcopy(region(dp)),
+    model = deepcopy(model(dp)),
+    covariate_parameterization = deepcopy(covariate_parameterization(dp)),
+    prior_knowledge = deepcopy(prior_knowledge(dp)),
+    transformation = deepcopy(transformation(dp)),
+    normal_approximation = deepcopy(normal_approximation(dp)),
+)
+    modified_dp = DesignProblem(;
+        criterion = criterion,
+        region = region,
+        model = model,
+        covariate_parameterization = covariate_parameterization,
+        prior_knowledge = prior_knowledge,
+        transformation = transformation,
+        normal_approximation = normal_approximation,
+    )
+    return modified_dp
+end
+
+function Base.:(==)(dp1::DesignProblem, dp2::DesignProblem)
+    fields_are_equal =
+        criterion(dp1) == criterion(dp2) &&
+        region(dp1) == region(dp2) &&
+        model(dp1) == model(dp2) &&
+        covariate_parameterization(dp1) == covariate_parameterization(dp2) &&
+        prior_knowledge(dp1) == prior_knowledge(dp2) &&
+        transformation(dp1) == transformation(dp2) &&
+        normal_approximation(dp1) == normal_approximation(dp2)
+    return fields_are_equal
+end
+
+function Base.hash(dp::DesignProblem, h::UInt)
+    h = hash(criterion(dp), h)
+    h = hash(region(dp), h)
+    h = hash(model(dp), h)
+    h = hash(covariate_parameterization(dp), h)
+    h = hash(prior_knowledge(dp), h)
+    h = hash(transformation(dp), h)
+    h = hash(normal_approximation(dp), h)
+    return h
 end
 
 """
@@ -127,7 +203,20 @@ Get the [`NormalApproximation`](@ref) of `dp`.
 """
 normal_approximation(dp::DesignProblem) = dp.na
 
-struct DPWorkspace{Tmw<:ModelWorkspace,Tc<:Covariate} <: AbstractWorkspace
+function Base.show(io::IO, ::MIME"text/plain", dp::DesignProblem)
+    println(io, "DesignProblem")
+    println(io, " - criterion: ", criterion(dp))
+    println(io, " - region: ", region(dp))
+    println(io, " - model: ", model(dp))
+    println(io, " - covariate parameterization: ", covariate_parameterization(dp))
+    print(io, " - prior knowledge: ")
+    show(io, MIME("text/plain"), prior_knowledge(dp))
+    println(io)
+    println(io, " - transformation: ", transformation(dp))
+    print(io, " - normal approximation: ", normal_approximation(dp))
+end
+
+struct DPWorkspace{Tmw<:ModelWorkspace,Tc<:Covariate} <: ProblemWorkspace
     nw::NIMWorkspace
     mw::Tmw
     c::Vector{Tc}
@@ -152,21 +241,52 @@ function objective_constants(dp::DesignProblem)
     return DPObjectiveConstants(tc)
 end
 
+function gateaux_constants(
+    d::DesignMeasure,
+    dp::DesignProblem{Tc,Tr,Tm,Tcp,Tp,Tt,Tn},
+) where {
+    Tc<:DesignCriterion,
+    Tr<:DesignRegion,
+    Tm<:Model,
+    Tcp<:CovariateParameterization,
+    Tp<:PriorSample,
+    Tt<:Transformation,
+    Tn<:NormalApproximation,
+}
+    (; dc, dr, m, cp, pk, trafo, na) = dp
+    t = codomain_dimension(trafo, pk)
+    r = parameter_dimension(pk)
+    numdraws = length(parameters(pk))
+    gc = GCPriorSample([zeros(r, r) for _ in 1:numdraws], zeros(numdraws))
+    mw = allocate_model_workspace(numpoints(d), m, pk)
+    nw = NIMWorkspace(r, t)
+    c = implied_covariates(d, m, cp)
+    tc = trafo_constants(trafo, pk)
+    gateaux_constants!(gc, mw, nw, c, dc, d, m, cp, pk, tc, na)
+    return gc
+end
+
 struct DPDerivativeConstants{Tgc<:GateauxConstants} <: DerivativeConstants
     gc::Tgc
 end
 
 function derivative_constants(at::DesignMeasure, dp::DesignProblem)
-    gc = gateaux_constants(
-        criterion(dp),
-        at,
-        model(dp),
-        covariate_parameterization(dp),
-        prior_knowledge(dp),
-        transformation(dp),
-        normal_approximation(dp),
-    )
-    return DPDerivativeConstants(gc)
+    return DPDerivativeConstants(gateaux_constants(at, dp))
+end
+
+function derivative_constants!(
+    dc::DPDerivativeConstants,
+    w::DPWorkspace,
+    d::DesignMeasure,
+    dp::DesignProblem,
+    oc::DPObjectiveConstants,
+)
+    cpar = covariate_parameterization(dp)
+    pk = prior_knowledge(dp)
+    cr = criterion(dp)
+    na = normal_approximation(dp)
+    gateaux_constants!(dc.gc, w.mw, w.nw, w.c, cr, d, model(dp), cpar, pk, oc.tc, na)
+    return dc
 end
 
 function objective!(
@@ -229,12 +349,31 @@ function gateauxderivative!(
     return acc
 end
 
+function sensitivity!(
+    w::DPWorkspace,
+    direction::DesignMeasure,
+    dp::DesignProblem,
+    dc::DPDerivativeConstants,
+)
+    update_covariates!(w.c, direction, model(dp), covariate_parameterization(dp))
+    update_model_workspace!(w.mw, model(dp), w.c)
+    pk_w, pk_p = weights(prior_knowledge(dp)), parameters(prior_knowledge(dp))
+    acc = 0.0
+    dir_w = weights(direction)
+    for i in 1:length(pk_p)
+        average_fishermatrix!(w.nw.r_x_r, w.mw, dir_w, model(dp), w.c, pk_p[i])
+        informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
+        acc += pk_w[i] * sensitivity_integrand(dc.gc.A[i], w.nw.r_x_r)
+    end
+    return acc
+end
+
 """
     simplify(d::DesignMeasure, dp::DesignProblem; maxweight = 0, maxdist = 0, uargs...)
 
 A wrapper that calls
 [`simplify_unique`](@ref),
-[`simplify_merge`](@ref),
+[`simplify_merge`](@ref) (with the design region of `dp`),
 and [`simplify_drop`](@ref) in that order.
 """
 function simplify(d::DesignMeasure, dp::DesignProblem; maxweight = 0, maxdist = 0, uargs...)
@@ -264,20 +403,6 @@ function efficiency(d1::DesignMeasure, d2::DesignMeasure, dp::DesignProblem)
     return efficiency(d1, d2, dp, dp)
 end
 
-# same design problem as `dp`, but with criterion replaced by `DCriterion()`.
-function as_doptimality_problem(dp::DesignProblem)
-    dpd = DesignProblem(;
-        criterion = DCriterion(),
-        model = model(dp),
-        region = region(dp),
-        covariate_parameterization = covariate_parameterization(dp),
-        prior_knowledge = prior_knowledge(dp),
-        transformation = transformation(dp),
-        normal_approximation = normal_approximation(dp),
-    )
-    return dpd
-end
-
 function efficiency(
     d1::DesignMeasure,
     d2::DesignMeasure,
@@ -292,8 +417,8 @@ function efficiency(
     # Take a shortcut via D criterion objective, which already gives the average
     # log-determinant of the transformed information matrices, and handles exceptions.
     # Note that the design region is irrelevant for relative efficiency.
-    dp1d = as_doptimality_problem(dp1)
-    dp2d = as_doptimality_problem(dp2)
+    dp1d = DesignProblem(dp1; criterion = DCriterion())
+    dp2d = DesignProblem(dp2; criterion = DCriterion())
     return exp((objective(d1, dp1d) - objective(d2, dp2d)) / t)
 end
 
@@ -312,7 +437,19 @@ See also the [mathematical background](math.md#Shannon-Information).
         so this function ignores the type of `criterion(dp)`.
 """
 function shannon_information(d::DesignMeasure, dp::DesignProblem, n::Integer)
-    dpd = as_doptimality_problem(dp)
+    dpd = DesignProblem(dp; criterion = DCriterion())
     t = codomain_dimension(transformation(dp), prior_knowledge(dp))
     return (t / 2) * (log(n) - 1 + log(2 * pi)) + 0.5 * objective(d, dpd)
+end
+
+function check_numerically_singular(d::DesignMeasure, dp::DesignProblem)
+    par_singular = filter(parameters(prior_knowledge(dp))) do p
+        na = normal_approximation(dp)
+        im = informationmatrix(d, model(dp), covariate_parameterization(dp), p, na)
+        return is_numerically_singular(im)
+    end
+    if !isempty(par_singular)
+        msg = "some parameters have numerically singular information matrices"
+        @warn msg dp d par_singular
+    end
 end

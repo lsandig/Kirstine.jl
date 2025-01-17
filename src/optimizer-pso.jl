@@ -1,10 +1,10 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## generic particle swarm optimizer ##
 
 """
-    Pso <: Optimizer
+    Pso <: ZerothOrderOptimizer
 
 A constricted particle swarm optimizer.
 
@@ -23,10 +23,10 @@ Construction from the vector of `prototypes` proceeds as follows:
     which is subsequently randomized.
     Randomization is subject to constraints, if any are given.
 
-[^CK02]: M. Clerc and J. Kennedy (2002). The particle swarm - explosion, stability, and convergence in a multidimensional complex space. IEEE Transactions on Evolutionary Computation, 6(1), 58–73. [doi:10.1109/4235.985692](http://dx.doi.org/10.1109/4235.985692)
-[^ES00]: R.C. Eberhardt and Y. Shi (2000). Comparing inertia weights and constriction factors in particle swarm optimization. Proceedings of the 2000 Congress on Evolutionary Computation. [doi: 10.1109/CEC.2000.870279](https://doi.org/10.1109/CEC.2000.870279)
+[^CK02]: Maurice Clerc and James Kennedy (2002). The particle swarm - explosion, stability, and convergence in a multidimensional complex space. IEEE Transactions on Evolutionary Computation, 6(1), 58–73. [doi:10.1109/4235.985692](http://dx.doi.org/10.1109/4235.985692)
+[^ES00]: Russell C. Eberhardt and Yuhui Shi (2000). Comparing inertia weights and constriction factors in particle swarm optimization. Proceedings of the 2000 Congress on Evolutionary Computation. [doi: 10.1109/CEC.2000.870279](https://doi.org/10.1109/CEC.2000.870279)
 """
-struct Pso <: Optimizer
+struct Pso <: ZerothOrderOptimizer
     iterations::Int64
     swarmsize::Int64
     c1::Float64
@@ -39,7 +39,7 @@ struct Pso <: Optimizer
             throw(ArgumentError("swarmsize must be at least 2"))
         end
         if c1 < 0 || c2 < 0 || c1 + c2 <= 4
-            throw(ArgumentError("c1 and c2 must be non-negative and, c1 + c2 > 4"))
+            throw(ArgumentError("c1 and c2 must be non-negative, and c1 + c2 > 4"))
         end
         return new(iterations, swarmsize, c1, c2)
     end
@@ -77,7 +77,8 @@ end
 
 maximizer(state::PsoState) = state.g
 Base.maximum(state::PsoState) = state.fg
-n_eval(state::PsoState) = state.n_eval
+n_eval_f(state::PsoState) = state.n_eval
+n_eval_g(state::PsoState) = 0
 
 # Note: user-visible documentation for this method is attached to `Pso`.
 function optimizer_state(
@@ -87,7 +88,8 @@ function optimizer_state(
     constraints::AbstractConstraints,
 )
     if o.swarmsize < length(prototypes)
-        throw(ArgumentError("swarmsize must be >= number of prototype particles"))
+        @error "" o.swarmsize prototypes
+        throw(ArgumentError("number of prototype particles must be <= swarmsize"))
     end
     x_given = deepcopy(prototypes)
     n_random = o.swarmsize - length(prototypes)
@@ -116,11 +118,7 @@ function optimizer_state(
     state.fg = -Inf
     pso_update_best!(state)
     # check for broken initial state
-    if state.fg == Inf
-        throw(ErrorException("infinite objective value at best initial point $(state.g)"))
-    elseif all(isnan.(state.fx))
-        throw(ErrorException("objective evaluates to NaN on all initial points"))
-    end
+    all(isnan.(state.fx)) && error("objective evaluates to NaN on all initial points")
     return state
 end
 
@@ -133,33 +131,38 @@ function tick!(
 )
     phi = optimizer.c1 + optimizer.c2
     chi = 2 / abs(2 - phi - sqrt(phi^2 - 4 * phi))
-    pso_update_velocity!(state, optimizer.c1, optimizer.c2, chi)
+    for i in 1:length(state.x)
+        pso_randomize_velocity_multipliers!(state)
+        pso_update_velocity!(state, i, optimizer.c1, optimizer.c2, chi)
+    end
     pso_update_position!(state, constraints)
     pso_evaluate_objective!(f, state)
     pso_update_best!(state)
     return state
 end
 
-function pso_update_velocity!(state::PsoState, c1, c2, chi)
-    for i in 1:length(state.x)
-        # In vector notation:
-        #
-        #   v[i] += c1 .* r1 .* (g - x[i]) .+ c2 .* r2 .* (p[i] - x[i])
-        #   v[i] *= chi
-        #
-        # with elements of r1, r2 uniformly random from [0,1].
-        ap_diff!(state.diffp, state.p[i], state.x[i])
-        ap_diff!(state.diffg, state.g, state.x[i])
-        ap_rand!(state.r1, 0, 1)
-        ap_rand!(state.r2, 0, 1)
-        ap_mul!(state.diffp, state.r1)
-        ap_mul!(state.diffg, state.r2)
-        ap_mul!(state.diffp, c1)
-        ap_mul!(state.diffg, c2)
-        ap_add!(state.v[i], state.diffp)
-        ap_add!(state.v[i], state.diffg)
-        ap_mul!(state.v[i], chi)
-    end
+function pso_randomize_velocity_multipliers!(state::PsoState)
+    ap_rand!(state.r1, 0, 1)
+    ap_rand!(state.r2, 0, 1)
+    return state
+end
+
+function pso_update_velocity!(state::PsoState, i, c1, c2, chi)
+    # In vector notation:
+    #
+    #   v[i] += c1 .* r1 .* (p[i] - x[i]) .+ c2 .* r2 .* (g - x[i])
+    #   v[i] *= chi
+    #
+    # with elements of r1, r2 uniformly random from [0,1].
+    ap_diff!(state.diffp, state.p[i], state.x[i])
+    ap_diff!(state.diffg, state.g, state.x[i])
+    ap_mul!(state.diffp, state.r1)
+    ap_mul!(state.diffg, state.r2)
+    ap_mul!(state.diffp, c1)
+    ap_mul!(state.diffg, c2)
+    ap_add!(state.v[i], state.diffp)
+    ap_add!(state.v[i], state.diffg)
+    ap_mul!(state.v[i], chi)
     return state
 end
 

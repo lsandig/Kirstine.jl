@@ -1,12 +1,12 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-@kwdef struct DTRMod <: NonlinearRegression
+@kwdef struct DTRMod <: Kirstine.NonlinearRegression
     sigma::Float64
     m::Int64
 end
 
-mutable struct DoseTimeCovariate <: Covariate
+mutable struct DoseTimeCovariate <: Kirstine.Covariate
     dose::Float64
     time::Vector{Float64}
 end
@@ -46,10 +46,15 @@ function Kirstine.jacobianmatrix!(jm, m::DTRMod, c::DoseTimeCovariate, p::DTRPar
     return jm
 end
 
-struct CopyBoth <: CovariateParameterization end
+struct CopyBoth <: Kirstine.CovariateParameterization end
 
 function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::CopyBoth)
     c.dose = dp[1]
     c.time[1] = dp[2]
     return c
+end
+
+function response(dose::Real, time::Real, p::DTRParameter)
+    c = dose / (1 - p.e / p.a) * (exp(-time * p.e) - exp(-time * p.a))
+    return p.e0 + p.emax * c / (p.ec50 + c)
 end

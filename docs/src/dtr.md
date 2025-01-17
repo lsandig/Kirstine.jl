@@ -84,12 +84,12 @@ but also the [other necessary methods](api.md#Implementing-a-Nonlinear-Regressio
 ```@example main
 using Kirstine, Random, Plots
 
-@kwdef struct DTRMod <: NonlinearRegression
+@kwdef struct DTRMod <: Kirstine.NonlinearRegression
     sigma::Float64
     m::Int64
 end
 
-mutable struct DoseTimeCovariate <: Covariate
+mutable struct DoseTimeCovariate <: Kirstine.Covariate
     dose::Float64
     time::Vector{Float64}
 end
@@ -146,9 +146,6 @@ function draw_from_prior(n)
     end
     return PriorSample(pars)
 end
-
-Random.seed!(4711)
-prior = draw_from_prior(1000)
 nothing # hide
 ```
 
@@ -194,7 +191,7 @@ In terms of our model and the design problem this means
 i.e. the design region is identical to the covariate set.
 
 ```@example main
-struct CopyBoth <: CovariateParameterization end
+struct CopyBoth <: Kirstine.CovariateParameterization end
 
 function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::CopyBoth)
     c.dose = dp[1]
@@ -258,12 +255,13 @@ set up the design problem and solve it with direct maximization.
     This is in order to reduce the documentation's compilation time.
 
 ```@example main
+Random.seed!(4711)
 dp1 = DesignProblem(
     criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 100), :time => (0, 24)),
     model = DTRMod(sigma = 1, m = 1),
     covariate_parameterization = CopyBoth(),
-    prior_knowledge = prior,
+    prior_knowledge = draw_from_prior(1000),
 )
 
 Random.seed!(1357)
@@ -279,12 +277,12 @@ s1
 
 ```@setup main
 s1 == DesignMeasure(
- [0.0, 0.0] => 0.20053030795126028,
- [14.310132703488692, 7.9551274923954916] => 0.1981120909448802,
- [61.493484624092964, 24.0] => 0.07683680630261552,
- [99.99929278721805, 4.0783147418405] => 0.19747192713878975,
- [100.0, 0.1730851666925906] => 0.1989417430614362,
- [100.0, 23.998585546217786] => 0.12810712460101795,
+ [0.0, 0.0] => 0.20053030795126034,
+ [14.310132703488692, 7.9551274923954916] => 0.19811209094488025,
+ [61.493484624092964, 24.0] => 0.07683680630261554,
+ [99.99929278721805, 4.0783147418405] => 0.1974719271387898,
+ [100.0, 0.1730851666925906] => 0.19894174306143625,
+ [100.0, 23.998585546217786] => 0.12810712460101797,
 ) || !check_results || error("not the expected result\n", s1)
 ```
 
@@ -334,9 +332,10 @@ m &= 1 \\
 
 This time there are no problems with uniqueness
 and the implementation is straightforward.
+Note how the `DesignProblem` differs from `dp1` only in its design region and its covariate parameterization.
 
 ```@example main
-struct FixedDose <: CovariateParameterization
+struct FixedDose <: Kirstine.CovariateParameterization
     dose::Float64
 end
 
@@ -347,11 +346,9 @@ function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::Fix
 end
 
 dp2 = DesignProblem(
-    criterion = DCriterion(),
+    dp1;
     region = DesignInterval(:time => (0, 24)),
-    model = DTRMod(1, 1),
     covariate_parameterization = FixedDose(100),
-    prior_knowledge = prior,
 )
 
 Random.seed!(111317)
@@ -367,11 +364,11 @@ s2
 
 ```@setup main
 s2 == DesignMeasure(
- [0.0] => 0.19963478041237373,
- [0.15441476713296678] => 0.20006662802108233,
- [2.2462632650730114] => 0.20067467321750979,
- [13.338793671645664] => 0.19962045785683458,
- [24.0] => 0.20000346049219964,
+ [0.0] => 0.1996347804123737,
+ [0.15441476713296678] => 0.2000666280210823,
+ [2.2462632650730114] => 0.20067467321750976,
+ [13.338793671645664] => 0.19962045785683455,
+ [24.0] => 0.2000034604921996,
 ) || !check_results || error("not the expected result\n", s2)
 ```
 
@@ -406,7 +403,7 @@ m &= 13 \\
 ```
 
 ```@example main
-struct FixedTimes <: CovariateParameterization
+struct FixedTimes <: Kirstine.CovariateParameterization
     time::Vector{Float64}
 end
 
@@ -417,11 +414,10 @@ function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::Fix
 end
 
 dp3 = DesignProblem(
-    criterion = DCriterion(),
+    dp1;
     region = DesignInterval(:dose => (0, 100)),
     model = DTRMod(1, 13), # measurements every two hours
     covariate_parameterization = FixedTimes(0:2:24),
-    prior_knowledge = prior,
 )
 
 Random.seed!(9630)
@@ -489,7 +485,7 @@ For this setup we need to think about uniqueness again.
     Here we also set the design point to ``(0, 2)``.
 
 ```@example main
-struct EquidistantTimes <: CovariateParameterization end
+struct EquidistantTimes <: Kirstine.CovariateParameterization end
 
 function Kirstine.map_to_covariate!(
     c::DoseTimeCovariate,
@@ -533,11 +529,9 @@ function Kirstine.simplify_unique(
 end
 
 dp4 = DesignProblem(
-    criterion = DCriterion(),
+    dp3;
     region = DesignInterval(:dose => (0, 100), :Δt => (0, 2)),
-    model = DTRMod(1, 13),
     covariate_parameterization = EquidistantTimes(),
-    prior_knowledge = prior,
 )
 
 Random.seed!(124816)
@@ -583,7 +577,7 @@ nothing # hide
 
 Looking at the optimization progress it seems that running with more iterations will not help.
 
-Now, we could try direct maximization again,
+We could try direct maximization again,
 this time with a prototype with more design points.
 But there is a smarter thing we can try instead.
 The [`Exchange`](@ref) algorithm can be understood as a kind of coordinate-wise infinite-dimensional gradient ascent,
@@ -598,25 +592,37 @@ Running this with a random starting design can be slow to converge,
 but since we already have promising candidate,
 we can hope that it gives us the solution after a few steps.
 
+For part 1,
+we will not use PSO,
+but a [`Kirstine.GridSearch`](@ref) over the design region $\DesignRegion$.
+This has the advantage
+that grid search is deterministic and will always find the maximum (on the grid),
+while Pso may sometimes get stuck in a local maximum
+and make the overall exchange algorithm somewhat unstable.
+On the other hand,
+grid search on a very fine grid can take a lot of time.
+
+In this particular example we save some runtime
+since we can reasonably guess
+that a single step of the exchange algorithm might be sufficient,
+and that the new point will be added at a point with ``D=100``.
+This is why we can get away with a [`Kirstine.ProductGrid`](@ref)
+that has only 2 different dose values.
+For the second dimension,
+the grid has 51 different values at ``Δt=0,0.04,…,2``.
+
 ```@example main
 st4b = Exchange(
     candidate = s4a,
-    steps = 6,
-    optimizer_direction = Pso(swarmsize = 25, iterations = 10),
-    optimizer_weight = Pso(swarmsize = 25, iterations = 25),
+    steps = 1,
+    optimizer_direction = Kirstine.GridSearch(gridspec = Kirstine.ProductGrid(2, 51)),
+    optimizer_weight = Pso(swarmsize = 25, iterations = 50),
 )
 
 Random.seed!(314)
 s4b, r4b = solve(dp4, st4b; minposdose = 1e-3, maxdist = 2e-2)
-pr4b = plot(r4b)
-savefig(pr4b, "dtr-pr4b.png") # hide
 nothing # hide
 ```
-
-![](dtr-pr4b.png)
-
-We see that the maximal derivative drops sharply after two steps,
-and the objective increases as well.
 
 Let's look at the solution.
 
@@ -626,13 +632,17 @@ s4b
 
 ```@setup main
 s4b == DesignMeasure(
- [0.0, 2.0] => 0.1137232342451187,
- [12.258680316012303, 0.9158234222042569] => 0.1457894552403696,
- [19.593596408255703, 2.0] => 0.1471416385906509,
- [99.99999450061316, 0.027467917484113615] => 0.19550901636913995,
- [100.0, 0.43533868322900837] => 0.05617938718584929,
- [100.0, 2.0] => 0.34165726836887167,
+ [0.0, 2.0] => 0.11343676907254417,
+ [12.258680316012303, 0.9158234222042569] => 0.1466543099306418,
+ [18.960755545027716, 2.0] => 0.1450562405792781,
+ [99.99958420409529, 0.030724171006199445] => 0.19609399574206807,
+ [100.0, 0.44] => 0.051532056457751135,
+ [100.0, 2.0] => 0.34722662821771666,
 ) || !check_results || error("not the expected result\n", s4b)
+```
+
+```@example main
+efficiency(s4a, s4b, dp4)
 ```
 
 ```@example main
@@ -668,7 +678,7 @@ m &= 13 \\
 In the following example we take ``b=\sqrt{2}``.
 
 ```@example main
-struct LogEquidistantTimes <: CovariateParameterization
+struct LogEquidistantTimes <: Kirstine.CovariateParameterization
     b::Float64
 end
 
@@ -719,11 +729,9 @@ function Kirstine.simplify_unique(
 end
 
 dp5 = DesignProblem(
-    criterion = DCriterion(),
-    model = DTRMod(1, 13),
+    dp3;
     covariate_parameterization = LogEquidistantTimes(sqrt(2)),
     region = DesignInterval(:dose => (0, 100), :Δt => (0, 24 / 45.25483399593908)),
-    prior_knowledge = prior,
 )
 
 Random.seed!(132435)
@@ -774,11 +782,11 @@ eff = [efficiency(d1, d2, p1, p2) for (d1, p1) in sol_prob, (d2, p2) in sol_prob
 
 ```@setup main
 eff == [
-1.0 1.4850650859043615 0.12650911830389935 0.09299711798671212 0.1016413811354575;
-0.6733711602889304 1.0 0.0851875917794263 0.06262157724223892 0.0684423747485524;
-7.904568567127365 11.738798798177912 1.0 0.7351020956711994 0.8034312664427492;
-10.753021401618971 15.96893665152671 1.3603552566217763 1.0 1.0929519466396846;
-9.83851251162457 14.610831428246879 1.2446615432675072 0.9149533088572939 1.0
+1.0 1.485065085904362 0.1265091183038994 0.09303061979858476 0.1016413811354575;
+0.6733711602889302 1.0 0.0851875917794263 0.06264413639617135 0.0684423747485524;
+7.904568567127361 11.738798798177912 1.0 0.7353669130402696 0.8034312664427492;
+10.749149066888325 15.9631859824173 1.359865370969225 1.0 1.0925583571894433;
+9.83851251162457 14.610831428246879 1.2446615432675072 0.9152829168525648 1.0
 ] || !check_results || error("not the expected result\n", eff)
 ```
 
@@ -797,7 +805,7 @@ But isn't a unit with 13 measurements already inherently “larger” than a uni
 Because of our choice of ``\UnitCovariance``,
 a different comparison can be devised.
 Since we assumed uncorrelated within-unit errors with ``\UnitCovariance = σ^2I_{\DimUnit}``
-any of the solutions `s2` through `s5` can be identified with candidate solution for `dp1`.
+any of the solutions `s2` through `s5` can be identified with a candidate solution for `dp1`.
 For example, we can “split up” a design point from `s4`,
 
 ```math

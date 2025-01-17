@@ -1,10 +1,10 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## solve design problem by directly maximizing the objective function ##
 
 """
-    DirectMaximization <: ProblemSolvingStrategy
+    DirectMaximization <: Kirstine.ProblemSolvingStrategy
 
 Find an optimal design by directly maximizing a criterion's objective function.
 """
@@ -13,42 +13,41 @@ struct DirectMaximization{To<:Optimizer} <: ProblemSolvingStrategy
     prototype::DesignMeasure
     fixedweights::Vector{Int64}
     fixedpoints::Vector{Int64}
-    # Note: We don't use @kwdef because fixed{weights,points} should be able to accept an
-    # AbstractVector, and esp. also a unit range
-    @doc """
-        DirectMaximization(;
-            optimizer::Optimizer,
-            prototype::DesignMeasure,
-            fixedweights = [],
-            fixedpoints = [],
-        )
-
-    Initialize the `optimizer` with a single `prototype`
-    and attempt to directly maximize the objective function.
-
-    For every index in `fixedweights`,
-    the corresponding weight of `prototype` is held constant during optimization.
-    The indices in `fixedpoints` do the same for the design points of the `prototype`.
-    These additional constraints can be used to speed up computation
-    in cases where some weights or design points are know analytically.
-
-    For more details on how the `prototype` is used,
-    see the specific [`Optimizer`](@ref)s.
-
-    The return value of [`solve`](@ref) for this strategy is a [`DirectMaximizationResult`](@ref).
-    """
-    function DirectMaximization(;
-        optimizer::To,
-        prototype::DesignMeasure,
-        fixedweights::AbstractVector{<:Integer} = Int64[],
-        fixedpoints::AbstractVector{<:Integer} = Int64[],
-    ) where To<:Optimizer
-        new{To}(optimizer, prototype, fixedweights, fixedpoints)
-    end
 end
 
 """
-    DirectMaximizationResult <: ProblemSolvingResult
+    DirectMaximization(;
+        optimizer::Kirstine.Optimizer,
+        prototype::DesignMeasure,
+        fixedweights = [],
+        fixedpoints = [],
+    )
+
+Initialize the `optimizer` with a single `prototype`
+and attempt to directly maximize the objective function.
+
+For every index in `fixedweights`,
+the corresponding weight of `prototype` is held constant during optimization.
+The indices in `fixedpoints` do the same for the design points of the `prototype`.
+These additional constraints can be used to speed up computation
+in cases where some weights or design points are know analytically.
+
+For more details on how the `prototype` is used,
+see the specific [`Optimizer`](@ref)s.
+
+The return value of [`solve`](@ref) for this strategy is a [`DirectMaximizationResult`](@ref).
+"""
+function DirectMaximization(;
+    optimizer::To,
+    prototype::DesignMeasure,
+    fixedweights::AbstractVector{<:Integer} = Int64[],
+    fixedpoints::AbstractVector{<:Integer} = Int64[],
+) where To<:Optimizer
+    return DirectMaximization{To}(optimizer, prototype, fixedweights, fixedpoints)
+end
+
+"""
+    Kirstine.DirectMaximizationResult <: Kirstine.ProblemSolvingResult
 
 Wraps the [`OptimizationResult`](@ref) from direct maximization.
 
@@ -60,7 +59,7 @@ struct DirectMaximizationResult{S<:OptimizerState{DesignMeasure,SignedMeasure}} 
 end
 
 """
-    solution(dmr::DirectMaximizationResult)
+    solution(dmr::Kirstine.DirectMaximizationResult)
 
 Return the best candidate found.
 """
@@ -69,7 +68,7 @@ function solution(dmr::DirectMaximizationResult)
 end
 
 """
-    optimization_result(dmr::DirectMaximizationResult)
+    optimization_result(dmr::Kirstine.DirectMaximizationResult)
 
 Get the full [`OptimizationResult`](@ref).
 """
@@ -77,9 +76,25 @@ function optimization_result(dmr::DirectMaximizationResult)
     return dmr.or
 end
 
+"""
+    total_runtime(dmr::Kirstine.DirectMaximizationResult)
+
+Get the total time spent during optimization.
+"""
+total_runtime(dmr::DirectMaximizationResult) = dmr.or.seconds_elapsed
+
+function Base.show(io::IO, ::MIME"text/plain", dmr::DirectMaximizationResult)
+    println(io, "DirectMaximizationResult")
+    println(io, "* final objective: ", dmr.or.maximum)
+    println(io, "* runtime total: ", prettydifftime(total_runtime(dmr)))
+    println(io, "* raw solution: ")
+    show(io, MIME("text/plain"), solution(dmr))
+    print(io, "\n* diagnostic information: optimization_result(<this object>)")
+end
+
 function solve_with(
     adp::AbstractDesignProblem,
-    strategy::DirectMaximization,
+    strategy::DirectMaximization{<:ZerothOrderOptimizer},
     trace_state::Bool,
 )
     constraints = DesignConstraints(
@@ -97,5 +112,25 @@ function solve_with(
         constraints;
         trace_state = trace_state,
     )
+    return DirectMaximizationResult(or)
+end
+
+function solve_with(
+    adp::AbstractDesignProblem,
+    strategy::DirectMaximization{<:FirstOrderOptimizer},
+    trace_state::Bool,
+)
+    (; optimizer, prototype, fixedpoints, fixedweights) = strategy
+    K = numpoints(prototype)
+    constraints = DesignConstraints(prototype, region(adp), fixedweights, fixedpoints)
+    !all(constraints.fixp) && error("only implemented for fixed points")
+    oc = objective_constants(adp)
+    dc = derivative_constants(prototype, adp)
+    opd = one_point_design(first(points(prototype)))
+    wf = allocate_workspace(prototype, adp)
+    wg = allocate_workspace(opd, adp)
+    f = d -> objective!(wf, d, adp, oc)
+    g! = (g, d) -> objective_gradient_weights!(g, opd, wg, wf, d, adp, dc, oc)
+    or = optimize((f, g!), optimizer, [prototype], constraints; trace_state = trace_state)
     return DirectMaximizationResult(or)
 end

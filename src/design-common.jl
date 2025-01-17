@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## preallocating objects for less memory overhead ##
@@ -29,7 +29,7 @@ end
     implied_covariates(d::DesignMeasure, m::M, cp::Cp)
 
 Return covariates that are implied by `d`
-for instances of user types `M <: Model` and `Cp <: CovariateParameterization`.
+for instances of user types `M <: Kirstine.Model` and `Cp <: Kirstine.CovariateParameterization`.
 
 This function is useful for debugging.
 
@@ -61,6 +61,10 @@ function gateaux_integrand(A::AbstractMatrix, nim_direction::AbstractMatrix, tr_
     return tr_prod(A, nim_direction, :U) - tr_B
 end
 
+function sensitivity_integrand(A::AbstractMatrix, nim_direction::AbstractMatrix)
+    return tr_prod(A, nim_direction, :U)
+end
+
 ## normalized information matrix for θ ##
 
 # In the simplest case, the normalized information is just the Fisher information matrix
@@ -72,12 +76,12 @@ end
 # For debugging purposes, one will typically want to look at an information matrix
 # corresponding to a single parameter value, not to all thousands of them in a prior sample.
 """
-    informationmatrix(
+    Kirstine.informationmatrix(
         d::DesignMeasure,
         m::Model,
-        cp::CovariateParameterization,
-        p::Parameter,
-        na::NormalApproximation,
+        cp::Kirstine.CovariateParameterization,
+        p::Kirstine.Parameter,
+        na::Kirstine.NormalApproximation,
     )
 
 Compute the normalized information matrix for a single `Parameter` value `p`.
@@ -105,8 +109,15 @@ function informationmatrix(
     return Symmetric(nw.r_x_r)
 end
 
+# We compare the reciprocal 1-norm condition number to machine epsilon.
+# This is also what the solve() function in R is doing with its default tol argument.
+# Note: this implicitly computes an SVD, so it is relatively expensive!
+function is_numerically_singular(m::AbstractMatrix)
+    return inv(cond(m, 1)) < eps(Float64)
+end
+
 """
-    apply_transformation(nim::AbstractMatrix{<:Real}, p::Parameter, trafo::Transformation)
+    Kirstine.apply_transformation(nim::AbstractMatrix{<:Real}, p::Kirstine.Parameter, trafo::Kirstine.Transformation)
 
 Compute the information matrix for the transformed `Parameter`.
 
@@ -155,7 +166,7 @@ function apply_transformation!(nw::NIMWorkspace, trafo::Identity, _)
     return nw
 end
 
-function apply_transformation!(nw::NIMWorkspace, trafo::DeltaMethod, jm::Matrix{Float64})
+function _apply_transformation_delta!(nw::NIMWorkspace, jm::Matrix{Float64})
     # Denote the Jacobian matrix of T by J and the normalized information matrix by M. We
     # want to efficiently calculate J * inv(M) * J'.
     #
@@ -196,6 +207,10 @@ function apply_transformation!(nw::NIMWorkspace, trafo::DeltaMethod, jm::Matrix{
     # Note that for this method, the result is not just an upper triangle, but always a
     # dense matrix.
     return nw
+end
+
+function apply_transformation!(nw::NIMWorkspace, trafo::DeltaMethod, jm::Matrix{Float64})
+    return _apply_transformation_delta!(nw, jm)
 end
 
 ## linear algebra shortcuts ##
@@ -241,6 +256,30 @@ function tr_prod(A::AbstractMatrix, B::AbstractMatrix, uplo::Symbol)
     return acc
 end
 
+function mirror_to_lower_triangle!(m::AbstractMatrix)
+    n = size(m, 1) # Note: we assume m to be square
+    for j in 1:(n - 1)
+        for i in (j + 1):n
+            m[i, j] = m[j, i]
+        end
+    end
+    return m
+end
+
+function opnorm1_sym_u(A::AbstractMatrix{Float64})
+    # modeled after LinearAlgebra.opnorm1()
+    m, n = size(A)
+    nrm = 0.0
+    for j in 1:n
+        nrmj = 0.0
+        for i in 1:m
+            nrmj += i <= j ? abs(A[i, j]) : abs(A[j, i])
+        end
+        nrm = max(nrm, nrmj)
+    end
+    return nrm
+end
+
 ## abstract design problem interface ##
 
 function region end
@@ -249,9 +288,10 @@ function objective_constants end
 function derivative_constants end
 function objective! end
 function gateauxderivative! end
+function check_numerically_singular end
 
 """
-    objective(d::DesignMeasure, adp::AbstractDesignProblem)
+    objective(d::DesignMeasure, adp::Kirstine.AbstractDesignProblem)
 
 Evaluate the objective function.
 
@@ -263,6 +303,31 @@ function objective(d::DesignMeasure, adp::AbstractDesignProblem)
     return objective!(w, d, adp, oc)
 end
 
+function objective_gradient_weights!(
+    g::AbstractVector{<:Real},
+    opd::DesignMeasure, # temporary variable for each of points(d)
+    wg::ProblemWorkspace,
+    wf::ProblemWorkspace,
+    d::DesignMeasure,
+    adp::AbstractDesignProblem,
+    dc::DerivativeConstants,
+    oc::ObjectiveConstants,
+)
+    try
+        derivative_constants!(dc, wf, d, adp, oc)
+    catch e
+        if e isa SingularException
+            @warn "current design is singular" d
+        end
+        rethrow(e)
+    end
+    for k in 1:numpoints(d)
+        points(opd)[1] .= points(d)[k]
+        g[k] = sensitivity!(wg, opd, adp, dc)
+    end
+    return g
+end
+
 """
     gateauxderivative(
         at::DesignMeasure,
@@ -270,9 +335,7 @@ end
         dp::DesignProblem,
     )
 
-Evaluate the Gateaux derivative for each direction.
-
-Directions must be one-point design measures.
+The directions are allowed to have different numbers of points.
 
 See also the [mathematical background](math.md#Gateaux-Derivative).
 """
@@ -281,23 +344,39 @@ function gateauxderivative(
     directions::AbstractArray{DesignMeasure},
     adp::AbstractDesignProblem,
 )
-    if any(d -> numpoints(d) != 1, directions)
-        throw(ErrorException("derivative only implemented for one-point directions"))
+    ws = map(d -> allocate_workspace(d, adp), directions)
+    dc = try
+        derivative_constants(at, adp)
+    catch e
+        if e isa SingularException
+            return fill(NaN, size(directions))
+        else
+            rethrow(e)
+        end
     end
-    if isinf(objective(at, adp))
-        # undefined objective implies no well-defined derivative
-        return fill(NaN, size(directions))
-    end
-    w = allocate_workspace(directions[1], adp)
-    dc = derivative_constants(at, adp)
-    gd = map(d -> gateauxderivative!(w, d, adp, dc), directions)
+    gd = map((w, d) -> gateauxderivative!(w, d, adp, dc), ws, directions)
     return gd
+end
+
+function check_oversimplified(
+    raw_solution::DesignMeasure,
+    simplified_solution::DesignMeasure,
+    adp::AbstractDesignProblem,
+)
+    objective_before = objective(raw_solution, adp)
+    objective_after = objective(simplified_solution, adp)
+    rel_diff = (objective_after - objective_before) / abs(objective_before)
+    diff_numpoints = numpoints(raw_solution) - numpoints(simplified_solution)
+    if rel_diff < -0.01
+        msg = "design may have been oversimplified"
+        @warn msg objective_before objective_after rel_diff diff_numpoints
+    end
 end
 
 """
     solve(
-        adp::AbstractDesignProblem,
-        strategy::ProblemSolvingStrategy;
+        adp::Kirstine.AbstractDesignProblem,
+        strategy::Kirstine.ProblemSolvingStrategy;
         trace_state = false,
         sargs...,
     )
@@ -321,18 +400,13 @@ function solve(
     trace_state = false,
     sargs...,
 )
-    or = solve_with(adp, strategy, trace_state)
+    psr = solve_with(adp, strategy, trace_state)
+    raw_solution = solution(psr)
     sort_point_kwargs = [:rev, :dimorder]
     sortargs = filter(p -> p.first in sort_point_kwargs, sargs)
     simpargs = setdiff(sargs, sortargs)
-    dopt = sort_points(simplify(solution(or), adp; simpargs...); sortargs...)
-    # check that we did not accidentally simplify too much
-    o_before = objective(solution(or), adp)
-    o_after = objective(dopt, adp)
-    rel_diff = (o_after - o_before) / abs(o_before)
-    diff_numpoints = numpoints(solution(or)) - numpoints(dopt)
-    if rel_diff < -0.01
-        @warn "simplification may have been too eager" o_before o_after rel_diff diff_numpoints
-    end
-    return dopt, or
+    simplified_solution = sort_points(simplify(raw_solution, adp; simpargs...); sortargs...)
+    check_numerically_singular(raw_solution, adp)
+    check_oversimplified(raw_solution, simplified_solution, adp)
+    return simplified_solution, psr
 end

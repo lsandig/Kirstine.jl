@@ -1,13 +1,23 @@
 # API Reference
 
+!!! note
+    
+    Everything documented here is part of the API,
+    (except for things that are explicitly declared experimental),
+    including the names
+    that are not exported but do have docstrings.
+    In Julia versions that support the `public` keyword,
+    those unexported but public names are marked explicitly.
+
 ## Design Problems
 
 ### Specifying and Composing Design Problems
 
 ```@docs
-AbstractDesignProblem
+Kirstine.AbstractDesignProblem
 DesignProblem
 DesignProblem()
+DesignProblem(::DesignProblem)
 criterion
 region(::DesignProblem)
 model
@@ -23,7 +33,7 @@ Composite design problems can be nested within each other.
 
 ```@docs
 CompositeDesignProblem
-CompositeDesignProblem(::AbstractVector{<:AbstractDesignProblem}, ::AbstractVector{<:Real})
+CompositeDesignProblem(::AbstractVector{<:Kirstine.AbstractDesignProblem}, ::AbstractVector{<:Real})
 problems(::CompositeDesignProblem)
 weights(::CompositeDesignProblem)
 region(::CompositeDesignProblem)
@@ -35,35 +45,51 @@ Different high-level strategies are available for trying to solve any `AbstractD
 
 ```@docs
 solve
-ProblemSolvingStrategy
-ProblemSolvingResult
+Kirstine.ProblemSolvingStrategy
+Kirstine.ProblemSolvingResult
 DirectMaximization
 DirectMaximization()
-DirectMaximizationResult
-solution(::DirectMaximizationResult)
+Kirstine.DirectMaximizationResult
+solution(::Kirstine.DirectMaximizationResult)
+total_runtime(::Kirstine.DirectMaximizationResult)
 optimization_result
 Exchange
 Exchange()
-ExchangeResult
-solution(::ExchangeResult)
+Kirstine.ExchangeResult
+solution(::Kirstine.ExchangeResult)
+total_runtime(::Kirstine.ExchangeResult)
+total_runtime_direction(::Kirstine.ExchangeResult)
+total_runtime_weight(::Kirstine.ExchangeResult)
 optimization_results_direction
 optimization_results_weight
 ```
 
 Particle-based optimizers are operating on a lower level,
-and are used as part of a `ProblemSolvingStrategy`.
+and are used as part of a `Kirstine.ProblemSolvingStrategy`.
 
 ```@docs
-Optimizer
-OptimizationResult
+Kirstine.Optimizer
+Kirstine.ZerothOrderOptimizer
+Kirstine.FirstOrderOptimizer
+Kirstine.OptimizationResult
 Pso
 Pso()
+Kirstine.GridSearch
+Kirstine.GridSearch()
+Kirstine.GridSpec
+Kirstine.ProductGrid
+Kirstine.FrankWolfe
+Kirstine.FrankWolfe(::Integer, ::Kirstine.StepSizeStrategy, ::Bool)
+Kirstine.StepSizeStrategy
+Kirstine.OpenLoop
+Kirstine.ConstNumIter
+Kirstine.Adaptive
 ```
 
 ## Design Criteria
 
 ```@docs
-DesignCriterion
+Kirstine.DesignCriterion
 DCriterion
 ACriterion
 objective
@@ -75,11 +101,11 @@ shannon_information
 ## Design Regions
 
 ```@docs
-DesignRegion
+Kirstine.DesignRegion
 DesignInterval
 DesignInterval(::Any, ::Any, ::Any)
 DesignInterval()
-dimension(::DesignRegion)
+dimension(::Kirstine.DesignRegion)
 dimnames
 upperbound
 lowerbound
@@ -88,28 +114,28 @@ lowerbound
 ## Nonlinear Regression Models
 
 Regression models are implemented
-by first subtyping `Model`, `Covariate`, `CovariateParameterization`, and `Parameter`,
+by first subtyping `Kirstine.Model`, `Kirstine.Covariate`, `Kirstine.CovariateParameterization`, and `Kirstine.Parameter`,
 and then defining several helper methods on them.
 See the [tutorial](tutorial.md) for a hands-on example.
 
 ### Supertypes
 
 ```@docs
-Model
-NonlinearRegression
-Covariate
-CovariateParameterization
-Parameter
+Kirstine.Model
+Kirstine.NonlinearRegression
+Kirstine.Covariate
+Kirstine.CovariateParameterization
+Kirstine.Parameter
 ```
 
 ### Implementing a Nonlinear Regression Model
 
 Suppose the following subtypes have been defined:
 
-  - `M <: NonlinearRegression`
-  - `C <: Covariate`
-  - `Cp <: CovariateParameterization`
-  - `P <: Parameter`
+  - `M <: Kirstine.NonlinearRegression`
+  - `C <: Kirstine.Covariate`
+  - `Cp <: Kirstine.CovariateParameterization`
+  - `P <: Kirstine.Parameter`
 
 Then methods need to be added for the following package-internal functions:
 
@@ -124,10 +150,10 @@ dimension
 
 !!! note
     
-    Some of these methods only require `M <: Model` and not `M <: NonlinearRegression`.
+    Some of these methods only require `M <: Kirstine.Model` and not `M <: Kirstine.NonlinearRegression`.
     This is intentional.
     These methods can in principle also be implemented for `M <: Ma`
-    where `abstract type Ma <: Model end` is also user-defined.
+    where `abstract type Ma <: Kirstine.Model end` is also user-defined.
 
 ### Helpers
 
@@ -141,7 +167,7 @@ the following helper macros can be used:
 ```
 
 In problems where the design variables coincide with the model covariates,
-the following `CovariateParameterization` can be used:
+the following `Kirstine.CovariateParameterization` can be used:
 
 ```@docs
 JustCopy
@@ -151,9 +177,10 @@ JustCopy()
 ## Prior Knowledge
 
 ```@docs
-PriorKnowledge
+Kirstine.PriorKnowledge
 PriorSample
-PriorSample(::AbstractVector{T}, ::AbstractVector{<:Real}) where T <: Parameter
+PriorSample(::AbstractVector{T}, ::AbstractVector{<:Real}) where T <: Kirstine.Parameter
+Base.:(==)(::PriorSample, ::PriorSample)
 parameters(::PriorSample)
 weights(::PriorSample)
 ```
@@ -161,7 +188,7 @@ weights(::PriorSample)
 ## Transformations
 
 ```@docs
-Transformation
+Kirstine.Transformation
 Identity
 DeltaMethod
 ```
@@ -169,7 +196,7 @@ DeltaMethod
 ## Normal Approximations
 
 ```@docs
-NormalApproximation
+Kirstine.NormalApproximation
 FisherMatrix
 ```
 
@@ -197,9 +224,9 @@ simplify(::DesignMeasure, ::CompositeDesignProblem)
 simplify_drop
 simplify_unique
 simplify_merge
-informationmatrix
-apply_transformation
-implied_covariates
+Kirstine.informationmatrix
+Kirstine.apply_transformation
+Kirstine.implied_covariates
 ```
 
 ## Plotting
@@ -211,11 +238,11 @@ For Gateaux derivatives and expected functions there are separate methods.
 
 ```julia
 plot(d::DesignMeasure)
-plot(d::DesignMeasure, dr::DesignRegion)
-plot(r::OptimizationResult)
+plot(d::DesignMeasure, dr::Kirstine.DesignRegion)
+plot(r::Kirstine.OptimizationResult)
 plot(rs::AbstractVector{<:OptimizationResult})
-plot(r::DirectMaximizationResult)
-plot(r::ExchangeResult)
+plot(r::Kirstine.DirectMaximizationResult)
+plot(r::Kirstine.ExchangeResult)
 ```
 
 The method for plotting `DesignMeasure`s has several options.

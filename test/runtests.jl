@@ -4,7 +4,10 @@
 using Test
 
 @testset "Kirstine" begin
-    include("pso.jl")
+    include("optimize.jl")
+    include("optimizer-pso.jl")
+    include("optimizer-grid.jl")
+    include("optimizer-frank-wolfe.jl")
     include("designregion.jl")
     include("designmeasure.jl")
     include("designmeasure-abstractpoint.jl")

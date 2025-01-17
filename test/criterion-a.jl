@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module DesignAOptimalTests
@@ -6,6 +6,7 @@ using Test
 using Kirstine
 using LinearAlgebra: SingularException, Symmetric, tr, diagm
 
+include("test-noalloc.jl")
 include("example-compartment.jl")
 
 @testset "criterion-a.jl" begin
@@ -83,7 +84,7 @@ include("example-compartment.jl")
         end
     end
 
-    @testset "gateaux_constants" begin
+    @testset "gateaux_constants!" begin
         # Identity transformation
         #
         # The GateauxConstants wrap the square and the trace of the inverse of the
@@ -94,28 +95,42 @@ include("example-compartment.jl")
         let dc = ACriterion(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
+            # for a4_ni, the infomatrix has rank 1, but is still numerically inv()able
+            a4_ni = DesignMeasure(
+                [1.0122] => 1.0 - 2 * eps(Float64),
+                [0.2288] => eps(Float64),
+                [18.471] => eps(Float64),
+            ),
             m = TPCModel(; sigma = 1),
             cp = CopyTime(),
             g1 = TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
             g2 = TPCParameter(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
             pk = PriorSample([g1, g2]),
             trafo = Identity(),
+            tc = Kirstine.trafo_constants(trafo, pk),
             na = FisherMatrix(),
+            dummy = DesignInterval(:t => (0, 24)),
+            dp = DesignProblem(dc, dummy, m, cp, pk, trafo, na),
             pgc = Kirstine.gateaux_constants,
+            pgc! = Kirstine.gateaux_constants!,
             # reference information matrices, already wrapped in Symmetric()
-            m1 = informationmatrix(a1, m, cp, g1, na),
-            m2 = informationmatrix(a1, m, cp, g2, na),
-            gc = pgc(dc, a1, m, cp, pk, trafo, na)
+            m1 = Kirstine.informationmatrix(a1, m, cp, g1, na),
+            m2 = Kirstine.informationmatrix(a1, m, cp, g2, na),
+            gc = Kirstine.GCPriorSample([zeros(3, 3), zeros(3, 3)], zeros(2)),
+            mw = Kirstine.NRWorkspace(numpoints(a1), 1, 3),
+            nw = Kirstine.NIMWorkspace(3, 3),
+            c = Kirstine.implied_covariates(a1, m, cp)
+
+            pgc!(gc, mw, nw, c, dc, a1, m, cp, pk, tc, na)
 
             # Singular designs should raise an exception. It will be caught by the caller.
-            @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
-            @test isa(gc, Kirstine.GCPriorSample)
-            @test length(gc.A) == 2
-            @test length(gc.tr_B) == 2
+            @test_throws "SingularException" pgc(a4, dp)
+            @test_throws "SingularException" pgc(a4_ni, dp)
             @test Symmetric(gc.A[1]) ≈ inv(m1)^2
             @test Symmetric(gc.A[2]) ≈ inv(m2)^2
             @test gc.tr_B[1] ≈ tr(inv(m1))
             @test gc.tr_B[2] ≈ tr(inv(m2))
+            @test_noalloc $pgc!($gc, $mw, $nw, $c, $dc, $a1, $m, $cp, $pk, $tc, $na)
         end
 
         # DeltaMethod transformation
@@ -128,6 +143,12 @@ include("example-compartment.jl")
         let dc = ACriterion(),
             a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
             a4 = DesignMeasure([1.0122] => 1.0), # singular
+            # for a4_ni, the infomatrix has rank 1, but is still numerically inv()able
+            a4_ni = DesignMeasure(
+                [1.0122] => 1.0 - 2 * eps(Float64),
+                [0.2288] => eps(Float64),
+                [18.471] => eps(Float64),
+            ),
             m = TPCModel(; sigma = 1),
             cp = CopyTime(),
             g1 = TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
@@ -135,22 +156,30 @@ include("example-compartment.jl")
             pk = PriorSample([g1, g2]),
             J = [Dauc(g1), Dauc(g2)],
             trafo = DeltaMethod(Dauc),
+            tc = Kirstine.trafo_constants(trafo, pk),
             na = FisherMatrix(),
+            dummy = DesignInterval(:t => (0, 24)),
+            dp = DesignProblem(dc, dummy, m, cp, pk, trafo, na),
             pgc = Kirstine.gateaux_constants,
+            pgc! = Kirstine.gateaux_constants!,
             # reference information matrices, already wrapped in Symmetric()
-            m1 = informationmatrix(a1, m, cp, g1, na),
-            m2 = informationmatrix(a1, m, cp, g2, na),
-            gc = pgc(dc, a1, m, cp, pk, trafo, na)
+            m1 = Kirstine.informationmatrix(a1, m, cp, g1, na),
+            m2 = Kirstine.informationmatrix(a1, m, cp, g2, na),
+            gc = Kirstine.GCPriorSample([zeros(3, 3), zeros(3, 3)], zeros(2)),
+            mw = Kirstine.NRWorkspace(numpoints(a1), 1, 3),
+            nw = Kirstine.NIMWorkspace(3, 1),
+            c = Kirstine.implied_covariates(a1, m, cp)
+
+            pgc!(gc, mw, nw, c, dc, a1, m, cp, pk, tc, na)
 
             # Singular designs should raise an exception. It will be caught by the caller.
-            @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
-            @test isa(gc, Kirstine.GCPriorSample)
-            @test length(gc.A) == 2
-            @test length(gc.tr_B) == 2
+            @test_throws "SingularException" pgc(a4, dp)
+            @test_throws "SingularException" pgc(a4_ni, dp)
             @test Symmetric(gc.A[1]) ≈ inv(m1) * J[1]' * J[1] * inv(m1)
             @test Symmetric(gc.A[2]) ≈ inv(m2) * J[2]' * J[2] * inv(m2)
             @test gc.tr_B[1] ≈ tr(J[1] * inv(m1) * J[1]')
             @test gc.tr_B[2] ≈ tr(J[2] * inv(m2) * J[2]')
+            @test_noalloc $pgc!($gc, $mw, $nw, $c, $dc, $a1, $m, $cp, $pk, $tc, $na)
         end
     end
 

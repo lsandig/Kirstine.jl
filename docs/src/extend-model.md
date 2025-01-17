@@ -41,7 +41,7 @@ and some calculations we arrive at
 
 ## Implementation
 
-First we introduce a new subtype of [`Model`](@ref),
+First we introduce a new subtype of [`Kirstine.Model`](@ref),
 and a corresponding `ModelWorkspace` to hold the pre-allocated Jacobian matrix of the predictor.
 Then we implement a method for `average_fishermatrix!`
 that specializes on logistic regression models
@@ -78,7 +78,7 @@ end
 function Kirstine.update_model_workspace!(
     mw::LRWorkspace,
     m::LogisticRegression,
-    c::AbstractVector{<:Covariate},
+    c::AbstractVector{<:Kirstine.Covariate},
 )
     return mw
 end
@@ -90,8 +90,8 @@ function Kirstine.average_fishermatrix!(
     mw::LRWorkspace,
     w::AbstractVector,
     m::LogisticRegression,
-    c::AbstractVector{<:Covariate},
-    p::Parameter,
+    c::AbstractVector{<:Kirstine.Covariate},
+    p::Kirstine.Parameter,
 )
     fill!(afm, 0.0)
     for k in 1:length(w)
@@ -133,20 +133,20 @@ struct LinLogReg <: LogisticRegression
     dim_covariate::Int64
 end
 
-mutable struct LLRCovariate <: Covariate
+mutable struct LLRCovariate <: Kirstine.Covariate
     x::Vector{Float64}
 end
 
 Kirstine.allocate_covariate(m::LinLogReg) = LLRCovariate(zeros(m.dim_covariate))
 
-struct LLRParameter <: Parameter
+struct LLRParameter <: Kirstine.Parameter
     beta_0::Float64
     beta_rest::Vector{Float64}
 end
 
 Kirstine.dimension(p::LLRParameter) = length(p.beta_rest) + 1
 
-struct CopyVector <: CovariateParameterization end
+struct CopyVector <: Kirstine.CovariateParameterization end
 
 function Kirstine.map_to_covariate!(c::LLRCovariate, dp, m::LinLogReg, cp::CopyVector)
     if length(dp) != length(c.x)
@@ -336,7 +336,7 @@ We are interested in estimating all of ``\Parameter``.
 ```@example main
 struct SinLogReg <: LogisticRegression end
 
-mutable struct Time <: Covariate
+mutable struct Time <: Kirstine.Covariate
     t::Float64
 end
 

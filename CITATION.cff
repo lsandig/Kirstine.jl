@@ -1,0 +1,28 @@
+cff-version: "1.2.0"
+authors:
+- family-names: Sandig
+  given-names: Ludger
+  orcid: "https://orcid.org/0000-0002-3174-3275"
+doi: 10.5281/zenodo.11185430
+message: If you use this software, please cite our article in the
+  Journal of Open Source Software.
+preferred-citation:
+  authors:
+  - family-names: Sandig
+    given-names: Ludger
+    orcid: "https://orcid.org/0000-0002-3174-3275"
+  date-published: 2024-05-20
+  doi: 10.21105/joss.06424
+  issn: 2475-9066
+  issue: 97
+  journal: Journal of Open Source Software
+  publisher:
+    name: Open Journals
+  start: 6424
+  title: "Kirstine.jl: A Julia Package for Bayesian Optimal Design of
+    Experiments"
+  type: article
+  url: "https://joss.theoj.org/papers/10.21105/joss.06424"
+  volume: 9
+title: "Kirstine.jl: A Julia Package for Bayesian Optimal Design of
+  Experiments"

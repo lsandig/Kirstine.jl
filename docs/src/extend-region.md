@@ -5,21 +5,21 @@ check_results = true
 ```
 
 A design region is a compact subset of ``\Reals^{\DimDesignRegion}``.
-In code, it is represented by a subtype of [`DesignRegion`](@ref),
+In code, it is represented by a subtype of [`Kirstine.DesignRegion`](@ref),
 which takes a type parameter `N`
 that corresponds to the dimension ``\DimDesignRegion`` above.
 
 The package implements [`DesignInterval`](@ref)s,
 which are `N`-dimensional boxes with sides parallel to the coordinate axes.
-This vignette describes how to implement your own subtype of [`DesignRegion`](@ref).
+This vignette describes how to implement your own subtype of [`Kirstine.DesignRegion`](@ref).
 
 Our example will be axis-parallel ellipsoidal subsets of ``\Reals^{\DimDesignRegion}``.
 (Note that this could alternatively be achieved with a [`DesignInterval`](@ref)
-and a suitable coordinate transformation in the [`CovariateParameterization`](@ref).)
+and a suitable coordinate transformation in the [`Kirstine.CovariateParameterization`](@ref).)
 
 ## Implementation
 
-Apart from the subtype of `DesignRegion{N}`, the following methods must be implemented:
+Apart from the subtype of `Kirstine.DesignRegion{N}`, the following methods must be implemented:
 
   - `boundingbox` is used in several places.
   - `isinside` is used in several places.
@@ -116,12 +116,12 @@ i.e. with the interval above as its bounding box.
 ```@example main
 using Random, Plots
 
-@kwdef struct DTRMod <: NonlinearRegression
+@kwdef struct DTRMod <: Kirstine.NonlinearRegression
     sigma::Float64
     m::Int64
 end
 
-mutable struct DoseTimeCovariate <: Covariate
+mutable struct DoseTimeCovariate <: Kirstine.Covariate
     dose::Float64
     time::Vector{Float64}
 end
@@ -175,7 +175,7 @@ end
 Random.seed!(4711)
 prior = draw_from_prior(1000)
 
-struct CopyBoth <: CovariateParameterization end
+struct CopyBoth <: Kirstine.CovariateParameterization end
 
 function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::CopyBoth)
     c.dose = dp[1]

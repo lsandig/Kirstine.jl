@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 # Vector-unit model with non-constant measurement error variance
@@ -6,12 +6,12 @@
 # This is a modification of `example-compartment.jl`, and not necessarily meaningful
 # biologically.
 
-struct VUMod <: NonlinearRegression
+struct VUMod <: Kirstine.NonlinearRegression
     sigma_squared::Float64
     m::Int64
 end
 
-mutable struct VUCovariate <: Covariate
+mutable struct VUCovariate <: Kirstine.Covariate
     time::Vector{Float64}
 end
 
@@ -40,7 +40,7 @@ function Kirstine.jacobianmatrix!(jm, m::VUMod, c::VUCovariate, p::VUParameter)
     return jm
 end
 
-struct EquiTime <: CovariateParameterization end
+struct EquiTime <: Kirstine.CovariateParameterization end
 
 function Kirstine.map_to_covariate!(c::VUCovariate, dp, m::VUMod, cp::EquiTime)
     for j in 1:(m.m)

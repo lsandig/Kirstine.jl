@@ -1,9 +1,10 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module Kirstine
 
 using LinearAlgebra:
+    BLAS.gemm!,
     BLAS.symm!,
     BLAS.syrk!,
     BLAS.trsm!,
@@ -13,50 +14,36 @@ using LinearAlgebra:
     PosDefException,
     SingularException,
     Symmetric,
+    cond,
     diagind,
     diagm,
+    dot,
     mul!,
     norm,
     rank,
     tr
 using Random: rand, rand!
-using RecipesBase
+using RecipesBase: RecipesBase, @layout, @recipe, @series
 using Statistics: quantile
+
+import Base: maximum
 
 export @simple_model,
     @simple_parameter,
     ACriterion,
-    AbstractDesignProblem,
     CompositeDesignProblem,
-    Covariate,
-    CovariateParameterization,
     DCriterion,
     DeltaMethod,
-    DesignCriterion,
     DesignInterval,
     DesignMeasure,
     DesignProblem,
-    DesignRegion,
     DirectMaximization,
-    DirectMaximizationResult,
     Exchange,
-    ExchangeResult,
     FisherMatrix,
     Identity,
     JustCopy,
-    Model,
-    NonlinearRegression,
-    NormalApproximation,
-    OptimizationResult,
-    Optimizer,
-    Parameter,
-    PriorKnowledge,
     PriorSample,
-    ProblemSolvingResult,
-    ProblemSolvingStrategy,
     Pso,
-    Transformation,
-    apply_transformation,
     apportion,
     covariate_parameterization,
     criterion,
@@ -65,8 +52,6 @@ export @simple_model,
     efficiency,
     equidistant_design,
     gateauxderivative,
-    implied_covariates,
-    informationmatrix,
     lowerbound,
     mixture,
     model,
@@ -94,14 +79,23 @@ export @simple_model,
     solve,
     sort_points,
     sort_weights,
+    total_runtime,
+    total_runtime_direction,
+    total_runtime_weight,
     transformation,
     uniform_design,
     upperbound,
     weights
 
+if VERSION >= v"1.11.0-DEV.469"
+    include("public.jl")
+end
+
 include("abstracttypes.jl")
 include("optimize.jl")
-include("pso.jl")
+include("optimizer-pso.jl")
+include("optimizer-grid.jl")
+include("optimizer-frank-wolfe.jl")
 include("designregion.jl")
 include("designmeasure.jl")
 include("designmeasure-abstractpoint.jl")

@@ -89,10 +89,10 @@ now would be a good time to refresh it.
 ### Model and Design Region
 
 In `Kirstine.jl`, the regression model [is defined](api.md#Implementing-a-Nonlinear-Regression-Model) by subtyping
-[`NonlinearRegression`](@ref),
-[`Covariate`](@ref),
-[`Parameter`](@ref),
-and [`CovariateParameterization`](@ref),
+[`Kirstine.NonlinearRegression`](@ref),
+[`Kirstine.Covariate`](@ref),
+[`Kirstine.Parameter`](@ref),
+and [`Kirstine.CovariateParameterization`](@ref),
 and implementing a handful of methods for them.
 
 In the sigmoid Emax model,
@@ -177,7 +177,7 @@ Here, the design region is simply the interval of possible doses.
 This means that we can just copy the only element of the design point
 into the covariate's `dose` field.
 For this we can use [`JustCopy`](@ref),
-which is a subtype of [`CovariateParameterization`](@ref).
+which is a subtype of [`Kirstine.CovariateParameterization`](@ref).
 
 ```@example main
 cp = JustCopy(:dose)
@@ -230,7 +230,7 @@ This is why we simply set it to `1` here.
 
 ## Optimal Design
 
-`Kirstine.jl` provides several high-level [`ProblemSolvingStrategy`](@ref) types
+`Kirstine.jl` provides several high-level [`Kirstine.ProblemSolvingStrategy`](@ref) types
 for solving the design problem `dp`.
 A very simple, but often quite effective one,
 is direct maximization with a [particle swarm optimizer](https://en.wikipedia.org/wiki/Particle_swarm_optimization).
@@ -260,10 +260,10 @@ nothing # hide
 The [`solve`](@ref) function returns two objects:
 
   - `s1`: a slightly post-processed [`DesignMeasure`](@ref)
-  - `r1`: a [`DirectMaximizationResult`](@ref)
+  - `r1`: a [`Kirstine.DirectMaximizationResult`](@ref)
     that contains diagnostic information about the optimization run.
 
-We can access the lower-level [`OptimizationResult`](@ref)
+We can access the lower-level [`Kirstine.OptimizationResult`](@ref)
 by calling [`optimization_result`](@ref) on `r1`,
 which will show some statistics when printed:
 
@@ -357,6 +357,7 @@ ef = plot_expected_function(
     prior_knowledge(dp);
     xguide = "dose",
     yguide = "response",
+    bands = true,              # prior credibility bands, by default 80%
 )
 savefig(ef, "tutorial-ef.png") # hide
 nothing # hide

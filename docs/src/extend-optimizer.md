@@ -7,7 +7,7 @@ check_results = true
 Kirstine.jl comes with a simple particle swarm optimizer.
 This document describes how to implement a custom particle-based optimizer
 that seamlessly plugs into the rest of the package,
-such that it can be used with any [`ProblemSolvingStrategy`](@ref).
+such that it can be used with any [`Kirstine.ProblemSolvingStrategy`](@ref).
 
 Our example we will be a simplified version of the
 [Imperialist-Competitive Algorithm (ICA)](https://en.wikipedia.org/wiki/Imperialist_competitive_algorithm)
@@ -110,7 +110,7 @@ are valid for a design measure.
     as implied by ``f^{-1}``.
 
 Now, from a software engineering point of view,
-an [`Optimizer`](@ref) should not have to know anything about the nature of the points it works with.
+an [`Kirstine.Optimizer`](@ref) should not have to know anything about the nature of the points it works with.
 It only sees objects of a type `T <: AbstractPoint`,
 and a corresponding type `U <: AbstractPointDifference`
 that can store a representation of the difference between two `T`s.
@@ -141,18 +141,18 @@ shown here for `T = DesignMeasure` and `U = SignedMeasure`:
     
     The `DesignConstraints <: AbstractConstraints` object has the following fields:
     
-      - `dr <: DesignRegion` the [`DesignRegion`](@ref) of the current design problem
+      - `dr <: Kirstine.DesignRegion` the [`Kirstine.DesignRegion`](@ref) of the current design problem
       - `fixw::Vector{Bool}` true elements correspond to design weights that should not move
       - `fixp::Vector{Bool}` true elements correspond to design points that should not move
     
-    When you implement a general `Optimizer`,
+    When you implement a general `Kirstine.Optimizer`,
     you will not need to use this information
     since it is specific to the `DesignMeasure` subtype of `AbstractPoint`.
 
 ## Implementation
 
 The internal optimization interface consists of functions
-that operate on objects of a type `O <: Optimizer`,
+that operate on objects of a type `O <: Kirstine.Optimizer`,
 which holds the algorithm's parameters,
 and a type `S <: OptimizerState`
 which holds the state of the optimizer in the current iteration.
@@ -164,21 +164,37 @@ For `O = Ica` and `S = IcaState` we must implement the following methods:
     accessor for the best candidate seen so far
   - `maximum(state::IcaState)`:
     accessor for the best objective value seen so far
-  - `n_eval(state::IcaState)`:
+  - `n_eval_f(state::IcaState)`:
     accessor for the cumulative number of evaluations of the objective function
+  - `n_eval_g(state::IcaState)`:
+    accessor for the cumulative number of evaluations of the gradient of the objective function
+    (always 0 since ICA does not use gradients)
   - `optimizer_state(f, o::Ica, prototypes::Vector{AbstractPoint}, constraints::AbstractConstraints)`:
     constructor of an `IcaState` for the objective function `f` and parameters `o`.
     It should use the given `prototypes` for initialization
     and take the `constraints` into account for randomization.
+    Setting up the state is counted as the first iteration of the algorithm.
   - `tick!(f, state::IcaState, optimizer::Ica, constraints::AbstractConstraints, iter::Integer)`:
     update the optimizers state once.
-    The number of the current iteration is passed in `iter`.
+    This function is called internally `iterations() - 1` times.
+    The number of the current iteration is passed in `iter`,
+    it goes from 2 to `iterations()`.
+
+!!! note
+    
+    The `Kirstine.Optimizer` type has two abstract subtypes:
+    A [`Kirstine.ZerothOrderOptimizer`](@ref) only works with the objective function itself,
+    while a [`Kirstine.FirstOrderOptimizer`](@ref) also requires its gradient.
+    ICA is of order zero.
+    If you want to implement a first-order optimizer,
+    you need versions of `optimizer_state((f, g!), ...)` and of `tick!((f, g!), ...)`
+    that additionally take a mutating gradient `g!(g::AbstractVector, x::AbstractPoint) -> g`.
 
 ```@example main
 using Kirstine
 using Statistics: mean
 
-struct Ica <: Kirstine.Optimizer
+struct Ica <: Kirstine.ZerothOrderOptimizer
     iterations::Int64
     num_countries::Int64
     num_initial_empires::Int64
@@ -249,7 +265,8 @@ end
 
 Kirstine.maximizer(state::IcaState) = state.country[argmax(state.val[state.imperialist])]
 Kirstine.maximum(state::IcaState) = maximum(state.val[state.imperialist])
-Kirstine.n_eval(state::IcaState) = state.n_eval
+Kirstine.n_eval_f(state::IcaState) = state.n_eval
+Kirstine.n_eval_g(state::IcaState) = 0
 
 function Kirstine.optimizer_state(
     f,
@@ -288,7 +305,7 @@ function Kirstine.optimizer_state(
     min_val = minimum(state.val[state.imperialist])
     imperialist_power = (0.3 * sign(min_val) - 1) .* min_val .+ state.val[state.imperialist]
     imperialist_power ./= sum(imperialist_power)
-    # we use the apportionent procedure to make sure empire sizes add up
+    # we use the apportionment procedure to make sure empire sizes add up
     empsize .+= apportion(imperialist_power, num_colonies - o.num_initial_empires)
     # partition the remaining countries according to empire sizes
     colony_indices = setdiff(1:(o.num_countries), state.imperialist)

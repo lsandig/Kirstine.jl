@@ -1,36 +1,36 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## abstract types for user-supplied models ##
 
 """
-    Model
+    Kirstine.Model
 
 Supertype for statistical models.
 """
 abstract type Model end
 
 """
-    Parameter
+    Kirstine.Parameter
 
 Supertype for [`Model`](@ref) parameters.
 """
 abstract type Parameter end
 
 """
-    Covariate
+    Kirstine.Covariate
 
 Supertype for user-defined model covariates.
 
 # Implementation
 
-Subtypes of `Covariate` should be mutable, or have at least a mutable field. This is
+Subtypes of `Kirstine.Covariate` should be mutable, or have at least a mutable field. This is
 necessary for being able to modify them in [`map_to_covariate!`](@ref).
 """
 abstract type Covariate end
 
 """
-    CovariateParameterization
+    Kirstine.CovariateParameterization
 
 Supertype for user-defined mappings from design points to model covariates.
 
@@ -41,7 +41,7 @@ abstract type CovariateParameterization end
 ## abstract types for package code ##
 
 @doc raw"""
-    DesignRegion{N}
+    Kirstine.DesignRegion{N}
 
 Supertype for design regions. A design region is a compact subset of ``\Reals^N``.
 
@@ -52,7 +52,7 @@ See also [`DesignInterval`](@ref), [`dimnames`](@ref).
 abstract type DesignRegion{N} end
 
 """
-    PriorKnowledge{T<:Parameter}
+    Kirstine.PriorKnowledge{T<:Kirstine.Parameter}
 
 Supertype for representing prior knowledge of the model [`Parameter`](@ref).
 
@@ -61,14 +61,14 @@ See also [`PriorSample`](@ref).
 abstract type PriorKnowledge{T<:Parameter} end
 
 """
-    NormalApproximation
+    Kirstine.NormalApproximation
 
 Supertype for different possible normal approximations to the posterior distribution.
 """
 abstract type NormalApproximation end
 
 @doc raw"""
-    Transformation
+    Kirstine.Transformation
 
 Supertype of posterior transformations.
 
@@ -78,7 +78,7 @@ and the [mathematical background](math.md#Objective-Function).
 abstract type Transformation end
 
 """
-    DesignCriterion
+    Kirstine.DesignCriterion
 
 Supertype for optimal experimental design criteria.
 
@@ -100,13 +100,27 @@ abstract type AbstractPoint end
 abstract type AbstractPointDifference end
 
 """
-    Optimizer
+    Kirstine.Optimizer
 
 Supertype for particle-based optimization algorithms.
 
-See also [`Pso`](@ref).
+See also [`Pso`](@ref), [`GridSearch`](@ref), [`FrankWolfe`](@ref).
 """
 abstract type Optimizer end
+
+"""
+    Kirstine.ZerothOrderOptimizer <: Kirstine.Optimizer
+
+Supertype for optimization algorithms that only use the objective function.
+"""
+abstract type ZerothOrderOptimizer <: Optimizer end
+
+"""
+    Kirstine.FirstOrderOptimizer <: Kirstine.Optimizer
+
+Supertype for optimization algorithms that use the objective function and its gradient.
+"""
+abstract type FirstOrderOptimizer <: Optimizer end
 abstract type OptimizerState{T<:AbstractPoint,U<:AbstractPointDifference} end
 
 abstract type AbstractConstraints end
@@ -114,7 +128,7 @@ abstract type AbstractConstraints end
 ## types related to defining and solving design problems ##
 
 """
-    AbstractDesignProblem
+    Kirstine.AbstractDesignProblem
 
 Supertype for all kinds of design problems.
 
@@ -122,17 +136,17 @@ See also [`DesignProblem`](@ref).
 """
 abstract type AbstractDesignProblem end
 
-abstract type AbstractWorkspace end
+abstract type ProblemWorkspace end
 
 """
-    ProblemSolvingStrategy
+    Kirstine.ProblemSolvingStrategy
 
 Supertype for algorithms for solving an [`AbstractDesignProblem`](@ref).
 """
 abstract type ProblemSolvingStrategy end
 
 """
-    ProblemSolvingResult
+    Kirstine.ProblemSolvingResult
 
 Supertype for results of a [`ProblemSolvingStrategy`](@ref).
 """

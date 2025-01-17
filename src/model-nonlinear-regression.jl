@@ -1,10 +1,10 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## code specific for nonlinear regression models ##
 
 """
-    NonlinearRegression
+    Kirstine.NonlinearRegression
 
 Supertype for user-defined nonlinear regression models.
 """

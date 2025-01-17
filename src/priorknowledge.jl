@@ -1,28 +1,19 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## concrete types for prior knowledge ##
 
 """
-    PriorSample{T} <: PriorKnowledge{T}
+    PriorSample{T} <: Kirstine.PriorKnowledge{T}
 
 A sample from a prior distribution, or a discrete prior distribution with finite support.
 """
 struct PriorSample{T} <: PriorKnowledge{T}
-    weight::Vector{Float64}
     p::Vector{T}
-    @doc """
-    PriorSample(p::AbstractVector{<:Parameter} [, weights::AbstractVector{<:Real}])
-
-Construct a weighted prior sample on the given parameter draws.
-
-If no `weights` are given, a uniform distribution on the elements of `p` is assumed.
-
-See also [`parameters`](@ref), [`weights(::PriorSample)`](@ref).
-"""
-    function PriorSample(
+    weight::Vector{Float64}
+    function PriorSample{T}(
         parameters::AbstractVector{T},
-        weights::AbstractVector{<:Real} = fill(1 / length(parameters), length(parameters)),
+        weights::AbstractVector{<:Real},
     ) where T<:Parameter
         if length(weights) != length(parameters)
             throw(ArgumentError("number of weights and parameter values must be equal"))
@@ -33,8 +24,24 @@ See also [`parameters`](@ref), [`weights(::PriorSample)`](@ref).
         if !isconcretetype(T)
             throw(ArgumentError("parameters must all have the same concrete type"))
         end
-        return new{T}(weights, parameters)
+        return new{T}(parameters, weights)
     end
+end
+
+"""
+    PriorSample(p::AbstractVector{<:Kirstine.Parameter} [, weights::AbstractVector{<:Real}])
+
+Construct a weighted prior sample on the given parameter draws.
+
+If no `weights` are given, a uniform distribution on the elements of `p` is assumed.
+
+See also [`parameters`](@ref), [`weights(::PriorSample)`](@ref).
+"""
+function PriorSample(
+    parameters::AbstractVector{T},
+    weights::AbstractVector{<:Real} = fill(1 / length(parameters), length(parameters)),
+) where T<:Parameter
+    return PriorSample{T}(parameters, weights)
 end
 
 function parameter_dimension(pk::PriorSample)
@@ -61,4 +68,37 @@ See also [`weights(::DesignMeasure)`](@ref).
 """
 function parameters(pk::PriorSample)
     return pk.p
+end
+
+"""
+    ==(pk1::PriorSample, pk2::PriorSample)
+
+Test prior samples for equality.
+
+Two prior samples are considered equal iff
+
+  - they have the same subtype of [`Parameter`](@ref),
+  - and their parameter draws are equal,
+  - and their weights are equal,
+  - and the order of the draws is equal.
+
+Note that this is stricter than when comparing prior samples as mathematical sets,
+where the order of the draws does not matter.
+"""
+function Base.:(==)(pk1::PriorSample, pk2::PriorSample)
+    return weights(pk1) == weights(pk2) && parameters(pk1) == parameters(pk2)
+end
+
+function Base.hash(pk::PriorSample, h::UInt)
+    return hash(parameters(pk), hash(weights(pk), h))
+end
+
+function Base.show(io::IO, ::MIME"text/plain", pk::PriorSample)
+    partype = typeof(first(parameters(pk)))
+    ndraw = length(parameters(pk))
+    if ndraw > 1
+        print(io, "$(ndraw) draws of $(partype)")
+    else
+        print(io, "one-point distribution at $(only(parameters(pk)))")
+    end
 end

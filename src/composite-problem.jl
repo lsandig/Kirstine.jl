@@ -1,10 +1,10 @@
-# SPDX-FileCopyrightText: 2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## implement AbstractDesignProblem interface for CompositeDesignProblem ##
 
 """
-    CompositeDesignProblem <: AbstractDesignProblem
+    CompositeDesignProblem <: Kirstine.AbstractDesignProblem
 
 A weighted construct of other abstract design problems.
 
@@ -25,7 +25,7 @@ struct CompositeDesignProblem{T<:AbstractDesignProblem} <: AbstractDesignProblem
 
     See also [`problems`](@ref),
     [`weights(::CompositeDesignProblem)`](@ref),
-    and [`region(::CompositeDesignProblem)`](@ref).
+    [`region(::CompositeDesignProblem)`](@ref).
     """
     function CompositeDesignProblem(
         problems::AbstractVector{<:AbstractDesignProblem},
@@ -40,6 +40,14 @@ struct CompositeDesignProblem{T<:AbstractDesignProblem} <: AbstractDesignProblem
         end
         return new{eltype(problems)}(problems, weights)
     end
+end
+
+function Base.:(==)(cdp1::CompositeDesignProblem, cdp2::CompositeDesignProblem)
+    return problems(cdp1) == problems(cdp2) && weights(cdp1) == weights(cdp2)
+end
+
+function Base.hash(cdp::CompositeDesignProblem, h::UInt)
+    return hash(problems(cdp), hash(weights(cdp), h))
 end
 
 """
@@ -65,7 +73,31 @@ function region(cdp::CompositeDesignProblem)
     return region(first(problems(cdp)))
 end
 
-struct CDPWorkspace{T<:AbstractWorkspace} <: AbstractWorkspace
+function pretty_lines_cdp(cdp::CompositeDesignProblem, depth::Integer)
+    lines = ["CompositeDesignProblem"]
+    indent = "  "
+    depth == 0 && push!(lines, indent * "with region: " * string(region(cdp)))
+    iob = IOBuffer()
+    ioc = IOContext(iob, :limit => false)
+    pretty = String[]
+    map(problems(cdp), weights(cdp)) do dp, w
+        if dp isa CompositeDesignProblem
+            pretty = pretty_lines_cdp(dp, depth + 1)
+        else
+            show(ioc, "text/plain", dp)
+            pretty = split(String(take!(iob)), '\n')
+        end
+        push!(lines, indent * "* " * popfirst!(pretty) * " (weight: $w)")
+        append!(lines, indent .* pretty)
+    end
+    return lines
+end
+
+function Base.show(io::IO, ::MIME"text/plain", cdp::CompositeDesignProblem)
+    print(io, join(pretty_lines_cdp(cdp, 0), '\n'))
+end
+
+struct CDPWorkspace{T<:ProblemWorkspace} <: ProblemWorkspace
     component_workspaces::Vector{T}
 end
 
@@ -87,6 +119,24 @@ end
 
 function derivative_constants(at::DesignMeasure, cdp::CompositeDesignProblem)
     return CDPDerivativeConstants(map(p -> derivative_constants(at, p), problems(cdp)))
+end
+
+function derivative_constants!(
+    cdc::CDPDerivativeConstants,
+    w::CDPWorkspace,
+    d::DesignMeasure,
+    cdp::CompositeDesignProblem,
+    oc::CDPObjectiveConstants,
+)
+    map(
+        cdc.component_constants,
+        w.component_workspaces,
+        problems(cdp),
+        oc.component_constants,
+    ) do dc, w, p, oc
+        derivative_constants!(dc, w, d, p, oc)
+    end
+    return cdc
 end
 
 function objective!(
@@ -125,6 +175,24 @@ function gateauxderivative!(
     return acc
 end
 
+function sensitivity!(
+    cwg::CDPWorkspace,
+    direction::DesignMeasure,
+    cdp::CompositeDesignProblem,
+    cdc::CDPDerivativeConstants,
+)
+    acc = 0.0
+    map(
+        cwg.component_workspaces,
+        problems(cdp),
+        weights(cdp),
+        cdc.component_constants,
+    ) do wg, p, w, dc
+        acc += w * sensitivity!(wg, direction, p, dc)
+    end
+    return acc
+end
+
 """
     simplify(d::DesignMeasure, cdp::CompositeDesignProblem; maxweight = 0, maxdist = 0, uargs...)
 
@@ -150,4 +218,10 @@ function simplify(
     d = simplify_merge(d, region(cdp), maxdist)
     d = simplify_drop(d, maxweight)
     return d
+end
+
+function check_numerically_singular(d::DesignMeasure, cdp::CompositeDesignProblem)
+    for dp in problems(cdp)
+        check_numerically_singular(d, dp)
+    end
 end

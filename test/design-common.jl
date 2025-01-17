@@ -1,15 +1,17 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module DesignCommonTests
 using Test
 using Kirstine
 using Random: seed!
-using LinearAlgebra: Symmetric, UpperTriangular, tr, det, diagm
+using LinearAlgebra: SingularException, Symmetric, UpperTriangular, tr, det, diagm, opnorm
 
+include("test-noalloc.jl")
 include("example-testpar.jl")
 include("example-emax.jl")
 include("example-vector.jl")
+include("example-compartment.jl")
 
 @testset "design-common.jl" begin
     @testset "NIMWorkspace" begin
@@ -35,6 +37,24 @@ include("example-vector.jl")
         end
     end
 
+    @testset "mirror_to_lower_triangle!" begin
+        let m1 = [1;;], m2 = [1 2; 0 3], m3 = [1 2 3; 0 4 5; 0 0 6]
+            Kirstine.mirror_to_lower_triangle!(m1)
+            Kirstine.mirror_to_lower_triangle!(m2)
+            Kirstine.mirror_to_lower_triangle!(m3)
+
+            @test m1 == [1;;]
+            @test m2 == [1 2; 2 3]
+            @test m3 == [1 2 3; 2 4 5; 3 5 6]
+        end
+    end
+
+    @testset "opnorm1_sym_u" begin
+        let A = randn(3, 3)
+            @test opnorm(Symmetric(A), 1) == Kirstine.opnorm1_sym_u(A)
+        end
+    end
+
     @testset "informationmatrix!" begin
         # The `FisherMatrix` normal approximation should just give the average Fisher
         # information matrix as NIM.
@@ -55,7 +75,7 @@ include("example-vector.jl")
             cp = CopyDose(),
             p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
             na = FisherMatrix(),
-            res = informationmatrix(d, m, cp, p, na)
+            res = Kirstine.informationmatrix(d, m, cp, p, na)
 
             ref = [16 6 -6; 6 3 -3; -6 -3 3] ./ 16
 
@@ -68,7 +88,7 @@ include("example-vector.jl")
             cp = EquiTime(),
             p = VUParameter(; a = 4.298, e = 0.05884, s = 21.80),
             na = FisherMatrix(),
-            res = informationmatrix(d, m, cp, p, na),
+            res = Kirstine.informationmatrix(d, m, cp, p, na),
             # recreate by hand
             c = [VUCovariate([0, 5, 10]), VUCovariate([0, 20, 40])],
             jm = Kirstine.jacobianmatrix!.([zeros(3, 3), zeros(3, 3)], [m], c, [p]),
@@ -79,6 +99,13 @@ include("example-vector.jl")
 
             @test res ≈ ref
         end
+    end
+
+    @testset "is_numerically_singular" begin
+        # Julia can invert this really badly conditioned matrix...
+        @test inv([1 0; 1 1e-16]) ≈ [1 0; -1e16 1e16]
+        # ... but we want the behavior of solve(matrix(c(1, 0, 1, 1e-16), 2)) in R:
+        @test Kirstine.is_numerically_singular([1 0; 1 1e-16])
     end
 
     @testset "apply_transformation" begin
@@ -92,9 +119,9 @@ include("example-vector.jl")
             t1 = Identity(),
             t2 = DeltaMethod(p -> [0 1]), # p -> p.b
             t3 = DeltaMethod(p -> [2*p.a 0; -1 1]), # p -> [p.a^2, p[2] - p[1]]
-            MT1 = apply_transformation(M, p, t1),
-            MT2 = apply_transformation(M, p, t2),
-            MT3 = apply_transformation(M, p, t3)
+            MT1 = Kirstine.apply_transformation(M, p, t1),
+            MT2 = Kirstine.apply_transformation(M, p, t2),
+            MT3 = Kirstine.apply_transformation(M, p, t3)
 
             @test MT1 isa Symmetric
             @test MT1 == M
@@ -168,6 +195,11 @@ include("example-vector.jl")
             @test r3 === nw3
             @test r4 === nw4
             @test det(Symmetric(nw3.t_x_t)) ≈ 4^2 * det(Symmetric(inv_nim))
+
+            # we only need to test cases for both values of r_is_inv,
+            # the entries of the diagm() are not important
+            @test_noalloc Kirstine.apply_transformation!($nw1, $tid, $(ctid.jm[1]))
+            @test_noalloc Kirstine.apply_transformation!($nw2, $tid, $(ctid.jm[1]))
         end
 
         # The Identity transformation simply passes through the input matrix and its
@@ -199,6 +231,9 @@ include("example-vector.jl")
             @test r2 === nw2
             @test r2.t_is_inv == true
             @test r2.r_is_inv == true
+
+            @test_noalloc Kirstine.apply_transformation!($nw1, $trafo, $(diagm(ones(3)))),
+            @test_noalloc Kirstine.apply_transformation!($nw2, $trafo, $(diagm(ones(3))))
         end
     end
 
@@ -206,7 +241,7 @@ include("example-vector.jl")
         let d = DesignMeasure([[0], [1], [2]], [0.2, 0.3, 0.5]),
             m = EmaxModel(1),
             cp = CopyDose(),
-            c = implied_covariates(d, m, cp)
+            c = Kirstine.implied_covariates(d, m, cp)
 
             @test length(c) == numpoints(d)
             @test c[1].dose == points(d)[1][1]
@@ -220,7 +255,7 @@ include("example-vector.jl")
             d2 = DesignMeasure([[3], [4], [5]], [0.4, 0.4, 0.2]),
             m = EmaxModel(1),
             cp = CopyDose(),
-            c = implied_covariates(d1, m, cp),
+            c = Kirstine.implied_covariates(d1, m, cp),
             res = Kirstine.update_covariates!(c, d2, m, cp)
 
             @test res === c
@@ -243,6 +278,84 @@ include("example-vector.jl")
             @test gi(A, B, d) == tr(Symmetric(A) * Symmetric(B)) - d
             # rule out unintentionally symmetric input
             @test gi(A, B, d) != tr(A * B) - d
+        end
+    end
+
+    @testset "sensitivity_integrand" begin
+        # This should compute tr(A * B), using only upper triangles from A and B. A is taken
+        # from the GateauxConstants, B is the normalized information matrix corresponding to
+        # the direction. Both matrices have size (r, r). Here we test an example with r = 2.
+        let A = [2.0 3.0; 0.0 7.0],
+            B = [0.4 1.0; 0.0 0.5],
+            si = Kirstine.sensitivity_integrand
+
+            @test si(A, B) == tr(Symmetric(A) * Symmetric(B))
+            # rule out unintentionally symmetric input
+            @test si(A, B) != tr(A * B)
+        end
+    end
+
+    @testset "gateauxderivative" begin
+        # check that gateauxderivative works for multi-point directions
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            at = emax_solution(only(parameters(prior_knowledge(dp))), region(dp)),
+            dir = DesignMeasure([[1], [3], [9]], [0.3, 0.2, 0.5]),
+            opdir = map(one_point_design, points(dir))
+
+            g0 = gateauxderivative(at, [dir], dp)
+            g1 = gateauxderivative(at, opdir[1:1], dp)
+            g2 = gateauxderivative(at, opdir[2:2], dp)
+            g3 = gateauxderivative(at, opdir[3:3], dp)
+            @test g0 ≈ sum([g1, g2, g3] .* weights(dir))
+
+            # directions with different numbers of points
+            h = gateauxderivative(at, [dir, opdir[1]], dp)
+            @test h ≈ [g0; g1]
+        end
+    end
+
+    @testset "objective_gradient_weights!" begin
+        let ogw! = Kirstine.objective_gradient_weights!,
+            p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
+            dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([p]),
+            ),
+            d = emax_solution(p, region(dp)),
+            g = zeros(3),
+            opd = one_point_design([0]),
+            wg = Kirstine.allocate_workspace(opd, dp),
+            wf = Kirstine.allocate_workspace(d, dp),
+            dc = Kirstine.derivative_constants(d, dp),
+            oc = Kirstine.objective_constants(dp)
+
+            # manually zero out the derivative constants to see whether they are updated
+            dc.gc.A[1] .= 0
+            dc.gc.tr_B[1] = 0
+
+            # gradient == sensitivity function at points(d) == dim of parameter
+            ogw!(g, opd, wg, wf, d, dp, dc, oc)
+            @test g ≈ [3, 3, 3]
+
+            @test_noalloc $ogw!($g, $opd, $wg, $wf, $d, $dp, $dc, $oc)
+
+            # make the design singular by effectively dropping a point
+            # (without changing numpoints(d)).
+            weights(d) .= [weights(d)[1:2]; 0] ./ sum(weights(d)[1:2])
+            @test_logs(
+                (:warn, "current design is singular"),
+                match_mode = :any,
+                (@test_throws SingularException ogw!(g, opd, wg, wf, d, dp, dc, oc))
+            )
         end
     end
 
@@ -284,10 +397,7 @@ include("example-vector.jl")
 
             # Warn on too strong simplification. An example with finite objective afterwards
             # would be nicer, but is difficult to construct with this model and prior.
-            @test_logs(
-                (:warn, "simplification may have been too eager"),
-                solve(dp, str; maxdist = 5)
-            )
+            @test_logs((:warn, r"oversimplified"), solve(dp, str; maxdist = 5))
         end
     end
 end

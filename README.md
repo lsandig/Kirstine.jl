@@ -1,16 +1,18 @@
 # Kirstine.jl
 
-<!-- SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de> -->
+<!-- SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de> -->
 <!-- SPDX-License-Identifier: GFDL-1.3-or-later -->
 
 A [Julia][julia-url] package for Bayesian optimal experimental design with nonlinear regression models.
 
-[repo][repo-url] | [docs][docs-url] | [change log][change-url]
+[repo][repo-url] | [docs][docs-url] | [change log][change-url] | [examples][examples-url] | [mailing lists][lists-url]
 
 [julia-url]: https://julialang.org
 [repo-url]: https://sr.ht/~lsandig/Kirstine.jl/
 [docs-url]: https://lsandig.srht.site/Kirstine.jl/index.html
 [change-url]: https://git.sr.ht/~lsandig/Kirstine.jl/refs
+[examples-url]: https://git.sr.ht/~lsandig/kirstine-examples
+[lists-url]: https://sr.ht/~lsandig/Kirstine.jl/lists
 
 ## Project Status
 
@@ -47,6 +49,11 @@ you can get it directly from sourcehut:
 Pkg.add(url = "https://git.sr.ht/~lsandig/Kirstine.jl")
 ```
 
+To install the development branch:
+```julia
+Pkg.add(url = "https://git.sr.ht/~lsandig/Kirstine.jl", rev="develop")
+```
+
 ## Documentation
 
 [Markdown](docs/src/), [HTML][docs-url]
@@ -63,6 +70,24 @@ There is also a separate repository with [additional examples](https://git.sr.ht
 Kirstine.jl is free and open source software.
 The code is licensed under GPL-3.0 or later,
 and the documentation under GFDL-1.3 or later.
+
+## Citing
+
+Kirstine.jl is [published in the Journal of Open Source Software](https://joss.theoj.org/papers/10.21105/joss.06424).
+You can cite the package like this:
+
+```
+@article{,
+  author =  {Ludger Sandig},
+  title =   {Kirstine.jl: A Julia Package for Bayesian Optimal Design of Experiments},
+  journal = {Journal of Open Source Software},
+  volume =  9,
+  number =  97,
+  pages =   6424,
+  year =    2024,
+  doi =     {10.21105/joss.06424},
+}
+```
 
 ## Rationale
 

@@ -57,7 +57,7 @@ let's look at the implementation.
 
 ## Implementation
 
-We define a new subtype of [`NormalApproximation`](@ref)
+We define a new subtype of [`Kirstine.NormalApproximation`](@ref)
 and a corresponding method for the internal `informationmatrix!` function.
 In its first argument it receives the average Fisher information matrix
 which it should overwrite with the normalized information matrix.
@@ -114,21 +114,19 @@ function Dttm(p)
     return [da de ds]
 end
 
-function dp_for(trafo, approx)
-    DesignProblem(
-        region = DesignInterval(:time => [0, 48]),
-        criterion = DCriterion(),
-        covariate_parameterization = JustCopy(:time),
-        model = TPCModel(sigma = 1),
-        prior_knowledge = PriorSample([TPCParameter(a = 4.298, e = 0.05884, s = 21.80)]),
-        transformation = trafo,
-        normal_approximation = approx,
-    )
-end
+dp_i = DesignProblem(
+    region = DesignInterval(:time => [0, 48]),
+    criterion = DCriterion(),
+    covariate_parameterization = JustCopy(:time),
+    model = TPCModel(sigma = 1),
+    prior_knowledge = PriorSample([TPCParameter(a = 4.298, e = 0.05884, s = 21.80)]),
+    transformation = Identity(),
+    normal_approximation = FisherMatrix(),
+)
 
-dp_i = dp_for(Identity(), FisherMatrix())
-dp_ir = dp_for(Identity(), RegularizedFisherMatrix(diagm(fill(1e-4, 3))))
-dp_tr = dp_for(DeltaMethod(Dttm), RegularizedFisherMatrix(diagm(fill(1e-4, 3))))
+rfm_em4 = RegularizedFisherMatrix(diagm(fill(1e-4, 3)))
+dp_ir = DesignProblem(dp_i; normal_approximation = rfm_em4)
+dp_tr = DesignProblem(dp_ir; transformation = DeltaMethod(Dttm))
 
 strategy = DirectMaximization(
     optimizer = Pso(swarmsize = 100, iterations = 50),
@@ -179,7 +177,7 @@ s_tr == DesignMeasure(
 As expected, `s_tr` is singular when no regularization is employed:
 
 ```@example main
-dp_t = dp_for(DeltaMethod(Dttm), FisherMatrix())
+dp_t = DesignProblem(dp_i; transformation = DeltaMethod(Dttm))
 objective(s_tr, dp_t)
 ```
 
@@ -187,7 +185,7 @@ This is also reflected in the rank of the information matrix:
 
 ```@example main
 function infomat(d::DesignMeasure, dp::DesignProblem)
-    informationmatrix(
+    Kirstine.informationmatrix(
         d,
         model(dp),
         covariate_parameterization(dp),

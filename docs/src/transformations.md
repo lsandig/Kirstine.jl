@@ -90,22 +90,20 @@ nothing # hide
 ```
 
 In this vignette we will focus on the effect of different transformations.
-The following helper function lets us specify the parts of the design problem that do not change just once.
-We fix the seed so that different transformations do not accidentally use different prior samples.
+We start with the following design problem and replace its transformation as needed.
 Our design interval extends from `0` to `48` hours after administration of the drug.
+We set the seed to get a reproducible draw from the prior.
 
 ```@example main
-function dp_for_trafo(trafo)
-    Random.seed!(4711)
-    DesignProblem(
-        region = DesignInterval(:time => [0, 48]),
-        criterion = DCriterion(),
-        covariate_parameterization = JustCopy(:time),
-        model = TPCModel(sigma = 1),
-        prior_knowledge = draw_from_prior(1000, 2),
-        transformation = trafo,
-    )
-end
+Random.seed!(4711)
+dp_id = DesignProblem(
+    region = DesignInterval(:time => [0, 48]),
+    criterion = DCriterion(),
+    covariate_parameterization = JustCopy(:time),
+    model = TPCModel(sigma = 1),
+    prior_knowledge = draw_from_prior(1000, 2),
+    transformation = Identity(),
+)
 nothing # hide
 ```
 
@@ -143,7 +141,6 @@ In order to have a design to compare other solutions against,
 we first determine the Bayesian D-optimal design for the whole parameter ``\Parameter``.
 
 ```@example main
-dp_id = dp_for_trafo(Identity())
 Random.seed!(1357)
 s_id, r_id = solve(dp_id, dms)
 nothing # hide
@@ -206,12 +203,12 @@ nothing # hide
 Note that we return a _row_ vector,
 and that the order of the partial derivatives is the same as in the Jacobian matrix of the mean function.
 
-The only difference to the previous call of `dp_for_trafo`
-is that we now use a [`DeltaMethod`](@ref) object wrapped around the Jacobian matrix function
-instead of the identity transformation.
+Now make a copy of `dp_id` in which we replace the `Identity` transformation by a [`DeltaMethod`](@ref) object
+that wraps the Jacobian matrix function.
+(This is more convenient than explicitly specifying again all the parts that should stay the same.)
 
 ```@example main
-dp_auc = dp_for_trafo(DeltaMethod(Dauc))
+dp_auc = DesignProblem(dp_id; transformation = DeltaMethod(Dauc))
 Random.seed!(1357)
 s_auc, r_auc = solve(dp_auc, dms)
 s_auc
@@ -283,7 +280,7 @@ nothing # hide
 ```
 
 ```@example main
-dp_ttm = dp_for_trafo(DeltaMethod(Dttm))
+dp_ttm = DesignProblem(dp_id; transformation = DeltaMethod(Dttm))
 Random.seed!(1357)
 s_ttm, r_ttm = solve(dp_ttm, dms)
 s_ttm
@@ -338,7 +335,7 @@ nothing # hide
 ```
 
 ```@example main
-dp_cmax = dp_for_trafo(DeltaMethod(Dcmax))
+dp_cmax = DesignProblem(dp_id; transformation = DeltaMethod(Dcmax))
 Random.seed!(13579)
 s_cmax, r_cmax = solve(dp_cmax, dms)
 s_cmax
@@ -389,7 +386,7 @@ we now only need to concatenate them vertically.
 
 ```@example main
 Dboth(p) = [Dttm(p); Dcmax(p)]
-dp_both = dp_for_trafo(DeltaMethod(Dboth))
+dp_both = DesignProblem(dp_id; transformation = DeltaMethod(Dboth))
 Random.seed!(1357)
 s_both, r_both = solve(dp_both, dms)
 s_both

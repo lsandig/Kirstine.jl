@@ -43,6 +43,12 @@ you can get it directly from sourcehut:
 Pkg.add(url = "https://git.sr.ht/~lsandig/Kirstine.jl")
 ```
 
+To install the development branch:
+
+```julia
+Pkg.add(url = "https://git.sr.ht/~lsandig/Kirstine.jl", rev = "develop")
+```
+
 ## Documentation
 
 To get started, read the [tutorial](tutorial.md).
@@ -70,6 +76,24 @@ There is also a separate repository with [additional examples](https://git.sr.ht
 Kirstine.jl is free and open source software.
 The code is licensed under GPL-3.0 or later,
 and the documentation under GFDL-1.3 or later.
+
+## Citing
+
+Kirstine.jl is [published in the Journal of Open Source Software](https://joss.theoj.org/papers/10.21105/joss.06424).
+You can cite the package like this:
+
+```
+@article{,
+  author =  {Ludger Sandig},
+  title =   {Kirstine.jl: A Julia Package for Bayesian Optimal Design of Experiments},
+  journal = {Journal of Open Source Software},
+  volume =  9,
+  number =  97,
+  pages =   6424,
+  year =    2024,
+  doi =     {10.21105/joss.06424},
+}
+```
 
 ## Rationale
 

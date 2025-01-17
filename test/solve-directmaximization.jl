@@ -1,15 +1,16 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module SolveDirectmaximizationTests
 using Test
 using Random: seed!
+using LinearAlgebra: SingularException
 using Kirstine
 
 include("example-emax.jl")
 
 @testset "solve-directmaximization.jl" begin
-    @testset "solve_with" begin
+    @testset "solve_with(::Pso)" begin
         let dp = DesignProblem(;
                 criterion = DCriterion(),
                 region = DesignInterval(:dose => (0, 10)),
@@ -54,8 +55,8 @@ include("example-emax.jl")
             @test_throws "outside design region" (@test_warn "dp =" solve(dp, str3))
             @test_throws "must match" solve(dp, str4)
             # result type
-            @test isa(r1, DirectMaximizationResult)
-            @test isa(r2, DirectMaximizationResult)
+            @test isa(r1, Kirstine.DirectMaximizationResult)
+            @test isa(r2, Kirstine.DirectMaximizationResult)
             # traced state
             @test length(optimization_result(r1).trace_state) == 0
             @test length(optimization_result(r2).trace_state) == 20
@@ -68,6 +69,8 @@ include("example-emax.jl")
             @test all(upper_dp_vals .== upperbound(region(dp))[1])
             # non-fixed design point converges to 2.5
             @test issorted(middle_dp_dists, rev = true)
+            # total runtime can be accessed
+            @test total_runtime(r1) > 0
         end
 
         # DirectMaximization, but with fixed weights / design points that we know are not
@@ -115,6 +118,52 @@ include("example-emax.jl")
                 match_mode = :any,
                 sws(fw = [1, 2, 5], fp = Int64[])
             )
+        end
+    end
+
+    @testset "solve_with(::FrankWolfe)" begin
+        let guess = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
+            dp = DesignProblem(;
+                criterion = DCriterion(),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([guess]),
+                region = DesignInterval(:dose => (0, 10)),
+            ),
+            exact_solution = emax_solution(guess, region(dp)),
+            pro = DesignMeasure(points(exact_solution), [0.1, 0.85, 0.05]),
+            fw1 = Kirstine.FrankWolfe(10000, Kirstine.ConstNumIter(), false),
+            a2 = Kirstine.Adaptive(; initial_smoothness_estimate = 100),
+            fw2 = Kirstine.FrankWolfe(50, a2, true),
+            a3 = Kirstine.Adaptive(; initial_smoothness_estimate = Inf),
+            fw3 = Kirstine.FrankWolfe(1, a3, true),
+            a4 = Kirstine.Adaptive(; initial_smoothness_estimate = 1),
+            fw4 = Kirstine.FrankWolfe(1, a4, true),
+            fw5 = Kirstine.FrankWolfe(2, Kirstine.OpenLoop(2), false),
+            st1 = DirectMaximization(; optimizer = fw1, prototype = pro, fixedpoints = 1:3),
+            st2 = DirectMaximization(; optimizer = fw2, prototype = pro, fixedpoints = 1:3),
+            st3 = DirectMaximization(; optimizer = fw3, prototype = pro, fixedpoints = 1:3),
+            st4 = DirectMaximization(; optimizer = fw4, prototype = pro, fixedpoints = 1:3),
+            st5 = DirectMaximization(; optimizer = fw5, prototype = pro, fixedpoints = 1:3)
+
+            s1, r1 = solve(dp, st1)
+            @test weights(s1) ≈ [1 / 3, 1 / 3, 1 / 3] rtol = 1e-2
+
+            s2, r2 = solve(dp, st2)
+            @test weights(s2) ≈ [1 / 3, 1 / 3, 1 / 3]
+
+            _, r3 = solve(dp, st3; trace_state = true)
+            # this should fail if we change something about the initial estimate
+            L_est = optimization_result(r3).trace_state[1].work.smoothness_estimate
+            @test L_est ≈ 262.573934
+
+            @test_logs(
+                (:error, r"increase the initial smoothness"),
+                match_mode = :any,
+                (@test_throws SingularException solve(dp, st4))
+            )
+
+            @test_throws "not finite: -Inf" solve(dp, st5)
         end
     end
 end

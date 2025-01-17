@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## A-optimal design ##
@@ -18,7 +18,7 @@
 #   tr[B(ζ,θ)] = tr[DT'(θ) DT(θ) M(ζ,θ)^{-1}].
 
 """
-    ACriterion <: DesignCriterion
+    ACriterion <: Kirstine.DesignCriterion
 
 Criterion for A-optimal experimental design.
 
@@ -30,9 +30,10 @@ struct ACriterion <: DesignCriterion end
 
 function criterion_functional!(tnim::AbstractMatrix, is_inv::Bool, dc::ACriterion)
     if is_inv
-        # Note: In this branch there won't be an exception if `tnim` is singular. But as this
-        # branch is called with the DeltaMethod transformation, an exception will already
-        # have been thrown in `apply_transformation!`.
+        # Note: this branch is taken when tnim was obtained by a DeltaMethod transformation.
+        # Hence it could be singular without having thrown an error,
+        # since we have never explicitly inverted it.
+        # Taking the trace here then produces something non-positive.
         return -tr(tnim)
     else
         potrf!('U', tnim) # Cholesky factor
@@ -44,34 +45,71 @@ function criterion_functional!(tnim::AbstractMatrix, is_inv::Bool, dc::ACriterio
     end
 end
 
-function gateaux_constants(
+function gateaux_constants!(
+    gc::GCPriorSample,
+    mw::ModelWorkspace,
+    nw::NIMWorkspace,
+    c::AbstractVector{<:Covariate},
     dc::ACriterion,
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
-    trafo::Identity,
+    tc::TCIdentity,
     na::NormalApproximation,
 )
-    invM = [inv(informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
-    tr_B = map(tr, invM)
-    A = map(m -> Symmetric(m)^2, invM)
-    return GCPriorSample(A, tr_B)
+    ps = parameters(pk)
+    update_covariates!(c, d, m, cp)
+    update_model_workspace!(mw, m, c)
+    for i in 1:length(ps)
+        average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, ps[i])
+        informationmatrix!(nw.r_x_r, na)
+        mnorm = opnorm1_sym_u(nw.r_x_r)
+        potrf!('U', nw.r_x_r)
+        potri!('U', nw.r_x_r)
+        invmnorm = opnorm1_sym_u(nw.r_x_r)
+        # check for numerical singularity, see DCriterion/Identity method
+        inv(mnorm * invmnorm) < eps(Float64) && throw(SingularException(-1))
+        gc.tr_B[i] = tr(nw.r_x_r)
+        # mul!() needs dense matrices, symm!() would need a dense B
+        mirror_to_lower_triangle!(nw.r_x_r)
+        mul!(gc.A[i], nw.r_x_r, nw.r_x_r)
+    end
+    return gc
 end
 
-function gateaux_constants(
+function gateaux_constants!(
+    gc::GCPriorSample,
+    mw::ModelWorkspace,
+    nw::NIMWorkspace,
+    c::AbstractVector{<:Covariate},
     dc::ACriterion,
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample,
-    trafo::DeltaMethod,
+    tc::TCDeltaMethod,
     na::NormalApproximation,
 )
-    tc = trafo_constants(trafo, pk)
-    invM = [inv(informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
-    JpJ = map(J -> J' * J, tc.jm)
-    tr_B = map((J, iM) -> tr(J * Symmetric(iM)), JpJ, invM)
-    A = map((J, iM) -> Symmetric(iM) * J * Symmetric(iM), JpJ, invM)
-    return GCPriorSample(A, tr_B)
+    ps = parameters(pk)
+    update_covariates!(c, d, m, cp)
+    update_model_workspace!(mw, m, c)
+    for i in 1:length(ps)
+        average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, ps[i])
+        informationmatrix!(nw.r_x_r, na)
+        mnorm = opnorm1_sym_u(nw.r_x_r)
+        potrf!('U', nw.r_x_r)
+        potri!('U', nw.r_x_r)
+        invmnorm = opnorm1_sym_u(nw.r_x_r)
+        # check for numerical singularity, see DCriterion/Identity method
+        inv(mnorm * invmnorm) < eps(Float64) && throw(SingularException(-1))
+        # nw.t_x_r := DT * inv(M)
+        symm!('R', 'U', 1.0, nw.r_x_r, tc.jm[i], 0.0, nw.t_x_r)
+        # gc.A[i] := (DT * inv(M))' * DT * inv(M)
+        gemm!('T', 'N', 1.0, nw.t_x_r, nw.t_x_r, 0.0, gc.A[i])
+        # nw.t_x_t := DT * inv(M) * DT'
+        gemm!('N', 'T', 1.0, nw.t_x_r, tc.jm[i], 0.0, nw.t_x_t)
+        gc.tr_B[i] = tr(nw.t_x_t)
+    end
+    return gc
 end
