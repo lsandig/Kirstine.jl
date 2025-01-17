@@ -308,5 +308,22 @@ include("example-compartment.jl")
             @test si(d1, dpa, 1) ≈ c + half_ob atol = 5e-5
         end
     end
+
+    @testset "check_numerically_singular" begin
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            s = uniform_design([[0], [5], [10]]),
+            mix = mixture(1e-14, s, one_point_design([2])),
+            cns = Kirstine.check_numerically_singular
+
+            @test_logs cns(s, dp)
+            @test_logs (:warn, r"numerically singular") cns(mix, dp)
+        end
+    end
 end
 end

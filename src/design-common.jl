@@ -288,6 +288,7 @@ function objective_constants end
 function derivative_constants end
 function objective! end
 function gateauxderivative! end
+function check_numerically_singular end
 
 """
     objective(d::DesignMeasure, adp::Kirstine.AbstractDesignProblem)
@@ -405,6 +406,7 @@ function solve(
     sortargs = filter(p -> p.first in sort_point_kwargs, sargs)
     simpargs = setdiff(sargs, sortargs)
     simplified_solution = sort_points(simplify(raw_solution, adp; simpargs...); sortargs...)
+    check_numerically_singular(raw_solution, adp)
     check_oversimplified(raw_solution, simplified_solution, adp)
     return simplified_solution, psr
 end

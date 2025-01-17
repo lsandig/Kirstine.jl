@@ -219,3 +219,9 @@ function simplify(
     d = simplify_drop(d, maxweight)
     return d
 end
+
+function check_numerically_singular(d::DesignMeasure, cdp::CompositeDesignProblem)
+    for dp in problems(cdp)
+        check_numerically_singular(d, dp)
+    end
+end

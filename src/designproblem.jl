@@ -441,3 +441,15 @@ function shannon_information(d::DesignMeasure, dp::DesignProblem, n::Integer)
     t = codomain_dimension(transformation(dp), prior_knowledge(dp))
     return (t / 2) * (log(n) - 1 + log(2 * pi)) + 0.5 * objective(d, dpd)
 end
+
+function check_numerically_singular(d::DesignMeasure, dp::DesignProblem)
+    par_singular = filter(parameters(prior_knowledge(dp))) do p
+        na = normal_approximation(dp)
+        im = informationmatrix(d, model(dp), covariate_parameterization(dp), p, na)
+        return is_numerically_singular(im)
+    end
+    if !isempty(par_singular)
+        msg = "some parameters have numerically singular information matrices"
+        @warn msg dp d par_singular
+    end
+end

@@ -485,5 +485,24 @@ include("example-compartment.jl")
             @test first(gateauxderivative(sc, [one_point_design([0.5])], cdp)) < 0
         end
     end
+
+    @testset "check_numerically_singular" begin
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            dpa = DesignProblem(dp; criterion = ACriterion()),
+            cdp = CompositeDesignProblem([dp, dpa], [3, 4]),
+            s = uniform_design([[0], [5], [10]]),
+            mix = mixture(1e-14, s, one_point_design([2])),
+            cns = Kirstine.check_numerically_singular
+
+            @test_logs cns(s, cdp)
+            @test_logs (:warn, r"numerically singular") match_mode = :any cns(mix, cdp)
+        end
+    end
 end
 end
