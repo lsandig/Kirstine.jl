@@ -328,7 +328,6 @@ end
     for k in 1:numpoints(d)
         @series begin
             label --> (label_formatter(k, pt[k], wt[k]))
-            # TODO: refactor into separate function?
             markersize --> max(minmarkersize, maxmarkersize * sqrt(wt[k]))
             markercolor --> k
             seriestype := :scatter
