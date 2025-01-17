@@ -84,10 +84,17 @@ Additionally, the following methods must be implemented.
     The function ``\DesignCriterion`` in the mathematical notation.
     This function should be fast.
     Ideally, it should not allocate new memory.
-  - `gateaux_constants(dc::T, d::DesignMeasure, m::Kirstine.Model, cp::Kirstine.CovariateParameterization, pk::PriorSample, trafo::Kirstine.Transformation, na::Kirstine.NormalApproximation)`:
-    Compute the value of all expensive expressions in the Gateaux derivative
-    that do not depend on ``\NIMatrix(\DesignMeasureDirection,\Parameter)``
+  - `gateaux_constants!(<internal structures>, d::DesignMeasure, <problem parts>)`:
+    Compute the value of `A` and `tr_B` of the Gateaux derivative
     for every parameter value in the Monte-Carlo sample.
+    This function does a lot of in-place linear algebra
+    with low-level pre-allocated structures.
+    If you do not intend to use the (currently experimental) [`Kirstine.FrankWolfe`](@ref) optimizer,
+    you can alternatively implement a slower version
+    `gateaux_constants(d::DesignMeasure, dp::DesignProblem{T,<:DesignRegion,<:Model,<:CovariateParameterization,<:Parameter,V,<:NormalApproximation})`
+    that dispatches on your new criterion type `T`
+    and either `V=Identity` or `V=DeltaMethod`.
+    It should allocate and return a `Kirstine.GCPriorSample`.
 
 Next, we will implement the alternative D-criterion for [`Identity`](@ref) and [`DeltaMethod`](@ref) transformations.
 Since it is in some way the exponential of the predefined version,
@@ -96,6 +103,8 @@ we will call it `DexpCriterion`.
 ```@example main
 using Kirstine
 using LinearAlgebra: Symmetric, det
+using LinearAlgebra.LAPACK: potri!, posv!
+using LinearAlgebra.BLAS: gemm!
 
 struct DexpCriterion <: Kirstine.DesignCriterion end
 
@@ -119,65 +128,78 @@ function Kirstine.criterion_functional!(
     return exp(cv / t)
 end
 
-function Kirstine.gateaux_constants(
+function Kirstine.gateaux_constants!(
+    gc::Kirstine.GCPriorSample,
+    mw::Kirstine.ModelWorkspace,
+    nw::Kirstine.NIMWorkspace,
+    c::AbstractVector{<:Kirstine.Covariate},
     dc::DexpCriterion,
     d::DesignMeasure,
     m::Kirstine.Model,
     cp::Kirstine.CovariateParameterization,
     pk::PriorSample,
-    trafo::Identity,
+    tc::Kirstine.TCIdentity,
     na::Kirstine.NormalApproximation,
 )
-    tc = Kirstine.trafo_constants(trafo, pk)
-    # For M(ζ,θ) ∈ S_+^r we need
-    # A     = (1/r) det(M(ζ,θ))^{1/r} M(ζ,θ)^{-1}
-    # tr(B) = det(M(ζ,θ))^{1/r}
-    r = Kirstine.codomain_dimension(trafo, pk)
-    # Compute M^{-1} as Symmetric matrices.
-    # The following unexported function basically computes
-    #   [inv(Kirstine.informationmatrix(d, m, cp, p, na)) for p in parameters(pk)]
-    # but throws a SingularException when the rank of the information matrix is not dimension(p).
-    # This exception is caught inside gateauxderivative()
-    # and makes it return a NaN array.
-    inv_M = Kirstine.inv_informationmatrices(d, m, cp, pk, na)
-    # Since we already have M(ζ,θ)^{-1}, we compute tr(B) more numerically stable as
-    # exp(-log(det(M(ζ,θ)^{-1}) / r)).
-    # We don't use log_det!() since we don't want to modify inv_M.
-    tr_B = map(iM -> exp(-log(det(iM)) / r), inv_M)
-    A = map((iM, trB) -> iM * trB / r, inv_M, tr_B)
-    return Kirstine.GCPriorSample(A, tr_B)
+    ps = parameters(pk)
+    r = dimension(ps[1])
+    Kirstine.update_covariates!(c, d, m, cp)
+    Kirstine.update_model_workspace!(mw, m, c)
+    for i in 1:length(ps)
+        Kirstine.average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, ps[i])
+        Kirstine.informationmatrix!(nw.r_x_r, na)
+        # tr_B := det(M)^(1/r)
+        gc.tr_B[i] = exp(Kirstine.log_det!(nw.r_x_r) / r) # performs potrf!() internally
+        # nw.r_x_r := inv(M)
+        potri!('U', nw.r_x_r)
+        # nw.r_x_r := (1/r) * det(M)^(1/r) * inv(M)
+        nw.r_x_r .*= gc.tr_B[i] / r
+        gc.A[i] .= nw.r_x_r # only upper triangle
+    end
+    return gc
 end
 
-function Kirstine.gateaux_constants(
+function Kirstine.gateaux_constants!(
+    gc::Kirstine.GCPriorSample,
+    mw::Kirstine.ModelWorkspace,
+    nw::Kirstine.NIMWorkspace,
+    c::AbstractVector{<:Kirstine.Covariate},
     dc::DexpCriterion,
     d::DesignMeasure,
     m::Kirstine.Model,
     cp::Kirstine.CovariateParameterization,
     pk::PriorSample,
-    trafo::DeltaMethod,
+    tc::Kirstine.TCDeltaMethod,
     na::Kirstine.NormalApproximation,
 )
-    # For the
-    #  * original NIM M(ζ,θ) ∈ S_+^r,
-    #  * transformed NIM Q(ζ,θ) ∈ S_+^t,
-    #  * and transformation T: ℝ^r → ℝ^t with Jacobian matrix DT,
-    # we need
-    # A     = (1/t) det(M(ζ,θ))^{1/t} M(ζ,θ)^{-1} DT' Q(ζ,θ) DT M(ζ,θ)^{-1}
-    # tr(B) = det(M(ζ,θ))^{1/t}
-    tc = Kirstine.trafo_constants(trafo, pk)
-    t = Kirstine.codomain_dimension(trafo, pk)
-    # This computes M^{-1} as Symmetric matrices.
-    inv_M = Kirstine.inv_informationmatrices(d, m, cp, pk, na)
-    tr_B = map(iM -> exp(-log(det(iM)) / t), inv_M)
-    # Note that these A will be dense.
-    A = map(inv_M, tc.jm, tr_B) do iM, DT, trB
-        # compute (Q(ζ,θ))^{-1} from M(ζ,θ)^{-1}.
-        iMT = DT * iM * DT'
-        # Instead of an explicit inversion, we solve (Q(ζ,θ))^{-1} X = DT for X.
-        C = DT' * (iMT \ DT)
-        return iM * C * iM * trB / t
+    r = size(nw.r_x_r, 1)
+    t = size(nw.t_x_t, 1)
+    ps = parameters(pk)
+    Kirstine.update_covariates!(c, d, m, cp)
+    Kirstine.update_model_workspace!(mw, m, c)
+    for i in 1:length(ps)
+        Kirstine.average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, ps[i])
+        Kirstine.informationmatrix!(nw.r_x_r, na)
+        gc.A[i] .= nw.r_x_r # store it temporarily here, apply_transformation!() will overwrite it
+        # nw.t_x_t := inv(Q)
+        nw.r_is_inv = false
+        Kirstine._apply_transformation_delta!(nw, tc.jm[i])
+        # nw.r_x_t := inv(M) * DT'
+        nw.r_x_t .= tc.jm[i]'
+        posv!('U', gc.A[i], nw.r_x_t)
+        # nw.t_x_r := DT * inv(M)
+        nw.t_x_r .= nw.r_x_t'
+        # nw.t_x_r := Q * DT * inv(M) and implicitly nw.t_x_t := upper cholesky factor of inv(Q)
+        posv!('U', nw.t_x_t, nw.t_x_r)
+        # tr_B = det(Q)^(1/t)
+        gc.tr_B[i] =
+            exp(-2 * sum(nw.t_x_t[j, j] > 0 ? log(nw.t_x_t[j, j]) : -Inf for j in 1:t) / t)
+        # nw.r_x_r := inv(M) * DT' * Q * DT * inv(M)
+        gemm!('N', 'N', 1.0, nw.r_x_t, nw.t_x_r, 0.0, nw.r_x_r)
+        # A := (1/t) * det(Q)^(1/t) * inv(M) * DT' * Q * DT * inv(M)
+        gc.A[i] .= nw.r_x_r .* gc.tr_B[i] / t # dense
     end
-    return Kirstine.GCPriorSample(A, tr_B)
+    return gc
 end
 ```
 
