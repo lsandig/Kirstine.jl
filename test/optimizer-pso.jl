@@ -29,7 +29,10 @@ include("example-pnt.jl")
             ps = [Pnt([i]) for i in 1:5],
             c = BoxConstraints(Pnt([0]), Pnt([10]))
 
-            @test_throws ">= number" Kirstine.optimizer_state(fconst, o3, ps, c)
+            @test_logs(
+                (:error, ""),
+                @test_throws("<= swarmsize", Kirstine.optimizer_state(fconst, o3, ps, c))
+            )
             @test_throws "Inf" h(Kirstine.optimizer_state(finf, o5, ps, c))
             @test_throws "NaN on all" Kirstine.optimizer_state(fnan, o5, ps, c)
         end

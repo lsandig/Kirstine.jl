@@ -88,7 +88,8 @@ function optimizer_state(
     constraints::AbstractConstraints,
 )
     if o.swarmsize < length(prototypes)
-        throw(ArgumentError("swarmsize must be >= number of prototype particles"))
+        @error "" o.swarmsize prototypes
+        throw(ArgumentError("number of prototype particles must be <= swarmsize"))
     end
     x_given = deepcopy(prototypes)
     n_random = o.swarmsize - length(prototypes)
