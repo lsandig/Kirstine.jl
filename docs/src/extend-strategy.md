@@ -186,4 +186,4 @@ nothing # hide
 
 ![](extend-strategy-pr.png)
 
-We that the solution was found after four steps.
+We see that the solution was found after four steps.

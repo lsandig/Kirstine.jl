@@ -106,7 +106,7 @@ dp = DesignProblem(; criterion = DCriterion(), other_keyword_arguments...)
 This constructs a similar problem where only the criterion differs:
 
 ```julia
-DesignCriterion(dp; criterion = ACriterion())
+DesignProblem(dp; criterion = ACriterion())
 ```
 """
 function DesignProblem(

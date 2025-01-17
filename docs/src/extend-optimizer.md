@@ -305,7 +305,7 @@ function Kirstine.optimizer_state(
     min_val = minimum(state.val[state.imperialist])
     imperialist_power = (0.3 * sign(min_val) - 1) .* min_val .+ state.val[state.imperialist]
     imperialist_power ./= sum(imperialist_power)
-    # we use the apportionent procedure to make sure empire sizes add up
+    # we use the apportionment procedure to make sure empire sizes add up
     empsize .+= apportion(imperialist_power, num_colonies - o.num_initial_empires)
     # partition the remaining countries according to empire sizes
     colony_indices = setdiff(1:(o.num_countries), state.imperialist)
