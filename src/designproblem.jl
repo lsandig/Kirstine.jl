@@ -95,7 +95,7 @@ This function is useful for constructing variations of a given problem
 without having to re-type a lot of code
 or having to write helper functions.
 
-# Example
+# Examples
 
 Consider some design problem
 

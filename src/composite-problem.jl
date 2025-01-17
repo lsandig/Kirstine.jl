@@ -25,7 +25,7 @@ struct CompositeDesignProblem{T<:AbstractDesignProblem} <: AbstractDesignProblem
 
     See also [`problems`](@ref),
     [`weights(::CompositeDesignProblem)`](@ref),
-    and [`region(::CompositeDesignProblem)`](@ref).
+    [`region(::CompositeDesignProblem)`](@ref).
     """
     function CompositeDesignProblem(
         problems::AbstractVector{<:AbstractDesignProblem},

@@ -10,7 +10,7 @@ Find an optimal design by ascending the Gateaux derivative of the objective func
 
 This is a variant of the basic idea in [^YBT13].
 
-[^YBT13]: Min Yang, Stefanie Biedermann, Elina Tang (2013). On optimal designs for nonlinear models: a general and efficient algorithm. Journal of the American Statistical Association, 108(504), 1411–1420. [doi:10.1080/01621459.2013.806268](http://dx.doi.org/10.1080/01621459.2013.806268)
+[^YBT13]: Min Yang, Stefanie Biedermann, and Elina Tang (2013). On optimal designs for nonlinear models: a general and efficient algorithm. Journal of the American Statistical Association, 108(504), 1411–1420. [doi:10.1080/01621459.2013.806268](http://dx.doi.org/10.1080/01621459.2013.806268)
 """
 struct Exchange{Tod<:ZerothOrderOptimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,<:Any}} <:
        ProblemSolvingStrategy
