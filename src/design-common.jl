@@ -25,27 +25,6 @@ struct GCPriorSample <: GateauxConstants
     tr_B::Vector{Float64}
 end
 
-function gateaux_constants(
-    dc::DesignCriterion,
-    d::DesignMeasure,
-    m::Model,
-    cp::CovariateParameterization,
-    pk::PriorSample,
-    trafo::Transformation,
-    na::NormalApproximation,
-)
-    t = codomain_dimension(trafo, pk)
-    r = parameter_dimension(pk)
-    numdraws = length(parameters(pk))
-    gc = GCPriorSample([zeros(r, r) for _ in 1:numdraws], zeros(numdraws))
-    mw = allocate_model_workspace(numpoints(d), m, pk)
-    nw = NIMWorkspace(r, t)
-    c = implied_covariates(d, m, cp)
-    tc = trafo_constants(trafo, pk)
-    gateaux_constants!(gc, mw, nw, c, dc, d, m, cp, pk, tc, na)
-    return gc
-end
-
 """
     implied_covariates(d::DesignMeasure, m::M, cp::Cp)
 

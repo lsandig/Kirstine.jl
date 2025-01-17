@@ -109,6 +109,8 @@ include("example-compartment.jl")
             trafo = Identity(),
             tc = Kirstine.trafo_constants(trafo, pk),
             na = FisherMatrix(),
+            dummy = DesignInterval(:t => (0, 24)),
+            dp = DesignProblem(dc, dummy, m, cp, pk, trafo, na),
             pgc = Kirstine.gateaux_constants,
             pgc! = Kirstine.gateaux_constants!,
             # reference information matrices, already wrapped in Symmetric()
@@ -122,8 +124,8 @@ include("example-compartment.jl")
             pgc!(gc, mw, nw, c, dc, a1, m, cp, pk, tc, na)
 
             # Singular designs should raise an exception. It will be caught by the caller.
-            @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
-            @test_throws "SingularException" pgc(dc, a4_ni, m, cp, pk, trafo, na)
+            @test_throws "SingularException" pgc(a4, dp)
+            @test_throws "SingularException" pgc(a4_ni, dp)
             @test Symmetric(gc.A[1]) ≈ inv(m1)^2
             @test Symmetric(gc.A[2]) ≈ inv(m2)^2
             @test gc.tr_B[1] ≈ tr(inv(m1))
@@ -156,6 +158,8 @@ include("example-compartment.jl")
             trafo = DeltaMethod(Dauc),
             tc = Kirstine.trafo_constants(trafo, pk),
             na = FisherMatrix(),
+            dummy = DesignInterval(:t => (0, 24)),
+            dp = DesignProblem(dc, dummy, m, cp, pk, trafo, na),
             pgc = Kirstine.gateaux_constants,
             pgc! = Kirstine.gateaux_constants!,
             # reference information matrices, already wrapped in Symmetric()
@@ -169,8 +173,8 @@ include("example-compartment.jl")
             pgc!(gc, mw, nw, c, dc, a1, m, cp, pk, tc, na)
 
             # Singular designs should raise an exception. It will be caught by the caller.
-            @test_throws "SingularException" pgc(dc, a4, m, cp, pk, trafo, na)
-            @test_throws "SingularException" pgc(dc, a4_ni, m, cp, pk, trafo, na)
+            @test_throws "SingularException" pgc(a4, dp)
+            @test_throws "SingularException" pgc(a4_ni, dp)
             @test Symmetric(gc.A[1]) ≈ inv(m1) * J[1]' * J[1] * inv(m1)
             @test Symmetric(gc.A[2]) ≈ inv(m2) * J[2]' * J[2] * inv(m2)
             @test gc.tr_B[1] ≈ tr(J[1] * inv(m1) * J[1]')

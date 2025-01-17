@@ -241,21 +241,37 @@ function objective_constants(dp::DesignProblem)
     return DPObjectiveConstants(tc)
 end
 
+function gateaux_constants(
+    d::DesignMeasure,
+    dp::DesignProblem{Tc,Tr,Tm,Tcp,Tp,Tt,Tn},
+) where {
+    Tc<:DesignCriterion,
+    Tr<:DesignRegion,
+    Tm<:Model,
+    Tcp<:CovariateParameterization,
+    Tp<:PriorSample,
+    Tt<:Transformation,
+    Tn<:NormalApproximation,
+}
+    (; dc, dr, m, cp, pk, trafo, na) = dp
+    t = codomain_dimension(trafo, pk)
+    r = parameter_dimension(pk)
+    numdraws = length(parameters(pk))
+    gc = GCPriorSample([zeros(r, r) for _ in 1:numdraws], zeros(numdraws))
+    mw = allocate_model_workspace(numpoints(d), m, pk)
+    nw = NIMWorkspace(r, t)
+    c = implied_covariates(d, m, cp)
+    tc = trafo_constants(trafo, pk)
+    gateaux_constants!(gc, mw, nw, c, dc, d, m, cp, pk, tc, na)
+    return gc
+end
+
 struct DPDerivativeConstants{Tgc<:GateauxConstants} <: DerivativeConstants
     gc::Tgc
 end
 
 function derivative_constants(at::DesignMeasure, dp::DesignProblem)
-    gc = gateaux_constants(
-        criterion(dp),
-        at,
-        model(dp),
-        covariate_parameterization(dp),
-        prior_knowledge(dp),
-        transformation(dp),
-        normal_approximation(dp),
-    )
-    return DPDerivativeConstants(gc)
+    return DPDerivativeConstants(gateaux_constants(at, dp))
 end
 
 function derivative_constants!(
