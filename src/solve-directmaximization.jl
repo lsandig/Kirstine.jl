@@ -13,38 +13,37 @@ struct DirectMaximization{To<:Optimizer} <: ProblemSolvingStrategy
     prototype::DesignMeasure
     fixedweights::Vector{Int64}
     fixedpoints::Vector{Int64}
-    # Note: We don't use @kwdef because fixed{weights,points} should be able to accept an
-    # AbstractVector, and esp. also a unit range
-    @doc """
-        DirectMaximization(;
-            optimizer::Kirstine.Optimizer,
-            prototype::DesignMeasure,
-            fixedweights = [],
-            fixedpoints = [],
-        )
+end
 
-    Initialize the `optimizer` with a single `prototype`
-    and attempt to directly maximize the objective function.
-
-    For every index in `fixedweights`,
-    the corresponding weight of `prototype` is held constant during optimization.
-    The indices in `fixedpoints` do the same for the design points of the `prototype`.
-    These additional constraints can be used to speed up computation
-    in cases where some weights or design points are know analytically.
-
-    For more details on how the `prototype` is used,
-    see the specific [`Optimizer`](@ref)s.
-
-    The return value of [`solve`](@ref) for this strategy is a [`DirectMaximizationResult`](@ref).
-    """
-    function DirectMaximization(;
-        optimizer::To,
+"""
+    DirectMaximization(;
+        optimizer::Kirstine.Optimizer,
         prototype::DesignMeasure,
-        fixedweights::AbstractVector{<:Integer} = Int64[],
-        fixedpoints::AbstractVector{<:Integer} = Int64[],
-    ) where To<:Optimizer
-        new{To}(optimizer, prototype, fixedweights, fixedpoints)
-    end
+        fixedweights = [],
+        fixedpoints = [],
+    )
+
+Initialize the `optimizer` with a single `prototype`
+and attempt to directly maximize the objective function.
+
+For every index in `fixedweights`,
+the corresponding weight of `prototype` is held constant during optimization.
+The indices in `fixedpoints` do the same for the design points of the `prototype`.
+These additional constraints can be used to speed up computation
+in cases where some weights or design points are know analytically.
+
+For more details on how the `prototype` is used,
+see the specific [`Optimizer`](@ref)s.
+
+The return value of [`solve`](@ref) for this strategy is a [`DirectMaximizationResult`](@ref).
+"""
+function DirectMaximization(;
+    optimizer::To,
+    prototype::DesignMeasure,
+    fixedweights::AbstractVector{<:Integer} = Int64[],
+    fixedpoints::AbstractVector{<:Integer} = Int64[],
+) where To<:Optimizer
+    return DirectMaximization{To}(optimizer, prototype, fixedweights, fixedpoints)
 end
 
 """
