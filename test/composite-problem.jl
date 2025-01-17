@@ -450,7 +450,7 @@ include("example-compartment.jl")
         jm[1, 2] = c.x
     end
 
-    @testset "solve(::CompoundDesignProblem)" begin
+    @testset "solve(::CompositeDesignProblem)" begin
         let dr = DesignInterval(:x => (-1, 1)),
             cp = JustCopy(:x),
             dp1 = DesignProblem(;

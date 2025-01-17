@@ -8,7 +8,7 @@ using Kirstine
 include("example-testmod.jl")
 
 @testset "user.jl (using)" begin
-    @testset "simple_model" begin
+    @testset "@simple_model" begin
         @test_throws "no covariate field names" @macroexpand(@simple_model(Foo))
 
         let ex = @macroexpand(@simple_model(Foo, bar, baz)),
@@ -54,7 +54,7 @@ include("example-testmod.jl")
         end
     end
 
-    @testset "define_vector_parameter" begin
+    @testset "@simple_parameter" begin
         @test_throws "no field names" @macroexpand(@simple_parameter(Foo))
 
         let ex = @macroexpand(@simple_parameter(Emax, e0, emax, ec50)),

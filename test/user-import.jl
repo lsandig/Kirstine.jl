@@ -6,7 +6,7 @@ using Test
 import Kirstine as Smith
 
 @testset "user.jl (import)" begin
-    @testset "simple_model" begin
+    @testset "@simple_model" begin
         @test_throws "no covariate field names" @macroexpand(Smith.@simple_model(Foo))
 
         let ex = @macroexpand(Smith.@simple_model(Foo, bar, baz)),
@@ -52,7 +52,7 @@ import Kirstine as Smith
         end
     end
 
-    @testset "define_vector_parameter" begin
+    @testset "@simple_parameter" begin
         @test_throws "no field names" @macroexpand(Smith.@simple_parameter(Foo))
 
         let ex = @macroexpand(Smith.@simple_parameter(Emax, e0, emax, ec50)),
