@@ -342,7 +342,7 @@ end
         f,
         g,
         h,
-        xrange::AbstractVector{<:Real},
+        xgrid::AbstractVector{<:Real},
         d::DesignMeasure,
         m::Kirstine.Model,
         cp::Kirstine.CovariateParameterization,
@@ -368,7 +368,8 @@ the functions `f`, `g`, and `h` should have the following signatures:
 For each value of the covariate `c` implied by the design measure `d`,
 the following things will be plotted:
 
-  - A graph of the average of `f` with respect to `pk` as a function of `x` over `xrange`.
+  - A graph of the average of `f` with respect to `pk` as a function of `x`
+    evaluated at the elements of `xgrid`.
     If different `c` result in identical graphs, only one will be plotted.
 
   - Points at `g(c)` and `h(c, p)` averaged with respect to `pk`.
@@ -394,13 +395,13 @@ function plot_expected_function(
     f,
     g,
     h,
-    xrange::AbstractVector{<:Real},
+    xgrid::AbstractVector{<:Real},
     d::DesignMeasure,
     m::Model,
     cp::CovariateParameterization,
     pk::PriorSample;
     kw...,
 )
-    efp = ExpectedFunctionPlot(f, g, h, collect(xrange), d, m, cp, pk)
+    efp = ExpectedFunctionPlot(f, g, h, collect(xgrid), d, m, cp, pk)
     return RecipesBase.plot(efp; kw...)
 end
