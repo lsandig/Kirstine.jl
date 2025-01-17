@@ -108,35 +108,6 @@ include("example-compartment.jl")
         @test Kirstine.is_numerically_singular([1 0; 1 1e-16])
     end
 
-    @testset "inv_informationmatrix" begin
-        # Atkinson compartmental example
-        let a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
-            a4 = DesignMeasure([1.0122] => 1.0), # singular
-            # for a4_ni, the infomatrix has rank 1, but is still numerically inv()able
-            a4_ni = DesignMeasure(
-                [1.0122] => 1.0 - 2 * eps(Float64),
-                [0.2288] => eps(Float64),
-                [18.471] => eps(Float64),
-            ),
-            m = TPCModel(; sigma = 1),
-            cp = CopyTime(),
-            g1 = TPCParameter(; a = 4.298, e = 0.05884, s = 21.80),
-            g2 = TPCParameter(; a = 4.298 + 0.5, e = 0.05884 + 0.005, s = 21.80), # g1 + 1 * se
-            pk = PriorSample([g1, g2]),
-            na = FisherMatrix(),
-            iim = Kirstine.inv_informationmatrices
-
-            im = [Kirstine.informationmatrix(a1, m, cp, g, na) for g in [g1, g2]]
-            inv_im = iim(a1, m, cp, pk, na)
-            id_mat = map(*, im, inv_im)
-
-            @test id_mat[1] ≈ diagm(fill(1, 3))
-            @test id_mat[2] ≈ diagm(fill(1, 3))
-            @test_throws SingularException iim(a4, m, cp, pk, na)
-            @test_throws SingularException iim(a4_ni, m, cp, pk, na)
-        end
-    end
-
     @testset "apply_transformation" begin
         # This example is chosen to have nice values in the inverted matrices:
         # M = [2 1; 1 3]

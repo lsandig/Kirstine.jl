@@ -116,30 +116,6 @@ function is_numerically_singular(m::AbstractMatrix)
     return inv(cond(m, 1)) < eps(Float64)
 end
 
-function inv_informationmatrices(
-    d::DesignMeasure,
-    m::Model,
-    cp::CovariateParameterization,
-    pk::PriorSample,
-    na::NormalApproximation,
-)
-    imat = [informationmatrix(d, m, cp, p, na) for p in parameters(pk)]
-    # For a singular matrix, inv() below would throw a SingularException(n),
-    # where n is the index of one of the singular values.
-    # However, there are nearly singular matrices where inv() does not throw an exception,
-    # but produces huge and unstable results.
-    # So we are more strict here.
-    # Note that we don't know the index of the singular value,
-    # so we supply a dummy -1 to the exception constructor.
-    for im in imat
-        if is_numerically_singular(im)
-            throw(SingularException(-1))
-        end
-    end
-    inv_imat = map(inv, imat)
-    return inv_imat
-end
-
 """
     Kirstine.apply_transformation(nim::AbstractMatrix{<:Real}, p::Kirstine.Parameter, trafo::Kirstine.Transformation)
 
