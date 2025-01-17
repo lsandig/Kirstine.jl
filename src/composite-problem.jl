@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## implement AbstractDesignProblem interface for CompositeDesignProblem ##
@@ -25,7 +25,7 @@ struct CompositeDesignProblem{T<:AbstractDesignProblem} <: AbstractDesignProblem
 
     See also [`problems`](@ref),
     [`weights(::CompositeDesignProblem)`](@ref),
-    and [`region(::CompositeDesignProblem)`](@ref).
+    [`region(::CompositeDesignProblem)`](@ref).
     """
     function CompositeDesignProblem(
         problems::AbstractVector{<:AbstractDesignProblem},

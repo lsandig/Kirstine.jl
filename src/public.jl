@@ -1,3 +1,6 @@
+# SPDX-FileCopyrightText: 2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-License-Identifier: GPL-3.0-or-later
+
 public AbstractDesignProblem,
     Covariate,
     CovariateParameterization,

@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## implement AbstractDesignProblem interface for DesignProblem ##
@@ -95,7 +95,7 @@ This function is useful for constructing variations of a given problem
 without having to re-type a lot of code
 or having to write helper functions.
 
-# Example
+# Examples
 
 Consider some design problem
 

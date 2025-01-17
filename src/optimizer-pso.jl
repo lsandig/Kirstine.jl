@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## generic particle swarm optimizer ##
@@ -23,8 +23,8 @@ Construction from the vector of `prototypes` proceeds as follows:
     which is subsequently randomized.
     Randomization is subject to constraints, if any are given.
 
-[^CK02]: M. Clerc and J. Kennedy (2002). The particle swarm - explosion, stability, and convergence in a multidimensional complex space. IEEE Transactions on Evolutionary Computation, 6(1), 58–73. [doi:10.1109/4235.985692](http://dx.doi.org/10.1109/4235.985692)
-[^ES00]: R.C. Eberhardt and Y. Shi (2000). Comparing inertia weights and constriction factors in particle swarm optimization. Proceedings of the 2000 Congress on Evolutionary Computation. [doi: 10.1109/CEC.2000.870279](https://doi.org/10.1109/CEC.2000.870279)
+[^CK02]: Maurice Clerc and James Kennedy (2002). The particle swarm - explosion, stability, and convergence in a multidimensional complex space. IEEE Transactions on Evolutionary Computation, 6(1), 58–73. [doi:10.1109/4235.985692](http://dx.doi.org/10.1109/4235.985692)
+[^ES00]: Russell C. Eberhardt and Yuhui Shi (2000). Comparing inertia weights and constriction factors in particle swarm optimization. Proceedings of the 2000 Congress on Evolutionary Computation. [doi: 10.1109/CEC.2000.870279](https://doi.org/10.1109/CEC.2000.870279)
 """
 struct Pso <: ZerothOrderOptimizer
     iterations::Int64
