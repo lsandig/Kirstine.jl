@@ -96,8 +96,24 @@ function codomain_dimension(trafo::Identity, pk::PriorSample)
     return parameter_dimension(pk)
 end
 
+# TODO: document this in DeltaMethod docstring
+function transformed_parameter_dimension(jacobian_matrix::Function, p::Parameter)
+    allocated_jm = @allocated jm = jacobian_matrix(p)
+    t = size(jm, 1)
+    if allocated_jm / sizeof(jm) > 1000
+        is_anonymous = startswith(string(jacobian_matrix), "#")
+        msg = """
+        Jacobian matrix of transformation might be expensive to evaluate.
+        Consider implementing the Jacobian matrix as a non-anonymous function and defining
+        Kirstine.transformed_parameter_dimension(::typeof(<your_jacobian_matrix>), p::$(typeof(p)))
+        """
+        @warn msg
+    end
+    return t
+end
+
 function codomain_dimension(trafo::DeltaMethod, pk::PriorSample)
-    return size(trafo.jacobian_matrix(parameters(pk)[1]), 1)
+    return transformed_parameter_dimension(trafo.jacobian_matrix, first(parameters(pk)))
 end
 
 function trafo_jacobianmatrix_for_index(tc::TCIdentity, i::Integer)

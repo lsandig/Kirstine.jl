@@ -49,6 +49,31 @@ include("example-testpar.jl")
         let pk = PriorSample([TestPar3(1, 2, 3)]), trafo = DeltaMethod(p -> [1 0 0; 0 0 1])
             @test Kirstine.codomain_dimension(trafo, pk) == 2
         end
+
+        # dimension via evaluating Jacobian matrix
+        let pk = PriorSample([TestPar3(1, 2, 3)])
+            function dt_expensive(p)
+                foo = zeros(1000, 1000)
+                return [1 0 0]
+            end
+
+            function dt_expensive_generator()
+                dt = function(p)
+                    zeros(1000, 1000)
+                    return [1 0 0]
+                end
+                return dt
+            end
+
+            trafo_function = DeltaMethod(dt_expensive)
+            trafo_closure = DeltaMethod(p -> begin zeros(1000, 1000), return [1 0 0] end)
+            dt_generated = dt_expensive_generator()
+            trafo_generated = DeltaMethod(dt_generated)
+
+            @test_logs (:warn, r"expensive") Kirstine.codomain_dimension(trafo_function, pk)
+            @test_logs (:warn, r"expensive") Kirstine.codomain_dimension(trafo_generated, pk)
+            @test_logs (:warn, r"expensive") Kirstine.codomain_dimension(trafo_closure, pk)
+        end
     end
 end
 end
