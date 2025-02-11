@@ -232,28 +232,6 @@ end
 
 ## helper macros ##
 
-function _kirstine_known_as(calling_mod)
-    # This takes care of
-    #  `import Kirstine`
-    # and of
-    #   `import Kirstine as SomethingElse`.
-    # Ingoring `:ans` is necessary on the REPL.
-    filtered_modnames = filter(names(calling_mod; imported = true)) do n
-        x = getfield(calling_mod, n)
-        x isa Module && fullname(x)[end] == :Kirstine && n != :ans
-    end
-    if !(isempty(filtered_modnames))
-        if length(filtered_modnames) > 1
-            @warn "Kirstine seems to be known under mupltiple names" filtered_modnames
-        end
-        return filtered_modnames[1]
-    end
-    # When Kirstine was not `import`ed, we must by logical necessity be `using` it, since
-    # otherwise this very function could not have been called. We could play around with a
-    # `ccall` to `:jl_module_using`, but this would give us only the same information.
-    return :Kirstine
-end
-
 """
     @simple_model name covariate_field_names...
 
@@ -309,7 +287,7 @@ Further note that the `@simple_model` macro can be used together with,
 or independently of [`@simple_parameter`](@ref).
 """
 macro simple_model(name, covariate_field_names...)
-    module_name = _kirstine_known_as(__module__)
+    module_path = _kirstine_known_as(__module__)
     model_name = Symbol(string(name) * "Model")
     covariate_name = Symbol(string(name) * "Covariate")
     if isempty(covariate_field_names)
@@ -320,14 +298,14 @@ macro simple_model(name, covariate_field_names...)
     covariate_struct_expression = Expr(
         :struct,
         true, # mutable
-        Expr(:<:, covariate_name, :($module_name.Covariate)),
+        Expr(:<:, covariate_name, :($module_path.Covariate)),
         Expr(:block, covariate_fields...),
     )
     # Note: We have to `esc()` the definitions so that they are evaluated in the calling
     # module. This has the nice side effect of not replacing `m` with a gensym.
     return esc(
         quote
-            @kwdef struct $model_name <: $module_name.NonlinearRegression
+            @kwdef struct $model_name <: $module_path.NonlinearRegression
                 sigma::Float64
                 function $model_name(sigma::Real)
                     if sigma <= 0
@@ -337,10 +315,10 @@ macro simple_model(name, covariate_field_names...)
                 end
             end
             $covariate_struct_expression
-            function $module_name.unit_length(m::$model_name)
+            function $module_path.unit_length(m::$model_name)
                 return 1
             end
-            function $module_name.update_model_vcov!(
+            function $module_path.update_model_vcov!(
                 s::Matrix{Float64},
                 m::$model_name,
                 c::$covariate_name,
@@ -348,7 +326,7 @@ macro simple_model(name, covariate_field_names...)
                 s[1, 1] = m.sigma^2
                 return s
             end
-            function $module_name.allocate_covariate(m::$model_name)
+            function $module_path.allocate_covariate(m::$model_name)
                 return $covariate_name($(fill(0, length(covariate_field_names))...))
             end
         end,
@@ -404,7 +382,7 @@ Further note that the `@simple_parameter` macro can be used together with,
 or independently of [`@simple_model`](@ref).
 """
 macro simple_parameter(name, field_names...)
-    module_name = _kirstine_known_as(__module__)
+    module_path = _kirstine_known_as(__module__)
     parameter_name = Symbol(string(name) * "Parameter")
     if isempty(field_names)
         throw(ArgumentError("no field names supplied"))
@@ -414,11 +392,65 @@ macro simple_parameter(name, field_names...)
     par_struct_expression = Expr(
         :struct,
         false, # immutable
-        Expr(:<:, parameter_name, :($module_name.Parameter)),
+        Expr(:<:, parameter_name, :($module_path.Parameter)),
         Expr(:block, par_fields...),
     )
     return esc(quote
         @kwdef $par_struct_expression
-        $module_name.dimension(p::$parameter_name) = $dim
+        $module_path.dimension(p::$parameter_name) = $dim
     end)
+end
+
+function _path_to_module(from::Module, to::Module, ignore::AbstractVector{Module})
+    path = Symbol[]
+    visited = append!(Module[], ignore)
+    _path_to_module_dfs!(path, visited, from, to)
+    return path
+end
+
+function _path_to_module_dfs!(
+    path::AbstractVector{Symbol},
+    visited::AbstractVector{Module},
+    current::Module,
+    target::Module,
+)
+    # a module contains a reference to itself, marking it as visited prevents infinite recursion
+    push!(visited, current)
+    # we need all = true here since a sub-module could be defined but not exported
+    names_of_submodules = filter(names(current; all = true, imported = true)) do name
+        return isdefined(current, name) && getfield(current, name) isa Module
+    end
+    submodules = [getfield(current, name) for name in names_of_submodules]
+    for (name, submodule) in Iterators.zip(names_of_submodules, submodules)
+        if submodule == target
+            push!(path, name)
+            return true
+        else
+            if !(submodule in visited)
+                push!(path, name)
+                found = _path_to_module_dfs!(path, visited, submodule, target)
+                if found
+                    return true
+                end
+            end
+        end
+    end
+    !isempty(path) && pop!(path)
+    return false
+end
+
+function _kirstine_known_as(caller::Module)
+    target = parentmodule(_kirstine_known_as)
+    path_elements = _path_to_module(caller, target, [Base, Core])
+    if !isempty(path_elements)
+        # structure from looking at dump(:(Foo.Bar.Baz))
+        # Expr(:., Expr(:., :Foo, QuoteNode(:Bar)), QuoteNode(:Baz))
+        # foldl((x, y) -> Expr(:., x, QuoteNode(y)), [:Foo, :Bar, :Baz])
+        path_expression = foldl((x, y) -> Expr(:., x, QuoteNode(y)), path_elements)
+        return path_expression
+    else
+        # If there is no path to Kirstine among the `imported` modules, we must be `using`
+        # the package instead (else this function could not have been called).
+        return :Kirstine
+    end
 end

@@ -7,6 +7,17 @@ using Kirstine
 
 include("example-testmod.jl")
 
+# Note: module definitions can't occur inside a @testset so we place it here
+module Foo
+module Bar
+Quux = 42
+end
+module Baz
+module Quux end
+end
+import .Baz.Quux as Frob
+end
+
 @testset "user.jl (using)" begin
     @testset "@simple_model" begin
         @test_throws "no covariate field names" @macroexpand(@simple_model(Foo))
@@ -70,6 +81,35 @@ include("example-testmod.jl")
             @test a == Base.remove_linenums!(aref)
             @test b == Base.remove_linenums!(bref)
         end
+    end
+
+    @testset "_path_to_module" begin
+        # depth 1
+        path = Kirstine._path_to_module(UserUsingTests, Foo, Module[])
+        @test path == [:Foo]
+
+        # depth 3
+        target = Foo.Baz.Quux
+        path = Kirstine._path_to_module(UserUsingTests, target, Module[])
+        @test path == [:Foo, :Baz, :Quux]
+
+        # aliased module, we find the original path
+        target = Foo.Frob
+        path = Kirstine._path_to_module(UserUsingTests, target, Module[])
+        @test path == [:Foo, :Baz, :Quux]
+
+        # aliased module, we ignore the original name
+        ignore = [Foo.Baz]
+        target = Foo.Frob
+        path = Kirstine._path_to_module(UserUsingTests, target, ignore)
+        @test path == [:Foo, :Frob]
+        # we should not leak visited modules
+        @test ignore == [Foo.Baz]
+
+        # partial path
+        target = Foo.Baz.Quux
+        path = Kirstine._path_to_module(Foo, target, Module[])
+        @test path == [:Baz, :Quux]
     end
 
     @testset "==(JustCopy)" begin
