@@ -2,10 +2,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module TransformationTests
-using Test
+using Test, Logging
 using Kirstine
 
 include("example-testpar.jl")
+include("test-noalloc.jl")
 
 @testset "transformation.jl" begin
     @testset "trafo_constants" begin
@@ -48,31 +49,83 @@ include("example-testpar.jl")
     @testset "codomain_dimension(DeltaMethod)" begin
         let pk = PriorSample([TestPar3(1, 2, 3)]), trafo = DeltaMethod(p -> [1 0 0; 0 0 1])
             @test Kirstine.codomain_dimension(trafo, pk) == 2
+            bytes_allocated = @ballocated Kirstine.codomain_dimension($trafo, $pk)
+            @test bytes_allocated < 2^10
         end
 
         # dimension via evaluating Jacobian matrix
         let pk = PriorSample([TestPar3(1, 2, 3)])
             function dt_expensive(p)
-                foo = zeros(1000, 1000)
+                zeros(1000, 1000)
                 return [1 0 0]
             end
 
             function dt_expensive_generator()
-                dt = function(p)
+                dt = function (p)
                     zeros(1000, 1000)
                     return [1 0 0]
                 end
                 return dt
             end
 
-            trafo_function = DeltaMethod(dt_expensive)
-            trafo_closure = DeltaMethod(p -> begin zeros(1000, 1000), return [1 0 0] end)
-            dt_generated = dt_expensive_generator()
-            trafo_generated = DeltaMethod(dt_generated)
+            dt_closure = dt_expensive_generator()
 
-            @test_logs (:warn, r"expensive") Kirstine.codomain_dimension(trafo_function, pk)
-            @test_logs (:warn, r"expensive") Kirstine.codomain_dimension(trafo_generated, pk)
-            @test_logs (:warn, r"expensive") Kirstine.codomain_dimension(trafo_closure, pk)
+            trafo_function = DeltaMethod(dt_expensive)
+            trafo_closure = DeltaMethod(dt_closure)
+            trafo_anonymous = DeltaMethod(p -> zeros(1000, 3)[1, :])
+
+            we = (:warn, r"expensive")
+            wa = (:warn, r"non-anonymous")
+
+            @test_logs we Kirstine.codomain_dimension(trafo_function, pk)
+            @test_logs we Kirstine.codomain_dimension(trafo_closure, pk)
+            @test_logs we Kirstine.codomain_dimension(trafo_anonymous, pk)
+            @test_logs wa Kirstine.codomain_dimension(trafo_closure, pk)
+            @test_logs wa Kirstine.codomain_dimension(trafo_anonymous, pk)
+        end
+
+        # dimension via special method
+        let pk = PriorSample([TestPar3(1, 2, 3)])
+            function dt_expensive(p)
+                zeros(1000, 1000)
+                return [1 0 0]
+            end
+
+            function Kirstine.transformed_parameter_dimension(
+                ::typeof(dt_expensive),
+                p::TestPar3,
+            )
+                return 1
+            end
+
+            function dt_expensive_generator()
+                dt = function (p)
+                    zeros(1000, 1000)
+                    return [1 0 0]
+                end
+                return dt
+            end
+
+            dt_closure = dt_expensive_generator()
+            Kirstine.transformed_parameter_dimension(::typeof(dt_closure), p::TestPar3) = 1
+
+            trafo_function = DeltaMethod(dt_expensive)
+            trafo_closure = DeltaMethod(dt_closure)
+
+            # check absence of warnings
+            @test_logs(
+                min_level = Logging.Error,
+                Kirstine.codomain_dimension(trafo_function, pk)
+            )
+            @test_logs(
+                min_level = Logging.Error,
+                Kirstine.codomain_dimension(trafo_closure, pk)
+            )
+            @test_noalloc Kirstine.transformed_parameter_dimension(
+                $dt_expensive,
+                $(first(parameters(pk))),
+            )
+            @test_noalloc Kirstine.codomain_dimension($dt_expensive, $pk)
         end
     end
 end
