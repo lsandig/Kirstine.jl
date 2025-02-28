@@ -48,7 +48,7 @@ Then you would write
 function expensive_dt(p::MyParameter)
     # some expensive computations that return a matrix with size (5, 8)
 end
-Kirstine.transformed_parameter_dimension(dt::typeof(expensive_dt), p::MyParameter)
+function Kirstine.transformed_parameter_dimension(dt::typeof(expensive_dt), p::MyParameter)
     return 5
 end
 ```
