@@ -29,6 +29,30 @@ to the Jacobian matrix of ``\Transformation`` evaluated at `p`.
 Note that the order of the columns must match the order that you used
 when implementing the [`jacobianmatrix!`](@ref) for your model.
 
+# The Dimension of the Transformed Parameter
+Several places in the package need to know the dimension of ``\Transformation(\Parameter)``.
+By default, this will be computed by evaluating ``\TotalDiff\Transformation(\Parameter)``
+for one ``\Parameter`` from the prior sample,
+and then counting the number of rows of this matrix.
+However, this may be undesirable when ``\TotalDiff\Transformation`` is expensive to compute
+(e.g., when it requires numerical integration).
+To prevent this default behavior,
+you can implement a method for the internal function `transformed_parameter_dimension`
+that dispatches on the types of your `jacobian_matrix` function and your model parameter.
+
+For example, suppose you have an 8-dimensional `MyParameter <: Parameter`
+and an expensive transformation to something 5-dimensional.
+Then you would write
+
+```julia
+function expensive_dt(p::MyParameter)
+    # some expensive computations that return a matrix with size (5, 8)
+end
+Kirstine.transformed_parameter_dimension(dt::typeof(expensive_dt), p::MyParameter)
+    return 5
+end
+```
+
 # Examples
 Suppose `p` has the fields `a` and `b`, and ``\Transformation(\Parameter) = (ab, b/a)'``.
 Then the Jacobian matrix of ``\Transformation`` is
