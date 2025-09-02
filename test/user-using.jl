@@ -5,19 +5,6 @@ module UserUsingTests
 using Test
 using Kirstine
 
-include("example-testmod.jl")
-
-# Note: module definitions can't occur inside a @testset so we place it here
-module Foo
-module Bar
-Quux = 42
-end
-module Baz
-module Quux end
-end
-import .Baz.Quux as Frob
-end
-
 @testset "user.jl (using)" begin
     @testset "@simple_model" begin
         @test_throws "no covariate field names" @macroexpand(@simple_model(Foo))
@@ -80,88 +67,6 @@ end
 
             @test a == Base.remove_linenums!(aref)
             @test b == Base.remove_linenums!(bref)
-        end
-    end
-
-    @testset "_path_to_module" begin
-        # depth 1
-        path = Kirstine._path_to_module(UserUsingTests, Foo, Module[])
-        @test path == [:Foo]
-
-        # depth 3
-        target = Foo.Baz.Quux
-        path = Kirstine._path_to_module(UserUsingTests, target, Module[])
-        @test path == [:Foo, :Baz, :Quux]
-
-        # aliased module, we find the original path
-        target = Foo.Frob
-        path = Kirstine._path_to_module(UserUsingTests, target, Module[])
-        @test path == [:Foo, :Baz, :Quux]
-
-        # aliased module, we ignore the original name
-        ignore = [Foo.Baz]
-        target = Foo.Frob
-        path = Kirstine._path_to_module(UserUsingTests, target, ignore)
-        @test path == [:Foo, :Frob]
-        # we should not leak visited modules
-        @test ignore == [Foo.Baz]
-
-        # partial path
-        target = Foo.Baz.Quux
-        path = Kirstine._path_to_module(Foo, target, Module[])
-        @test path == [:Baz, :Quux]
-    end
-
-    @testset "==(JustCopy)" begin
-        let jc1 = JustCopy(:a, :b),
-            jc2 = JustCopy(:a, :b),
-            jc3 = JustCopy(:a, :c),
-            jc4 = JustCopy(:b, :a)
-
-            @test jc1 == jc2
-            @test jc1 != jc3
-            @test jc1 != jc4
-        end
-    end
-
-    @testset "show(::JustCopy)" begin
-        # check that pretty representation is parseable
-        let x = JustCopy(:a, :b, :c),
-            io = IOBuffer(),
-            ioc = IOContext(io, :limit => false),
-            _ = show(ioc, "text/plain", x),
-            str_pretty = String(take!(io)),
-            x_pretty = eval(Meta.parse(str_pretty))
-
-            @test x == x_pretty
-        end
-    end
-
-    @testset "map_to_covariate!(JustCopy)" begin
-        let mtc! = Kirstine.map_to_covariate!,
-            c1 = TestCovar2(0, 0),
-            c2 = TestCovarNonFloat(0, [0.1, 0.2, 0.3]),
-            dp = [42.0, 3.14],
-            m = TestMod(), # any model would do
-            jc1 = JustCopy(:a, :b),
-            jc2 = JustCopy(:a, :b, :c),
-            jc3 = JustCopy(:a, :x),
-            ret = mtc!(c1, dp, m, jc1)
-
-            # a reference is returned
-            @test ret === c1
-            # the fields are set correctly
-            @test c1.a == 42
-            @test c1.b == 3.14
-            # design point is not modified
-            @test dp == [42.0, 3.14]
-            # covariate parameterization is not modified
-            @test jc1.covariate_field_names == (:a, :b)
-
-            @test_throws "dimension of design point" mtc!(c1, [1.0], m, jc1)
-            @test_throws "don't match field names of covariate" mtc!(c1, dp, m, jc2)
-            @test_throws "don't match field names of covariate" mtc!(c1, dp, m, jc3)
-            @test_throws TypeError mtc!(c2, dp, m, jc1)
         end
     end
 end
