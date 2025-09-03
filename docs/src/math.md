@@ -469,6 +469,9 @@ and a sample size of ``\SampleSize`` is
 
 ## Efficiency
 
+The notion of a design's efficiency depends on the design criterion.
+We start here with a discussion of D-efficiency.
+
 Consider two experiments with design measures ``\DesignMeasure_1`` and ``\DesignMeasure_2``,
 and samples sizes ``\SampleSize^{(1)}`` and ``\SampleSize^{(2)}``.
 Equating their approximate expected posterior Shannon information
@@ -491,12 +494,14 @@ and solving for the ratio of sample sizes yields
 }{\PriorDensity(\Parameter)}{\Parameter}
 \biggr)
 =:
-\RelEff(\DesignMeasure_1, \DesignMeasure_2)
-.
+\RelEff(\DesignMeasure_1, \DesignMeasure_2; \DesignProblem),
 ```
 
+where ``\DesignProblem = (\DesignCriterion_D, \DesignRegion, \MeanFunction, \CovariateParameterization, \PriorDensity, \Transformation)``
+denotes the design problem.
+
 This quantity is called the _expected relative D-efficiency_
-of the two designs.
+of the two designs under ``\DesignProblem``.
 A relative efficiency smaller than ``1`` means
 that ``\DesignMeasure_1`` is less efficient than ``\DesignMeasure_2``
 since the first experiment needs a larger sample size than the second to achieve the same accuracy.
@@ -510,7 +515,7 @@ where the prior distribution is a point mass at ``\Parameter_0``,
 this simplifies to
 
 ```math
-\RelEff(\DesignMeasure_1, \DesignMeasure_2)
+\RelEff(\DesignMeasure_1, \DesignMeasure_2; \DesignProblem)
 =
 \biggl(
 \frac{\det \TNIMatrix(\DesignMeasure_1, \Parameter_0)}{\det \TNIMatrix(\DesignMeasure_2, \Parameter_0)}
@@ -521,6 +526,7 @@ this simplifies to
 Note that it is also possible to compute a relative efficiency under two different design problems
 
 ```math
+\DesignProblem_1 =
 (
   \DesignCriterion_D,
   \DesignRegion^{(1)},
@@ -530,6 +536,7 @@ Note that it is also possible to compute a relative efficiency under two differe
   \Transformation^{(1)}
 )
 \text{ and }
+\DesignProblem_2 =
 (
   \DesignCriterion_D,
   \DesignRegion^{(2)},
@@ -546,7 +553,7 @@ In this general case, the two integrals must be calculated separately:
 
 ```math
 \begin{aligned}
-\RelEff(\DesignMeasure_1, \DesignMeasure_2)
+\RelEff(\DesignMeasure_1, \DesignMeasure_2, \DesignProblem_1, \DesignProblem_2)
 &=
 \exp\biggl(
 \frac{1}{\DimTransformedParameter}\biggl\{
@@ -559,11 +566,29 @@ In this general case, the two integrals must be calculated separately:
 \log\det \TNIMatrix^{(2)}(\DesignMeasure_2, \Parameter^{(2)})
 }{\PriorDensity^{(2)}(\Parameter^{(2)})}{\Parameter^{(2)}}
 \biggr\}
-\biggr)
+\biggr) \\
+&=
+\exp\bigl((f(\DesignMeasure_1; \DesignProblem_1) - f(\DesignMeasure_2; \DesignProblem_2)) / t\bigr)
 \end{aligned}
 ```
 
 This more general quantity of course now also depends on the potentially different prior densities!
+
+Similarly, we can consider a design problem that uses the A-criterion,
+``\DesignProblem_A = (\DesignCriterion_A, \DesignRegion, \MeanFunction, \CovariateParameterization, \PriorDensity, \Transformation)``.
+Here we equate the expected sums of the variances of the parameter estimates
+and can also solve for the ratio of sample sizes.
+This gives us _expected relative A-efficiency_
+
+```math
+\frac{n^{(2)}}{n^{(1)}}
+=
+\frac{\Objective(\DesignMeasure_2; \DesignProblem_A)}{\Objective(\DesignMeasure_1; \DesignProblem_A)}
+=:
+\RelEff(\DesignMeasure_1, \DesignMeasure_2; \DesignProblem_A)
+```
+
+and an analogous version for two different design problems.
 
 ## Composite Design Problems
 
