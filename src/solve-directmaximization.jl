@@ -97,21 +97,12 @@ function solve_with(
     strategy::DirectMaximization{<:ZerothOrderOptimizer},
     trace_state::Bool,
 )
-    constraints = DesignConstraints(
-        strategy.prototype,
-        region(adp),
-        strategy.fixedweights,
-        strategy.fixedpoints,
-    )
+    (; optimizer, prototype, fixedpoints, fixedweights) = strategy
+    constraints = DesignConstraints(prototype, region(adp), fixedweights, fixedpoints)
     oc = objective_constants(adp)
-    w = allocate_workspace(strategy.prototype, adp)
-    or = optimize(
-        d -> objective!(w, d, adp, oc),
-        strategy.optimizer,
-        [strategy.prototype],
-        constraints;
-        trace_state = trace_state,
-    )
+    w = allocate_workspace(prototype, adp)
+    f = d -> objective!(w, d, adp, oc)
+    or = optimize(f, optimizer, [prototype], constraints; trace_state = trace_state)
     return DirectMaximizationResult(or)
 end
 
