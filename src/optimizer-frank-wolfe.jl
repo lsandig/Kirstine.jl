@@ -154,6 +154,10 @@ end
 
 iterations(o::FrankWolfe) = o.iterations
 
+# In [^P23] the time index starts at t=0.
+# Since our `iterations` count the number of calls to tick!() starting at 1,
+# we keep track of iterations starting at zero in an extra field of the state.
+
 mutable struct FrankWolfeState{T,U,V} <: OptimizerState{T,U}
     x::T
     v::T
@@ -165,6 +169,7 @@ mutable struct FrankWolfeState{T,U,V} <: OptimizerState{T,U}
     alpha::Vector{Float64}
     active_set::Vector{T}
     work::V
+    iteration_from_zero::Int64
     active_points_added::Int64
     active_points_removed::Int64
     n_eval_f::Int64
@@ -186,10 +191,9 @@ function stepsize!(
     state::FrankWolfeState,
     o::FrankWolfe{OpenLoop},
     c::AbstractConstraints,
-    t::Integer,
     gamma_max::Real,
 )
-    return stepsize_openloop(o.stepsize.shift, t, gamma_max)
+    return stepsize_openloop(o.stepsize.shift, state.iteration_from_zero, gamma_max)
 end
 
 function stepsize_constnumiter(iterations::Integer, t::Integer, gamma_max::Real)
@@ -202,10 +206,9 @@ function stepsize!(
     state::FrankWolfeState,
     o::FrankWolfe{ConstNumIter},
     c::AbstractConstraints,
-    t::Integer,
     gamma_max::Real,
 )
-    return stepsize_constnumiter(o.iterations, t, gamma_max)
+    return stepsize_constnumiter(o.iterations, state.iteration_from_zero, gamma_max)
 end
 
 function fw_estimate_initial_smoothness!(
@@ -252,7 +255,6 @@ function stepsize!(
     state::FrankWolfeState,
     o::FrankWolfe{Adaptive},
     c::AbstractConstraints,
-    t::Integer,
     gamma_max::Real,
 )
     w = state.work
@@ -318,7 +320,8 @@ function optimizer_state(
     gx = fill(NaN, grad_length)
     as = [deepcopy(x)]
     work = fw_workspace(optimizer.stepsize, x, grad_length)
-    state = FrankWolfeState(x, v, dir, NaN, NaN, gx, NaN, [1.0], as, work, 0, 0, 0, 0)
+    # The iteration will be counted up towards 0 in the first call to tick!()
+    state = FrankWolfeState(x, v, dir, NaN, NaN, gx, NaN, [1.0], as, work, -1, 0, 0, 0, 0)
     # Here we perform the update corresponding to step t=0 in [^P23].
     # With OpenLoop this always gives an x1 that is on the boundary of the compact convex set
     # since the initial step size is 1.
@@ -333,6 +336,7 @@ function tick!(
     constraints::AbstractConstraints,
     iter::Integer,
 )
+    state.iteration_from_zero += 1
     g!(state.gx, state.x)
     state.n_eval_g += 1
     fw_linear_maximization_oracle!(state.v, state.gx, constraints)
@@ -348,10 +352,7 @@ function tick!(
         ap_diff!(state.direction, state.v, state.active_set[away])
     end
     gamma_max = optimizer.pairwise ? state.alpha[away] : 1.0
-    # In [^P23] the time index starts at t=0.
-    # Since we start to count from iter=1,
-    # we have to subtract 1 from it in the stepsize computation.
-    state.stepsize = stepsize!(g!, state, optimizer, constraints, iter - 1, gamma_max)
+    state.stepsize = stepsize!(g!, state, optimizer, constraints, gamma_max)
     if !optimizer.pairwise
         state.alpha .*= (1 - state.stepsize)
         if !(state.v in state.active_set)

@@ -230,6 +230,7 @@ end
             iter = 2
 
             Kirstine.tick!((f, g!), state, opt, c, iter)
+            @test state.iteration_from_zero == 1
             @test state.gx == [2, -18]
             @test state.v == Pnt([10, 0])
             @test state.stepsize ≈ 2 / 3
