@@ -266,6 +266,9 @@ end
             @test r1.maximum ≈ 0.0 atol = 1e-4
             @test length(r1.trace_gx) == 2000
             @test r1.n_eval_g == 2000
+            # initial and subsequent gradient traces should not share memory
+            @test !(r1.trace_gx[1] === r1.trace_gx[2])
+            @test !(r1.trace_gx[2] === r1.trace_gx[end])
             @test r1.trace_gx[end] ≈ zeros(n) atol = 1e-2 # local maximum
             @test r2.maximizer.x ≈ [0.5; xstar[2:end]] rtol = 1e-4
             @test r2.maximum ≈ -0.25 rtol = 1e-4

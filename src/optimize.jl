@@ -87,7 +87,7 @@ function optimize(
     is_first_order = optimizer isa FirstOrderOptimizer
     if is_first_order
         check_gradient(state; only_warn = false, prefix = "iteration 1: ")
-        push!(t_gx, gradient(state))
+        push!(t_gx, deepcopy(gradient(state)))
     end
     t_state = typeof(state)[]
     trace_state && push!(t_state, deepcopy(state))
@@ -95,7 +95,7 @@ function optimize(
         tick!(f_or_f_g!, state, optimizer, constraints, i)
         push!(t_x, deepcopy(maximizer(state)))
         push!(t_fx, maximum(state))
-        is_first_order && push!(t_gx, gradient(state))
+        is_first_order && push!(t_gx, deepcopy(gradient(state)))
         trace_state && push!(t_state, deepcopy(state))
     end
     check_objective(state; only_warn = true, prefix = "final iteration: ")
