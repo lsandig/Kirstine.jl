@@ -98,13 +98,14 @@ mutable struct AdaptiveWorkspace{T<:AbstractPoint,U<:AbstractPointDifference} <:
     x_tmp::T
     d_tmp::U
     gx_tmp::Vector{Float64}
+    has_diverged::Bool
 end
 
 function fw_workspace(step::Adaptive, x::AbstractPoint, gradient_length::Integer)
     d_tmp = ap_as_difference(deepcopy(x))
     x_tmp = deepcopy(x)
     gx_tmp = fill(NaN, gradient_length)
-    return AdaptiveWorkspace(step.initial_smoothness_estimate, x_tmp, d_tmp, gx_tmp)
+    return AdaptiveWorkspace(step.initial_smoothness_estimate, x_tmp, d_tmp, gx_tmp, false)
 end
 
 """
@@ -258,6 +259,7 @@ function stepsize!(
     gamma_max::Real,
 )
     w = state.work
+    w.has_diverged = false
     if isinf(w.smoothness_estimate)
         fw_estimate_initial_smoothness!(
             g!,
@@ -297,6 +299,7 @@ function stepsize!(
         end
         if M > o.stepsize.smoothness_threshold
             @warn "smoothness estimate seems to diverge, terminating step size search"
+            w.has_diverged = true
             return gamma
         end
         M *= o.stepsize.tau

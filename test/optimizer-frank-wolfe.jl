@@ -110,7 +110,7 @@ end
             gx = g!(zeros(4), x),
             gx_tmp = fill(NaN, 4),
             c = BoxConstraints(Pnt(fill(-1, n)), Pnt(fill(10, n))),
-            w = Kirstine.AdaptiveWorkspace(NaN, x_tmp, d_tmp, gx_tmp)
+            w = Kirstine.AdaptiveWorkspace(NaN, x_tmp, d_tmp, gx_tmp, false)
 
             res = Kirstine.fw_estimate_initial_smoothness!(g!, w, x, gx, d, c, 1)
 
