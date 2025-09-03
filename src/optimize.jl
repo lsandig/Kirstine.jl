@@ -92,7 +92,7 @@ function optimize(
     t_state = typeof(state)[]
     trace_state && push!(t_state, deepcopy(state))
     for i in 2:iterations(optimizer)
-        tick!(f_or_f_g!, state, optimizer, constraints, i)
+        tick!(f_or_f_g!, state, optimizer, constraints)
         push!(t_x, deepcopy(maximizer(state)))
         push!(t_fx, maximum(state))
         is_first_order && push!(t_gx, deepcopy(gradient(state)))

@@ -122,13 +122,7 @@ function optimizer_state(
     return state
 end
 
-function tick!(
-    f,
-    state::PsoState,
-    optimizer::Pso,
-    constraints::AbstractConstraints,
-    iter::Integer,
-)
+function tick!(f, state::PsoState, optimizer::Pso, constraints::AbstractConstraints)
     phi = optimizer.c1 + optimizer.c2
     chi = 2 / abs(2 - phi - sqrt(phi^2 - 4 * phi))
     for i in 1:length(state.x)

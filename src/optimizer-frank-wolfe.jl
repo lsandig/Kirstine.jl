@@ -325,7 +325,7 @@ function optimizer_state(
     # Here we perform the update corresponding to step t=0 in [^P23].
     # With OpenLoop this always gives an x1 that is on the boundary of the compact convex set
     # since the initial step size is 1.
-    tick!((f, g!), state, optimizer, constraints, 1)
+    tick!((f, g!), state, optimizer, constraints)
     return state
 end
 
@@ -334,7 +334,6 @@ function tick!(
     state::FrankWolfeState,
     optimizer::FrankWolfe,
     constraints::AbstractConstraints,
-    iter::Integer,
 )
     state.iteration_from_zero += 1
     g!(state.gx, state.x)

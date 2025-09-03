@@ -226,10 +226,9 @@ end
             f(p) = -sum((p.x .- xstar) .^ 2),
             g!(grad, p) = grad .= -2 .* (p.x .- xstar),
             c = BoxConstraints(Pnt([0, 0]), Pnt([10, 10])),
-            state = Kirstine.optimizer_state((f, g!), opt, [Pnt([5, 0.5])], c),
-            iter = 2
+            state = Kirstine.optimizer_state((f, g!), opt, [Pnt([5, 0.5])], c)
 
-            Kirstine.tick!((f, g!), state, opt, c, iter)
+            Kirstine.tick!((f, g!), state, opt, c)
             @test state.iteration_from_zero == 1
             @test state.gx == [2, -18]
             @test state.v == Pnt([10, 0])

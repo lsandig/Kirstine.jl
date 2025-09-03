@@ -130,7 +130,7 @@ n_eval_f(s::GridSearchState) = length(s.fx)
 
 n_eval_g(s::GridSearchState) = 0
 
-tick!(f, s::GridSearchState, o::GridSearch, c::AbstractConstraints, i::Integer) = s
+tick!(f, s::GridSearchState, o::GridSearch, c::AbstractConstraints) = s
 
 # Note: user-visible documentation is attached to `GridSearch`.
 function optimizer_state(
