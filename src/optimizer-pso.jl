@@ -11,6 +11,10 @@ A constricted particle swarm optimizer.
 There is a large number of published PSO variants,
 this one was taken from two [^CK02] publications [^ES00].
 
+Note that particle swarm optimization has no convergence guarantees,
+hence the `has_converged` field of the [`OptimizationResult`](@ref)
+returned by a PSO run is always `false` by definition.
+
 # Initialization
 
 The swarm is initialized from a vector of prototypical `AbstractPoint`s,
@@ -79,6 +83,7 @@ maximizer(state::PsoState) = state.g
 Base.maximum(state::PsoState) = state.fg
 n_eval_f(state::PsoState) = state.n_eval
 n_eval_g(state::PsoState) = 0
+has_converged(state::PsoState, o::Pso) = false
 
 # Note: user-visible documentation for this method is attached to `Pso`.
 function optimizer_state(

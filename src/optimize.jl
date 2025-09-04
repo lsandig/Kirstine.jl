@@ -18,6 +18,7 @@ Wrapper for results of particle-based optimization.
 | trace_fx        | vector of current objective value in each iteration  |
 | trace_gx        | vector of current gradient in each iteration         |
 | trace_state     | vector of internal optimizer state in each iteration |
+| has_converged   | true if the algorithm has converged                  |
 | n\\_eval\\_f    | total number of objective evaluations                |
 | n\\_eval\\_g    | total number of gradient evaluations                 |
 | seconds_elapsed | total runtime                                        |
@@ -38,6 +39,7 @@ struct OptimizationResult{
     trace_fx::Vector{Float64}
     trace_gx::Vector{Vector{Float64}}
     trace_state::Vector{S}
+    has_converged::Bool
     n_eval_f::Int64
     n_eval_g::Int64
     seconds_elapsed::Float64
@@ -97,6 +99,7 @@ function optimize(
         push!(t_fx, maximum(state))
         is_first_order && push!(t_gx, deepcopy(gradient(state)))
         trace_state && push!(t_state, deepcopy(state))
+        has_converged(state, optimizer) && break
     end
     check_objective(state; only_warn = true, prefix = "final iteration: ")
     is_first_order && check_gradient(state; only_warn = true, prefix = "final iteration: ")
@@ -106,7 +109,8 @@ function optimize(
     fx = maximum(state)
     nf = n_eval_f(state)
     ng = n_eval_g(state)
-    return OptimizationResult(x, fx, t_x, t_fx, t_gx, t_state, nf, ng, twall)
+    hc = has_converged(state, optimizer)
+    return OptimizationResult(x, fx, t_x, t_fx, t_gx, t_state, hc, nf, ng, twall)
 end
 
 function prettydifftime(t)

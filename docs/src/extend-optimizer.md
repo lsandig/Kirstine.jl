@@ -174,6 +174,12 @@ For `O = Ica` and `S = IcaState` we must implement the following methods:
     It should use the given `prototypes` for initialization
     and take the `constraints` into account for randomization.
     Setting up the state is counted as the first iteration of the algorithm.
+  - `has_converged(state::IcaState, optimizer::Ica)`:
+    return true if the algorithm has converged already.
+    This is used for early stopping.
+    It is useful for algorithms that have convergence guarantees.
+    Since ICA has no such guarantees, the algorithm never converges
+    (in this strict sense) by definition.
   - `tick!(f, state::IcaState, optimizer::Ica, constraints::AbstractConstraints)`:
     update the optimizers state once.
     This function is called internally `iterations() - 1` times.
@@ -317,6 +323,8 @@ function Kirstine.optimizer_state(
     @debug "INIT" state.empire
     return state
 end
+
+Kirstine.has_converged(state::IcaState, optimizer::Ica) = false
 
 function Kirstine.tick!(
     f,

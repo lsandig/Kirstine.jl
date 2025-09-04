@@ -140,16 +140,27 @@ This prototype will be used as the starting value.
 """
 @kwdef struct FrankWolfe{T<:StepSizeStrategy} <: FirstOrderOptimizer
     iterations::Int64
+    fw_gap_tolerance::Float64
     stepsize::StepSizeStrategy
     pairwise::Bool
     @doc """
-        FrankWolfe(; iterations::Integer, stepsize::StepSizeStrategy, pairwise::Bool)
+        FrankWolfe(; iterations::Integer, fw_gap_tolerance::Real, stepsize::StepSizeStrategy, pairwise::Bool)
 
     Set up parameters for the Frank-Wolfe algorithm.
+    The argument `iterations` sets the maximum number of iterations to run.
+    The algorithm terminates early if the Frank-Wolfe gap of the current iteration is smaller than the given tolerance.
+    Set `fw_gap_tolerance=0` to prevent early stopping.
     """
-    function FrankWolfe(iterations::Integer, s::StepSizeStrategy, pairwise::Bool)
+    function FrankWolfe(
+        iterations::Integer,
+        fw_gap_tolerance::Real,
+        s::StepSizeStrategy,
+        pairwise::Bool,
+    )
         iterations <= 0 && throw(ArgumentError("number of iterations must be positive"))
-        return new{typeof(s)}(iterations, s, pairwise)
+        fw_gap_tolerance < 0 &&
+            throw(ArgumentError("fw_gap_tolerance must be non-negative"))
+        return new{typeof(s)}(iterations, fw_gap_tolerance, s, pairwise)
     end
 end
 
@@ -182,6 +193,7 @@ maximum(s::FrankWolfeState) = s.fx
 gradient(s::FrankWolfeState) = s.gx
 n_eval_f(s::FrankWolfeState) = s.n_eval_f
 n_eval_g(s::FrankWolfeState) = s.n_eval_g
+has_converged(s::FrankWolfeState, o::FrankWolfe) = s.frank_wolfe_gap < o.fw_gap_tolerance
 
 function stepsize_openloop(shift::Integer, t::Integer, gamma_max::Real)
     return min(shift / (t + shift), gamma_max)

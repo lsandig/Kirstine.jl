@@ -76,6 +76,7 @@ end
             r1 = Kirstine.optimize(f, gs1, Pnt[], constr; trace_state = true)
             r2 = Kirstine.optimize(f, gs2, Pnt[], constr)
 
+            @test r1.has_converged
             @test r1.maximizer.x == xstar
             @test r1.maximum == 0
             @test length(r1.trace_state) == 1
