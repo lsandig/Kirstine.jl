@@ -12,14 +12,17 @@ This is a variant of the basic idea in [^YBT13].
 
 [^YBT13]: Min Yang, Stefanie Biedermann, and Elina Tang (2013). On optimal designs for nonlinear models: a general and efficient algorithm. Journal of the American Statistical Association, 108(504), 1411–1420. [doi:10.1080/01621459.2013.806268](http://dx.doi.org/10.1080/01621459.2013.806268)
 """
-struct Exchange{Tod<:ZerothOrderOptimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,<:Any}} <:
-       ProblemSolvingStrategy
+@kwdef struct Exchange{
+    Tod<:ZerothOrderOptimizer,
+    Tow<:Optimizer,
+    Td<:AbstractDict{Symbol,<:Any},
+} <: ProblemSolvingStrategy
     optimizer_direction::Tod
     optimizer_weight::Tow
     steps::Int64
     gateaux_tolerance::Float64
     candidate::DesignMeasure
-    simplify_args::Td
+    simplify_args::Td = Dict{Symbol,Any}()
     @doc """
         Exchange(;
             optimizer_direction::ZerothOrderOptimizer,
@@ -53,13 +56,13 @@ struct Exchange{Tod<:ZerothOrderOptimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol
 
     The return value of [`solve`](@ref) for this strategy is an [`ExchangeResult`](@ref).
     """
-    function Exchange(;
+    function Exchange(
         optimizer_direction::Tod,
         optimizer_weight::Tow,
         steps::Integer,
         gateaux_tolerance::Real,
         candidate::DesignMeasure,
-        simplify_args::Td = Dict{Symbol,Any}(),
+        simplify_args::Td,
     ) where {Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,<:Any}}
         if steps < 1
             throw(ArgumentError("steps must be >= 1"))

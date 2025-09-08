@@ -54,7 +54,7 @@ solution(::Kirstine.DirectMaximizationResult)
 total_runtime(::Kirstine.DirectMaximizationResult)
 optimization_result
 Exchange
-Exchange()
+Exchange(::Kirstine.Optimizer, ::Kirstine.Optimizer, ::Integer, ::Real, ::Kirstine::DesignMeasure, ::AbstractDict{Symbol,<:Any})
 Kirstine.ExchangeResult
 solution(::Kirstine.ExchangeResult)
 total_runtime(::Kirstine.ExchangeResult)
