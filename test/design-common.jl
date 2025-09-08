@@ -320,6 +320,34 @@ include("example-compartment.jl")
         end
     end
 
+    @testset "gd_grid_helper" begin
+        let dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = DesignInterval(:dose => (0, 10)),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([EmaxPar(; e0 = 1, emax = 10, ec50 = 5)]),
+            ),
+            at = emax_solution(only(parameters(prior_knowledge(dp))), region(dp)),
+            ggh = Kirstine.gd_grid_helper
+
+            # with/without include 1d flag
+            mg1, pg1 = ggh(at, dp, (11,); include_1d_support = false)
+            mg2, pg2 = ggh(at, dp, (11,); include_1d_support = true)
+
+            @test length(pg1) == 11
+            @test length(pg2) == 14
+
+            @test_throws "here 1" ggh(at, dp, (11, 11); include_1d_support = false)
+            @test_throws "n_grid must be .>= 2" ggh(
+                at,
+                dp,
+                (1,);
+                include_1d_support = false,
+            )
+        end
+    end
+
     @testset "objective_gradient_weights!" begin
         let ogw! = Kirstine.objective_gradient_weights!,
             p = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),

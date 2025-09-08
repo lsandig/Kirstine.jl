@@ -104,25 +104,8 @@ struct DerivativePlot{N,Tdr<:DesignRegion{N}}
         adp::AbstractDesignProblem,
         n_grid::NTuple{N,Integer},
     ) where N
-        if any(n_grid .< 2)
-            throw(ArgumentError("n_grid must be .>= 2"))
-        end
+        mg, gd_grid = gd_grid_helper(d, adp, n_grid; include_1d_support = true)
         dr = region(adp)
-        # Calculate Gateaux derivative on a grid over the bounding box of dr.
-        # Evaluate it only on those points that are inside and fill the rest with NaN,
-        # which renders transparently in the heatmap.
-        mg = marginal_grids(dr, n_grid)
-        if N == 1
-            append!(mg[1], Iterators.flatten(points(d)))
-            sort!(mg[1])
-        end
-        product_dp_grid = collect.(Iterators.product(mg...))
-        inside_dr = isinside.(product_dp_grid, Ref(dr))
-        gd_grid = fill(NaN, size(product_dp_grid))
-        # note: indexing and array with another array produces a vector
-        directions = [one_point_design(dp) for dp in product_dp_grid[inside_dr]]
-        gd = gateauxderivative(d, directions, adp)
-        gd_grid[inside_dr] .= gd
         return new{N,typeof(dr)}(dr, mg, gd_grid)
     end
 end
@@ -139,6 +122,7 @@ end
 end
 
 @recipe function f(dplot::DerivativePlot{2,<:DesignRegion{2}})
+    # Note that NaN values in gd will renders transparently in the heatmap.
     gd_not_nan = filter(!isnan, dplot.gd)
     ex = isempty(gd_not_nan) ? (-1.0, 1.0) : extrema(gd_not_nan)
     xguide --> (dimnames(dplot.dr)[1])
@@ -201,10 +185,6 @@ function plot_gateauxderivative(
             msg = "only implemented for 1 or 2 dimensional regions, got $N"
             throw(ArgumentError(msg))
         end
-    end
-    if length(n_grid) != N
-        msg = "length(n_grid) must match dimension of design region, here $N"
-        throw(ArgumentError(msg))
     end
     n_grid_tuple = n_grid isa Integer ? (n_grid,) : n_grid
     plt_gd = RecipesBase.plot(DerivativePlot(d, adp, n_grid_tuple); kw...)

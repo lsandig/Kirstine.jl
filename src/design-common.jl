@@ -358,6 +358,38 @@ function gateauxderivative(
     return gd
 end
 
+function gd_grid_helper(
+    d::DesignMeasure,
+    adp::AbstractDesignProblem,
+    n_grid::NTuple{N,Integer};
+    include_1d_support::Bool,
+) where N
+    # Compute Gateaux derivative on a grid over the bounding box of dr.
+    # Evaluate it only on those points that are inside and fill the rest with NaN.
+    dim_dr = dimension(region(adp))
+    if N != dim_dr
+        msg = "length(n_grid) must match dimension of design region, here $dim_dr"
+        throw(ArgumentError(msg))
+    end
+    if any(n_grid .< 2)
+        throw(ArgumentError("n_grid must be .>= 2"))
+    end
+    dr = region(adp)
+    mg = marginal_grids(dr, n_grid)
+    if N == 1 && include_1d_support
+        append!(mg[1], Iterators.flatten(points(d)))
+        sort!(mg[1])
+    end
+    product_dp_grid = collect.(Iterators.product(mg...))
+    inside_dr = isinside.(product_dp_grid, Ref(dr))
+    gd_grid = fill(NaN, size(product_dp_grid))
+    # note: indexing and array with another array produces a vector
+    directions = [one_point_design(dp) for dp in product_dp_grid[inside_dr]]
+    gd = gateauxderivative(d, directions, adp)
+    gd_grid[inside_dr] .= gd
+    return mg, gd_grid
+end
+
 function check_oversimplified(
     raw_solution::DesignMeasure,
     simplified_solution::DesignMeasure,
