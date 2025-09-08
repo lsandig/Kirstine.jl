@@ -79,7 +79,7 @@ Kirstine.GridSearch()
 Kirstine.GridSpec
 Kirstine.ProductGrid
 Kirstine.FrankWolfe
-Kirstine.FrankWolfe(::Integer, ::Kirstine.StepSizeStrategy, ::Bool)
+Kirstine.FrankWolfe(::Integer, ::Real, ::Kirstine.StepSizeStrategy, ::Bool)
 Kirstine.StepSizeStrategy
 Kirstine.OpenLoop
 Kirstine.ConstNumIter

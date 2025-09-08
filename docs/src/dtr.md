@@ -615,6 +615,7 @@ the grid has 51 different values at ``Δt=0,0.04,…,2``.
 st4b = Exchange(
     candidate = s4a,
     steps = 1,
+    gateaux_tolerance = 0,
     optimizer_direction = Kirstine.GridSearch(gridspec = Kirstine.ProductGrid(2, 51)),
     optimizer_weight = Pso(swarmsize = 25, iterations = 50),
 )

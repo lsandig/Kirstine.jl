@@ -15,6 +15,14 @@ include("example-emax.jl")
                 optimizer_direction = st,
                 optimizer_weight = st,
                 steps = 0,
+                gateaux_tolerance = 1e-3,
+                candidate = one_point_design([42]),
+            )
+            @test_throws "gateaux_tolerance must be >= 0" Exchange(
+                optimizer_direction = st,
+                optimizer_weight = st,
+                steps = 1,
+                gateaux_tolerance = -1,
                 candidate = one_point_design([42]),
             )
         end
@@ -35,6 +43,7 @@ include("example-emax.jl")
                 optimizer_direction = od,
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 3,
+                gateaux_tolerance = 0,
                 simplify_args = Dict(:maxweight => 1e-3),
             ),
             _ = seed!(54321),
@@ -48,6 +57,7 @@ include("example-emax.jl")
                 optimizer_weight = ow,
                 optimizer_direction = od,
                 candidate = DesignMeasure([[0], [2.5], [10]], [0.6, 0.3, 0.1]),
+                gateaux_tolerance = 0,
                 steps = 1,
             ),
             _ = seed!(13579),
@@ -58,12 +68,14 @@ include("example-emax.jl")
                 optimizer_direction = od,
                 candidate = uniform_design([[0], [20]]),
                 steps = 1,
+                gateaux_tolerance = 0,
             ),
             str4 = Exchange(;
                 optimizer_weight = ow,
                 optimizer_direction = od,
                 candidate = uniform_design([[0, 1], [1, 0]]),
                 steps = 1,
+                gateaux_tolerance = 0,
             ),
             # initial design is singular
             str5 = Exchange(;
@@ -71,6 +83,7 @@ include("example-emax.jl")
                 optimizer_direction = od,
                 candidate = one_point_design([5]),
                 steps = 1,
+                gateaux_tolerance = 0,
             )
 
             # errors from check_compatible
@@ -121,6 +134,7 @@ include("example-emax.jl")
                 optimizer_direction = Kirstine.GridSearch(; gridspec = pg101),
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 5,
+                gateaux_tolerance = 0,
             ),
             # grid that does not contain [2.5]
             pg11 = Kirstine.ProductGrid(11),
@@ -129,13 +143,31 @@ include("example-emax.jl")
                 optimizer_direction = Kirstine.GridSearch(; gridspec = pg11),
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 5,
-            )
+                gateaux_tolerance = 0,
+            ),
             # grid does not contain [2.5], but a prototype point is off-grid, single step
             str3 = Exchange(;
                 optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
                 optimizer_direction = Kirstine.GridSearch(; gridspec = pg11),
                 candidate = uniform_design([[2.9], [0], [10]]),
                 steps = 1,
+                gateaux_tolerance = 0,
+            ),
+            # check that early stopping works
+            str4 = Exchange(;
+                optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
+                optimizer_direction = Kirstine.GridSearch(; gridspec = pg101),
+                candidate = uniform_design([[5], [0], [10]]),
+                steps = 10,
+                gateaux_tolerance = -3 * log(0.999),
+            ),
+            # but one step is performed even if the candidate is optimal
+            str5 = Exchange(;
+                optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
+                optimizer_direction = Kirstine.GridSearch(; gridspec = pg101),
+                candidate = exact_solution,
+                steps = 10,
+                gateaux_tolerance = -3 * log(0.999),
             )
 
             seed!(1234)
@@ -159,6 +191,17 @@ include("example-emax.jl")
             sol3 = solution(r3)
             @test length(first(optimization_results_direction(r3)).trace_state[1].fx) == 12
             @test [2.9] in points(sol3)
+
+            seed!(1234)
+            r4 = Kirstine.solve_with(dp, str4, false)
+            @test efficiency(solution(r4), exact_solution, dp) > 1 - 1e-8
+            @test length(optimization_results_weight(r4)) == 4
+            @test length(optimization_results_direction(r4)) == 4
+
+            seed!(1234)
+            r5 = Kirstine.solve_with(dp, str5, false)
+            @test length(optimization_results_weight(r5)) == 1
+            @test length(optimization_results_direction(r5)) == 1
         end
     end
 end

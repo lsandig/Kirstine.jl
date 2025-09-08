@@ -74,6 +74,10 @@ and in the number of non-fixed design points.
 (Strictly speaking this optimizer is not particle-based,
 but it uses the same internal infrastructure.)
 
+Since grid search finds the maximum over a finite set of points,
+the `has_converged` flag of a corresponding [`OptimizationResult`](@ref)
+is always `true` by definition.
+
 # Initialization
 
 Similar to optimization with [`Pso`](@ref),
@@ -129,6 +133,8 @@ maximum(s::GridSearchState) = maximum(s.fx)
 n_eval_f(s::GridSearchState) = length(s.fx)
 
 n_eval_g(s::GridSearchState) = 0
+
+has_converged(s::GridSearchState, o::GridSearch) = true
 
 tick!(f, s::GridSearchState, o::GridSearch, c::AbstractConstraints) = s
 

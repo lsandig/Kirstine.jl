@@ -130,6 +130,7 @@ include("example-pnt.jl")
             r2 = Kirstine.optimize(f, pso, [prototype], constr2; trace_state = true),
             mean_speed = map(st -> mean(vi -> norm(vi.v), st.v), r2.trace_state)
 
+            @test !r1.has_converged
             @test r1.maximizer.x ≈ xstar rtol = 1e-4
             @test r1.maximum ≈ 0.0 atol = 1e-4
             @test issorted(r1.trace_fx)
