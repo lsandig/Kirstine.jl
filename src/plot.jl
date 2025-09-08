@@ -21,7 +21,7 @@ end
     nsteps = length(rs)
     steps = collect(1:nsteps)
     seriestype --> (nsteps == 1 ? :scatter : :line)
-    xticks --> (nsteps == 1 ? [1] : :auto)
+    xticks --> steps
     xlims --> (nsteps == 1 ? (0.5, 1.5) : (1, nsteps))
     fx = [r.maximum for r in rs]
     xguide --> "step"
@@ -41,6 +41,7 @@ end
     end
     @series begin
         subplot := 2
+        widen --> true
         optimization_results_weight(r)
     end
 end
