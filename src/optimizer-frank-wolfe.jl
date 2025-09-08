@@ -171,16 +171,16 @@ iterations(o::FrankWolfe) = o.iterations
 # we keep track of iterations starting at zero in an extra field of the state.
 
 mutable struct FrankWolfeState{T,U,V} <: OptimizerState{T,U}
-    x::T
-    v::T
-    direction::U
+    x::T                     # current position
+    v::T                     # Frank-Wolfe vertex
+    direction::U             # difference vector x - v
     stepsize::Float64
-    fx::Float64
-    gx::Vector{<:Float64}
-    frank_wolfe_gap::Float64
-    alpha::Vector{Float64}
-    active_set::Vector{T}
-    work::V
+    fx::Float64              # objective at x
+    gx::Vector{<:Float64}    # gradient at x
+    frank_wolfe_gap::Float64 # inner product of gradient and direction
+    alpha::Vector{Float64}   # maximum feasible stepsize for pairwise variant
+    active_set::Vector{T}    # active set for pairwise variant
+    work::V                  # workspace for the stepsize strategy
     iteration_from_zero::Int64
     active_points_added::Int64
     active_points_removed::Int64
@@ -234,7 +234,8 @@ function fw_estimate_initial_smoothness!(
     gamma_max::Real,
 )
     # in-place initial estimate for Lipschitz constant of the gradient,
-    # norm(g!(x) - g!(x + ε*direction)) / (ε * norm(direction))
+    # norm(g!(x) - g!(x + ε*direction)) / (ε * norm(direction));
+    # the constant 1e-3 is chosen to be the same as in the linesearch of the FrankWolfe.jl package
     epsilon = min(1e-3, gamma_max)
     ap_copy!(w.x_tmp, x)
     ap_copy!(w.d_tmp, direction)
