@@ -13,7 +13,10 @@ function Kirstine.fw_linear_maximization_oracle!(
     c::BoxConstraints,
 )
     box_corners = Iterators.product(Iterators.zip(c.lb.x, c.ub.x)...)
+    # Workaround for https://github.com/domluna/JuliaFormatter.jl/issues/926
+    #! format: off
     v.x .= argmax(corner -> mapreduce(*, +, gx, corner), box_corners)
+    #! format: on
     return v
 end
 
