@@ -149,9 +149,9 @@ function total_runtime_weight(er::ExchangeResult)
 end
 
 function Base.show(io::IO, ::MIME"text/plain", er::ExchangeResult)
-    println(io, "DirectMaximizationResult")
+    println(io, "ExchangeResult")
     println(io, "* final objective: ", er.orw[end].maximum)
-    println(io, "* final max Gateaux derivative: ", er.ord[end].maximum)
+    println(io, "* penultimate max Gateaux derivative: ", er.ord[end].maximum)
     println(io, "* runtime total: ", prettydifftime(total_runtime(er)))
     println(io, "      direction: ", prettydifftime(total_runtime_direction(er)))
     println(io, "         weight: ", prettydifftime(total_runtime_weight(er)))
