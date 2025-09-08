@@ -133,7 +133,7 @@ include("example-dtr.jl")
                 region = DesignInterval(:dose => (0, 1)),
                 prior_knowledge = PriorSample([EmaxPar(; e0 = 0, emax = 1, ec50 = 0.2)]),
                 model = EmaxModel(1),
-                covariate_parameterization = JustCopy(:dose),
+                covariate_parameterization = CopyTo(:dose),
             ),
             dp1 = dp_helper(DCriterion()),
             dp2 = dp_helper(ACriterion()),

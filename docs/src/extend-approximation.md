@@ -117,7 +117,7 @@ end
 dp_i = DesignProblem(
     region = DesignInterval(:time => [0, 48]),
     criterion = DCriterion(),
-    covariate_parameterization = JustCopy(:time),
+    covariate_parameterization = CopyTo(:time),
     model = TPCModel(sigma = 1),
     prior_knowledge = PriorSample([TPCParameter(a = 4.298, e = 0.05884, s = 21.80)]),
     transformation = Identity(),

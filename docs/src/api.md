@@ -171,8 +171,8 @@ In problems where the design variables coincide with the model covariates,
 the following `Kirstine.CovariateParameterization` can be used:
 
 ```@docs
-JustCopy
-JustCopy()
+CopyTo
+CopyTo()
 ```
 
 ## Prior Knowledge

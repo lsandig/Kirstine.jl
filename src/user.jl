@@ -100,11 +100,11 @@ function dimension end
 ## generic identity covariate parameterization ##
 
 """
-    JustCopy <: Kirstine.CovariateParameterization
+    CopyTo <: Kirstine.CovariateParameterization
 
 A convenience type to use when design variables and model covariates are identical.
 """
-struct JustCopy{N} <: CovariateParameterization
+struct CopyTo{N} <: CovariateParameterization
     # Note that we have to give the field names of the _covariate_ explicitly
     # since map_to_covariate!() does not have access to the design region,
     # hence also not to the dimnames() of the design region.
@@ -117,17 +117,17 @@ struct JustCopy{N} <: CovariateParameterization
     #     b::Float64
     # end
     # dr = DesignInterval(:b => (1, 2), :a => (3, 4))
-    # JustCopy(:b, :a)
+    # CopyTo(:b, :a)
     covariate_field_names::NTuple{N,Symbol}
 end
 
-function Base.show(io::IO, cp::JustCopy)
+function Base.show(io::IO, cp::CopyTo)
     args = map(fn -> ':' * string(fn), cp.covariate_field_names)
-    print(io, "JustCopy(" * join(args, ", "), ")")
+    print(io, "CopyTo(" * join(args, ", "), ")")
 end
 
 """
-    JustCopy(names::Symbol...)
+    CopyTo(names::Symbol...)
 
 Construct a [`CovariateParameterization`](@ref) that copies the elements of a design point
 to the fields of a [`Covariate`](@ref) with the given `names`.
@@ -136,7 +136,7 @@ This parameterization can be used with any [`Covariate`](@ref)
 that has only `Float64` fields.
 Note that the order of the `names`
 should match the the order of `dimnames(region(prob))` for the [`DesignProblem`](@ref)
-in which `JustCopy` is used.
+in which `CopyTo` is used.
 No new method for [`map_to_covariate!`](@ref) needs to be implemented for user types
 since the package supplies a generic one that works with any [`Model`](@ref)
 and any [`Covariate`](@ref).
@@ -157,8 +157,8 @@ julia> @simple_parameter Foo θ
 we can define
 
 ```jldoctest justcopy
-julia> cp = JustCopy(:a, :b)
-JustCopy(:a, :b)
+julia> cp = CopyTo(:a, :b)
+CopyTo(:a, :b)
 ```
 
 and then solve
@@ -194,13 +194,13 @@ would be slightly more efficient
 since it knows the types and field names at compile time.
 
 Also note that since the design points are assigned in the order of the names given,
-`cp = JustCopy(:b, :a)` would be equivalent to setting `c.b = dp[1]` and `c.a = dp[2]`.
+`cp = CopyTo(:b, :a)` would be equivalent to setting `c.b = dp[1]` and `c.a = dp[2]`.
 """
-function JustCopy(names::Symbol...)
-    return JustCopy(names)
+function CopyTo(names::Symbol...)
+    return CopyTo(names)
 end
 
-function map_to_covariate!(c::Covariate, dp::AbstractVector{<:Real}, m::Model, cp::JustCopy)
+function map_to_covariate!(c::Covariate, dp::AbstractVector{<:Real}, m::Model, cp::CopyTo)
     dimc = length(cp.covariate_field_names)
     cnames = fieldnames(typeof(c))
     msg = "names of $(cp) don't match field names of covariate $(cnames)"

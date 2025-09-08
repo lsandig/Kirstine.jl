@@ -48,21 +48,21 @@ end
         @test path == [:Baz, :Quux]
     end
 
-    @testset "==(JustCopy)" begin
-        let jc1 = JustCopy(:a, :b),
-            jc2 = JustCopy(:a, :b),
-            jc3 = JustCopy(:a, :c),
-            jc4 = JustCopy(:b, :a)
+    @testset "==(CopyTo)" begin
+        let ct1 = CopyTo(:a, :b),
+            ct2 = CopyTo(:a, :b),
+            ct3 = CopyTo(:a, :c),
+            ct4 = CopyTo(:b, :a)
 
-            @test jc1 == jc2
-            @test jc1 != jc3
-            @test jc1 != jc4
+            @test ct1 == ct2
+            @test ct1 != ct3
+            @test ct1 != ct4
         end
     end
 
-    @testset "show(::JustCopy)" begin
+    @testset "show(::CopyTo)" begin
         # check that pretty representation is parseable
-        let x = JustCopy(:a, :b, :c),
+        let x = CopyTo(:a, :b, :c),
             io = IOBuffer(),
             ioc = IOContext(io, :limit => false),
             _ = show(ioc, "text/plain", x),
@@ -73,16 +73,16 @@ end
         end
     end
 
-    @testset "map_to_covariate!(JustCopy)" begin
+    @testset "map_to_covariate!(CopyTo)" begin
         let mtc! = Kirstine.map_to_covariate!,
             c1 = TestCovar2(0, 0),
             c2 = TestCovarNonFloat(0, [0.1, 0.2, 0.3]),
             dp = [42.0, 3.14],
             m = TestMod(), # any model would do
-            jc1 = JustCopy(:a, :b),
-            jc2 = JustCopy(:a, :b, :c),
-            jc3 = JustCopy(:a, :x),
-            ret = mtc!(c1, dp, m, jc1)
+            ct1 = CopyTo(:a, :b),
+            ct2 = CopyTo(:a, :b, :c),
+            ct3 = CopyTo(:a, :x),
+            ret = mtc!(c1, dp, m, ct1)
 
             # a reference is returned
             @test ret === c1
@@ -92,12 +92,12 @@ end
             # design point is not modified
             @test dp == [42.0, 3.14]
             # covariate parameterization is not modified
-            @test jc1.covariate_field_names == (:a, :b)
+            @test ct1.covariate_field_names == (:a, :b)
 
-            @test_throws "dimension of design point" mtc!(c1, [1.0], m, jc1)
-            @test_throws "don't match field names of covariate" mtc!(c1, dp, m, jc2)
-            @test_throws "don't match field names of covariate" mtc!(c1, dp, m, jc3)
-            @test_throws TypeError mtc!(c2, dp, m, jc1)
+            @test_throws "dimension of design point" mtc!(c1, [1.0], m, ct1)
+            @test_throws "don't match field names of covariate" mtc!(c1, dp, m, ct2)
+            @test_throws "don't match field names of covariate" mtc!(c1, dp, m, ct3)
+            @test_throws TypeError mtc!(c2, dp, m, ct1)
         end
     end
 end
