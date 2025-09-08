@@ -250,6 +250,14 @@ function fw_estimate_initial_smoothness!(
     return w
 end
 
+struct AdaptiveStepsizeException
+    original_exception::Exception
+    x::AbstractPoint
+    initial_smooothness_estimate::Float64
+    M::Float64
+    gamma::Float64
+end
+
 # This is modeled after the adaptive line search in the FrankWolfe.jl package.
 #
 # It assumes that the following fields of the state have been updated for the current x
@@ -298,12 +306,15 @@ function stepsize!(
         try
             g!(w.gx_tmp, w.x_tmp)
         catch e
-            if e isa SingularException
-                msg = """singular intermediate design in adaptive step-size computation,
-               it might help to increase the initial smoothness estimate"""
-                @error msg o.stepsize.initial_smoothness_estimate M gamma w.x_tmp
-            end
-            rethrow(e)
+            throw(
+                AdaptiveStepsizeException(
+                    e,
+                    w.x_tmp,
+                    o.stepsize.initial_smoothness_estimate,
+                    M,
+                    gamma,
+                ),
+            )
         end
         state.n_eval_g += 1
         if fw_evaluate_linearization(w.gx_tmp, state.direction, c) >= 0

@@ -204,5 +204,36 @@ include("example-emax.jl")
             @test length(optimization_results_direction(r5)) == 1
         end
     end
+
+    @testset "solve_with(::GridSearch, ::FrankWolfe)" begin
+        let guess = EmaxPar(; e0 = 1, emax = 10, ec50 = 5),
+            dp = DesignProblem(;
+                criterion = DCriterion(),
+                model = EmaxModel(1),
+                covariate_parameterization = CopyDose(),
+                prior_knowledge = PriorSample([guess]),
+                region = DesignInterval(:dose => (0, 10)),
+            ),
+            pg101 = Kirstine.ProductGrid(101),
+            str = Exchange(;
+                optimizer_weight = Kirstine.FrankWolfe(
+                    iterations = 100,
+                    stepsize = Kirstine.Adaptive(; initial_smoothness_estimate = 1),
+                    pairwise = true,
+                    fw_gap_tolerance = 1e-4,
+                ),
+                optimizer_direction = Kirstine.GridSearch(; gridspec = pg101),
+                candidate = uniform_design([[5], [0], [10]]),
+                steps = 5,
+                gateaux_tolerance = 0,
+            )
+
+            @test_logs(
+                (:warn, "current design is singular"),
+                (:error, r"singular exception in adaptive step-size computation"),
+                @test_throws Kirstine.AdaptiveStepsizeException solve(dp, str)
+            )
+        end
+    end
 end
 end

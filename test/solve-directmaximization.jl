@@ -157,12 +157,6 @@ include("example-emax.jl")
             L_est = optimization_result(r3).trace_state[1].work.smoothness_estimate
             @test L_est ≈ 262.573934
 
-            @test_logs(
-                (:error, r"increase the initial smoothness"),
-                match_mode = :any,
-                (@test_throws SingularException solve(dp, st4))
-            )
-
             @test_throws "not finite: -Inf" solve(dp, st5)
         end
     end

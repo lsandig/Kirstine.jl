@@ -216,7 +216,18 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
         e isa SingularException ? throw(ae) : rethrow(e)
     end
     ord_trace = [ord]
-    orw_trace = [step_weight(candidate, ord.maximizer)]
+    orw = try
+        step_weight(candidate, ord.maximizer)
+    catch e
+        if e isa AdaptiveStepsizeException && e.original_exception isa SingularException
+            msg = """singular exception in adaptive step-size computation,
+                     it might help to increase the initial smoothness estimate.
+                     Current values of the relevant variables are:"""
+            @error msg e.initial_smooothness_estimate e.M e.gamma
+        end
+        rethrow(e)
+    end
+    orw_trace = [orw]
     for i in 2:steps
         candidate = simplify(orw_trace[i - 1].maximizer, adp; simplify_args...)
         ord = try
