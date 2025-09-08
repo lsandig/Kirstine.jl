@@ -111,12 +111,15 @@ struct DerivativePlot{N,Tdr<:DesignRegion{N}}
 end
 
 @recipe function f(dplot::DerivativePlot{1,<:DesignRegion{1}})
+    gd_not_nan = filter(!isnan, dplot.gd)
+    gd_max = isempty(gd_not_nan) ? NaN : maximum(gd_not_nan)
     seriestype := :line
     markershape := :none
     label --> ""
     xguide --> dimnames(dplot.dr)[1]
     yguide --> "Gateaux derivative"
     linecolor --> :black
+    title --> "maximum: $(round(gd_max; sigdigits=3))"
 
     dplot.marginal_grids[1], dplot.gd
 end
@@ -124,6 +127,7 @@ end
 @recipe function f(dplot::DerivativePlot{2,<:DesignRegion{2}})
     # Note that NaN values in gd will renders transparently in the heatmap.
     gd_not_nan = filter(!isnan, dplot.gd)
+    gd_max = isempty(gd_not_nan) ? NaN : maximum(gd_not_nan)
     ex = isempty(gd_not_nan) ? (-1.0, 1.0) : extrema(gd_not_nan)
     xguide --> (dimnames(dplot.dr)[1])
     yguide --> (dimnames(dplot.dr)[2])
@@ -133,6 +137,8 @@ end
     clims --> ((-1, 1) .* max_abs_gd)
     seriestype := :heatmap
     label := ""
+    colorbar_title --> "Gateaux derivative"
+    title --> "maximum: $(round(gd_max; sigdigits=3))"
 
     dplot.marginal_grids[1], dplot.marginal_grids[2], permutedims(dplot.gd)
 end
