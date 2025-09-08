@@ -390,6 +390,39 @@ function gd_grid_helper(
     return mg, gd_grid
 end
 
+"""
+    Kirstine.max_argmax_gateauxderivative(
+        at::DesignMeasure,
+        adp::AbstractDesignProblem;
+        n_grid::Union{Integer,NTuple{N,Integer}}
+    )
+
+Compute the maximal Gateaux derivative over a grid
+of one-point directions on the design region.
+
+The dimension of the [`DesignRegion`](@ref) of `adp` must equal `N`.
+The number of points in each dimension of the grid is given by the elements of `n_grid`.
+For convenience in case `N==1`, a single Integer can be given instead of a 1-tuple.
+If the design region is not an interval,
+the grid is constructed on the region's bounding box
+and grid points outside the region will be ignored.
+
+Returns the maximum of the Gateaux derivative
+and the one-point design of the direction where the maximum is attained.
+"""
+function max_argmax_gateauxderivative(
+    at::DesignMeasure,
+    adp::AbstractDesignProblem;
+    n_grid::Union{Integer,NTuple{N,Integer}},
+) where N
+    # Note: `n_grid` here has the same semantics as in plot_gateauxderivative()
+    n_grid_tuple = n_grid isa Integer ? (n_grid,) : n_grid
+    mg, gd_grid = gd_grid_helper(at, adp, n_grid_tuple; include_1d_support = false)
+    max_gd, ci = findmax(gd_grid)
+    argmax_gd = one_point_design([mg[i][j] for (i, j) in enumerate(Tuple(ci))])
+    return max_gd, argmax_gd
+end
+
 function check_oversimplified(
     raw_solution::DesignMeasure,
     simplified_solution::DesignMeasure,

@@ -26,5 +26,6 @@ public AbstractDesignProblem,
     informationmatrix,
     jacobianmatrix!,
     map_to_covariate!,
+    max_argmax_gateauxderivative,
     unit_length,
     update_model_vcov!

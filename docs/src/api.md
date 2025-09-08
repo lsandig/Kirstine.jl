@@ -94,6 +94,7 @@ DCriterion
 ACriterion
 objective
 gateauxderivative
+Kirstine.max_argmax_gateauxderivative
 efficiency
 shannon_information
 ```
