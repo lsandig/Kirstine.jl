@@ -398,6 +398,14 @@ Apart from that, the two design problems are allowed to be completely different.
 The function with three arguments is a shorthand for when `dp1` and `dp2` are identical.
 
 See also the [mathematical background](math.md#Efficiency).
+
+!!! note
+
+    Before version 0.8.0 of Kirstine.jl, the criteria of the design problems were ignored
+    and D-efficiency was computed unconditionally.
+    The old behavior can be mimicked by explicitly calling
+
+        efficiency(d1, d2, DesignProblem(dp1; criterion = DCriterion()), DesignProblem(dp2; criterion = DCriterion()))
 """
 function efficiency(d1::DesignMeasure, d2::DesignMeasure, dp::DesignProblem)
     return efficiency(d1, d2, dp, dp)
