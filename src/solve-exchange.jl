@@ -26,7 +26,7 @@ This is a variant of the basic idea in [^YBT13].
     simplify_args::Td = Dict{Symbol,Any}()
     @doc """
         Exchange(;
-            optimizer_direction::ZerothOrderOptimizer,
+            optimizer_direction::Kirstine.ZerothOrderOptimizer,
             optimizer_weight::Kirstine.Optimizer,
             steps::Integer,
             gateaux_tolerance::Real,
@@ -74,9 +74,7 @@ This is a variant of the basic idea in [^YBT13].
         candidate::DesignMeasure,
         simplify_args::Td,
     ) where {Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,<:Any}}
-        if steps < 1
-            throw(ArgumentError("steps must be >= 1"))
-        end
+        steps < 1 && throw(ArgumentError("steps must be >= 1"))
         if !(isnan(initial_weight) || 0 <= initial_weight < 1)
             throw(ArgumentError("initial_weight must be in [0, 1) or NaN"))
         end
@@ -116,27 +114,21 @@ end
 
 Return the best candidate found.
 """
-function solution(er::ExchangeResult)
-    return er.orw[end].maximizer
-end
+solution(er::ExchangeResult) = er.orw[end].maximizer
 
 """
     optimization_results_direction(er::Kirstine.ExchangeResult)
 
 Get the vector of [`OptimizationResult`](@ref)s from the direction steps.
 """
-function optimization_results_direction(er::ExchangeResult)
-    return er.ord
-end
+optimization_results_direction(er::ExchangeResult) = er.ord
 
 """
     optimization_results_weight(er::Kirstine.ExchangeResult)
 
 Get the full [`OptimizationResult`](@ref)s from the re-weighting steps.
 """
-function optimization_results_weight(er::ExchangeResult)
-    return er.orw
-end
+optimization_results_weight(er::ExchangeResult) = return er.orw
 
 """
     total_runtime(er::Kirstine.ExchangeResult)
@@ -181,24 +173,16 @@ function Base.show(io::IO, ::MIME"text/plain", er::ExchangeResult)
 end
 
 function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state::Bool)
-    (;
-        optimizer_direction,
-        optimizer_weight,
-        steps,
-        gateaux_tolerance,
-        initial_weight,
-        candidate,
-        simplify_args,
-    ) = strategy
-    check_compatible(candidate, region(adp))
-    point_for_dim = first(points(candidate))
+    check_compatible(strategy.candidate, region(adp))
+    point_for_dim = first(points(strategy.candidate))
     workspace_direction = allocate_workspace(one_point_design(point_for_dim), adp)
     function step_direction(candidate::DesignMeasure)
         opds = map(one_point_design, points(candidate))
         dc_direction = derivative_constants(candidate, adp)
         fix_weights = DesignConstraints(region(adp), [true], [false])
         gd = d -> gateauxderivative!(workspace_direction, d, adp, dc_direction)
-        or = optimize(gd, optimizer_direction, opds, fix_weights; trace_state = trace_state)
+        optimizer = strategy.optimizer_direction
+        or = optimize(gd, optimizer, opds, fix_weights; trace_state = trace_state)
         return or
     end
     function step_weight(candidate::DesignMeasure, direction::DesignMeasure)
@@ -208,17 +192,17 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
         # and rely on simplify_merge() with a maxdist of 0 to merge the later occurrence
         # into the earlier one.
         if !(only(points(direction)) in points(candidate))
-            if isnan(initial_weight)
+            if isnan(strategy.initial_weight)
                 mixture_weight = 1 / (1 + numpoints(candidate))
             else
-                mixture_weight = initial_weight
+                mixture_weight = strategy.initial_weight
             end
             candidate = mixture(mixture_weight, direction, candidate)
         else
             candidate = simplify_merge(mixture(0, direction, candidate), region(adp), 0)
         end
         dms = DirectMaximization(;
-            optimizer = optimizer_weight,
+            optimizer = strategy.optimizer_weight,
             prototype = candidate,
             fixedpoints = 1:numpoints(candidate),
         )
@@ -227,7 +211,7 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
         _, dmr = solve(adp, dms; trace_state = trace_state)
         return optimization_result(dmr)
     end
-    candidate = simplify(candidate, adp; simplify_args...)
+    candidate = simplify(strategy.candidate, adp; strategy.simplify_args...)
     # computing the derivative constants can fail for a singular design
     ord = try
         step_direction(candidate)
@@ -248,15 +232,15 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
         rethrow(e)
     end
     orw_trace = [orw]
-    for i in 2:steps
-        candidate = simplify(orw_trace[i - 1].maximizer, adp; simplify_args...)
+    for i in 2:strategy.steps
+        candidate = simplify(orw_trace[i - 1].maximizer, adp; strategy.simplify_args...)
         ord = try
             step_direction(candidate)
         catch e
             ae = ArgumentError("step $i: candidate design is singular")
             e isa SingularException ? throw(ae) : rethrow(e)
         end
-        ord.maximum < gateaux_tolerance && break
+        ord.maximum < strategy.gateaux_tolerance && break
         push!(ord_trace, ord)
         push!(orw_trace, step_weight(candidate, ord.maximizer))
     end
