@@ -63,18 +63,14 @@ end
 
 Return the best candidate found.
 """
-function solution(dmr::DirectMaximizationResult)
-    return dmr.or.maximizer
-end
+solution(dmr::DirectMaximizationResult) = dmr.or.maximizer
 
 """
     optimization_result(dmr::Kirstine.DirectMaximizationResult)
 
 Get the full [`OptimizationResult`](@ref).
 """
-function optimization_result(dmr::DirectMaximizationResult)
-    return dmr.or
-end
+optimization_result(dmr::DirectMaximizationResult) = dmr.or
 
 """
     total_runtime(dmr::Kirstine.DirectMaximizationResult)
@@ -98,11 +94,11 @@ function solve_with(
     trace_state::Bool,
 )
     (; optimizer, prototype, fixedpoints, fixedweights) = strategy
-    constraints = DesignConstraints(prototype, region(adp), fixedweights, fixedpoints)
+    cstr = DesignConstraints(prototype, region(adp), fixedweights, fixedpoints)
     oc = objective_constants(adp)
     w = allocate_workspace(prototype, adp)
     f = d -> objective!(w, d, adp, oc)
-    or = optimize(f, optimizer, [prototype], constraints; trace_state = trace_state)
+    or = optimize(f, optimizer, [prototype], cstr; trace_state = trace_state)
     return DirectMaximizationResult(or)
 end
 
@@ -113,8 +109,8 @@ function solve_with(
 )
     (; optimizer, prototype, fixedpoints, fixedweights) = strategy
     K = numpoints(prototype)
-    constraints = DesignConstraints(prototype, region(adp), fixedweights, fixedpoints)
-    !all(constraints.fixp) && error("only implemented for fixed points")
+    cstr = DesignConstraints(prototype, region(adp), fixedweights, fixedpoints)
+    !all(cstr.fixp) && error("only implemented for fixed points")
     oc = objective_constants(adp)
     dc = derivative_constants(prototype, adp)
     opd = one_point_design(first(points(prototype)))
@@ -122,6 +118,6 @@ function solve_with(
     wg = allocate_workspace(opd, adp)
     f = d -> objective!(wf, d, adp, oc)
     g! = (g, d) -> objective_gradient_weights!(g, opd, wg, wf, d, adp, dc, oc)
-    or = optimize((f, g!), optimizer, [prototype], constraints; trace_state = trace_state)
+    or = optimize((f, g!), optimizer, [prototype], cstr; trace_state = trace_state)
     return DirectMaximizationResult(or)
 end
