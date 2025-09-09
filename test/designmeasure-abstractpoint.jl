@@ -510,7 +510,7 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
         end
     end
 
-    @testset "move_add_v!" begin
+    @testset "move_add_tv!" begin
         let dr = DesignInterval(:a => (1, 3)),
             d = DesignMeasure([[1.5], [2], [2.5]], [3 / 8, 4 / 8, 1 / 8]),
             # Note:
@@ -521,22 +521,22 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
             #
             # stay inside
             v1 = Kirstine.SignedMeasure([0.25 0.25 0.25], fill(1 / 32, 3)),
-            r1 = Kirstine.move_add_v!(deepcopy(d), 1.0, v1, dr, fill(false, 3)),
+            r1 = Kirstine.move_add_tv!(deepcopy(d), 1.0, v1, dr, fill(false, 3)),
             # move out in design point right
             v2 = Kirstine.SignedMeasure([4 0.25 0.25], fill(1 / 32, 3)),
-            r2 = Kirstine.move_add_v!(deepcopy(d), 1.0, v2, dr, fill(false, 3)),
+            r2 = Kirstine.move_add_tv!(deepcopy(d), 1.0, v2, dr, fill(false, 3)),
             # move out in design point left
             v3 = Kirstine.SignedMeasure([-2 0.25 0.25], fill(1 / 32, 3)),
-            r3 = Kirstine.move_add_v!(deepcopy(d), 1.0, v3, dr, fill(false, 3)),
+            r3 = Kirstine.move_add_tv!(deepcopy(d), 1.0, v3, dr, fill(false, 3)),
             # move out in weight right, also set last weight to 0
             v4 = Kirstine.SignedMeasure([0.25 0.25 0.25], [1, -0.5, 0]),
-            r4 = Kirstine.move_add_v!(deepcopy(d), 1.0, v4, dr, fill(false, 3)),
+            r4 = Kirstine.move_add_tv!(deepcopy(d), 1.0, v4, dr, fill(false, 3)),
             # move out in weight left
             v5 = Kirstine.SignedMeasure([0.25 0.25 0.25], [-1, 1 / 8, 2 / 8]),
-            r5 = Kirstine.move_add_v!(deepcopy(d), 1.0, v5, dr, fill(false, 3)),
+            r5 = Kirstine.move_add_tv!(deepcopy(d), 1.0, v5, dr, fill(false, 3)),
             # special case: fixed last weight
             v6 = Kirstine.SignedMeasure([0.25 0.25 0.25], [1 / 4, -1 / 4, 0]),
-            r6 = Kirstine.move_add_v!(deepcopy(d), 1.0, v6, dr, [false, false, true])
+            r6 = Kirstine.move_add_tv!(deepcopy(d), 1.0, v6, dr, [false, false, true])
 
             @test r1 == DesignMeasure([[1.75], [2.25], [2.75]], [13 / 32, 17 / 32, 1 / 16])
             @test r2 == DesignMeasure([[3.00], [2.25], [2.75]], [13 / 32, 17 / 32, 1 / 16])

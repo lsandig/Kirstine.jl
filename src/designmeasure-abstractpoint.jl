@@ -339,7 +339,7 @@ function ap_add!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
         t = 0.0
     end
     # Then, set p to p + tv
-    move_add_v!(p, t, v, c.dr, c.fixw)
+    move_add_tv!(p, t, v, c.dr, c.fixw)
     # Stop the particle if the boundary was hit.
     if t != 1.0
         ap_mul!(v, 0)
@@ -415,7 +415,7 @@ function move_how_far(p::DesignMeasure, v::SignedMeasure, dr::DesignRegion{N}) w
     return t
 end
 
-function move_add_v!(
+function move_add_tv!(
     p::DesignMeasure,
     t,
     v::SignedMeasure,
