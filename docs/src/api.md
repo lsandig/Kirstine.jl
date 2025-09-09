@@ -117,7 +117,14 @@ lowerbound
 Regression models are implemented
 by first subtyping `Kirstine.Model`, `Kirstine.Covariate`, `Kirstine.CovariateParameterization`, and `Kirstine.Parameter`,
 and then defining several helper methods on them.
-See the [tutorial](tutorial.md) for a hands-on example.
+
+For models with a scalar-valued unit of observation
+and for parameters that are a collection of scalar values,
+this can easily be achieved with the [`@simple_model`](@ref) and [`@simple_parameter`](@ref) macros.
+See the [tutorial](tutorial.md) for a hands-on example
+and the section on [helpers](#Helpers) below.
+For an example of a manually implemented model see the [dose-time-response](dtr.md) vignette,
+and for both a manual model and a manual parameter the vignette on [automatic differentiation](autodiff.md).
 
 ### Supertypes
 
