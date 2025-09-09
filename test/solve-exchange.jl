@@ -16,6 +16,7 @@ include("example-emax.jl")
                 optimizer_weight = st,
                 steps = 0,
                 gateaux_tolerance = 1e-3,
+                initial_weight = NaN,
                 candidate = one_point_design([42]),
             )
             @test_throws "gateaux_tolerance must be >= 0" Exchange(
@@ -23,6 +24,15 @@ include("example-emax.jl")
                 optimizer_weight = st,
                 steps = 1,
                 gateaux_tolerance = -1,
+                initial_weight = NaN,
+                candidate = one_point_design([42]),
+            )
+            @test_throws "initial_weight must be in [0, 1) or NaN" Exchange(
+                optimizer_direction = st,
+                optimizer_weight = st,
+                steps = 1,
+                gateaux_tolerance = 1e-3,
+                initial_weight = 1,
                 candidate = one_point_design([42]),
             )
         end
@@ -44,6 +54,7 @@ include("example-emax.jl")
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 3,
                 gateaux_tolerance = 0,
+                initial_weight = NaN,
                 simplify_args = Dict(:maxweight => 1e-3),
             ),
             _ = seed!(54321),
@@ -58,6 +69,7 @@ include("example-emax.jl")
                 optimizer_direction = od,
                 candidate = DesignMeasure([[0], [2.5], [10]], [0.6, 0.3, 0.1]),
                 gateaux_tolerance = 0,
+                initial_weight = NaN,
                 steps = 1,
             ),
             _ = seed!(13579),
@@ -69,6 +81,7 @@ include("example-emax.jl")
                 candidate = uniform_design([[0], [20]]),
                 steps = 1,
                 gateaux_tolerance = 0,
+                initial_weight = NaN,
             ),
             str4 = Exchange(;
                 optimizer_weight = ow,
@@ -76,6 +89,7 @@ include("example-emax.jl")
                 candidate = uniform_design([[0, 1], [1, 0]]),
                 steps = 1,
                 gateaux_tolerance = 0,
+                initial_weight = NaN,
             ),
             # initial design is singular
             str5 = Exchange(;
@@ -84,6 +98,7 @@ include("example-emax.jl")
                 candidate = one_point_design([5]),
                 steps = 1,
                 gateaux_tolerance = 0,
+                initial_weight = NaN,
             )
 
             # errors from check_compatible
@@ -135,6 +150,7 @@ include("example-emax.jl")
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 5,
                 gateaux_tolerance = 0,
+                initial_weight = NaN,
             ),
             # grid that does not contain [2.5]
             pg11 = Kirstine.ProductGrid(11),
@@ -144,6 +160,7 @@ include("example-emax.jl")
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 5,
                 gateaux_tolerance = 0,
+                initial_weight = NaN,
             ),
             # grid does not contain [2.5], but a prototype point is off-grid, single step
             str3 = Exchange(;
@@ -152,6 +169,7 @@ include("example-emax.jl")
                 candidate = uniform_design([[2.9], [0], [10]]),
                 steps = 1,
                 gateaux_tolerance = 0,
+                initial_weight = NaN,
             ),
             # check that early stopping works
             str4 = Exchange(;
@@ -160,6 +178,7 @@ include("example-emax.jl")
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 10,
                 gateaux_tolerance = -3 * log(0.999),
+                initial_weight = NaN,
             ),
             # but one step is performed even if the candidate is optimal
             str5 = Exchange(;
@@ -168,6 +187,16 @@ include("example-emax.jl")
                 candidate = exact_solution,
                 steps = 10,
                 gateaux_tolerance = -3 * log(0.999),
+                initial_weight = NaN,
+            ),
+            # initial weights that do _not_ depend on the support size of the candidate
+            str6 = Exchange(;
+                optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
+                optimizer_direction = Kirstine.GridSearch(; gridspec = pg101),
+                candidate = uniform_design([[5], [0], [10]]),
+                steps = 1,
+                gateaux_tolerance = 0,
+                initial_weight = 0,
             )
 
             seed!(1234)
@@ -179,6 +208,10 @@ include("example-emax.jl")
             @test ord_step_1.trace_state isa Vector{<:Kirstine.GridSearchState}
             @test ord_step_1.maximizer == one_point_design([2.2])
             @test length(ord_step_1.trace_state[1].fx) == 101
+            orw_step_1 = first(optimization_results_weight(r1))
+            # prototype has K=3 points, initial_weight = NaN implies new point in front hast weight 1/(k+1) = 0.25
+            # Note that we can't test this with Frank-Wolfe since there we don't trace the initial prototype.
+            @test weights(orw_step_1.trace_state[1].x[1]) ≈ fill(0.25, 4)
 
             seed!(1234)
             r2 = Kirstine.solve_with(dp, str2, true)
@@ -202,6 +235,12 @@ include("example-emax.jl")
             r5 = Kirstine.solve_with(dp, str5, false)
             @test length(optimization_results_weight(r5)) == 1
             @test length(optimization_results_direction(r5)) == 1
+
+            seed!(1234)
+            r6 = Kirstine.solve_with(dp, str6, true)
+            orw_step_1 = first(optimization_results_weight(r6))
+            # prototype has K=3 points, initial_weight = 0 is passed through
+            @test weights(orw_step_1.trace_state[1].x[1]) ≈ [0, 1/3, 1/3, 1/3]
         end
     end
 
@@ -226,6 +265,7 @@ include("example-emax.jl")
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 5,
                 gateaux_tolerance = 0,
+                initial_weight = NaN,
             )
 
             @test_logs(

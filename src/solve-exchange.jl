@@ -21,6 +21,7 @@ This is a variant of the basic idea in [^YBT13].
     optimizer_weight::Tow
     steps::Int64
     gateaux_tolerance::Float64
+    initial_weight::Float64
     candidate::DesignMeasure
     simplify_args::Td = Dict{Symbol,Any}()
     @doc """
@@ -29,6 +30,7 @@ This is a variant of the basic idea in [^YBT13].
             optimizer_weight::Kirstine.Optimizer,
             steps::Integer,
             gateaux_tolerance::Real,
+            initial_weight::Real,
             candidate::DesignMeasure,
             simplify_args = Dict{Symbol,Any}(),
         )
@@ -42,7 +44,10 @@ This is a variant of the basic idea in [^YBT13].
         This uses `optimizer_direction`,
         initialized with one-point prototypes at the [`points`](@ref) of the current `candidate`.
         See the low-level [`Optimizer`](@ref)s for algorithm-specific details.
-     3. Append the single point of `d` to the support of the current `candidate`.
+     3. Append the single point of `d` to the support of the current `candidate`
+        and give it `initial_weight`, scaling down the already existing by `1-initial_weight`.
+        In the special case `initial_weight=NaN`,
+        the weight of the new point is set to `1/(1+ points(candidate))`.
      4. Recompute optimal weights for the current `candidate` while keeping all point fixed.
 
     The loop is stopped early if the maximum of the Gateaux derivative after sub-step 2
@@ -55,17 +60,25 @@ This is a variant of the basic idea in [^YBT13].
     than the `candidate` you started with.
 
     The return value of [`solve`](@ref) for this strategy is an [`ExchangeResult`](@ref).
+
+    !!! note
+
+        Before version 0.8.0 of Kirstine.jl, `initial_weight = NaN` had been hard-coded.
     """
     function Exchange(
         optimizer_direction::Tod,
         optimizer_weight::Tow,
         steps::Integer,
         gateaux_tolerance::Real,
+        initial_weight::Real,
         candidate::DesignMeasure,
         simplify_args::Td,
     ) where {Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,<:Any}}
         if steps < 1
             throw(ArgumentError("steps must be >= 1"))
+        end
+        if !(isnan(initial_weight) || 0 <= initial_weight < 1)
+            throw(ArgumentError("initial_weight must be in [0, 1) or NaN"))
         end
         gateaux_tolerance < 0 && throw(ArgumentError("gateaux_tolerance must be >= 0"))
         new{Tod,Tow,Td}(
@@ -73,6 +86,7 @@ This is a variant of the basic idea in [^YBT13].
             optimizer_weight,
             steps,
             gateaux_tolerance,
+            initial_weight,
             candidate,
             simplify_args,
         )
@@ -172,6 +186,7 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
         optimizer_weight,
         steps,
         gateaux_tolerance,
+        initial_weight,
         candidate,
         simplify_args,
     ) = strategy
@@ -193,7 +208,12 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
         # and rely on simplify_merge() with a maxdist of 0 to merge the later occurrence
         # into the earlier one.
         if !(only(points(direction)) in points(candidate))
-            candidate = mixture(1 / (1 + numpoints(candidate)), direction, candidate)
+            if isnan(initial_weight)
+                mixture_weight = 1 / (1 + numpoints(candidate))
+            else
+                mixture_weight = initial_weight
+            end
+            candidate = mixture(mixture_weight, direction, candidate)
         else
             candidate = simplify_merge(mixture(0, direction, candidate), region(adp), 0)
         end
