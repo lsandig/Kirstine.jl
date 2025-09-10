@@ -214,8 +214,8 @@ function ap_convex_combination!(
             p.weights[k] = 0
             for i in 1:length(alpha)
                 p.weights[k] += alpha[i] * qs[i].weights[k]
-                p.weights[k] = min(p.weights[k], 1.0)
             end
+            p.weights[k] = min(p.weights[k], 1.0)
         end
     end
     p.weights ./= sum(p.weights)
