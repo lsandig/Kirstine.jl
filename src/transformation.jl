@@ -80,7 +80,7 @@ DeltaMethod(jm2)
 DeltaMethod{typeof(jm2)}(jm2)
 ```
 """
-struct DeltaMethod{T<:Function} <: Kirstine.Transformation
+struct DeltaMethod{T<:Function} <: Transformation
     jacobian_matrix::T # parameter -> Matrix{Float64}
 end
 
