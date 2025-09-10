@@ -73,7 +73,7 @@ Kirstine.ZerothOrderOptimizer
 Kirstine.FirstOrderOptimizer
 Kirstine.OptimizationResult
 Pso
-Pso()
+Pso(::Integer, ::Integer, ::Real, ::Real)
 Kirstine.GridSearch
 Kirstine.GridSearch()
 Kirstine.GridSpec
