@@ -102,10 +102,10 @@ mutable struct AdaptiveWorkspace{T<:AbstractPoint,U<:AbstractPointDifference} <:
 end
 
 function fw_workspace(step::Adaptive, x::AbstractPoint, gradient_length::Integer)
-    d_tmp = ap_as_difference(deepcopy(x))
-    x_tmp = deepcopy(x)
-    gx_tmp = fill(NaN, gradient_length)
-    return AdaptiveWorkspace(step.initial_smoothness_estimate, x_tmp, d_tmp, gx_tmp, false)
+    x_copy = deepcopy(x)
+    d = ap_as_difference(x)
+    gx = fill(NaN, gradient_length)
+    return AdaptiveWorkspace(step.initial_smoothness_estimate, x_copy, d, gx, false)
 end
 
 """
@@ -141,7 +141,7 @@ This prototype will be used as the starting value.
 @kwdef struct FrankWolfe{T<:StepSizeStrategy} <: FirstOrderOptimizer
     iterations::Int64
     fw_gap_tolerance::Float64
-    stepsize::StepSizeStrategy
+    stepsize::T
     pairwise::Bool
     @doc """
         FrankWolfe(; iterations::Integer, fw_gap_tolerance::Real, stepsize::StepSizeStrategy, pairwise::Bool)
@@ -158,8 +158,8 @@ This prototype will be used as the starting value.
         pairwise::Bool,
     )
         iterations <= 0 && throw(ArgumentError("number of iterations must be positive"))
-        fw_gap_tolerance < 0 &&
-            throw(ArgumentError("fw_gap_tolerance must be non-negative"))
+        msg_tolerance = "fw_gap_tolerance must be non-negative"
+        fw_gap_tolerance < 0 && throw(ArgumentError(msg_tolerance))
         return new{typeof(s)}(iterations, fw_gap_tolerance, s, pairwise)
     end
 end
@@ -175,8 +175,8 @@ mutable struct FrankWolfeState{T,U,V} <: OptimizerState{T,U}
     v::T                     # Frank-Wolfe vertex
     direction::U             # difference vector x - v
     stepsize::Float64
-    fx::Float64              # objective at x
-    gx::Vector{<:Float64}    # gradient at x
+    fx::Float64              # objective at the new x
+    gx::Vector{<:Float64}    # gradient at the old x
     frank_wolfe_gap::Float64 # inner product of gradient and direction
     alpha::Vector{Float64}   # maximum feasible stepsize for pairwise variant
     active_set::Vector{T}    # active set for pairwise variant
@@ -193,14 +193,16 @@ maximum(s::FrankWolfeState) = s.fx
 gradient(s::FrankWolfeState) = s.gx
 n_eval_f(s::FrankWolfeState) = s.n_eval_f
 n_eval_g(s::FrankWolfeState) = s.n_eval_g
-has_converged(s::FrankWolfeState, o::FrankWolfe) = s.frank_wolfe_gap < o.fw_gap_tolerance
+function has_converged(s::FrankWolfeState, o::FrankWolfe)
+    return s.frank_wolfe_gap < o.fw_gap_tolerance
+end
 
 function stepsize_openloop(shift::Integer, t::Integer, gamma_max::Real)
     return min(shift / (t + shift), gamma_max)
 end
 
 function stepsize!(
-    g!,
+    g!::Function,
     state::FrankWolfeState,
     o::FrankWolfe{OpenLoop},
     c::AbstractConstraints,
@@ -215,7 +217,7 @@ function stepsize_constnumiter(iterations::Integer, t::Integer, gamma_max::Real)
 end
 
 function stepsize!(
-    g!,
+    g!::Function,
     state::FrankWolfeState,
     o::FrankWolfe{ConstNumIter},
     c::AbstractConstraints,
@@ -225,7 +227,7 @@ function stepsize!(
 end
 
 function fw_estimate_initial_smoothness!(
-    g!,
+    g!::Function,
     w::AdaptiveWorkspace,
     x::AbstractPoint,
     gx::AbstractVector{<:Real},
@@ -273,51 +275,36 @@ end
 #     general 0 < gamma_max <= 1 and other directions. This is necessary for the pairwise
 #     algorithm variant as in [^LJ15] and in the FrankWolfe.jl package.
 function stepsize!(
-    g!,
+    g!::Function,
     state::FrankWolfeState,
     o::FrankWolfe{Adaptive},
     c::AbstractConstraints,
     gamma_max::Real,
 )
-    w = state.work
+    w, x, gx, direction = state.work, state.x, state.gx, state.direction
     w.has_diverged = false
     if isinf(w.smoothness_estimate)
-        fw_estimate_initial_smoothness!(
-            g!,
-            w,
-            state.x,
-            state.gx,
-            state.direction,
-            c,
-            gamma_max,
-        )
+        fw_estimate_initial_smoothness!(g!, w, x, gx, direction, c, gamma_max)
         state.n_eval_g += 1
     end
     M = o.stepsize.eta * w.smoothness_estimate
-    dd_direction = fw_evaluate_linearization(state.gx, state.direction, c)
+    dd_direction = fw_evaluate_linearization(gx, direction, c)
     while true
-        gamma = min(dd_direction / (M * fw_norm(state.direction)^2), gamma_max)
+        gamma = min(dd_direction / (M * fw_norm(direction)^2), gamma_max)
         gamma < 0 && error("gamma should not become negative")
         # in-place computation of g!(x + gamma * direction)
-        ap_copy!(w.d_tmp, state.direction)
+        ap_copy!(w.d_tmp, direction)
         ap_mul!(w.d_tmp, gamma)
-        ap_copy!(w.x_tmp, state.x)
+        ap_copy!(w.x_tmp, x)
         ap_add!(w.x_tmp, w.d_tmp, c)
         try
             g!(w.gx_tmp, w.x_tmp)
         catch e
-            throw(
-                AdaptiveStepsizeException(
-                    e,
-                    w.x_tmp,
-                    o.stepsize.initial_smoothness_estimate,
-                    M,
-                    gamma,
-                ),
-            )
+            ise = o.stepsize.initial_smoothness_estimate
+            throw(AdaptiveStepsizeException(e, w.x_tmp, ise, M, gamma))
         end
         state.n_eval_g += 1
-        if fw_evaluate_linearization(w.gx_tmp, state.direction, c) >= 0
+        if fw_evaluate_linearization(w.gx_tmp, direction, c) >= 0
             w.smoothness_estimate = M
             return gamma
         end
@@ -331,7 +318,7 @@ function stepsize!(
 end
 
 function optimizer_state(
-    (f, g!),
+    (f, g!)::Tuple{Function,Function},
     optimizer::FrankWolfe,
     prototypes::AbstractVector{<:AbstractPoint},
     constraints::AbstractConstraints,
@@ -342,13 +329,13 @@ function optimizer_state(
     end
     x = deepcopy(only(prototypes))
     v = deepcopy(x)
-    dir = deepcopy(ap_as_difference(v))
+    d = deepcopy(ap_as_difference(v))
     grad_length = fw_gradient_length(x, constraints)
     gx = fill(NaN, grad_length)
     as = [deepcopy(x)]
     work = fw_workspace(optimizer.stepsize, x, grad_length)
     # The iteration will be counted up towards 0 in the first call to tick!()
-    state = FrankWolfeState(x, v, dir, NaN, NaN, gx, NaN, [1.0], as, work, -1, 0, 0, 0, 0)
+    state = FrankWolfeState(x, v, d, NaN, NaN, gx, NaN, [1.0], as, work, -1, 0, 0, 0, 0)
     # Here we perform the update corresponding to step t=0 in [^P23].
     # With OpenLoop this always gives an x1 that is on the boundary of the compact convex set
     # since the initial step size is 1.
@@ -357,58 +344,59 @@ function optimizer_state(
 end
 
 function tick!(
-    (f, g!),
+    (f, g!)::Tuple{Function,Function},
     state::FrankWolfeState,
     optimizer::FrankWolfe,
     constraints::AbstractConstraints,
 )
+    x, gx, direction, v = state.x, state.gx, state.direction, state.v
+    active_set, alpha = state.active_set, state.alpha
     state.iteration_from_zero += 1
-    g!(state.gx, state.x)
+    g!(gx, x)
     state.n_eval_g += 1
-    fw_linear_maximization_oracle!(state.v, state.gx, constraints)
-    ap_diff!(state.direction, state.v, state.x)
+    fw_linear_maximization_oracle!(v, gx, constraints)
+    ap_diff!(direction, v, x)
     # Note: this is the gap for x from the previous iteration!
-    state.frank_wolfe_gap =
-        fw_evaluate_linearization(state.gx, state.direction, constraints)
+    state.frank_wolfe_gap = fw_evaluate_linearization(gx, direction, constraints)
     away = -1
     if optimizer.pairwise
-        _, away = findmin(state.active_set) do a
-            fw_evaluate_linearization(state.gx, a, constraints)
+        _, away = findmin(active_set) do a
+            fw_evaluate_linearization(gx, a, constraints)
         end
-        ap_diff!(state.direction, state.v, state.active_set[away])
+        ap_diff!(direction, v, active_set[away])
     end
-    gamma_max = optimizer.pairwise ? state.alpha[away] : 1.0
+    gamma_max = optimizer.pairwise ? alpha[away] : 1.0
     state.stepsize = stepsize!(g!, state, optimizer, constraints, gamma_max)
     if !optimizer.pairwise
-        state.alpha .*= (1 - state.stepsize)
-        if !(state.v in state.active_set)
+        alpha .*= (1 - state.stepsize)
+        if !(v in active_set)
             state.active_points_added += 1
-            push!(state.active_set, deepcopy(state.v))
-            push!(state.alpha, state.stepsize)
+            push!(active_set, deepcopy(v))
+            push!(alpha, state.stepsize)
         else
-            idx = findfirst(==(state.v), state.active_set)
-            state.alpha[idx] += state.stepsize
-            state.alpha[idx] = min(state.alpha[idx], 1.0)
+            idx = findfirst(==(v), active_set)
+            alpha[idx] += state.stepsize
+            alpha[idx] = min(alpha[idx], 1.0)
         end
     else
-        if !(state.v in state.active_set)
+        if !(v in active_set)
             state.active_points_added += 1
-            push!(state.active_set, deepcopy(state.v))
-            push!(state.alpha, state.stepsize)
-            state.alpha[away] = max(state.alpha[away] - state.stepsize, 0)
+            push!(active_set, deepcopy(v))
+            push!(alpha, state.stepsize)
+            alpha[away] = max(alpha[away] - state.stepsize, 0)
         else
-            idx = findfirst(==(state.v), state.active_set)
-            state.alpha[away] = max(state.alpha[away] - state.stepsize, 0)
-            state.alpha[idx] = min(state.alpha[idx] + state.stepsize, 1)
+            idx = findfirst(==(v), active_set)
+            alpha[away] = max(alpha[away] - state.stepsize, 0)
+            alpha[idx] = min(alpha[idx] + state.stepsize, 1)
         end
-        if state.alpha[away] == 0
+        if alpha[away] == 0
             state.active_points_removed += 1
-            deleteat!(state.alpha, away)
-            deleteat!(state.active_set, away)
+            deleteat!(alpha, away)
+            deleteat!(active_set, away)
         end
     end
-    ap_convex_combination!(state.x, state.alpha, state.active_set, constraints)
-    state.fx = f(state.x)
+    ap_convex_combination!(x, state.alpha, active_set, constraints)
+    state.fx = f(x)
     state.n_eval_f += 1
     return state
 end
