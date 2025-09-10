@@ -8,7 +8,7 @@ using Kirstine
 include("example-pnt.jl")
 
 function Kirstine.construct_grid(
-    gs::Kirstine.ProductGrid,
+    gs::ProductGrid,
     c::BoxConstraints,
     prototypes::AbstractVector{Pnt},
 )
@@ -19,8 +19,8 @@ end
 
 @testset "optimizer-grid.jl" begin
     @testset "ProductGrid" begin
-        @test Kirstine.ProductGrid(4, 2) == Kirstine.ProductGrid{2}((4, 2))
-        @test_throws "at least 2" Kirstine.ProductGrid(1, 2, 3)
+        @test ProductGrid(4, 2) == ProductGrid{2}((4, 2))
+        @test_throws "at least 2" ProductGrid(1, 2, 3)
     end
 
     @testset "GridSearchState" begin
@@ -34,7 +34,7 @@ end
     end
 
     @testset "construct_grid" begin
-        let bbg = Kirstine.ProductGrid(2, 3),
+        let bbg = ProductGrid(2, 3),
             c = BoxConstraints(Pnt([0, 0]), Pnt([1, 1])),
             ref_x = [[0, 0], [0, 0.5], [0, 1], [1, 0], [1, 0.5], [1, 1]]
 
@@ -50,7 +50,7 @@ end
     @testset "optimizer_state" begin
         let xstar = ones(2),
             f(p) = -sum((p.x .- xstar) .^ 2),
-            gs = Kirstine.GridSearch(; gridspec = Kirstine.ProductGrid(3, 3)),
+            gs = GridSearch(; gridspec = ProductGrid(3, 3)),
             p = Pnt([0, 0]),
             c = BoxConstraints(Pnt([-1, -1]), Pnt([4, 4]))
 
@@ -68,9 +68,9 @@ end
         let xstar = ones(2),
             f(p) = -sum((p.x .- xstar) .^ 2),
             # grid that includes xstar
-            gs1 = Kirstine.GridSearch(; gridspec = Kirstine.ProductGrid(11, 11)),
+            gs1 = GridSearch(; gridspec = ProductGrid(11, 11)),
             # grid that does not include xstar
-            gs2 = Kirstine.GridSearch(; gridspec = Kirstine.ProductGrid(3, 3)),
+            gs2 = GridSearch(; gridspec = ProductGrid(3, 3)),
             constr = BoxConstraints(Pnt([-1, -1]), Pnt([4, 4]))
 
             r1 = Kirstine.optimize(f, gs1, Pnt[], constr; trace_state = true)

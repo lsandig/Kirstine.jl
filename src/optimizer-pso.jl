@@ -4,7 +4,7 @@
 ## generic particle swarm optimizer ##
 
 """
-    Pso <: ZerothOrderOptimizer
+    Pso <: Kirstine.ZerothOrderOptimizer
 
 A constricted particle swarm optimizer.
 

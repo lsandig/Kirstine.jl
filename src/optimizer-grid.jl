@@ -23,7 +23,7 @@ abstract type GridSpec end
 function construct_grid end
 
 """
-    Kirstine.ProductGrid <: Kirstine.GridSpec
+    ProductGrid <: Kirstine.GridSpec
 
 A Cartesian product with the given number of grid points in each dimension.
 
@@ -32,8 +32,8 @@ A Cartesian product with the given number of grid points in each dimension.
 A 2-dimensional grid with 5×11 points:
 
 ```jldoctest
-julia> Kirstine.ProductGrid(5, 11)
-Kirstine.ProductGrid{2}((5, 11))
+julia> ProductGrid(5, 11)
+ProductGrid{2}((5, 11))
 ```
 """
 struct ProductGrid{N} <: GridSpec
@@ -51,16 +51,9 @@ end
 ProductGrid(n_points::Integer...) = ProductGrid{length(n_points)}(n_points)
 
 """
-    Kirstine.GridSearch <: ZerothOrderOptimizer
+    GridSearch <: Kirstine.ZerothOrderOptimizer
 
 A grid search optimizer.
-
-!!! warning "Experimental Feature"
-
-    This optimizer is experimental.
-    It is not to be considered part of the API yet,
-    hence it is not exported and may be subject to breaking changes
-    even in minor or patch version updates.
 
 This optimizer is particularly useful for the direction-finding step in [`Exchange`](@ref),
 but can also be used for [`DirectMaximization`](@ref)
@@ -91,7 +84,7 @@ struct GridSearch{T<:GridSpec} <: ZerothOrderOptimizer
 end
 
 """
-    Kirstine.GridSearch(; gridspec::Kirstine.GridSpec)
+    GridSearch(; gridspec::Kirstine.GridSpec)
 
 Set up parameters for a grid search.
 
@@ -101,8 +94,8 @@ so the dimensions of both must be equal.
 # Examples
 
 ```jldoctest
-julia> Kirstine.GridSearch(; gridspec = Kirstine.ProductGrid(11, 11))
-Kirstine.GridSearch{Kirstine.ProductGrid{2}}(Kirstine.ProductGrid{2}((11, 11)))
+julia> GridSearch(; gridspec = ProductGrid(11, 11))
+GridSearch{ProductGrid{2}}(ProductGrid{2}((11, 11)))
 ```
 """
 GridSearch(; gridspec::GridSpec) = GridSearch(gridspec)

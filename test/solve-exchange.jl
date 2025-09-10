@@ -143,20 +143,20 @@ include("example-emax.jl")
             ),
             exact_solution = emax_solution(guess, region(dp)),
             # grid that contains the points of the solution [[0], [2.5], [10]]
-            pg101 = Kirstine.ProductGrid(101),
+            pg101 = ProductGrid(101),
             str1 = Exchange(;
                 optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
-                optimizer_direction = Kirstine.GridSearch(; gridspec = pg101),
+                optimizer_direction = GridSearch(; gridspec = pg101),
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 5,
                 gateaux_tolerance = 0,
                 initial_weight = NaN,
             ),
             # grid that does not contain [2.5]
-            pg11 = Kirstine.ProductGrid(11),
+            pg11 = ProductGrid(11),
             str2 = Exchange(;
                 optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
-                optimizer_direction = Kirstine.GridSearch(; gridspec = pg11),
+                optimizer_direction = GridSearch(; gridspec = pg11),
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 5,
                 gateaux_tolerance = 0,
@@ -165,7 +165,7 @@ include("example-emax.jl")
             # grid does not contain [2.5], but a prototype point is off-grid, single step
             str3 = Exchange(;
                 optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
-                optimizer_direction = Kirstine.GridSearch(; gridspec = pg11),
+                optimizer_direction = GridSearch(; gridspec = pg11),
                 candidate = uniform_design([[2.9], [0], [10]]),
                 steps = 1,
                 gateaux_tolerance = 0,
@@ -174,7 +174,7 @@ include("example-emax.jl")
             # check that early stopping works
             str4 = Exchange(;
                 optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
-                optimizer_direction = Kirstine.GridSearch(; gridspec = pg101),
+                optimizer_direction = GridSearch(; gridspec = pg101),
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 10,
                 gateaux_tolerance = -3 * log(0.999),
@@ -183,7 +183,7 @@ include("example-emax.jl")
             # but one step is performed even if the candidate is optimal
             str5 = Exchange(;
                 optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
-                optimizer_direction = Kirstine.GridSearch(; gridspec = pg101),
+                optimizer_direction = GridSearch(; gridspec = pg101),
                 candidate = exact_solution,
                 steps = 10,
                 gateaux_tolerance = -3 * log(0.999),
@@ -192,7 +192,7 @@ include("example-emax.jl")
             # initial weights that do _not_ depend on the support size of the candidate
             str6 = Exchange(;
                 optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
-                optimizer_direction = Kirstine.GridSearch(; gridspec = pg101),
+                optimizer_direction = GridSearch(; gridspec = pg101),
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 1,
                 gateaux_tolerance = 0,
@@ -253,7 +253,7 @@ include("example-emax.jl")
                 prior_knowledge = PriorSample([guess]),
                 region = DesignInterval(:dose => (0, 10)),
             ),
-            pg101 = Kirstine.ProductGrid(101),
+            pg101 = ProductGrid(101),
             str = Exchange(;
                 optimizer_weight = Kirstine.FrankWolfe(
                     iterations = 100,
@@ -261,7 +261,7 @@ include("example-emax.jl")
                     pairwise = true,
                     fw_gap_tolerance = 1e-4,
                 ),
-                optimizer_direction = Kirstine.GridSearch(; gridspec = pg101),
+                optimizer_direction = GridSearch(; gridspec = pg101),
                 candidate = uniform_design([[5], [0], [10]]),
                 steps = 5,
                 gateaux_tolerance = 0,

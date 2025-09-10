@@ -594,7 +594,7 @@ we can hope that it gives us the solution after a few steps.
 
 For part 1,
 we will not use PSO,
-but a [`Kirstine.GridSearch`](@ref) over the design region $\DesignRegion$.
+but a [`GridSearch`](@ref) over the design region $\DesignRegion$.
 This has the advantage
 that grid search is deterministic and will always find the maximum (on the grid),
 while Pso may sometimes get stuck in a local maximum
@@ -606,7 +606,7 @@ In this particular example we save some runtime
 since we can reasonably guess
 that a single step of the exchange algorithm might be sufficient,
 and that the new point will be added at a point with ``D=100``.
-This is why we can get away with a [`Kirstine.ProductGrid`](@ref)
+This is why we can get away with a [`ProductGrid`](@ref)
 that has only 2 different dose values.
 For the second dimension,
 the grid has 51 different values at ``Δt=0,0.04,…,2``.
@@ -617,7 +617,7 @@ st4b = Exchange(
     steps = 1,
     gateaux_tolerance = 0,
     initial_weight = NaN,
-    optimizer_direction = Kirstine.GridSearch(gridspec = Kirstine.ProductGrid(2, 51)),
+    optimizer_direction = GridSearch(gridspec = ProductGrid(2, 51)),
     optimizer_weight = Pso(swarmsize = 25, iterations = 50),
 )
 

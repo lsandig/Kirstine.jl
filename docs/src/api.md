@@ -74,10 +74,10 @@ Kirstine.FirstOrderOptimizer
 Kirstine.OptimizationResult
 Pso
 Pso(::Integer, ::Integer, ::Real, ::Real)
-Kirstine.GridSearch
-Kirstine.GridSearch()
+GridSearch
+GridSearch()
 Kirstine.GridSpec
-Kirstine.ProductGrid
+ProductGrid
 Kirstine.FrankWolfe
 Kirstine.FrankWolfe(::Integer, ::Real, ::Kirstine.StepSizeStrategy, ::Bool)
 Kirstine.StepSizeStrategy
