@@ -89,7 +89,7 @@ Additionally, the following methods must be implemented.
     for every parameter value in the Monte-Carlo sample.
     This function does a lot of in-place linear algebra
     with low-level pre-allocated structures.
-    If you do not intend to use the (currently experimental) [`Kirstine.FrankWolfe`](@ref) optimizer,
+    If you do not intend to use the [`FrankWolfe`](@ref) optimizer,
     you can alternatively implement a slower version
     `gateaux_constants(d::DesignMeasure, dp::DesignProblem{T,<:DesignRegion,<:Model,<:CovariateParameterization,<:Parameter,V,<:NormalApproximation})`
     that dispatches on your new criterion type `T`

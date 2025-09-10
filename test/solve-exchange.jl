@@ -255,9 +255,9 @@ include("example-emax.jl")
             ),
             pg101 = ProductGrid(101),
             str = Exchange(;
-                optimizer_weight = Kirstine.FrankWolfe(
+                optimizer_weight = FrankWolfe(
                     iterations = 100,
-                    stepsize = Kirstine.Adaptive(; initial_smoothness_estimate = 1),
+                    stepsize = Adaptive(; initial_smoothness_estimate = 1),
                     pairwise = true,
                     fw_gap_tolerance = 1e-4,
                 ),

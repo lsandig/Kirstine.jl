@@ -78,12 +78,12 @@ GridSearch
 GridSearch()
 Kirstine.GridSpec
 ProductGrid
-Kirstine.FrankWolfe
-Kirstine.FrankWolfe(::Integer, ::Real, ::Kirstine.StepSizeStrategy, ::Bool)
+FrankWolfe
+FrankWolfe(::Integer, ::Real, ::Kirstine.StepSizeStrategy, ::Bool)
 Kirstine.StepSizeStrategy
-Kirstine.OpenLoop
-Kirstine.ConstNumIter
-Kirstine.Adaptive
+OpenLoop
+ConstNumIter
+Adaptive
 ```
 
 ## Design Criteria

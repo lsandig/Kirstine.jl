@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 """
-    StepSizeStrategy
+    Kirstine.StepSizeStrategy
 
 Supertype for Frank-Wolfe step-size strategies.
 """
@@ -11,7 +11,7 @@ abstract type StepSizeStrategy end
 abstract type FWWorkspace end
 
 """
-    OpenLoop <: StepSizeStrategy
+    OpenLoop <: Kirstine.StepSizeStrategy
     OpenLoop(; shift = 2)
 
 Frank-Wolfe step-size strategy ``γ(t) = l / (t + l)`` for ``t=0,1,2,…`` with shift ``l∈ℕ, l≥1``.
@@ -38,7 +38,7 @@ function fw_workspace(step::OpenLoop, x::AbstractPoint, gradient_length::Integer
 end
 
 """
-    ConstNumIter <: StepSizeStrategy
+    ConstNumIter <: Kirstine.StepSizeStrategy
 
 Frank-Wolfe step-size strategy ``γ(t) = 1 / \\sqrt{T}`` for a run with ``T`` iterations ``t=0,…,T-1``.
 """
@@ -49,7 +49,7 @@ function fw_workspace(step::ConstNumIter, x::AbstractPoint, gradient_length::Int
 end
 
 """
-    Adaptive <: StepSizeStrategy
+    Adaptive <: Kirstine.StepSizeStrategy
     Adaptive(; eta = 0.9, tau = 2.0, initial_smoothness_estimate = Inf, smoothness_threshold = 1e10)
 
 Adaptive Frank-Wolfe step-size strategy that uses a smoothness property of the objective function.
@@ -109,26 +109,19 @@ function fw_workspace(step::Adaptive, x::AbstractPoint, gradient_length::Integer
 end
 
 """
-    FrankWolfe <: FirstOrderOptimizer
+    FrankWolfe <: Kirstine.FirstOrderOptimizer
 
 A Frank-Wolfe optimizer.
-
-!!! warning "Experimental Feature"
-
-    This optimizer is experimental.
-    It is not to be considered part of the API yet,
-    hence it is not exported and may be subject to breaking changes
-    even in minor or patch version updates.
-
-    It is currently intended to be used for the re-weighting step of [`Exchange`](@ref).
-    For [`DirectMaximization`](@ref) it can currently only be used
-    when all design points are fixed.
 
 Two variants are implemented:
 a basic one that always moves towards the best vertex for the linearized problem
 (see Algorithm 4 in [^P23]),
 and a version with pairwise steps (see Algorithm 2 in [^LJ15])
 that is better at finding an optimum on the boundary.
+
+It is currently intended to be used for the re-weighting step of [`Exchange`](@ref).
+For [`DirectMaximization`](@ref) it can currently only be used
+when all design points are fixed.
 
 # Initialization
 
