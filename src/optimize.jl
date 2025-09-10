@@ -73,11 +73,11 @@ end
 # or a tuple with a function AbstractPoint -> Float64
 # and its mutating gradient (Vector{Float64}, AbstractPoint) -> Vector{Float64}
 function optimize(
-    f_or_f_g!,
+    f_or_f_g!::Union{Function,Tuple{Function,Function}},
     optimizer::Optimizer,
     prototypes::AbstractVector{<:AbstractPoint},
     constraints::AbstractConstraints;
-    trace_state = false,
+    trace_state::Bool = false,
 )
     time_start = time()
     assert_constraints(prototypes, constraints)
@@ -103,28 +103,23 @@ function optimize(
     end
     check_objective(state; only_warn = true, prefix = "final iteration: ")
     is_first_order && check_gradient(state; only_warn = true, prefix = "final iteration: ")
-    time_end = time()
-    twall = time_end - time_start
-    x = maximizer(state)
-    fx = maximum(state)
-    nf = n_eval_f(state)
-    ng = n_eval_g(state)
+    twall = time() - time_start
+    x, fx = maximizer(state), maximum(state)
+    nf, ng = n_eval_f(state), n_eval_g(state)
     hc = has_converged(state, optimizer)
     return OptimizationResult(x, fx, t_x, t_fx, t_gx, t_state, hc, nf, ng, twall)
 end
 
-function prettydifftime(t)
+function prettydifftime(t::Real)
     maybe_sign = t >= 0 ? "" : "-"
-    t = abs(t)
-    h, r = divrem(t, 3600)
+    h, r = divrem(abs(t), 3600)
     m, r = divrem(r, 60)
     s, r = divrem(r, 1)
     ms, r = divrem(r, 1e-3)
-    string_h = string(Int64(h))
     pad_m = lpad(Int64(m), 2, '0')
     pad_s = lpad(Int64(s), 2, '0')
     pad_ms = lpad(Int64(ms), 3, '0')
-    return maybe_sign * join([string_h, pad_m, pad_s, pad_ms], ":", ".")
+    return maybe_sign * join([string(Int64(h)), pad_m, pad_s, pad_ms], ":", ".")
 end
 
 function Base.show(
