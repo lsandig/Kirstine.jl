@@ -28,7 +28,7 @@ end
             gss = Kirstine.GridSearchState(x, fx1)
 
             @test gss isa Kirstine.GridSearchState{Pnt,PntDiff}
-            @test_throws "must be identical" Kirstine.GridSearchState(x, fx2)
+            @test_throws "must have same length" Kirstine.GridSearchState(x, fx2)
             @test_throws "can't be empty" Kirstine.GridSearchState(Pnt[], Float64[])
         end
     end

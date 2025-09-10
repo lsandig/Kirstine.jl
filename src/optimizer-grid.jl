@@ -39,9 +39,8 @@ Kirstine.ProductGrid{2}((5, 11))
 struct ProductGrid{N} <: GridSpec
     n_points::NTuple{N,Int64}
     function ProductGrid{N}(n_points::NTuple{N,Integer}) where N
-        if any(n_points .< 2)
-            throw(ArgumentError("need at least 2 points in each direction"))
-        end
+        msg_min_points = "need at least 2 points in each direction"
+        any(<(2), n_points) && throw(ArgumentError(msg_min_points))
         return new{N}(n_points)
     end
 end
@@ -112,14 +111,9 @@ struct GridSearchState{T<:AbstractPoint,U} <: OptimizerState{T,U}
     x::Vector{T}
     fx::Vector{Float64}
     function GridSearchState(x::AbstractVector{<:AbstractPoint}, fx::AbstractVector{<:Real})
-        if size(x) != size(fx)
-            throw(ArgumentError("length(x) and length(fx) must be identical"))
-        elseif length(x) == 0
-            throw(ArgumentError("vector of grid points can't be empty"))
-        end
-        T = typeof(x[1])
-        U = typeof(ap_as_difference(x[1]))
-        return new{T,U}(x, fx)
+        size(x) != size(fx) && throw(ArgumentError("x and fx must have same length"))
+        length(x) == 0 && throw(ArgumentError("vector of grid points can't be empty"))
+        return new{typeof(x[1]),typeof(ap_as_difference(x[1]))}(x, fx)
     end
 end
 
@@ -140,15 +134,14 @@ tick!(f, s::GridSearchState, o::GridSearch, c::AbstractConstraints) = s
 
 # Note: user-visible documentation is attached to `GridSearch`.
 function optimizer_state(
-    f,
+    f::Function,
     o::GridSearch,
     prototypes::AbstractVector{<:AbstractPoint},
     c::AbstractConstraints,
 )
     # construct grid subject to constraints
-    x_raw = construct_grid(o.gs, c, prototypes)
-    x = unique(vcat(x_raw, prototypes))
-    # evaluate f on grid points
-    fx = map(f, x)
-    return GridSearchState(x, fx)
+    x_grid = construct_grid(o.gs, c, prototypes)
+    x = unique(vcat(x_grid, prototypes))
+    # evaluate f on grid points and prototype points
+    return GridSearchState(x, map(f, x))
 end
