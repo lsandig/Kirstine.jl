@@ -40,7 +40,7 @@ end
 
 function Kirstine.ap_diff!(d::PntDiff, p::Pnt, q::Pnt)
     d.v .= p.x .- q.x
-    return d.v
+    return d
 end
 
 function Kirstine.ap_copy!(to::Pnt, from::Pnt)
