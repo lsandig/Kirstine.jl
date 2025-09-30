@@ -61,13 +61,13 @@ include("example-emax.jl")
             r1 = Kirstine.solve_with(dp, str1, true),
             # When the direction of steepest ascent is in the support of the candidate, the
             # number of design points of the intermediate design measure should not
-            # increase. When merged, the new point should move to the front of the vector of
-            # design points. We check this here by starting with a candidate that has the
-            # correct design points, but unequal weights.
+            # increase. The new point should be merged with the existing one, and the order
+            # of the design points should not change. We check this here by starting with a
+            # candidate that has the correct design points, but unequal weights.
             str2 = Exchange(;
                 optimizer_weight = ow,
                 optimizer_direction = od,
-                candidate = DesignMeasure([[0], [2.5], [10]], [0.6, 0.3, 0.1]),
+                candidate = DesignMeasure([[0], [10], [2.5]], [0.6, 0.1, 0.3]),
                 gateaux_tolerance = 0,
                 initial_weight = NaN,
                 steps = 1,
@@ -95,7 +95,7 @@ include("example-emax.jl")
             str5 = Exchange(;
                 optimizer_weight = ow,
                 optimizer_direction = od,
-                candidate = one_point_design([5]),
+                candidate = DesignMeasure([[5], [6]], [0.1, 0.9]),
                 steps = 1,
                 gateaux_tolerance = 0,
                 initial_weight = NaN,
@@ -105,7 +105,7 @@ include("example-emax.jl")
             @test_throws "outside design region" (@test_warn "dp =" solve(dp, str3))
             @test_throws "must match" solve(dp, str4)
             # singular candidate design
-            @test_throws "step 1: candidate design is singular" solve(dp, str5)
+            @test_throws "maximum is not finite: -Inf" solve(dp, str5)
             # result type
             @test isa(r1, Kirstine.ExchangeResult)
             @test isa(r2, Kirstine.ExchangeResult)
@@ -122,7 +122,7 @@ include("example-emax.jl")
             @test issorted(optimization_results_weight(r2), by = or -> or.maximum)
             # no new point, but last one of the candidate
             @test numpoints(optimization_results_weight(r2)[1].maximizer) == 3
-            @test points(optimization_results_weight(r2)[1].maximizer)[1] == [10]
+            @test points(optimization_results_weight(r2)[1].maximizer) == [[0], [10], [2.5]]
             # test that runtimes can be accessed
             rt_direction = total_runtime_direction(r1)
             rt_weight = total_runtime_weight(r1)
@@ -194,7 +194,7 @@ include("example-emax.jl")
                 optimizer_weight = Pso(; iterations = 40, swarmsize = 20),
                 optimizer_direction = GridSearch(; gridspec = pg101),
                 candidate = uniform_design([[5], [0], [10]]),
-                steps = 1,
+                steps = 2,
                 gateaux_tolerance = 0,
                 initial_weight = 0,
             )
@@ -208,10 +208,10 @@ include("example-emax.jl")
             @test ord_step_1.trace_state isa Vector{<:Kirstine.GridSearchState}
             @test ord_step_1.maximizer == one_point_design([2.2])
             @test length(ord_step_1.trace_state[1].fx) == 101
-            orw_step_1 = first(optimization_results_weight(r1))
-            # prototype has K=3 points, initial_weight = NaN implies new point in front hast weight 1/(k+1) = 0.25
+            orw_step_2 = optimization_results_weight(r1)[2]
+            # prototype has K=3 points, initial_weight = NaN implies new point at the back hast weight 1/(K+1) = 0.25
             # Note that we can't test this with Frank-Wolfe since there we don't trace the initial prototype.
-            @test weights(orw_step_1.trace_state[1].x[1]) ≈ fill(0.25, 4)
+            @test weights(orw_step_2.trace_state[1].x[1]) ≈ fill(0.25, 4)
 
             seed!(1234)
             r2 = Kirstine.solve_with(dp, str2, true)
@@ -238,9 +238,9 @@ include("example-emax.jl")
 
             seed!(1234)
             r6 = Kirstine.solve_with(dp, str6, true)
-            orw_step_1 = first(optimization_results_weight(r6))
+            orw_step_2 = optimization_results_weight(r6)[2]
             # prototype has K=3 points, initial_weight = 0 is passed through
-            @test weights(orw_step_1.trace_state[1].x[1]) ≈ [0, 1/3, 1/3, 1/3]
+            @test weights(orw_step_2.trace_state[1].x[1]) ≈ [1/3, 1/3, 1/3, 0]
         end
     end
 
@@ -262,8 +262,8 @@ include("example-emax.jl")
                     fw_gap_tolerance = 1e-4,
                 ),
                 optimizer_direction = GridSearch(; gridspec = pg101),
-                candidate = uniform_design([[5], [0], [10]]),
-                steps = 5,
+                candidate = DesignMeasure([[5], [0], [10]], [0.1, 0.5, 0.4]),
+                steps = 1,
                 gateaux_tolerance = 0,
                 initial_weight = NaN,
             )

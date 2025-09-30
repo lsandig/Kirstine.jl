@@ -35,25 +35,20 @@ This is a variant of the basic idea in [^YBT13].
             simplify_args = Dict{Symbol,Any}(),
         )
 
-    Improve the initial `candidate` design by repeating the following loop at most `steps` times:
+    Improve the initial `candidate` design by repeating the following in a loop at most `steps` times:
 
-     1. [`simplify`](@ref) the current `candidate`,
-        passing along `simplify_args`.
-     2. Find the direction (one-point design) `d`
-        in which the [`gateauxderivative`](@ref) at the current `candidate` is highest.
+     1. Recompute optimal weights for the current `candidate` while keeping all points fixed.
+     2. [`simplify`](@ref) the current `candidate`, passing along `simplify_args`.
+     3. Find the one-point design `d`
+        towards which the [`gateauxderivative`](@ref) at the current `candidate` is largest.
         This uses `optimizer_direction`,
         initialized with one-point prototypes at the [`points`](@ref) of the current `candidate`.
         See the low-level [`Optimizer`](@ref)s for algorithm-specific details.
-     3. Append the single point of `d` to the support of the current `candidate`
+     4. If the maximum Gateaux derivative is smaller than `gateaux_tolerance`, stop early.
+     5. Append the single point of `d` to the support of the current `candidate`
         and give it `initial_weight`, scaling down the already existing by `1-initial_weight`.
         In the special case `initial_weight=NaN`,
-        the weight of the new point is set to `1/(1+ points(candidate))`.
-     4. Recompute optimal weights for the current `candidate` while keeping all point fixed.
-
-    The loop is stopped early if the maximum of the Gateaux derivative after sub-step 2
-    is smaller than `gateaux_tolerance`.
-    However, sub-steps 1 through 4 are guaranteed to run at least once,
-    even if the initial `candidate` is already optimal.
+        the weight of the new point is set to `1/(1 + points(candidate))`.
 
     Note that depending on the chosen optimizers,
     this strategy can produce intermediate designs with a _lower_ value of the objective function
@@ -63,7 +58,9 @@ This is a variant of the basic idea in [^YBT13].
 
     !!! note
 
-        Before version 0.8.0 of Kirstine.jl, `initial_weight = NaN` had been hard-coded.
+        Before version 0.8.0 of Kirstine.jl,
+        the order of the re-weighting step and the derivative-maximizing step were swapped
+        and `initial_weight = NaN` had been hard-coded
     """
     function Exchange(
         optimizer_direction::Tod,
@@ -160,7 +157,7 @@ end
 function Base.show(io::IO, ::MIME"text/plain", er::ExchangeResult)
     println(io, "ExchangeResult")
     println(io, "* final objective: ", er.orw[end].maximum)
-    println(io, "* penultimate max Gateaux derivative: ", er.ord[end].maximum)
+    println(io, "* final max Gateaux derivative: ", er.ord[end].maximum)
     println(io, "* runtime total: ", prettydifftime(total_runtime(er)))
     println(io, "      direction: ", prettydifftime(total_runtime_direction(er)))
     println(io, "         weight: ", prettydifftime(total_runtime_weight(er)))
@@ -174,33 +171,7 @@ end
 
 function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state::Bool)
     check_compatible(strategy.candidate, region(adp))
-    point_for_dim = first(points(strategy.candidate))
-    workspace_direction = allocate_workspace(one_point_design(point_for_dim), adp)
-    function step_direction(candidate::DesignMeasure)
-        opds = map(one_point_design, points(candidate))
-        dc_direction = derivative_constants(candidate, adp)
-        fix_weights = DesignConstraints(region(adp), [true], [false])
-        gd = d -> gateauxderivative!(workspace_direction, d, adp, dc_direction)
-        optimizer = strategy.optimizer_direction
-        or = optimize(gd, optimizer, opds, fix_weights; trace_state = trace_state)
-        return or
-    end
-    function step_weight(candidate::DesignMeasure, direction::DesignMeasure)
-        # The mass point of the direction can either be already in the support of the
-        # candidate, or it can be a new point. In both cases we want to prepend it to the
-        # candidate's support. If it is already in the support, we prepend it with weight 0
-        # and rely on simplify_merge() with a maxdist of 0 to merge the later occurrence
-        # into the earlier one.
-        if !(only(points(direction)) in points(candidate))
-            if isnan(strategy.initial_weight)
-                mixture_weight = 1 / (1 + numpoints(candidate))
-            else
-                mixture_weight = strategy.initial_weight
-            end
-            candidate = mixture(mixture_weight, direction, candidate)
-        else
-            candidate = simplify_merge(mixture(0, direction, candidate), region(adp), 0)
-        end
+    function step_weight(candidate::DesignMeasure)
         dms = DirectMaximization(;
             optimizer = strategy.optimizer_weight,
             prototype = candidate,
@@ -211,38 +182,65 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
         _, dmr = solve(adp, dms; trace_state = trace_state)
         return optimization_result(dmr)
     end
-    candidate = simplify(strategy.candidate, adp; strategy.simplify_args...)
-    # computing the derivative constants can fail for a singular design
-    ord = try
-        step_direction(candidate)
-    catch e
-        ae = ArgumentError("step 1: candidate design is singular")
-        e isa SingularException ? throw(ae) : rethrow(e)
+    function step_direction(candidate::DesignMeasure)
+        point_for_dim = first(points(strategy.candidate))
+        workspace_direction = allocate_workspace(one_point_design(point_for_dim), adp)
+        opds = map(one_point_design, points(candidate))
+        dc_direction = derivative_constants(candidate, adp)
+        fix_weights = DesignConstraints(region(adp), [true], [false])
+        gd = d -> gateauxderivative!(workspace_direction, d, adp, dc_direction)
+        optimizer = strategy.optimizer_direction
+        or = optimize(gd, optimizer, opds, fix_weights; trace_state = trace_state)
+        return or
     end
-    ord_trace = [ord]
-    orw = try
-        step_weight(candidate, ord.maximizer)
-    catch e
-        if e isa AdaptiveStepsizeException && e.original_exception isa SingularException
-            msg = """singular exception in adaptive step-size computation,
-                     it might help to increase the initial smoothness estimate.
-                     Current values of the relevant variables are:"""
-            @error msg e.initial_smooothness_estimate e.M e.gamma
+    function append_point(candidate::DesignMeasure, direction::DesignMeasure)
+        # The mass point of the direction can either be already in the support of the
+        # candidate, or it can be a new point. In the latter case, we simply append it the support with the given initial_weight used for mixing.
+        # In the former case, we don't want to scale the existing points unnecessarily for numerical reasons.
+        # Hence we append it with mixture weight 0 and use simplify_merge() to join it with the already existing point at the same location.
+        if !(only(points(direction)) in points(candidate))
+            if isnan(strategy.initial_weight)
+                mixture_weight = 1 / (1 + numpoints(candidate))
+            else
+                mixture_weight = strategy.initial_weight
+            end
+            candidate = mixture(1 - mixture_weight, candidate, direction)
+        else
+            candidate = simplify_merge(mixture(1, candidate, direction), region(adp), 0)
         end
-        rethrow(e)
     end
-    orw_trace = [orw]
-    for i in 2:strategy.steps
-        candidate = simplify(orw_trace[i - 1].maximizer, adp; strategy.simplify_args...)
+    function full_step(candidate::DesignMeasure, i::Integer)
+        orw = try
+            step_weight(candidate)
+        catch e
+            msg1 = "step $i: singular exception in adaptive step-size computation."
+            msg2 = "It might help to increase the initial smoothness estimate."
+            msg3 = "Current values of the relevant variables are:"
+            msg = "$msg1\n$msg2\n$msg3"
+            if e isa AdaptiveStepsizeException && e.original_exception isa SingularException
+                @error msg e.initial_smooothness_estimate e.M e.gamma
+            end
+            rethrow(e)
+        end
+        candidate = simplify(orw.maximizer, adp; strategy.simplify_args...)
         ord = try
             step_direction(candidate)
         catch e
-            ae = ArgumentError("step $i: candidate design is singular")
-            e isa SingularException ? throw(ae) : rethrow(e)
+            msg = "step $i: candidate design is singular"
+            e isa SingularException ? error(msg) : rethrow(e)
         end
-        ord.maximum < strategy.gateaux_tolerance && break
+        candidate = append_point(candidate, ord.maximizer)
+        return orw, ord, ord.maximum < strategy.gateaux_tolerance, candidate
+    end
+    i = 1
+    orw, ord, is_close_enough, candidate = full_step(strategy.candidate, i)
+    orw_trace, ord_trace = [orw], [ord]
+    while !is_close_enough && i < strategy.steps
+        i += 1
+        orw, ord, is_close_enough, candidate = full_step(candidate, i)
+        push!(orw_trace, orw)
         push!(ord_trace, ord)
-        push!(orw_trace, step_weight(candidate, ord.maximizer))
+        is_close_enough && break
     end
     return ExchangeResult(ord_trace, orw_trace)
 end
