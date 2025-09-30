@@ -3,7 +3,7 @@
 
 ## abstract particle based optimization ##
 
-"""
+@doc raw"""
     Kirstine.OptimizationResult
 
 Wrapper for results of particle-based optimization.
@@ -19,8 +19,8 @@ Wrapper for results of particle-based optimization.
 | trace_gx        | vector of current gradient in each iteration         |
 | trace_state     | vector of internal optimizer state in each iteration |
 | has_converged   | true if the algorithm has converged                  |
-| n\\_eval\\_f    | total number of objective evaluations                |
-| n\\_eval\\_g    | total number of gradient evaluations                 |
+| n\_eval\_f      | total number of objective evaluations                |
+| n\_eval\_g      | total number of gradient evaluations                 |
 | seconds_elapsed | total runtime                                        |
 
 Note that for a [`ZerothOrderOptimizer`](@ref) `trace_gx` will be empty

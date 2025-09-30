@@ -37,10 +37,10 @@ function fw_workspace(step::OpenLoop, x::AbstractPoint, gradient_length::Integer
     return FWDummyWorkspace()
 end
 
-"""
+@doc raw"""
     ConstNumIter <: Kirstine.StepSizeStrategy
 
-Frank-Wolfe step-size strategy ``γ(t) = 1 / \\sqrt{T}`` for a run with ``T`` iterations ``t=0,…,T-1``.
+Frank-Wolfe step-size strategy ``γ(t) = 1 / \sqrt{T}`` for a run with ``T`` iterations ``t=0,…,T-1``.
 """
 struct ConstNumIter <: StepSizeStrategy end
 
@@ -48,7 +48,7 @@ function fw_workspace(step::ConstNumIter, x::AbstractPoint, gradient_length::Int
     return FWDummyWorkspace()
 end
 
-"""
+@doc raw"""
     Adaptive <: Kirstine.StepSizeStrategy
     Adaptive(; eta = 0.9, tau = 2.0, initial_smoothness_estimate = Inf, smoothness_threshold = 1e10)
 
@@ -56,7 +56,7 @@ Adaptive Frank-Wolfe step-size strategy that uses a smoothness property of the o
 
 Since we typically do not know the smoothness constant of the objective function ``f``,
 i.e. a real number ``L`` such that
-``⟨∇f(y) - ∇f(x), y - x⟩ ≤ L\\lVert y-x\\rVert^2``
+``⟨∇f(y) - ∇f(x), y - x⟩ ≤ L\lVert y-x\rVert^2``
 for all ``x`` and ``y`` in the convex domain of ``f``,
 the constant is dynamically approximated via multiplicative search with parameters `eta ≤ 1` and `tau > 1`.
 When `initial_smoothness_estimate = Inf`,
