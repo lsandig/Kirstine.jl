@@ -371,7 +371,7 @@ end
 dp2 = DesignProblem(
     criterion = DCriterion(),
     region = DesignInterval(:t => (0, 1)),
-    covariate_parameterization = JustCopy(:t),
+    covariate_parameterization = CopyTo(:t),
     prior_knowledge = PriorSample([SLRParameter(a = 1, b = 1.5, c = 0.125)]),
     model = SinLogReg(),
 )

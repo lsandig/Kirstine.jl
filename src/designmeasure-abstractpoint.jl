@@ -9,11 +9,11 @@
 struct SignedMeasure <: AbstractPointDifference
     atoms::Matrix{Float64}
     weights::Vector{Float64}
-    function SignedMeasure(atoms, weights)
+    function SignedMeasure(atoms::AbstractMatrix{<:Real}, weights::AbstractVector{<:Real})
         if length(weights) != size(atoms, 2)
             throw(ArgumentError("number of weights and atoms must be equal"))
         end
-        new(atoms, weights)
+        return new(atoms, weights)
     end
 end
 
@@ -24,15 +24,17 @@ function Base.:(==)(s1::SignedMeasure, s2::SignedMeasure)
     return s1.weights == s2.weights && s1.atoms == s2.atoms
 end
 
-function Base.hash(s::SignedMeasure, h::UInt)
-    return hash(s.atoms, hash(s.weights, h))
-end
+Base.hash(s::SignedMeasure, h::UInt) = hash(s.atoms, hash(s.weights, h))
 
 struct DesignConstraints{N,T<:DesignRegion{N}} <: AbstractConstraints
     dr::T
     fixw::Vector{Bool}
     fixp::Vector{Bool}
-    function DesignConstraints(dr::T, fixw, fixp) where {N,T<:DesignRegion{N}}
+    function DesignConstraints(
+        dr::T,
+        fixw::AbstractVector{Bool},
+        fixp::AbstractVector{Bool},
+    ) where {N,T<:DesignRegion{N}}
         if length(fixw) != length(fixp)
             throw(DimensionMismatch("fix vectors must have identical lengths"))
         end
@@ -54,23 +56,19 @@ function DesignConstraints(
     fixedpoints::AbstractVector{<:Integer},
 )
     check_compatible(d, dr)
-    K = numpoints(d)
-    if any(fixedweights .< 1) || any(fixedweights .> K)
-        throw(ArgumentError("indices for fixed weights must be between 1 and $K"))
-    end
-    if any(fixedpoints .< 1) || any(fixedpoints .> K)
-        throw(ArgumentError("indices for fixed points must be between 1 and $K"))
-    end
-    fixw = [k in fixedweights for k in 1:K]
-    fixp = [k in fixedpoints for k in 1:K]
+    msg_weight = "indices for fixed weights must be between 1 and $(numpoints(d))"
+    msg_point = "indices for fixed points must be between 1 and $(numpoints(d))"
+    !all(in(1:numpoints(d)), fixedweights) && throw(ArgumentError(msg_weight))
+    !all(in(1:numpoints(d)), fixedpoints) && throw(ArgumentError(msg_weight))
+    fixw = [k in fixedweights for k in 1:numpoints(d)]
+    fixp = [k in fixedpoints for k in 1:numpoints(d)]
     return DesignConstraints(dr, fixw, fixp)
 end
 
 function check_compatible(d::DesignMeasure, dr::DesignRegion{N}) where N
     for dp in points(d)
-        if length(dp) != N
-            throw(ArgumentError("design point length must match design region dimension"))
-        end
+        msg_length = "design point length must match design region dimension"
+        length(dp) != N && throw(ArgumentError(msg_length))
         if !isinside(dp, dr)
             @error "" dp dr
             throw(ArgumentError("design point is outside design region"))
@@ -80,25 +78,15 @@ function check_compatible(d::DesignMeasure, dr::DesignRegion{N}) where N
 end
 
 function assert_constraints(ds::AbstractVector{DesignMeasure}, c::DesignConstraints)
-    for d in ds
-        check_compatible(d, c.dr)
-    end
-    K = length(c.fixw)
-    np = numpoints.(ds)
-    if !all(np .== K)
-        msg = "all prototypes must have $K point(s), found $(np)"
-        throw(ArgumentError(msg))
-    end
+    map(d -> check_compatible(d, c.dr), ds)
+    msg = "all prototypes must have $(length(c.fixw)) point(s), found $(numpoints.(ds))"
+    !all(d -> numpoints(d) == length(c.fixw), ds) && throw(ArgumentError(msg))
     val_fixw = [weights(d)[c.fixw] for d in ds]
+    msgw = "fixed weights must be identical across prototypes, found $(val_fixw)"
+    !allequal(val_fixw) && throw(ArgumentError(msgw))
     val_fixp = [points(d)[c.fixp] for d in ds]
-    if !allequal(val_fixw)
-        msg = "fixed weights must be identical across prototypes, found $(val_fixw)"
-        throw(ArgumentError(msg))
-    end
-    if !allequal(val_fixp)
-        msg = "fixed points must be identical across prototypes, found $(val_fixp)"
-        throw(ArgumentError(msg))
-    end
+    msgp = "fixed points must be identical across prototypes, found $(val_fixp)"
+    !allequal(val_fixp) && throw(ArgumentError(msgp))
     return nothing
 end
 
@@ -107,35 +95,31 @@ function construct_grid(
     c::DesignConstraints{N,<:DesignRegion{N}},
     prototypes::AbstractVector{DesignMeasure},
 ) where N
-    if isempty(prototypes)
-        throw(ArgumentError("grid search needs a prototype"))
-    elseif N != length(first(points(first(prototypes))))
-        throw(ArgumentError("grid spec and design point dimension do not match"))
-    elseif !(all(c.fixw))
-        throw(ArgumentError("grid on weights is not implemented"))
-    end
+    isempty(prototypes) && throw(ArgumentError("grid search needs a prototype"))
+    msg_dim = "grid spec and design point dimension do not match"
+    N != length(first(points(first(prototypes)))) && throw(ArgumentError(msg_dim))
+    !(all(c.fixw)) && throw(ArgumentError("grid on weights is not implemented"))
     # first build a grid on the design region
     region_ranges = marginal_grids(c.dr, gs.n_points)
-    bbg = collect.(Iterators.product(region_ranges...))
-    region_grid = filter(p -> isinside(p, c.dr), bbg)
-    if isempty(region_grid)
-        throw(ArgumentError("no grid points satisfy design constraints"))
-    end
+    bounding_box_grid = collect.(Iterators.product(region_ranges...))
+    grid_points_in_region = filter(p -> isinside(p, c.dr), bounding_box_grid)
+    msg_constraint = "no grid points satisfy design constraints"
+    isempty(grid_points_in_region) && throw(ArgumentError(msg_constraint))
     # then build a product of grids for each point of the design measure;
-    # each "factor" is either the region_grid (for free points)
+    # each "factor" is either the grid_points_in_region (for free points)
     # or a vector with a single design point (for fixed points)
     prototype_weights = weights(first(prototypes))
     prototype_points = collect.(points(first(prototypes)))
     points_ranges = map(1:length(prototype_points)) do k
-        c.fixp[k] ? [prototype_points[k]] : region_grid
+        return c.fixp[k] ? [prototype_points[k]] : grid_points_in_region
     end
     # Note: The length of prototype_points is not known at compile time.
     # Hence, the following product iterator does not have a concrete type.
     # Without the manual type annotation, g would be of type Any.
-    # This problem does _not_ occur above for bbg
+    # This problem does _not_ occur above for bounding_box_grid
     # since dimension(c.dr) == N _is_ known at compile time.
-    pr_iter = Iterators.product(points_ranges...)
-    points_grid = vec(collect.(pr_iter))::Vector{Vector{Vector{Float64}}}
+    product_iterator = Iterators.product(points_ranges...)
+    points_grid = vec(collect.(product_iterator))::Vector{Vector{Vector{Float64}}}
     g = [DesignMeasure(pts, prototype_weights) for pts in points_grid]
     return g
 end
@@ -143,20 +127,14 @@ end
 # Note: in contrast to ap_diff(p, q), this does _not_ consider the last weight to be specified implicitly.
 # For Frank-Wolfe it is more convenient to use the full K-dimensional weights vector.
 function fw_norm(s::SignedMeasure)
-    acc = 0.0
-    for i in 1:length(s.atoms)
-        acc += s.atoms[i]^2
-    end
-    for k in 1:length(s.weights)
-        acc += s.weights[k]^2
-    end
-    return sqrt(acc)
+    # Note that we map over the single entries of the s.atoms matrix here!
+    ssq = mapreduce(x -> x^2, +, s.atoms) + mapreduce(x -> x^2, +, s.weights)
+    return sqrt(ssq)
 end
 
 function fw_gradient_length(d::DesignMeasure, c::DesignConstraints)
-    K = numpoints(d)
     dim = length(first(points(d)))
-    return (K - sum(c.fixp)) * dim + K - sum(c.fixw)
+    return (numpoints(d) - sum(c.fixp)) * dim + numpoints(d) - sum(c.fixw)
 end
 
 # Since we're only optimizing weights, our convex region is a probability simplex.
@@ -203,9 +181,8 @@ function ap_convex_combination!(
     qs::AbstractVector{DesignMeasure},
     c::DesignConstraints,
 )
-    if length(alpha) != length(qs)
-        throw(ArgumentError("not the same number of points and weights"))
-    end
+    msg_length = "not the same number of points and weights"
+    length(alpha) == length(qs) || throw(ArgumentError(msg_length))
     sum(alpha) ≈ 1.0 || throw(ArgumentError("sum(alpha) must be ≈ 1"))
     for k in 1:length(p.weights)
         if c.fixw[k]
@@ -214,8 +191,8 @@ function ap_convex_combination!(
             p.weights[k] = 0
             for i in 1:length(alpha)
                 p.weights[k] += alpha[i] * qs[i].weights[k]
-                p.weights[k] = min(p.weights[k], 1.0)
             end
+            p.weights[k] = min(p.weights[k], 1.0)
         end
     end
     p.weights ./= sum(p.weights)
@@ -233,25 +210,21 @@ function ap_convex_combination!(
 end
 
 function ap_rand!(d::DesignMeasure, c::DesignConstraints)
-    K = numpoints(d)
-    pts = points(d)
-    for k in 1:K
+    for k in 1:numpoints(d)
         if !c.fixp[k]
-            random_designpoint!(pts[k], c.dr)
+            random_designpoint!(points(d)[k], c.dr)
         end
     end
     if !all(c.fixw)
         # Due to rounding errors, a sum > 1.0 can happen.
         # We need to prevent negative normalizing constants later on.
         cum_sum_fix = min(1.0, sum(weights(d)[c.fixw]))
-        if cum_sum_fix == 1.0
-            @warn "fixed weights already sum to one"
-        end
+        cum_sum_fix == 1.0 && @warn("fixed weights already sum to one")
         # rationale for the weights: when no indices are fixed, re-normalized exponential
         # weights imply a uniform distribution on the simplex, i.e. Dirichlet(1, …, 1).
         cum_sum_rand = 0.0
         while cum_sum_rand < eps() # we don't want to divide by too small numbers
-            for k in 1:K
+            for k in 1:numpoints(d)
                 if !c.fixw[k]
                     d.weights[k] = -log(rand())
                     cum_sum_rand += d.weights[k]
@@ -259,7 +232,7 @@ function ap_rand!(d::DesignMeasure, c::DesignConstraints)
             end
         end
         norm_const = (1 - cum_sum_fix) / cum_sum_rand
-        for k in 1:K
+        for k in 1:numpoints(d)
             if !c.fixw[k]
                 d.weights[k] *= norm_const
             end
@@ -291,14 +264,13 @@ function ap_as_difference(p::DesignMeasure)
 end
 
 function ap_dist(p::DesignMeasure, q::DesignMeasure)
-    acc = 0.0
-    for i in 1:length(p.points)
-        acc += (p.points[i] - q.points[i])^2
-    end
+    # we iterate through the scalar elements of the matrix,
+    # hence we don't use the points() accessor!
+    ssq = mapreduce((x, y) -> (x - y)^2, +, p.points, q.points)
     for k in 1:(length(p.weights) - 1)
-        acc += (p.weights[k] - q.weights[k])^2
+        ssq += (p.weights[k] - q.weights[k])^2
     end
-    return sqrt(acc)
+    return sqrt(ssq)
 end
 
 function ap_rand!(v::SignedMeasure, lb::Real, ub::Real)
@@ -335,11 +307,9 @@ function ap_add!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
     # handle intersections: find maximal 0<=t<=1 such that p+tv remains in the search volume
     t = move_how_far(p, v, c.dr)
     # treat a very small t as zero to reduce numerical inaccuracies in the next step
-    if t < 1e-8
-        t = 0.0
-    end
+    t = t < 1e-8 ? 0.0 : t
     # Then, set p to p + tv
-    move_add_v!(p, t, v, c.dr, c.fixw)
+    move_add_tv!(p, t, v, c.dr, c.fixw)
     # Stop the particle if the boundary was hit.
     if t != 1.0
         ap_mul!(v, 0)
@@ -349,7 +319,11 @@ function ap_add!(p::DesignMeasure, v::SignedMeasure, c::DesignConstraints)
     return p
 end
 
-function move_handle_fixed!(v::SignedMeasure, fixw, fixp)
+function move_handle_fixed!(
+    v::SignedMeasure,
+    fixw::AbstractVector{Bool},
+    fixp::AbstractVector{Bool},
+)
     K = length(v.weights)
     sum_vw_free = 0.0
     for k in 1:(K - 1)
@@ -394,12 +368,10 @@ function move_how_far(p::DesignMeasure, v::SignedMeasure, dr::DesignRegion{N}) w
     t = 1.0
     # design region constraints
     K = numpoints(p)
-    pts = points(p)
-    ats = atoms(v)
     # For each designpoint figure out how far we can go along v.
     # The minimum of these lengths is how far we can go overall.
     for k in 1:K
-        t = min(t, move_designpoint_how_far(pts[k], ats[k], dr))
+        t = min(t, move_designpoint_how_far(points(p)[k], atoms(v)[k], dr))
     end
     # simplex constraints
     #  * lower bounds are zero
@@ -415,20 +387,16 @@ function move_how_far(p::DesignMeasure, v::SignedMeasure, dr::DesignRegion{N}) w
     return t
 end
 
-function move_add_v!(
+function move_add_tv!(
     p::DesignMeasure,
-    t,
+    t::Real,
     v::SignedMeasure,
     dr::DesignRegion{N},
-    fixw,
+    fixw::AbstractVector{Bool},
 ) where N
     K = numpoints(p)
     # first for the design points ...
-    pts = points(p)
-    ats = atoms(v)
-    for k in 1:K
-        move_designpoint!(pts[k], t, ats[k], dr)
-    end
+    map((x, y) -> move_designpoint!(x, t, y, dr), points(p), atoms(v))
     # ... then for the weights.
     p.weights .+= t .* v.weights
     weight_K = 1.0
@@ -438,7 +406,7 @@ function move_add_v!(
         p.weights[k] = min(max(p.weights[k], 0.0), 1.0)
         weight_K -= p.weights[k]
     end
-    # In `handle_fixed()` we made sure that mathematically we have
+    # In `move_handle_fixed!()` we made sure that mathematically we have
     #
     #   weight_K == 1 - sum(weight[1:(K-1)]),
     #

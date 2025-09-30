@@ -99,6 +99,7 @@ math_macros = Dict(
     raw"\TotalDiff" => raw"\operatorname{D\!}",
     raw"\simappr" => raw"\overset{\mathrm{appr}}{\sim}",
     raw"\simiid" => raw"\overset{\mathrm{iid}}{\sim}",
+    raw"\DesignProblem" => raw"\mathcal{D}",
     # Abbreviations
     raw"\PosteriorDensity" => raw"p(\Parameter\mid\Unit_1,…,\Unit_{\SampleSize})",
 )

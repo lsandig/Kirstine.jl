@@ -116,7 +116,7 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
 
     @testset "construct_grid(::ProductGrid)" begin
         # argument errors
-        let gs33 = Kirstine.ProductGrid(3, 3),
+        let gs33 = ProductGrid(3, 3),
             dr2 = DesignInterval(:a => (0, 1), :b => (2, 4)),
             c2free = Kirstine.DesignConstraints(dr2, [false, false], [false, false]),
             c2fix = Kirstine.DesignConstraints(dr2, [true, true], [false, false]),
@@ -127,11 +127,11 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
             @test_throws "needs a prototype" cg(gs33, c2free, DesignMeasure[])
             @test_throws "do not match" cg(gs33, c2free, [DesignMeasure([1.0;;], [1.0])])
             @test_throws "weights is not" cg(gs33, c2free, [d])
-            @test_throws MethodError cg(Kirstine.ProductGrid(3), c2fix, [d])
+            @test_throws MethodError cg(ProductGrid(3), c2fix, [d])
         end
 
         # 1d design region, one-point design
-        let gs3 = Kirstine.ProductGrid(3),
+        let gs3 = ProductGrid(3),
             dr = DesignInterval(:a => (0, 1)),
             cfixw = Kirstine.DesignConstraints(dr, [true], [false]),
             d = one_point_design([0.1])
@@ -145,7 +145,7 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
         end
 
         # 1d design region, four-point design with two fixed, weights fixed
-        let gs = Kirstine.ProductGrid(4),
+        let gs = ProductGrid(4),
             dr = DesignInterval(:z => (0, 1)),
             fixw = fill(true, 4),
             fixp = [true, false, false, true],
@@ -161,7 +161,7 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
         end
 
         # weird region, too coarse grid
-        let gs2 = Kirstine.ProductGrid(2, 2),
+        let gs2 = ProductGrid(2, 2),
             dr = UnitBall{2}(),
             c = Kirstine.DesignConstraints(dr, [true], [false]),
             d = one_point_design([0, 0])
@@ -510,7 +510,7 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
         end
     end
 
-    @testset "move_add_v!" begin
+    @testset "move_add_tv!" begin
         let dr = DesignInterval(:a => (1, 3)),
             d = DesignMeasure([[1.5], [2], [2.5]], [3 / 8, 4 / 8, 1 / 8]),
             # Note:
@@ -521,22 +521,22 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
             #
             # stay inside
             v1 = Kirstine.SignedMeasure([0.25 0.25 0.25], fill(1 / 32, 3)),
-            r1 = Kirstine.move_add_v!(deepcopy(d), 1.0, v1, dr, fill(false, 3)),
+            r1 = Kirstine.move_add_tv!(deepcopy(d), 1.0, v1, dr, fill(false, 3)),
             # move out in design point right
             v2 = Kirstine.SignedMeasure([4 0.25 0.25], fill(1 / 32, 3)),
-            r2 = Kirstine.move_add_v!(deepcopy(d), 1.0, v2, dr, fill(false, 3)),
+            r2 = Kirstine.move_add_tv!(deepcopy(d), 1.0, v2, dr, fill(false, 3)),
             # move out in design point left
             v3 = Kirstine.SignedMeasure([-2 0.25 0.25], fill(1 / 32, 3)),
-            r3 = Kirstine.move_add_v!(deepcopy(d), 1.0, v3, dr, fill(false, 3)),
+            r3 = Kirstine.move_add_tv!(deepcopy(d), 1.0, v3, dr, fill(false, 3)),
             # move out in weight right, also set last weight to 0
             v4 = Kirstine.SignedMeasure([0.25 0.25 0.25], [1, -0.5, 0]),
-            r4 = Kirstine.move_add_v!(deepcopy(d), 1.0, v4, dr, fill(false, 3)),
+            r4 = Kirstine.move_add_tv!(deepcopy(d), 1.0, v4, dr, fill(false, 3)),
             # move out in weight left
             v5 = Kirstine.SignedMeasure([0.25 0.25 0.25], [-1, 1 / 8, 2 / 8]),
-            r5 = Kirstine.move_add_v!(deepcopy(d), 1.0, v5, dr, fill(false, 3)),
+            r5 = Kirstine.move_add_tv!(deepcopy(d), 1.0, v5, dr, fill(false, 3)),
             # special case: fixed last weight
             v6 = Kirstine.SignedMeasure([0.25 0.25 0.25], [1 / 4, -1 / 4, 0]),
-            r6 = Kirstine.move_add_v!(deepcopy(d), 1.0, v6, dr, [false, false, true])
+            r6 = Kirstine.move_add_tv!(deepcopy(d), 1.0, v6, dr, [false, false, true])
 
             @test r1 == DesignMeasure([[1.75], [2.25], [2.75]], [13 / 32, 17 / 32, 1 / 16])
             @test r2 == DesignMeasure([[3.00], [2.25], [2.75]], [13 / 32, 17 / 32, 1 / 16])

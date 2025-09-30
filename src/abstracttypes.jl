@@ -132,7 +132,7 @@ abstract type AbstractConstraints end
 
 Supertype for all kinds of design problems.
 
-See also [`DesignProblem`](@ref).
+See also [`DesignProblem`](@ref), [`CompositeDesignProblem`](@ref).
 """
 abstract type AbstractDesignProblem end
 

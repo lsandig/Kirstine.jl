@@ -2,10 +2,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module UserImportTests
+module Simple
 using Test
 import Kirstine as Smith
 
-@testset "user.jl (import)" begin
+@testset "user.jl (import, simple)" begin
     @testset "@simple_model" begin
         @test_throws "no covariate field names" @macroexpand(Smith.@simple_model(Foo))
 
@@ -69,5 +70,39 @@ import Kirstine as Smith
             @test b == Base.remove_linenums!(bref)
         end
     end
+end
+end
+
+module Complicated
+using Test
+module Foo
+module Bar
+import Kirstine as Smith
+end
+module Kirstine
+surname = "Frederiksen" # someone else
+end
+end
+Kirstine = 42
+import .Foo as Baz
+module Zaphod
+using Test
+import ..Baz
+
+# This call internally finds the correct one of the many variables named `Kirstine`:
+Baz.Bar.Smith.@simple_parameter Beeblebrox c d
+
+@testset "user.jl (import, complicated, inner)" begin
+    # The parameter and a method on it is defined inside this module...
+    p = BeeblebroxParameter(1, 2)
+    @test typeof(p) <: Baz.Bar.Smith.Parameter
+    @test Baz.Bar.Smith.dimension(p) == 2
+end
+end
+
+@testset "user.jl (import, complicated, outer)" begin
+    # ... but not outside
+    @test !@isdefined BeeblebroxParameter
+end
 end
 end

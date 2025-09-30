@@ -4,12 +4,16 @@
 ## generic particle swarm optimizer ##
 
 """
-    Pso <: ZerothOrderOptimizer
+    Pso <: Kirstine.ZerothOrderOptimizer
 
 A constricted particle swarm optimizer.
 
 There is a large number of published PSO variants,
 this one was taken from two [^CK02] publications [^ES00].
+
+Note that particle swarm optimization has no convergence guarantees,
+hence the `has_converged` field of the [`OptimizationResult`](@ref)
+returned by a PSO run is always `false` by definition.
 
 # Initialization
 
@@ -26,36 +30,28 @@ Construction from the vector of `prototypes` proceeds as follows:
 [^CK02]: Maurice Clerc and James Kennedy (2002). The particle swarm - explosion, stability, and convergence in a multidimensional complex space. IEEE Transactions on Evolutionary Computation, 6(1), 58–73. [doi:10.1109/4235.985692](http://dx.doi.org/10.1109/4235.985692)
 [^ES00]: Russell C. Eberhardt and Yuhui Shi (2000). Comparing inertia weights and constriction factors in particle swarm optimization. Proceedings of the 2000 Congress on Evolutionary Computation. [doi: 10.1109/CEC.2000.870279](https://doi.org/10.1109/CEC.2000.870279)
 """
-struct Pso <: ZerothOrderOptimizer
+@kwdef struct Pso <: ZerothOrderOptimizer
     iterations::Int64
     swarmsize::Int64
-    c1::Float64
-    c2::Float64
-    function Pso(iterations, swarmsize, c1, c2)
-        if iterations <= 0
-            throw(ArgumentError("number of iterations must be positive"))
-        end
-        if swarmsize <= 1
-            throw(ArgumentError("swarmsize must be at least 2"))
-        end
+    c1::Float64 = 2.05
+    c2::Float64 = 2.05
+    @doc """
+            Pso(; iterations, swarmsize, c1 = 2.05, c2 = 2.05)
+
+        Set up parameters for a particle swarm optimizer.
+
+        `c1` controls movement towards a particle's personal best, while `c2` controls
+        movement towards the global best. In this implementation, a particle's
+        neighborhood is the whole swarm.
+        """
+    function Pso(iterations::Integer, swarmsize::Integer, c1::Real, c2::Real)
+        iterations <= 0 && throw(ArgumentError("number of iterations must be positive"))
+        swarmsize <= 1 && throw(ArgumentError("swarmsize must be at least 2"))
         if c1 < 0 || c2 < 0 || c1 + c2 <= 4
             throw(ArgumentError("c1 and c2 must be non-negative, and c1 + c2 > 4"))
         end
         return new(iterations, swarmsize, c1, c2)
     end
-end
-
-"""
-    Pso(; iterations, swarmsize, c1 = 2.05, c2 = 2.05)
-
-Set up parameters for a particle swarm optimizer.
-
-`c1` controls movement towards a particle's personal best, while `c2` controls
-movement towards the global best. In this implementation, a particle's
-neighborhood is the whole swarm.
-"""
-function Pso(; iterations, swarmsize, c1 = 2.05, c2 = 2.05)
-    return Pso(iterations, swarmsize, c1, c2)
 end
 
 iterations(optimizer::Pso) = optimizer.iterations
@@ -79,10 +75,11 @@ maximizer(state::PsoState) = state.g
 Base.maximum(state::PsoState) = state.fg
 n_eval_f(state::PsoState) = state.n_eval
 n_eval_g(state::PsoState) = 0
+has_converged(state::PsoState, o::Pso) = false
 
 # Note: user-visible documentation for this method is attached to `Pso`.
 function optimizer_state(
-    f,
+    f::Function,
     o::Pso,
     prototypes::AbstractVector{<:AbstractPoint},
     constraints::AbstractConstraints,
@@ -91,26 +88,16 @@ function optimizer_state(
         @error "" o.swarmsize prototypes
         throw(ArgumentError("number of prototype particles must be <= swarmsize"))
     end
-    x_given = deepcopy(prototypes)
     n_random = o.swarmsize - length(prototypes)
-    x_random = [deepcopy(prototypes[1]) for _ in 1:n_random]
-    for i in 1:length(x_random)
-        ap_rand!(x_random[i], constraints)
-    end
-    x = [x_given; x_random]
+    x_random = [ap_rand!(deepcopy(first(prototypes)), constraints) for _ in 1:n_random]
+    x = [deepcopy(prototypes); x_random]
     # here we get the matching difference type for the concrete type of x[1]
-    zero_diff = ap_as_difference(x[1])
-    ap_diff!(zero_diff, x[1], x[1]) # initialize at 0
+    zero_diff = ap_diff!(ap_as_difference(x[1]), x[1], x[1]) # initialize at apd 0
     v = [deepcopy(zero_diff) for _ in 1:(o.swarmsize)]
-    p = deepcopy(x)
-    g = deepcopy(x[1])
-    fx = zeros(o.swarmsize)
-    fp = zeros(o.swarmsize)
-    fg = 0.0
-    r1 = deepcopy(zero_diff)
-    r2 = deepcopy(zero_diff)
-    diffg = deepcopy(zero_diff)
-    diffp = deepcopy(zero_diff)
+    p, g = deepcopy(x), deepcopy(x[1])
+    fx, fp, fg = zeros(o.swarmsize), zeros(o.swarmsize), 0.0
+    r1, r2 = deepcopy(zero_diff), deepcopy(zero_diff)
+    diffg, diffp = deepcopy(zero_diff), deepcopy(zero_diff)
     n_eval = 0
     state = PsoState(x, p, g, v, fx, fp, fg, r1, r2, diffg, diffp, n_eval)
     pso_evaluate_objective!(f, state)
@@ -122,13 +109,7 @@ function optimizer_state(
     return state
 end
 
-function tick!(
-    f,
-    state::PsoState,
-    optimizer::Pso,
-    constraints::AbstractConstraints,
-    iter::Integer,
-)
+function tick!(f, state::PsoState, optimizer::Pso, constraints::AbstractConstraints)
     phi = optimizer.c1 + optimizer.c2
     chi = 2 / abs(2 - phi - sqrt(phi^2 - 4 * phi))
     for i in 1:length(state.x)
@@ -167,9 +148,7 @@ function pso_update_velocity!(state::PsoState, i, c1, c2, chi)
 end
 
 function pso_update_position!(state::PsoState, constraints::AbstractConstraints)
-    for i in 1:length(state.x)
-        ap_add!(state.x[i], state.v[i], constraints)
-    end
+    map((x, v) -> ap_add!(x, v, constraints), state.x, state.v)
     return state
 end
 

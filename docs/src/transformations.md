@@ -99,7 +99,7 @@ Random.seed!(4711)
 dp_id = DesignProblem(
     region = DesignInterval(:time => [0, 48]),
     criterion = DCriterion(),
-    covariate_parameterization = JustCopy(:time),
+    covariate_parameterization = CopyTo(:time),
     model = TPCModel(sigma = 1),
     prior_knowledge = draw_from_prior(1000, 2),
     transformation = Identity(),

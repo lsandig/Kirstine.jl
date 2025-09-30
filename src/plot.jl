@@ -9,39 +9,40 @@
     xguide --> "iteration"
     yguide --> "objective"
     label --> ""
-    1:niter, r.trace_fx
+    return 1:niter, r.trace_fx
 end
 
 @recipe function f(r::DirectMaximizationResult)
     # just unwrap the OptimizationResult
-    optimization_result(r)
+    return optimization_result(r)
 end
 
 @recipe function f(rs::AbstractVector{<:OptimizationResult})
     nsteps = length(rs)
     steps = collect(1:nsteps)
     seriestype --> (nsteps == 1 ? :scatter : :line)
-    xticks --> (nsteps == 1 ? [1] : :auto)
+    xticks --> steps
     xlims --> (nsteps == 1 ? (0.5, 1.5) : (1, nsteps))
     fx = [r.maximum for r in rs]
     xguide --> "step"
     yguide --> "best objective value"
     label --> ""
-    steps, fx
+    return steps, fx
 end
 
 @recipe function f(r::ExchangeResult)
     layout --> @layout [derivative; objective]
     @series begin
         subplot := 1
+        widen --> true
+        optimization_results_weight(r)
+    end
+    @series begin
+        subplot := 2
         yguide --> "max derivative"
         ylims --> (0, NaN)
         widen --> true
         optimization_results_direction(r)
-    end
-    @series begin
-        subplot := 2
-        optimization_results_weight(r)
     end
 end
 
@@ -62,12 +63,11 @@ end
     # scatter each design point explicitly in its own series because grouping can't be used
     # in a recipe: https://github.com/JuliaPlots/Plots.jl/issues/1167
     pt = reduce(hcat, points(d))
-    w = weights(d)
     for k in 1:numpoints(d)
         @series begin
             seriestype := :scatter
             markercolor --> k
-            label --> (label_formatter(k, pt[:, k], w[k]))
+            label --> (label_formatter(k, pt[:, k], weights(d)[k]))
             y = (N == 1) ? 0 : pt[2, k]
             [pt[1, k]], [y]
         end
@@ -82,7 +82,7 @@ end
     xlims --> (lb[1], ub[1])
     ylims --> (lb[2], ub[2])
     widen --> true
-    d
+    return d
 end
 
 @recipe function f(d::DesignMeasure, dr::DesignRegion{1})
@@ -91,54 +91,41 @@ end
     xguide --> dimnames(dr)[1]
     xlims --> (lb[1], ub[1])
     widen --> true
-    d
+    return d
 end
 
 struct DerivativePlot{N,Tdr<:DesignRegion{N}}
     dr::Tdr
     marginal_grids::NTuple{N,Vector{Float64}}
     gd::Array{Float64,N}
-    function DerivativePlot(
-        d::DesignMeasure,
-        adp::AbstractDesignProblem,
-        n_grid::NTuple{N,Integer},
-    ) where N
-        if any(n_grid .< 2)
-            throw(ArgumentError("n_grid must be .>= 2"))
-        end
-        dr = region(adp)
-        # Calculate Gateaux derivative on a grid over the bounding box of dr.
-        # Evaluate it only on those points that are inside and fill the rest with NaN,
-        # which renders transparently in the heatmap.
-        mg = marginal_grids(dr, n_grid)
-        if N == 1
-            append!(mg[1], Iterators.flatten(points(d)))
-            sort!(mg[1])
-        end
-        product_dp_grid = collect.(Iterators.product(mg...))
-        inside_dr = isinside.(product_dp_grid, Ref(dr))
-        gd_grid = fill(NaN, size(product_dp_grid))
-        # note: indexing and array with another array produces a vector
-        directions = [one_point_design(dp) for dp in product_dp_grid[inside_dr]]
-        gd = gateauxderivative(d, directions, adp)
-        gd_grid[inside_dr] .= gd
-        return new{N,typeof(dr)}(dr, mg, gd_grid)
-    end
+end
+
+function DerivativePlot(
+    d::DesignMeasure,
+    adp::AbstractDesignProblem,
+    n_grid::NTuple{N,Integer},
+) where N
+    mg, gd_grid = gd_grid_helper(d, adp, n_grid; include_1d_support = true)
+    return DerivativePlot(region(adp), mg, gd_grid)
 end
 
 @recipe function f(dplot::DerivativePlot{1,<:DesignRegion{1}})
+    gd_not_nan = filter(!isnan, dplot.gd)
+    gd_max = isempty(gd_not_nan) ? NaN : maximum(gd_not_nan)
     seriestype := :line
     markershape := :none
     label --> ""
     xguide --> dimnames(dplot.dr)[1]
     yguide --> "Gateaux derivative"
     linecolor --> :black
-
-    dplot.marginal_grids[1], dplot.gd
+    title --> "maximum: $(round(gd_max; sigdigits=3))"
+    return dplot.marginal_grids[1], dplot.gd
 end
 
 @recipe function f(dplot::DerivativePlot{2,<:DesignRegion{2}})
+    # Note that NaN values in gd will renders transparently in the heatmap.
     gd_not_nan = filter(!isnan, dplot.gd)
+    gd_max = isempty(gd_not_nan) ? NaN : maximum(gd_not_nan)
     ex = isempty(gd_not_nan) ? (-1.0, 1.0) : extrema(gd_not_nan)
     xguide --> (dimnames(dplot.dr)[1])
     yguide --> (dimnames(dplot.dr)[2])
@@ -148,8 +135,9 @@ end
     clims --> ((-1, 1) .* max_abs_gd)
     seriestype := :heatmap
     label := ""
-
-    dplot.marginal_grids[1], dplot.marginal_grids[2], permutedims(dplot.gd)
+    colorbar_title --> "Gateaux derivative"
+    title --> "maximum: $(round(gd_max; sigdigits=3))"
+    return dplot.marginal_grids[1], dplot.marginal_grids[2], permutedims(dplot.gd)
 end
 
 """
@@ -192,24 +180,13 @@ function plot_gateauxderivative(
 )
     N = dimension(region(adp))
     if ismissing(n_grid)
-        if N == 1
-            n_grid = 101
-        elseif N == 2
-            n_grid = (51, 51)
-        else
-            msg = "only implemented for 1 or 2 dimensional regions, got $N"
-            throw(ArgumentError(msg))
-        end
-    end
-    if length(n_grid) != N
-        msg = "length(n_grid) must match dimension of design region, here $N"
-        throw(ArgumentError(msg))
+        msg = "only implemented for 1 or 2 dimensional regions, got $N"
+        N in [1, 2] || throw(ArgumentError(msg))
+        n_grid = N == 1 ? 101 : (51, 51)
     end
     n_grid_tuple = n_grid isa Integer ? (n_grid,) : n_grid
     plt_gd = RecipesBase.plot(DerivativePlot(d, adp, n_grid_tuple); kw...)
-    if overlay_points
-        RecipesBase.plot!(plt_gd, d; kw...)
-    end
+    overlay_points && RecipesBase.plot!(plt_gd, d; kw...)
     return plt_gd
 end
 
@@ -247,19 +224,17 @@ function expected_function_graph_data(
     elseif probability < 0 || probability > 1
         throw(ArgumentError("probability must be in in interval [0, 1]"))
     end
-    K = numpoints(d)
     num_draws = length(weights(pk))
     fx = zeros(num_draws)
-    fxm = zeros(length(x), K)
-    fxl = fill(NaN, length(x), K)
-    fxu = fill(NaN, length(x), K)
+    fxm = zeros(length(x), numpoints(d))
+    fxl = fill(NaN, length(x), numpoints(d))
+    fxu = fill(NaN, length(x), numpoints(d))
     c = implied_covariates(d, m, cp)
     qprobs = ((1 - probability) / 2, (1 + probability) / 2)
-    pars = parameters(pk)
-    for k in 1:K
+    for k in 1:numpoints(d)
         for i in 1:length(x)
             for s in 1:num_draws
-                fx[s] = f(x[i], c[k], pars[s])
+                fx[s] = f(x[i], c[k], parameters(pk)[s])
             end
             fxm[i, k] = mapreduce((w, fxs) -> w * fxs, +, weights(pk), fx)
             if bands
@@ -322,13 +297,11 @@ end
         x, fxm
     end
     # points
-    pt = points(d)
-    wt = weights(d)
     gx, hx = expected_function_point_data(g, h, d, m, cp, pk)
     for k in 1:numpoints(d)
         @series begin
-            label --> (label_formatter(k, pt[k], wt[k]))
-            markersize --> max(minmarkersize, maxmarkersize * sqrt(wt[k]))
+            label --> (label_formatter(k, points(d)[k], weights(d)[k]))
+            markersize --> max(minmarkersize, maxmarkersize * sqrt(weights(d)[k]))
             markercolor --> k
             seriestype := :scatter
             gx[:, k], hx[:, k]

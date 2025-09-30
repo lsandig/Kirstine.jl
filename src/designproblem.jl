@@ -387,17 +387,25 @@ end
     efficiency(d1::DesignMeasure, d2::DesignMeasure, dp::DesignProblem)
     efficiency(d1::DesignMeasure, d2::DesignMeasure, dp1::DesignProblem, dp2::DesignProblem)
 
-Relative D-efficiency of `d1` to `d2`.
+Relative efficiency of `d1` to `d2` under the corresponding problems.
 
-Note that for the method with two design problems,
+The function with two design problems is only defined
+if there is a sensible notion of efficiency for the
+combination of the two [`DesignCriterion`](@ref) fields.
+For the [`DCriterion`](@ref),
 the dimensions of the transformed parameters must be identical.
-All other aspects are allowed to be different.
+Apart from that, the two design problems are allowed to be completely different.
+The function with three arguments is a shorthand for when `dp1` and `dp2` are identical.
 
 See also the [mathematical background](math.md#Efficiency).
 
 !!! note
 
-    This always computes D-efficiency, regardless of the criterion used in `dp`.
+    Before version 0.8.0 of Kirstine.jl, the criteria of the design problems were ignored
+    and D-efficiency was computed unconditionally.
+    The old behavior can be mimicked by explicitly calling
+
+        efficiency(d1, d2, DesignProblem(dp1; criterion = DCriterion()), DesignProblem(dp2; criterion = DCriterion()))
 """
 function efficiency(d1::DesignMeasure, d2::DesignMeasure, dp::DesignProblem)
     return efficiency(d1, d2, dp, dp)
@@ -406,8 +414,24 @@ end
 function efficiency(
     d1::DesignMeasure,
     d2::DesignMeasure,
-    dp1::DesignProblem,
-    dp2::DesignProblem,
+    dp1::DesignProblem{
+        DCriterion,
+        <:DesignRegion,
+        <:Model,
+        <:CovariateParameterization,
+        <:PriorKnowledge,
+        <:Transformation,
+        FisherMatrix,
+    },
+    dp2::DesignProblem{
+        DCriterion,
+        <:DesignRegion,
+        <:Model,
+        <:CovariateParameterization,
+        <:PriorKnowledge,
+        <:Transformation,
+        FisherMatrix,
+    },
 )
     # check that minimal requirements are met for efficiency to make sense
     t = codomain_dimension(transformation(dp1), prior_knowledge(dp1))
@@ -417,9 +441,32 @@ function efficiency(
     # Take a shortcut via D criterion objective, which already gives the average
     # log-determinant of the transformed information matrices, and handles exceptions.
     # Note that the design region is irrelevant for relative efficiency.
-    dp1d = DesignProblem(dp1; criterion = DCriterion())
-    dp2d = DesignProblem(dp2; criterion = DCriterion())
-    return exp((objective(d1, dp1d) - objective(d2, dp2d)) / t)
+    return exp((objective(d1, dp1) - objective(d2, dp2)) / t)
+end
+
+function efficiency(
+    d1::DesignMeasure,
+    d2::DesignMeasure,
+    dp1::DesignProblem{
+        ACriterion,
+        <:DesignRegion,
+        <:Model,
+        <:CovariateParameterization,
+        <:PriorKnowledge,
+        <:Transformation,
+        FisherMatrix,
+    },
+    dp2::DesignProblem{
+        ACriterion,
+        <:DesignRegion,
+        <:Model,
+        <:CovariateParameterization,
+        <:PriorKnowledge,
+        <:Transformation,
+        FisherMatrix,
+    },
+)
+    return objective(d2, dp2) / objective(d1, dp1)
 end
 
 """

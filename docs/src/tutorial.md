@@ -176,11 +176,11 @@ Finally, we need to specify how a design point maps to a `SigEmaxCovariate`.
 Here, the design region is simply the interval of possible doses.
 This means that we can just copy the only element of the design point
 into the covariate's `dose` field.
-For this we can use [`JustCopy`](@ref),
+For this we can use [`CopyTo`](@ref),
 which is a subtype of [`Kirstine.CovariateParameterization`](@ref).
 
 ```@example main
-cp = JustCopy(:dose)
+cp = CopyTo(:dose)
 nothing # hide
 ```
 

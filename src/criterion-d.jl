@@ -120,3 +120,19 @@ function gateaux_constants!(
     end
     return gc
 end
+
+# For a problem with the D-criterion, we can estimate a lower bound for the efficiency with
+# respect to the (unknown) optimal design from the value of the maximal Gateaux derivative
+# at the current candidate design.
+function efficiency_lower_bound(
+    max_gateaux_derivative::Real,
+    dim_transformed_parameter::Integer,
+)
+    if max_gateaux_derivative == -Inf
+        throw(ArgumentError("gateaux derivative must be bounded from below"))
+    elseif dim_transformed_parameter < 1
+        throw(ArgumentError("dimension of transformed parameter must be >= 1"))
+    end
+    elb = exp(-max_gateaux_derivative / dim_transformed_parameter)
+    return elb
+end

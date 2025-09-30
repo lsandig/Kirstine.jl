@@ -13,7 +13,10 @@ function Kirstine.fw_linear_maximization_oracle!(
     c::BoxConstraints,
 )
     box_corners = Iterators.product(Iterators.zip(c.lb.x, c.ub.x)...)
+    # Workaround for https://github.com/domluna/JuliaFormatter.jl/issues/926
+    #! format: off
     v.x .= argmax(corner -> mapreduce(*, +, gx, corner), box_corners)
+    #! format: on
     return v
 end
 
@@ -58,11 +61,10 @@ end
 
 @testset "optimizer-frank-wolfe.jl" begin
     @testset "OpenLoop" begin
-        @test_throws ">= 1" Kirstine.OpenLoop(0)
+        @test_throws ">= 1" OpenLoop(0)
     end
 
     @testset "Adaptive" begin
-        Adaptive = Kirstine.Adaptive
         @test_throws "eta must be <= 1" Adaptive(; eta = 2)
         @test_throws "tau must be > 1" Adaptive(; tau = 1)
         @test_throws "threshold must be > 0" Adaptive(; smoothness_threshold = 0)
@@ -72,11 +74,18 @@ end
 
     @testset "FrankWolfe" begin
         # check both positional and keyword-based constructor
-        msg = "must be positive"
-        @test_throws msg Kirstine.FrankWolfe(-1, Kirstine.OpenLoop(2), false)
-        @test_throws msg Kirstine.FrankWolfe(;
+        msg = "number of iterations must be positive"
+        @test_throws msg FrankWolfe(-1, 1e-3, OpenLoop(2), false)
+        @test_throws msg FrankWolfe(;
             iterations = -1,
-            stepsize = Kirstine.OpenLoop(2),
+            fw_gap_tolerance = 1e-3,
+            stepsize = OpenLoop(2),
+            pairwise = false,
+        )
+        @test_throws "fw_gap_tolerance must be non-negative" FrankWolfe(;
+            iterations = 10,
+            fw_gap_tolerance = -1,
+            stepsize = OpenLoop(2),
             pairwise = false,
         )
     end
@@ -110,7 +119,7 @@ end
             gx = g!(zeros(4), x),
             gx_tmp = fill(NaN, 4),
             c = BoxConstraints(Pnt(fill(-1, n)), Pnt(fill(10, n))),
-            w = Kirstine.AdaptiveWorkspace(NaN, x_tmp, d_tmp, gx_tmp)
+            w = Kirstine.AdaptiveWorkspace(NaN, x_tmp, d_tmp, gx_tmp, false)
 
             res = Kirstine.fw_estimate_initial_smoothness!(g!, w, x, gx, d, c, 1)
 
@@ -133,8 +142,8 @@ end
 
             # We can only test stepsize() indirectly, since building the optimizer state already
             # performs the first full tick!().
-            a1 = Kirstine.Adaptive(; initial_smoothness_estimate = 1, eta = 0.8, tau = 1.5)
-            fw1 = Kirstine.FrankWolfe(1, a1, false)
+            a1 = Adaptive(; initial_smoothness_estimate = 1, eta = 0.8, tau = 1.5)
+            fw1 = FrankWolfe(1, 0, a1, false)
             s1 = Kirstine.optimizer_state((f, g!), fw1, [x], c)
             # To get from 0.8 * 1 to over 2, we need to multiply by 1.5 3 times and get 2.7
             @test s1.work.smoothness_estimate ≈ 2.7
@@ -145,16 +154,16 @@ end
             # Since step-size computation depends only on the smoothness estimate and constants,
             # the other cases do not differ in this respect.
             # For them we only check the bookkeeping of the number of gradient evaluations.
-            a2 = Kirstine.Adaptive(; initial_smoothness_estimate = 3, eta = 0.8, tau = 1.5)
-            fw2 = Kirstine.FrankWolfe(1, a2, false)
+            a2 = Adaptive(; initial_smoothness_estimate = 3, eta = 0.8, tau = 1.5)
+            fw2 = FrankWolfe(1, 0, a2, false)
             s2 = Kirstine.optimizer_state((f, g!), fw2, [x], c)
             # 0.8 * 3 = 2.4 is already larger than 2, so this is the estimate
             @test s2.work.smoothness_estimate ≈ 2.4
             # 1 from first tick!(), 1 from while loop in stepsize!()
             @test s2.n_eval_g == 2
 
-            a3 = Kirstine.Adaptive(; initial_smoothness_estimate = Inf, eta = 0.9, tau = 2)
-            fw3 = Kirstine.FrankWolfe(1, a3, false)
+            a3 = Adaptive(; initial_smoothness_estimate = Inf, eta = 0.9, tau = 2)
+            fw3 = FrankWolfe(1, 0, a3, false)
             s3 = Kirstine.optimizer_state((f, g!), fw3, [x], c)
             # the initial estimate is ≈ 2, which becomes too small as 2 * 0.9 = 1.8,
             # but doubling once again is sufficient
@@ -165,13 +174,9 @@ end
     end
 
     @testset "fw_workspace" begin
-        let ol = Kirstine.OpenLoop(2),
-            cni = Kirstine.ConstNumIter(),
-            ad = Kirstine.Adaptive()
-
-            w_ol = Kirstine.fw_workspace(ol, Pnt([0]), 1)
-            w_cni = Kirstine.fw_workspace(cni, Pnt([0]), 1)
-            w_ad = Kirstine.fw_workspace(ad, Pnt([0, 1, 2]), 3)
+        let w_ol = Kirstine.fw_workspace(OpenLoop(2), Pnt([0]), 1),
+            w_cni = Kirstine.fw_workspace(ConstNumIter(), Pnt([0]), 1),
+            w_ad = Kirstine.fw_workspace(Adaptive(), Pnt([0, 1, 2]), 3)
 
             @test w_ol isa Kirstine.FWDummyWorkspace
             @test w_cni isa Kirstine.FWDummyWorkspace
@@ -190,7 +195,7 @@ end
             ginf!(grad, p) = grad[1] = Inf,
             gninf!(grad, p) = grad[1] = -Inf,
             h(state) = Kirstine.check_gradient(state; only_warn = false),
-            opt = Kirstine.FrankWolfe(5, Kirstine.OpenLoop(2), false),
+            opt = FrankWolfe(5, 0, OpenLoop(2), false),
             # |------|------|
             # 0   x0=5     10
             x0 = Pnt([5]),
@@ -220,16 +225,16 @@ end
     end
 
     @testset "tick!" begin
-        let opt = Kirstine.FrankWolfe(2, Kirstine.OpenLoop(2), false),
+        let opt = FrankWolfe(2, 0, OpenLoop(2), false),
             n = 2,
             xstar = ones(n),
             f(p) = -sum((p.x .- xstar) .^ 2),
             g!(grad, p) = grad .= -2 .* (p.x .- xstar),
             c = BoxConstraints(Pnt([0, 0]), Pnt([10, 10])),
-            state = Kirstine.optimizer_state((f, g!), opt, [Pnt([5, 0.5])], c),
-            iter = 2
+            state = Kirstine.optimizer_state((f, g!), opt, [Pnt([5, 0.5])], c)
 
-            Kirstine.tick!((f, g!), state, opt, c, iter)
+            Kirstine.tick!((f, g!), state, opt, c)
+            @test state.iteration_from_zero == 1
             @test state.gx == [2, -18]
             @test state.v == Pnt([10, 0])
             @test state.stepsize ≈ 2 / 3
@@ -244,12 +249,9 @@ end
             xstar = ones(n),
             f(p) = -sum((p.x .- xstar) .^ 2),
             g!(grad, p) = grad .= -2 .* (p.x .- xstar),
-            fw = Kirstine.FrankWolfe(2000, Kirstine.OpenLoop(2), false),
-            pfw = Kirstine.FrankWolfe(
-                2000,
-                Kirstine.Adaptive(; initial_smoothness_estimate = 2),
-                true,
-            ),
+            fw = FrankWolfe(2000, 0, OpenLoop(2), false),
+            pfw = FrankWolfe(2000, 0, Adaptive(; initial_smoothness_estimate = 2), true),
+            et = FrankWolfe(2000, 1e-7, Adaptive(; initial_smoothness_estimate = 2), true),
             prototype = Pnt(zeros(n)),
             outside = Pnt([-1, -1, 5, -1]),
             constr1 = BoxConstraints(Pnt(fill(-1, n)), Pnt(fill(2, n))),
@@ -261,12 +263,19 @@ end
             r2 = Kirstine.optimize((f, g!), fw, [prototype], constr2; trace_state = true)
             # paired steps will be better at going to the boundary
             r3 = Kirstine.optimize((f, g!), pfw, [prototype], constr2; trace_state = true)
+            # early termination
+            r4 = Kirstine.optimize((f, g!), et, [prototype], constr2; trace_state = true)
 
+            @test !r1.has_converged # we compare with < against 0
             @test r1.maximizer.x ≈ xstar rtol = 1e-4
             @test r1.maximum ≈ 0.0 atol = 1e-4
             @test length(r1.trace_gx) == 2000
             @test r1.n_eval_g == 2000
+            # initial and subsequent gradient traces should not share memory
+            @test !(r1.trace_gx[1] === r1.trace_gx[2])
+            @test !(r1.trace_gx[2] === r1.trace_gx[end])
             @test r1.trace_gx[end] ≈ zeros(n) atol = 1e-2 # local maximum
+            @test !r2.has_converged # we compare with < against 0
             @test r2.maximizer.x ≈ [0.5; xstar[2:end]] rtol = 1e-4
             @test r2.maximum ≈ -0.25 rtol = 1e-4
             @test length(r2.trace_gx) == 2000
@@ -280,6 +289,10 @@ end
             @test r3.trace_state[end].active_points_added == 7
             @test r3.trace_state[end].active_points_removed == 3
             @test r3.trace_state[end].frank_wolfe_gap == 0
+            # and even faster still with early termination
+            @test r4.has_converged
+            @test length(r4.trace_fx) == 44
+            @test r4.trace_state[end].frank_wolfe_gap < 1e-7
         end
     end
 end

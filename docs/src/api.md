@@ -54,7 +54,7 @@ solution(::Kirstine.DirectMaximizationResult)
 total_runtime(::Kirstine.DirectMaximizationResult)
 optimization_result
 Exchange
-Exchange()
+Exchange(::Kirstine.Optimizer, ::Kirstine.Optimizer, ::Integer, ::Real, ::Real, ::Kirstine::DesignMeasure, ::AbstractDict{Symbol,<:Any})
 Kirstine.ExchangeResult
 solution(::Kirstine.ExchangeResult)
 total_runtime(::Kirstine.ExchangeResult)
@@ -73,17 +73,17 @@ Kirstine.ZerothOrderOptimizer
 Kirstine.FirstOrderOptimizer
 Kirstine.OptimizationResult
 Pso
-Pso()
-Kirstine.GridSearch
-Kirstine.GridSearch()
+Pso(::Integer, ::Integer, ::Real, ::Real)
+GridSearch
+GridSearch()
 Kirstine.GridSpec
-Kirstine.ProductGrid
-Kirstine.FrankWolfe
-Kirstine.FrankWolfe(::Integer, ::Kirstine.StepSizeStrategy, ::Bool)
+ProductGrid
+FrankWolfe
+FrankWolfe(::Integer, ::Real, ::Kirstine.StepSizeStrategy, ::Bool)
 Kirstine.StepSizeStrategy
-Kirstine.OpenLoop
-Kirstine.ConstNumIter
-Kirstine.Adaptive
+OpenLoop
+ConstNumIter
+Adaptive
 ```
 
 ## Design Criteria
@@ -94,6 +94,7 @@ DCriterion
 ACriterion
 objective
 gateauxderivative
+Kirstine.max_argmax_gateauxderivative
 efficiency
 shannon_information
 ```
@@ -116,7 +117,14 @@ lowerbound
 Regression models are implemented
 by first subtyping `Kirstine.Model`, `Kirstine.Covariate`, `Kirstine.CovariateParameterization`, and `Kirstine.Parameter`,
 and then defining several helper methods on them.
-See the [tutorial](tutorial.md) for a hands-on example.
+
+For models with a scalar-valued unit of observation
+and for parameters that are a collection of scalar values,
+this can easily be achieved with the [`@simple_model`](@ref) and [`@simple_parameter`](@ref) macros.
+See the [tutorial](tutorial.md) for a hands-on example
+and the section on [helpers](#Helpers) below.
+For an example of a manually implemented model see the [dose-time-response](dtr.md) vignette,
+and for both a manual model and a manual parameter the vignette on [automatic differentiation](autodiff.md).
 
 ### Supertypes
 
@@ -170,8 +178,8 @@ In problems where the design variables coincide with the model covariates,
 the following `Kirstine.CovariateParameterization` can be used:
 
 ```@docs
-JustCopy
-JustCopy()
+CopyTo
+CopyTo()
 ```
 
 ## Prior Knowledge

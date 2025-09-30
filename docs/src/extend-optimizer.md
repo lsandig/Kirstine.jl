@@ -174,11 +174,16 @@ For `O = Ica` and `S = IcaState` we must implement the following methods:
     It should use the given `prototypes` for initialization
     and take the `constraints` into account for randomization.
     Setting up the state is counted as the first iteration of the algorithm.
-  - `tick!(f, state::IcaState, optimizer::Ica, constraints::AbstractConstraints, iter::Integer)`:
+  - `has_converged(state::IcaState, optimizer::Ica)`:
+    return true if the algorithm has converged already.
+    This is used for early stopping.
+    It is useful for algorithms that have convergence guarantees.
+    Since ICA has no such guarantees, the algorithm never converges
+    (in this strict sense) by definition.
+  - `tick!(f, state::IcaState, optimizer::Ica, constraints::AbstractConstraints)`:
     update the optimizers state once.
     This function is called internally `iterations() - 1` times.
-    The number of the current iteration is passed in `iter`,
-    it goes from 2 to `iterations()`.
+    The initial state is considered to be the first iteration.
 
 !!! note
     
@@ -319,14 +324,14 @@ function Kirstine.optimizer_state(
     return state
 end
 
+Kirstine.has_converged(state::IcaState, optimizer::Ica) = false
+
 function Kirstine.tick!(
     f,
     state::IcaState,
     optimizer::Ica,
     constraints::Kirstine.AbstractConstraints,
-    iter::Integer,
 )
-    @debug "Iteration $iter"
     ica_assimilate!(state, optimizer, constraints)
     ica_revolt!(state, optimizer, constraints)
     ica_evaluate_objective!(f, state)
@@ -530,7 +535,7 @@ dp = DesignProblem(
     criterion = DCriterion(),
     region = DesignInterval(:dose => (0, 1)),
     model = SigEmaxModel(sigma = 1),
-    covariate_parameterization = JustCopy(:dose),
+    covariate_parameterization = CopyTo(:dose),
     prior_knowledge = prior,
 )
 

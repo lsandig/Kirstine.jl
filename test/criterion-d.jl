@@ -224,5 +224,15 @@ include("example-compartment.jl")
             @test gateauxderivative(d1, dir, dpi) ≈ gateauxderivative(d1, dir, dpd)
         end
     end
+
+    @testset "efficiency_lower_bound" begin
+        elb = Kirstine.efficiency_lower_bound
+        @test_throws "dimension of transformed parameter must be >= 1" elb(1, 0)
+        @test_throws "gateaux derivative must be bounded from below" elb(-Inf, 0)
+        @test elb(0, 42) ≈ 1
+        @test elb(Inf, 3) ≈ 0
+        @test elb(-5 * log(0.99), 5) ≈ 0.99
+        @test elb(1, 1) ≈ exp(-1)
+    end
 end
 end

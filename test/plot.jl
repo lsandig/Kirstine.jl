@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023,2024 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 module PlotTests
@@ -50,7 +50,7 @@ include("example-dtr.jl")
             @test_throws "here 1" plot_gateauxderivative(d, dp; n_grid = (11, 11))
             @test_throws ".>= 2" plot_gateauxderivative(d, dp; n_grid = -10)
 
-            # we should be able to pass a 1-tuple for n_grid without raising an excepiton
+            # we should be able to pass a 1-tuple for n_grid without raising an exception
             @test try
                 plot_gateauxderivative(d, dp; n_grid = (11,))
                 true
@@ -133,7 +133,7 @@ include("example-dtr.jl")
                 region = DesignInterval(:dose => (0, 1)),
                 prior_knowledge = PriorSample([EmaxPar(; e0 = 0, emax = 1, ec50 = 0.2)]),
                 model = EmaxModel(1),
-                covariate_parameterization = JustCopy(:dose),
+                covariate_parameterization = CopyTo(:dose),
             ),
             dp1 = dp_helper(DCriterion()),
             dp2 = dp_helper(ACriterion()),

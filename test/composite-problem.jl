@@ -452,7 +452,7 @@ include("example-compartment.jl")
 
     @testset "solve(::CompositeDesignProblem)" begin
         let dr = DesignInterval(:x => (-1, 1)),
-            cp = JustCopy(:x),
+            cp = CopyTo(:x),
             dp1 = DesignProblem(;
                 criterion = ACriterion(),
                 model = QuadraticModel(; sigma = 1),

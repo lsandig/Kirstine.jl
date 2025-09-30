@@ -224,6 +224,7 @@ include("example-compartment.jl")
             g1 = draw_from_prior(1000, 2),
             t_id = Identity(),
             t_auc = DeltaMethod(Dauc),
+            t_omnibus = DeltaMethod(DOmnibus),
             dp_for(pk, trafo) = DesignProblem(;
                 criterion = DCriterion(),
                 # not used in efficiency calculation!
@@ -233,31 +234,33 @@ include("example-compartment.jl")
                 prior_knowledge = pk,
                 transformation = trafo,
             ),
-            # singular locally optimal designs from Table 4
+            # 18-point design
+            a0pts_1 = [1 / 6, 1 / 3, 1 / 2, 2 / 3, 1, 1.5, 2, 2.5],
+            a0pts_2 = [3, 4, 5, 6, 8, 10, 12, 24, 30, 48],
+            a0 = uniform_design([[h] for h in vcat(a0pts_1, a0pts_2)]),
+            # D-optimal design
+            a1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
+            # singular locally optimal designs from Table 1
             a3 = DesignMeasure([0.1793] => 0.6062, [3.5671] => 0.3938),
             a4 = DesignMeasure([1.0122] => 1.0),
             dp1 = dp_for(g0, t_id),
             dp2 = dp_for(g0, t_auc),
-            # Bayesian optimal designs from Table 5
+            # omnibus design
+            a5 = DesignMeasure([0.2176] => 0.2337, [1.4343] => 0.3878, [18.297] => 0.3785),
+            dp5 = DesignProblem(dp1; transformation = t_omnibus, criterion = ACriterion()),
+            # Bayesian optimal designs from Table 2
             a6 = DesignMeasure([0.2288] => 1 / 3, [1.4170] => 1 / 3, [18.4513] => 1 / 3),
             a7 = DesignMeasure([0.2449] => 0.0129, [1.4950] => 0.0387, [18.4903] => 0.9484),
             dp6 = dp_for(g1, t_id),
-            dp7 = dp_for(g1, t_auc),
-            # swap out criterion
-            dp6a = DesignProblem(;
-                region = region(dp6),
-                model = model(dp6),
-                covariate_parameterization = covariate_parameterization(dp6),
-                criterion = ACriterion(),
-                prior_knowledge = prior_knowledge(dp6),
-            )
+            dp7 = dp_for(g1, t_auc)
 
-            # Compare with published efficiencies in Table 5. Due to Monte-Carlo uncertainty
+            # Compare with published D-efficiencies in Table 5. Due to Monte-Carlo uncertainty
             # and rounding of the published values, this is not very exact.
             @test efficiency(a7, a6, dp6) ≈ 0.234 atol = 1e-2
             @test efficiency(a6, a7, dp7) ≈ 0.370 atol = 1e-2
-            # check that criterion is ignored
-            @test efficiency(a7, a6, dp6a) ≈ 0.234 atol = 1e-2
+            # Compare with published A-efficiencies in rightmost column of Table 4:
+            @test efficiency(a1, a5, dp5) ≈ 0.9561 atol = 1e-3
+            @test efficiency(a0, a5, dp5) ≈ 0.663 atol = 1e-3
             # Check that singular designs are handled correctly both with Identity and with
             # DeltaMethod transformation.
             @test efficiency(a4, a6, dp1) == 0

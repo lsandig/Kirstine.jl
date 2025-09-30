@@ -583,30 +583,30 @@ But there is a smarter thing we can try instead.
 The [`Exchange`](@ref) algorithm can be understood as a kind of coordinate-wise infinite-dimensional gradient ascent,
 since it basically alternates the following two actions
 
- 1. Find the point ``\DesignPoint ∈ \DesignRegion`` where the corresponding Gateaux derivative is largest
-    and add it to the design measure.
+ 1. Re-optimize only the weights, then drop any points with zero weight.
 
- 2. Re-optimize only the weights, then drop any points with zero weight.
+ 2. Find the point ``\DesignPoint ∈ \DesignRegion`` where the corresponding Gateaux derivative is largest
+    and add it to the current design measure.
 
 Running this with a random starting design can be slow to converge,
 but since we already have promising candidate,
 we can hope that it gives us the solution after a few steps.
 
-For part 1,
+For part 2,
 we will not use PSO,
-but a [`Kirstine.GridSearch`](@ref) over the design region $\DesignRegion$.
+but a [`GridSearch`](@ref) over the design region $\DesignRegion$.
 This has the advantage
 that grid search is deterministic and will always find the maximum (on the grid),
-while Pso may sometimes get stuck in a local maximum
+while PSO may sometimes get stuck in a local maximum
 and make the overall exchange algorithm somewhat unstable.
 On the other hand,
 grid search on a very fine grid can take a lot of time.
 
 In this particular example we save some runtime
 since we can reasonably guess
-that a single step of the exchange algorithm might be sufficient,
-and that the new point will be added at a point with ``D=100``.
-This is why we can get away with a [`Kirstine.ProductGrid`](@ref)
+that two steps of the exchange algorithm might be sufficient,
+and that the new point will be added with a dose ``D=100``.
+This is why we can get away with a [`ProductGrid`](@ref)
 that has only 2 different dose values.
 For the second dimension,
 the grid has 51 different values at ``Δt=0,0.04,…,2``.
@@ -614,8 +614,10 @@ the grid has 51 different values at ``Δt=0,0.04,…,2``.
 ```@example main
 st4b = Exchange(
     candidate = s4a,
-    steps = 1,
-    optimizer_direction = Kirstine.GridSearch(gridspec = Kirstine.ProductGrid(2, 51)),
+    steps = 2,
+    gateaux_tolerance = 0,
+    initial_weight = NaN,
+    optimizer_direction = GridSearch(gridspec = ProductGrid(2, 51)),
     optimizer_weight = Pso(swarmsize = 25, iterations = 50),
 )
 
@@ -632,12 +634,12 @@ s4b
 
 ```@setup main
 s4b == DesignMeasure(
- [0.0, 2.0] => 0.11343676907254417,
- [12.258680316012303, 0.9158234222042569] => 0.1466543099306418,
- [18.960755545027716, 2.0] => 0.1450562405792781,
- [99.99958420409529, 0.030724171006199445] => 0.19609399574206807,
- [100.0, 0.44] => 0.051532056457751135,
- [100.0, 2.0] => 0.34722662821771666,
+ [0.0, 2.0] => 0.11366691969551841,
+ [12.258680316012303, 0.9158234222042569] => 0.14624074108700094,
+ [18.960755545027716, 2.0] => 0.1449730068924619,
+ [99.99958420409529, 0.030724171006199445] => 0.19645018653477164,
+ [100.0, 0.44] => 0.0520479841143221,
+ [100.0, 2.0] => 0.34662116167592505,
 ) || !check_results || error("not the expected result\n", s4b)
 ```
 
@@ -781,12 +783,11 @@ eff = [efficiency(d1, d2, p1, p2) for (d1, p1) in sol_prob, (d2, p2) in sol_prob
 ```
 
 ```@setup main
-eff == [
-1.0 1.485065085904362 0.1265091183038994 0.09303061979858476 0.1016413811354575;
-0.6733711602889302 1.0 0.0851875917794263 0.06264413639617135 0.0684423747485524;
-7.904568567127361 11.738798798177912 1.0 0.7353669130402696 0.8034312664427492;
-10.749149066888325 15.9631859824173 1.359865370969225 1.0 1.0925583571894433;
-9.83851251162457 14.610831428246879 1.2446615432675072 0.9152829168525648 1.0
+eff == [1.0 1.485065085904362 0.1265091183038994 0.09303062851689362 0.1016413811354575;
+0.6733711602889302 1.0 0.0851875917794263 0.06264414226682907 0.0684423747485524;
+7.904568567127361 11.738798798177912 1.0 0.7353669819547397 0.8034312664427492;
+10.74914805953835 15.963184486437028 1.3598652435302676 1.0 1.0925582548010004;
+9.83851251162457 14.610831428246879 1.2446615432675072 0.9152830026277554 1.0
 ] || !check_results || error("not the expected result\n", eff)
 ```
 
