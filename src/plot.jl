@@ -34,15 +34,15 @@ end
     layout --> @layout [derivative; objective]
     @series begin
         subplot := 1
+        widen --> true
+        optimization_results_weight(r)
+    end
+    @series begin
+        subplot := 2
         yguide --> "max derivative"
         ylims --> (0, NaN)
         widen --> true
         optimization_results_direction(r)
-    end
-    @series begin
-        subplot := 2
-        widen --> true
-        optimization_results_weight(r)
     end
 end
 
