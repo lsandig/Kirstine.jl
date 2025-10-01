@@ -581,7 +581,13 @@ function simplify_merge(d::DesignMeasure, f::Function, distfun::Function, maxdis
         j = idx[2]
         if cur_min_dist <= maxdist
             w_new = ws[i] + ws[j]
-            dp_raw = (ws[i] .* dps[i] .+ ws[j] .* dps[j]) ./ w_new
+            if w_new > 0
+                dp_raw = (ws[i] .* dps[i] .+ ws[j] .* dps[j]) ./ w_new
+            else
+                # w_new = 0 implies ws[i] == ws[j] == 0,
+                # we treat this as the limit of equal weights that tend to zero
+                dp_raw = 0.5 .* dps[i] .+ 0.5 .* dps[j]
+            end
             dp_new = min.(max.(dps[i], dps[j]), max.(min.(dps[i], dps[j]), dp_raw))
             deleteat!(dps, (j, i))
             pushfirst!(dps, dp_new)

@@ -265,6 +265,17 @@ using Kirstine
             @test d1 == dref
             @test d2 == dref
         end
+
+        # merging points with 0 weight should not introduce NaNs
+        let d = DesignMeasure([[1], [2], [2.1]], [1, 0, 0]),
+            dr = DesignInterval(:a => (0, 10))
+
+            merged = simplify_merge(d, dr, 0.1)
+
+            @test !any(isnan, reduce(hcat, points(merged)))
+            # equal weights of 0 are treated the same as positive equal weights
+            @test first(points(merged)) == [2.05]
+        end
     end
 
     # sorting
