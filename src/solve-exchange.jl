@@ -208,6 +208,7 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
         else
             candidate = simplify_merge(mixture(1, candidate, direction), region(adp), 0)
         end
+        return candidate
     end
     function full_step(candidate::DesignMeasure, i::Integer)
         orw = try
