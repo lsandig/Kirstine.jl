@@ -14,6 +14,15 @@ struct TestPar3 <: Kirstine.Parameter
     c::Float64
 end
 
+struct TestPar3opt <: Kirstine.Parameter
+    a::Float64
+    b::Float64
+    c::Float64
+    c_is_known::Bool
+end
+
 Kirstine.dimension(p::TestPar2) = 2
 
 Kirstine.dimension(p::TestPar3) = 3
+
+Kirstine.dimension(p::TestPar3opt) = p.c_is_known ? 2 : 3

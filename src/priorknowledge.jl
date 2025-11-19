@@ -15,15 +15,14 @@ struct PriorSample{T} <: PriorKnowledge{T}
         parameters::AbstractVector{T},
         weights::AbstractVector{<:Real},
     ) where T<:Parameter
-        if length(weights) != length(parameters)
-            throw(ArgumentError("number of weights and parameter values must be equal"))
-        end
-        if any(weights .< 0) || !(sum(weights) ≈ 1)
-            throw(ArgumentError("weights must be non-negative and sum to one"))
-        end
-        if !isconcretetype(T)
-            throw(ArgumentError("parameters must all have the same concrete type"))
-        end
+        err_length = ArgumentError("number of weights and parameter values must be equal")
+        length(weights) == length(parameters) || throw(err_length)
+        err_weights = ArgumentError("weights must be non-negative and sum to one")
+        (all(weights .>= 0) && sum(weights) ≈ 1) || throw(err_weights)
+        err_type = ArgumentError("parameters must all have the same concrete type")
+        isconcretetype(T) || throw(err_type)
+        err_dim = ArgumentError("parameters must all have the same dimension")
+        allequal(dimension, parameters) || throw(err_dim)
         return new{T}(parameters, weights)
     end
 end
@@ -44,9 +43,7 @@ function PriorSample(
     return PriorSample{T}(parameters, weights)
 end
 
-function parameter_dimension(pk::PriorSample)
-    return dimension(parameters(pk)[1])
-end
+parameter_dimension(pk::PriorSample) = dimension(first(parameters(pk)))
 
 """
     weights(pk::PriorSample)
@@ -55,9 +52,7 @@ Return a reference to the weights of the [`PriorSample`](@ref).
 
 See also [`parameters`](@ref).
 """
-function weights(pk::PriorSample)
-    return pk.weight
-end
+weights(pk::PriorSample) = pk.weight
 
 """
     parameters(pk::PriorSample)
@@ -66,9 +61,7 @@ Return a reference to the parameters of the [`PriorSample`](@ref).
 
 See also [`weights(::DesignMeasure)`](@ref).
 """
-function parameters(pk::PriorSample)
-    return pk.p
-end
+parameters(pk::PriorSample) = pk.p
 
 """
     ==(pk1::PriorSample, pk2::PriorSample)
