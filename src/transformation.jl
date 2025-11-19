@@ -99,18 +99,18 @@ end
 
 function trafo_constants(trafo::DeltaMethod, pk::PriorSample)
     jm = [trafo.jacobian_matrix(p) for p in parameters(pk)]
+    err_eltype = ArgumentError("$(trafo.jacobian_matrix) must return a matrix")
+    eltype(jm) <: Matrix || throw(err_eltype)
     r = parameter_dimension(pk)
-    if any(j -> size(j) != size(jm[1]), jm)
-        throw(DimensionMismatch("trafo Jacobians must be identical in size"))
-    end
+    err_size = DimensionMismatch("trafo Jacobians must be identical in size")
+    allequal(size, jm) || throw(err_size)
     # We know all elements of jm have identical sizes, so checking the first is enough
-    ncol = size(jm[1], 2)
-    if ncol != r
-        throw(DimensionMismatch("trafo Jacobian must have $(r) columns, got $(ncol)"))
-    end
-    if size(jm[1], 1) > size(jm[1], 2)
+    nrow, ncol = size(jm[1])
+    err_col = DimensionMismatch("trafo Jacobian must have $(r) columns, got $(ncol)")
+    ncol == r || throw(err_col)
+    if nrow > ncol
         @warn "trafo Jacobians have more rows than cols, infomatrices will be singular"
-    elseif any(rank.(jm) .!= size(jm[1], 1))
+    elseif any(rank.(jm) .!= nrow)
         @warn "some trafo Jacobians are not full rank, infomatrices will be singular"
     end
     return TCDeltaMethod(jm)
