@@ -138,7 +138,7 @@ function apply_transformation(
     nw = NIMWorkspace(r, t)
     nw.r_x_r .= M
     nw.r_is_inv = false
-    apply_transformation!(nw, trafo, trafo_jacobianmatrix_for_index(tc, 1))
+    apply_transformation!(nw, trafo, tc[1])
     if nw.t_is_inv
         return inv(Symmetric(nw.t_x_t))
     else

@@ -311,11 +311,7 @@ function objective!(
             average_fishermatrix!(w.nw.r_x_r, w.mw, weights(d), m, w.c, pk_p[i])
             informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
             w.nw.r_is_inv = false
-            apply_transformation!(
-                w.nw,
-                transformation(dp),
-                trafo_jacobianmatrix_for_index(oc.tc, i),
-            )
+            apply_transformation!(w.nw, transformation(dp), oc.tc[i])
             acc += pk_w[i] * criterion_functional!(w.nw.t_x_t, w.nw.t_is_inv, criterion(dp))
         end
         return acc
