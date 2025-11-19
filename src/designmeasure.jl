@@ -169,7 +169,6 @@ function equidistant_design(dr::DesignInterval{1}, K::Integer)
     return uniform_design(designpoints)
 end
 
-# Note: docstring for abstract type, implementation for subtypes
 """
     random_design(dr::Kirstine.DesignRegion, K::Integer)
 
@@ -178,9 +177,8 @@ Construct a random [`DesignMeasure`](@ref).
 The design points are drawn independently from the uniform distribution on the design region,
 and the weights drawn from the uniform distribution on a simplex.
 """
-function random_design(dr::DesignInterval{N}, K::Integer) where N
-    scl = upperbound(dr) .- lowerbound(dr)
-    dp = [lowerbound(dr) .+ scl .* rand(N) for _ in 1:K]
+function random_design(dr::DesignRegion{N}, K::Integer) where N
+    dp = [random_designpoint!(zeros(N), dr) for _ in 1:K]
     u = rand(K) # independent Uniform([0, 1])
     v = -log.(u) # independent Exp(1)
     w = v ./ sum(v) # Dirichlet(1, …, 1), i.e. uniform on simplex
@@ -352,25 +350,25 @@ end
 ## apportionment ##
 
 """
-    apportion(weights::AbstractVector{<:Real}, n::Integer)
+    apportion(w::AbstractVector{<:Real}, n::Integer)
 
-Find integers `a` with `sum(a) == n` such that `a ./ n` best approximates `weights`.
+Find integers `a` with `sum(a) == n` such that `a ./ n` best approximates the weights `w`.
 
 This is the efficient design apportionment procedure from Pukelsheim[^P06], p. 309.
 
 [^P06]: Friedrich Pukelsheim (2006). Optimal design of experiments. Wiley. [doi:10.1137/1.9780898719109](https://doi.org/10.1137/1.9780898719109)
 """
-function apportion(weights::AbstractVector{<:Real}, n::Integer)
+function apportion(w::AbstractVector{<:Real}, n::Integer)
     # Phase 1: initial multipliers
-    a = ceil.(Int64, (n - 0.5 * length(weights)) .* weights)
+    a = ceil.(Int64, (n - 0.5 * length(w)) .* w)
     # Phase 2: loop until discrepancy is zero
     discrepancy = sum(a) - n
     while discrepancy != 0
         if discrepancy < 0
-            j = argmin(a ./ weights)
+            j = argmin(a ./ w)
             a[j] += 1
         else # discrepancy > 0
-            k = argmax((a .- 1) ./ weights)
+            k = argmax((a .- 1) ./ w)
             a[k] -= 1
         end
         discrepancy = sum(a) - n
@@ -399,17 +397,12 @@ The vector of remaining weights is re-normalized.
 """
 function simplify_drop(d::DesignMeasure, maxweight::Real)
     maxweight < 1 || throw(ArgumentError("maxweight must be < 1"))
-    if numpoints(d) == 1 # nothing to do for one-point-designs
-        return deepcopy(d) # return a copy for consistency
+    to_be_kept = weights(d) .> maxweight
+    ws = weights(d)[to_be_kept]
+    if !all(to_be_kept)
+        ws ./= sum(ws)
     end
-    enough_weight = weights(d) .> maxweight
-    if all(enough_weight)
-        return deepcopy(d)
-    end
-    dps = points(d)[enough_weight]
-    ws = weights(d)[enough_weight]
-    ws ./= sum(ws)
-    return DesignMeasure(dps, ws)
+    return DesignMeasure(points(d)[to_be_kept], ws)
 end
 
 """
@@ -501,7 +494,11 @@ function pairwise_distance_matrix(
     f::Function,
     distfun::Function,
 )
-    return map(p -> distfun(f(p[1]), f(p[2])), Iterators.product(dps, dps))
+    distmat = map(p -> distfun(f(p[1]), f(p[2])), Iterators.product(dps, dps))
+    if any(<(0), distmat)
+        @warn "distance matrix has negative elements" distmat
+    end
+    return distmat
 end
 
 # Note: design measure before functions for consistency with the design region variant
@@ -566,8 +563,6 @@ DesignMeasure(
 ```
 """
 function simplify_merge(d::DesignMeasure, f::Function, distfun::Function, maxdist::Real)
-    # nothing to do for one-point-designs, return a copy for consistency
-    numpoints(d) == 1 && return deepcopy(d)
     dps = collect.(points(d))
     ws = deepcopy(weights(d))
     cur_min_dist = 0
@@ -577,8 +572,7 @@ function simplify_merge(d::DesignMeasure, f::Function, distfun::Function, maxdis
         distmat = pairwise_distance_matrix(dps, f, distfun)
         distmat[diagind(distmat)] .= Inf
         cur_min_dist, idx = findmin(distmat) # i > j because rows vary fastest
-        i = idx[1]
-        j = idx[2]
+        i, j = Tuple(idx)
         if cur_min_dist <= maxdist
             w_new = ws[i] + ws[j]
             if w_new > 0

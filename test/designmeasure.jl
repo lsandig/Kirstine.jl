@@ -193,12 +193,14 @@ using Kirstine
             l2dist(x, y) = norm(x - y),
             l1dist(x, y) = norm(x - y, 1),
             infdist(x, y) = norm(x - y, Inf),
+            neg(x, y) = sum(y - x),
             shear(dp) = [dp[1], dp[1] + dp[2]]
 
             pdm1 = Kirstine.pairwise_distance_matrix(dps, identity, l2dist)
             pdm2 = Kirstine.pairwise_distance_matrix(dps, identity, l1dist)
             pdm3 = Kirstine.pairwise_distance_matrix(dps, shear, infdist)
 
+            @test_warn "negative" Kirstine.pairwise_distance_matrix(dps, identity, neg)
             @test pdm1 == [0 4 sqrt(85); 4 0 sqrt(85); sqrt(85) sqrt(85) 0]
             @test pdm2 == [0 4 11; 4 0 11; 11 11 0]
             @test pdm3 == [0 4 11; 4 0 7; 11 7 0]
