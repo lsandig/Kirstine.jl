@@ -14,3 +14,9 @@ respect to the design measure. Singular information matrices can occur.
 See also the [mathematical background](math.md#Objective-Function).
 """
 struct FisherMatrix <: NormalApproximation end
+
+# In the simplest case, the normalized information is just the Fisher information matrix
+# averaged wrt the design measure.
+function informationmatrix!(afm::AbstractMatrix{<:Real}, na::FisherMatrix)
+    return afm
+end

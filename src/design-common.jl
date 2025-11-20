@@ -67,12 +67,6 @@ end
 
 ## normalized information matrix for θ ##
 
-# In the simplest case, the normalized information is just the Fisher information matrix
-# averaged wrt the design measure.
-function informationmatrix!(afm::AbstractMatrix{<:Real}, na::FisherMatrix)
-    return afm
-end
-
 # For debugging purposes, one will typically want to look at an information matrix
 # corresponding to a single parameter value, not to all thousands of them in a prior sample.
 """

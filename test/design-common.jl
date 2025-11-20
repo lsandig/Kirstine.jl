@@ -55,20 +55,6 @@ include("example-compartment.jl")
         end
     end
 
-    @testset "informationmatrix!" begin
-        # The `FisherMatrix` normal approximation should just give the average Fisher
-        # information matrix as NIM.
-        let _ = seed!(1234),
-            afm = rand(3, 3),
-            afm_copy = deepcopy(afm),
-            na = FisherMatrix(),
-            res = Kirstine.informationmatrix!(afm, na)
-
-            @test res === afm
-            @test res == afm_copy
-        end
-    end
-
     @testset "informationmatrix" begin
         let d = DesignMeasure([0] => 0.25, [5] => 0.75),
             m = EmaxModel(1),
