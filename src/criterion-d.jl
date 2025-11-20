@@ -28,10 +28,14 @@ See also the [mathematical background](math.md#D-Criterion).
 """
 struct DCriterion <: DesignCriterion end
 
-function criterion_functional!(tnim::AbstractMatrix, is_inv::Bool, dc::DCriterion)
+function criterion_functional!(
+    Q_or_inv_Q::AbstractMatrix{<:Real},
+    is_inv::Bool,
+    dc::DCriterion,
+)
     sgn = is_inv ? -1 : 1
-    ld = log_det!(tnim)
-    # With the DeltaMethod, `tnim` can be singular without having raised an exception up to
+    ld = log_det!(Q_or_inv_Q)
+    # With the DeltaMethod, `Q_or_inv_Q` can be singular without having raised an exception up to
     # now. Similarly to how we handle the PosDefException in `objective!`, we
     # unconditionally return -Inf.
     cv = ld != -Inf ? sgn * ld : ld
@@ -114,8 +118,7 @@ function gateaux_constants!(
         # nw.t_x_r := Q * DT * inv(M)
         posv!('U', nw.t_x_t, nw.t_x_r)
         # nw.r_x_r := inv(M) * DT' * Q * DT * inv(M)
-        gemm!('N', 'N', 1.0, nw.r_x_t, nw.t_x_r, 0.0, nw.r_x_r)
-        gc.A[i] .= nw.r_x_r # dense
+        gemm!('N', 'N', 1.0, nw.r_x_t, nw.t_x_r, 0.0, gc.A[i]) # dense
         gc.tr_B[i] = size(nw.t_x_t, 1)
     end
     return gc
@@ -128,11 +131,9 @@ function efficiency_lower_bound(
     max_gateaux_derivative::Real,
     dim_transformed_parameter::Integer,
 )
-    if max_gateaux_derivative == -Inf
-        throw(ArgumentError("gateaux derivative must be bounded from below"))
-    elseif dim_transformed_parameter < 1
-        throw(ArgumentError("dimension of transformed parameter must be >= 1"))
-    end
-    elb = exp(-max_gateaux_derivative / dim_transformed_parameter)
-    return elb
+    err_unbounded = ArgumentError("gateaux derivative must be bounded from below")
+    max_gateaux_derivative > -Inf || throw(err_unbounded)
+    err_dimpar = ArgumentError("dimension of transformed parameter must be >= 1")
+    dim_transformed_parameter >= 1 || throw(err_dimpar)
+    return exp(-max_gateaux_derivative / dim_transformed_parameter)
 end
