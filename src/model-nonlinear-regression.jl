@@ -14,14 +14,9 @@ struct NRWorkspace <: ModelWorkspace
     m_x_r::Matrix{Float64}
     m_x_m::Vector{Matrix{Float64}}
     function NRWorkspace(K::Integer, m::Integer, r::Integer)
-        if r < 1
-            throw(ArgumentError("matrix dimension must be positive, got r = $r"))
-        end
-        if K < 1
-            throw(ArgumentError("need at least one design point, got K = $K"))
-        end
-        mxm = [zeros(m, m) for _ in 1:K]
-        new(zeros(m, r), mxm)
+        r >= 1 || throw(ArgumentError("parameter dimension must be positive, got r = $r"))
+        K >= 1 || throw(ArgumentError("need at least one design point, got K = $K"))
+        new(zeros(m, r), [zeros(m, m) for _ in 1:K])
     end
 end
 
