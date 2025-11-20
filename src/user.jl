@@ -287,15 +287,14 @@ Further note that the `@simple_model` macro can be used together with,
 or independently of [`@simple_parameter`](@ref).
 """
 macro simple_model(name, covariate_field_names...)
+    err_nofields = ArgumentError("no covariate field names supplied")
+    !isempty(covariate_field_names) || throw(err_nofields)
     module_path = _kirstine_known_as(__module__)
     model_name = Symbol(string(name) * "Model")
     covariate_name = Symbol(string(name) * "Covariate")
-    if isempty(covariate_field_names)
-        throw(ArgumentError("no covariate field names supplied"))
-    end
     # programmatically build up the covariate struct definition
     covariate_fields = [Expr(:(::), fn, :Float64) for fn in covariate_field_names]
-    covariate_struct_expression = Expr(
+    covariate_struct = Expr(
         :struct,
         true, # mutable
         Expr(:<:, covariate_name, :($module_path.Covariate)),
@@ -314,7 +313,7 @@ macro simple_model(name, covariate_field_names...)
                     return new(sigma)
                 end
             end
-            $covariate_struct_expression
+            $covariate_struct
             function $module_path.unit_length(m::$model_name)
                 return 1
             end
@@ -389,14 +388,14 @@ macro simple_parameter(name, field_names...)
     end
     dim = length(field_names)
     par_fields = [Expr(:(::), fn, :Float64) for fn in field_names]
-    par_struct_expression = Expr(
+    par_struct = Expr(
         :struct,
         false, # immutable
         Expr(:<:, parameter_name, :($module_path.Parameter)),
         Expr(:block, par_fields...),
     )
     return esc(quote
-        @kwdef $par_struct_expression
+        @kwdef $par_struct
         $module_path.dimension(p::$parameter_name) = $dim
     end)
 end
