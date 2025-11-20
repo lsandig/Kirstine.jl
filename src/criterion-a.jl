@@ -28,20 +28,24 @@ See also the [mathematical background](math.md#A-Criterion).
 """
 struct ACriterion <: DesignCriterion end
 
-function criterion_functional!(tnim::AbstractMatrix, is_inv::Bool, dc::ACriterion)
+function criterion_functional!(
+    Q_or_inv_Q::AbstractMatrix{<:Real},
+    is_inv::Bool,
+    dc::ACriterion,
+)
     if is_inv
-        # Note: this branch is taken when tnim was obtained by a DeltaMethod transformation.
+        # Note: this branch is taken when Q_or_inv_Q was obtained by a DeltaMethod transformation.
         # Hence it could be singular without having thrown an error,
         # since we have never explicitly inverted it.
         # Taking the trace here then produces something non-positive.
-        return -tr(tnim)
+        return -tr(Q_or_inv_Q)
     else
-        potrf!('U', tnim) # Cholesky factor
-        potri!('U', tnim) # inverse thereof
+        potrf!('U', Q_or_inv_Q) # Cholesky factor
+        potri!('U', Q_or_inv_Q) # inverse thereof
         # Note that an exception thrown by `potri!` is caught in `objective!`, which then
-        # returns -Inf. This makes sense since `tr(tnim)` is the sum of the reciprocals of
-        # `tnim`'s eigenvalues, which for singular `tnim` contain at least one zero.
-        return -tr(tnim)
+        # returns -Inf. This makes sense since `tr(Q_or_inv_Q)` is the sum of the reciprocals of
+        # `Q_or_inv_Q`'s eigenvalues, which for singular `Q_or_inv_Q` contain at least one zero.
+        return -tr(Q_or_inv_Q)
     end
 end
 
