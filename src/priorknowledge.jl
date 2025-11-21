@@ -95,3 +95,8 @@ function Base.show(io::IO, ::MIME"text/plain", pk::PriorSample)
         print(io, "one-point distribution at $(only(parameters(pk)))")
     end
 end
+
+struct GCPriorSample <: GateauxConstants
+    A::Vector{Matrix{Float64}}
+    tr_B::Vector{Float64}
+end

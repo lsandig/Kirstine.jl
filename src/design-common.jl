@@ -17,11 +17,6 @@ mutable struct NIMWorkspace
     end
 end
 
-struct GCPriorSample <: GateauxConstants
-    A::Vector{Matrix{Float64}}
-    tr_B::Vector{Float64}
-end
-
 """
     implied_covariates(d::DesignMeasure, m::M, cp::Cp)
 
