@@ -269,7 +269,7 @@ end
 
 function derivative_constants!(
     dc::DPDerivativeConstants,
-    w::DPWorkspace,
+    wk::DPWorkspace,
     d::DesignMeasure,
     dp::DesignProblem,
     oc::DPObjectiveConstants,
@@ -278,19 +278,19 @@ function derivative_constants!(
     pk = prior_knowledge(dp)
     cr = criterion(dp)
     na = normal_approximation(dp)
-    gateaux_constants!(dc.gc, w.mw, w.nw, w.c, cr, d, model(dp), cpar, pk, oc.tc, na)
+    gateaux_constants!(dc.gc, wk.mw, wk.nw, wk.c, cr, d, model(dp), cpar, pk, oc.tc, na)
     return dc
 end
 
 function objective!(
-    w::DPWorkspace,
+    wk::DPWorkspace,
     d::DesignMeasure,
     dp::DesignProblem,
     oc::DPObjectiveConstants,
 )
     m = model(dp)
-    update_covariates!(w.c, d, m, covariate_parameterization(dp))
-    update_model_workspace!(w.mw, m, w.c)
+    update_covariates!(wk.c, d, m, covariate_parameterization(dp))
+    update_model_workspace!(wk.mw, m, wk.c)
     # When the information matrix is singular, the objective function is undefined. Lower
     # level calls may throw a PosDefException or a SingularException. This also means that
     # `d` can not be a solution to the maximization problem, hence we return negative
@@ -301,11 +301,12 @@ function objective!(
         pk_w = weights(pk)
         pk_p = parameters(pk)
         for i in 1:length(pk_p)
-            average_fishermatrix!(w.nw.r_x_r, w.mw, weights(d), m, w.c, pk_p[i])
-            informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
-            w.nw.r_is_inv = false
-            apply_transformation!(w.nw, transformation(dp), oc.tc[i])
-            acc += pk_w[i] * criterion_functional!(w.nw.t_x_t, w.nw.t_is_inv, criterion(dp))
+            average_fishermatrix!(wk.nw.r_x_r, wk.mw, weights(d), m, wk.c, pk_p[i])
+            informationmatrix!(wk.nw.r_x_r, normal_approximation(dp))
+            wk.nw.r_is_inv = false
+            apply_transformation!(wk.nw, transformation(dp), oc.tc[i])
+            acc +=
+                pk_w[i] * criterion_functional!(wk.nw.t_x_t, wk.nw.t_is_inv, criterion(dp))
         end
         return acc
     catch e
@@ -318,40 +319,40 @@ function objective!(
 end
 
 function gateauxderivative!(
-    w::DPWorkspace,
+    wk::DPWorkspace,
     toward::DesignMeasure,
     dp::DesignProblem,
     dc::DPDerivativeConstants,
 )
     m = model(dp)
-    update_covariates!(w.c, toward, m, covariate_parameterization(dp))
-    update_model_workspace!(w.mw, m, w.c)
+    update_covariates!(wk.c, toward, m, covariate_parameterization(dp))
+    update_model_workspace!(wk.mw, m, wk.c)
     pk = prior_knowledge(dp)
     acc = 0.0
     pk_w = weights(pk)
     pk_p = parameters(pk)
     for i in 1:length(pk_p)
-        average_fishermatrix!(w.nw.r_x_r, w.mw, weights(toward), m, w.c, pk_p[i])
-        informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
-        acc += pk_w[i] * gateaux_integrand(dc.gc.A[i], w.nw.r_x_r, dc.gc.tr_B[i])
+        average_fishermatrix!(wk.nw.r_x_r, wk.mw, weights(toward), m, wk.c, pk_p[i])
+        informationmatrix!(wk.nw.r_x_r, normal_approximation(dp))
+        acc += pk_w[i] * gateaux_integrand(dc.gc.A[i], wk.nw.r_x_r, dc.gc.tr_B[i])
     end
     return acc
 end
 
 function sensitivity!(
-    w::DPWorkspace,
+    wk::DPWorkspace,
     toward::DesignMeasure,
     dp::DesignProblem,
     dc::DPDerivativeConstants,
 )
-    update_covariates!(w.c, toward, model(dp), covariate_parameterization(dp))
-    update_model_workspace!(w.mw, model(dp), w.c)
+    update_covariates!(wk.c, toward, model(dp), covariate_parameterization(dp))
+    update_model_workspace!(wk.mw, model(dp), wk.c)
     pk_w, pk_p = weights(prior_knowledge(dp)), parameters(prior_knowledge(dp))
     acc = 0.0
     for i in 1:length(pk_p)
-        average_fishermatrix!(w.nw.r_x_r, w.mw, weights(toward), model(dp), w.c, pk_p[i])
-        informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
-        acc += pk_w[i] * sensitivity_integrand(dc.gc.A[i], w.nw.r_x_r)
+        average_fishermatrix!(wk.nw.r_x_r, wk.mw, weights(toward), model(dp), wk.c, pk_p[i])
+        informationmatrix!(wk.nw.r_x_r, normal_approximation(dp))
+        acc += pk_w[i] * sensitivity_integrand(dc.gc.A[i], wk.nw.r_x_r)
     end
     return acc
 end
