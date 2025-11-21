@@ -475,7 +475,7 @@ See also the [mathematical background](math.md#Shannon-Information).
 function shannon_information(d::DesignMeasure, dp::DesignProblem, n::Integer)
     dpd = DesignProblem(dp; criterion = DCriterion())
     t = codomain_dimension(transformation(dp), prior_knowledge(dp))
-    return (t / 2) * (log(n) - 1 + log(2 * pi)) + 0.5 * objective(d, dpd)
+    return (t / 2) * (log(n) - 1 - log(2 * pi)) + 0.5 * objective(d, dpd)
 end
 
 function check_numerically_singular(d::DesignMeasure, dp::DesignProblem)
