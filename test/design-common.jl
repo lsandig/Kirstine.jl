@@ -46,6 +46,7 @@ include("example-compartment.jl")
             @test m1 == [1;;]
             @test m2 == [1 2; 2 3]
             @test m3 == [1 2 3; 2 4 5; 3 5 6]
+            @test_throws "square" Kirstine.mirror_to_lower_triangle!([1 2 3; 4 5 6])
         end
     end
 
