@@ -241,37 +241,30 @@ function objective_constants(dp::DesignProblem)
     return DPObjectiveConstants(tc)
 end
 
-function gateaux_constants(
-    d::DesignMeasure,
-    dp::DesignProblem{Tc,Tr,Tm,Tcp,Tp,Tt,Tn},
-) where {
-    Tc<:DesignCriterion,
-    Tr<:DesignRegion,
-    Tm<:Model,
-    Tcp<:CovariateParameterization,
-    Tp<:PriorSample,
-    Tt<:Transformation,
-    Tn<:NormalApproximation,
-}
-    (; dc, dr, m, cp, pk, trafo, na) = dp
-    t = codomain_dimension(trafo, pk)
-    r = parameter_dimension(pk)
-    numdraws = length(parameters(pk))
-    gc = GCPriorSample([zeros(r, r) for _ in 1:numdraws], zeros(numdraws))
-    mw = allocate_model_workspace(numpoints(d), m, pk)
-    nw = NIMWorkspace(r, t)
-    c = implied_covariates(d, m, cp)
-    tc = trafo_constants(trafo, pk)
-    gateaux_constants!(gc, mw, nw, c, dc, d, m, cp, pk, tc, na)
-    return gc
-end
-
 struct DPDerivativeConstants{Tgc<:GateauxConstants} <: DerivativeConstants
     gc::Tgc
 end
 
 function derivative_constants(at::DesignMeasure, dp::DesignProblem)
-    return DPDerivativeConstants(gateaux_constants(at, dp))
+    err_pktype = ErrorException("only implemented for PriorSample")
+    prior_knowledge(dp) isa PriorSample || throw(err_pktype)
+    t = codomain_dimension(transformation(dp), prior_knowledge(dp))
+    r = parameter_dimension(prior_knowledge(dp))
+    numdraws = length(parameters(prior_knowledge(dp)))
+    gc = gateaux_constants!(
+        GCPriorSample([zeros(r, r) for _ in 1:numdraws], zeros(numdraws)),
+        allocate_model_workspace(numpoints(at), model(dp), prior_knowledge(dp)),
+        NIMWorkspace(r, t),
+        implied_covariates(at, model(dp), covariate_parameterization(dp)),
+        criterion(dp),
+        at,
+        model(dp),
+        covariate_parameterization(dp),
+        prior_knowledge(dp),
+        trafo_constants(transformation(dp), prior_knowledge(dp)),
+        normal_approximation(dp),
+    )
+    return DPDerivativeConstants(gc)
 end
 
 function derivative_constants!(

@@ -105,7 +105,6 @@ include("example-compartment.jl")
             na = FisherMatrix(),
             dummy = DesignInterval(:t => (0, 24)),
             dp = DesignProblem(dc, dummy, m, cp, pk, trafo, na),
-            pgc = Kirstine.gateaux_constants,
             pgc! = Kirstine.gateaux_constants!,
             gc = Kirstine.GCPriorSample([zeros(3, 3), zeros(3, 3)], zeros(2)),
             mw = Kirstine.NRWorkspace(numpoints(a1), 1, 3),
@@ -114,9 +113,6 @@ include("example-compartment.jl")
 
             pgc!(gc, mw, nw, c, dc, a1, m, cp, pk, tc, na)
 
-            # Singular designs should raise an exception. It will be caught by the caller.
-            @test_throws "SingularException" pgc(a4, dp)
-            @test_throws "SingularException" pgc(a4_ni, dp)
             # Note: the informationmatrix return value is already wrapped in Symmetric()
             @test Symmetric(gc.A[1]) ≈ inv(Kirstine.informationmatrix(a1, m, cp, g1, na))
             @test Symmetric(gc.A[2]) ≈ inv(Kirstine.informationmatrix(a1, m, cp, g2, na))
@@ -155,7 +151,6 @@ include("example-compartment.jl")
             na = FisherMatrix(),
             dummy = DesignInterval(:t => (0, 24)),
             dp = DesignProblem(dc, dummy, m, cp, pk, trafo, na),
-            pgc = Kirstine.gateaux_constants,
             pgc! = Kirstine.gateaux_constants!,
             gc = Kirstine.GCPriorSample([zeros(3, 3), zeros(3, 3)], zeros(2)),
             mw = Kirstine.NRWorkspace(numpoints(a1), 1, 3),
@@ -169,9 +164,6 @@ include("example-compartment.jl")
 
             pgc!(gc, mw, nw, c, dc, a1, m, cp, pk, tc, na)
 
-            # Singular designs should raise an exception. It will be caught by the caller.
-            @test_throws "SingularException" pgc(a4, dp)
-            @test_throws "SingularException" pgc(a4_ni, dp)
             @test isa(gc, Kirstine.GCPriorSample)
             @test length(gc.A) == 2
             @test length(gc.tr_B) == 2
