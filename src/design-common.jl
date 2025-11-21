@@ -57,12 +57,12 @@ end
 # Note: only the upper triangle of the symmetric matrix A needs to be filled out,
 # since `gateaux_integrand` uses `tr_prod` for the multiplication.
 # But producing a dense matrix does not hurt either.
-function gateaux_integrand(A::AbstractMatrix, nim_direction::AbstractMatrix, tr_B::Real)
-    return tr_prod(A, nim_direction, :U) - tr_B
+function gateaux_integrand(A::AbstractMatrix, nim_toward::AbstractMatrix, tr_B::Real)
+    return tr_prod(A, nim_toward, :U) - tr_B
 end
 
-function sensitivity_integrand(A::AbstractMatrix, nim_direction::AbstractMatrix)
-    return tr_prod(A, nim_direction, :U)
+function sensitivity_integrand(A::AbstractMatrix, nim_toward::AbstractMatrix)
+    return tr_prod(A, nim_toward, :U)
 end
 
 ## normalized information matrix for θ ##
@@ -325,30 +325,30 @@ end
 """
     gateauxderivative(
         at::DesignMeasure,
-        directions::AbstractArray{DesignMeasure},
+        towards::AbstractArray{DesignMeasure},
         dp::DesignProblem,
     )
 
-The directions are allowed to have different numbers of points.
+The designs towards which we compute the derivative are allowed to have different numbers of points.
 
 See also the [mathematical background](math.md#Gateaux-Derivative).
 """
 function gateauxderivative(
     at::DesignMeasure,
-    directions::AbstractArray{DesignMeasure},
+    towards::AbstractArray{DesignMeasure},
     adp::AbstractDesignProblem,
 )
-    ws = map(d -> allocate_workspace(d, adp), directions)
+    ws = map(d -> allocate_workspace(d, adp), towards)
     dc = try
         derivative_constants(at, adp)
     catch e
         if e isa SingularException
-            return fill(NaN, size(directions))
+            return fill(NaN, size(towards))
         else
             rethrow(e)
         end
     end
-    gd = map((w, d) -> gateauxderivative!(w, d, adp, dc), ws, directions)
+    gd = map((w, d) -> gateauxderivative!(w, d, adp, dc), ws, towards)
     return gd
 end
 
@@ -378,8 +378,8 @@ function gd_grid_helper(
     inside_dr = isinside.(product_dp_grid, Ref(dr))
     gd_grid = fill(NaN, size(product_dp_grid))
     # note: indexing and array with another array produces a vector
-    directions = [one_point_design(dp) for dp in product_dp_grid[inside_dr]]
-    gd = gateauxderivative(d, directions, adp)
+    towards = [one_point_design(dp) for dp in product_dp_grid[inside_dr]]
+    gd = gateauxderivative(d, towards, adp)
     gd_grid[inside_dr] .= gd
     return mg, gd_grid
 end
@@ -391,8 +391,8 @@ end
         n_grid::Union{Integer,NTuple{N,Integer}}
     )
 
-Compute the maximal Gateaux derivative over a grid
-of one-point directions on the design region.
+Compute the maximal Gateaux derivative towards one-point designs
+from a grid over the design region.
 
 The dimension of the [`DesignRegion`](@ref) of `adp` must equal `N`.
 The number of points in each dimension of the grid is given by the elements of `n_grid`.
@@ -402,7 +402,7 @@ the grid is constructed on the region's bounding box
 and grid points outside the region will be ignored.
 
 Returns the maximum of the Gateaux derivative
-and the one-point design of the direction where the maximum is attained.
+and the one-point design towards which the maximum is attained.
 """
 function max_argmax_gateauxderivative(
     at::DesignMeasure,
