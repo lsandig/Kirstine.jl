@@ -81,12 +81,12 @@ function optimize(
 )
     time_start = time()
     assert_constraints(prototypes, constraints)
+    is_first_order = optimizer isa FirstOrderOptimizer
     state = optimizer_state(f_or_f_g!, optimizer, prototypes, constraints)
     check_objective(state; only_warn = false, prefix = "iteration 1: ")
     t_x = [deepcopy(maximizer(state))]
     t_fx = [maximum(state)]
     t_gx = Vector{Float64}[]
-    is_first_order = optimizer isa FirstOrderOptimizer
     if is_first_order
         check_gradient(state; only_warn = false, prefix = "iteration 1: ")
         push!(t_gx, deepcopy(gradient(state)))
