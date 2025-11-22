@@ -183,30 +183,26 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
         return optimization_result(dmr)
     end
     function step_direction(candidate::DesignMeasure)
-        point_for_dim = first(points(strategy.candidate))
-        workspace_direction = allocate_workspace(one_point_design(point_for_dim), adp)
-        opds = map(one_point_design, points(candidate))
-        dc_direction = derivative_constants(candidate, adp)
-        fix_weights = DesignConstraints(region(adp), [true], [false])
-        gd = d -> gateauxderivative!(workspace_direction, d, adp, dc_direction)
-        optimizer = strategy.optimizer_direction
-        or = optimize(gd, optimizer, opds, fix_weights; trace_state = trace_state)
+        wk = allocate_workspace(one_point_design(first(points(strategy.candidate))), adp)
+        dc = derivative_constants(candidate, adp)
+        or = optimize(
+            d -> gateauxderivative!(wk, d, adp, dc),
+            strategy.optimizer_direction,
+            map(one_point_design, points(candidate)),
+            DesignConstraints(region(adp), [true], [false]);
+            trace_state = trace_state,
+        )
         return or
     end
-    function append_point(candidate::DesignMeasure, direction::DesignMeasure)
-        # The mass point of the direction can either be already in the support of the
-        # candidate, or it can be a new point. In the latter case, we simply append it the support with the given initial_weight used for mixing.
-        # In the former case, we don't want to scale the existing points unnecessarily for numerical reasons.
-        # Hence we append it with mixture weight 0 and use simplify_merge() to join it with the already existing point at the same location.
-        if !(only(points(direction)) in points(candidate))
-            if isnan(strategy.initial_weight)
-                mixture_weight = 1 / (1 + numpoints(candidate))
-            else
-                mixture_weight = strategy.initial_weight
-            end
-            candidate = mixture(1 - mixture_weight, candidate, direction)
-        else
-            candidate = simplify_merge(mixture(1, candidate, direction), region(adp), 0)
+    function append_point(candidate::DesignMeasure, toward::DesignMeasure)
+        # The mass point of the one-point design towards which the Gateaux derivative is
+        # maximal can either be already in the support of the candidate (then we don't have
+        # to do anything), or it can be new (then we append it to the support, with the
+        # indicated inital_weight).
+        if !(only(points(toward)) in points(candidate))
+            L = numpoints(candidate)
+            w = isnan(strategy.initial_weight) ? 1 / (1 + L) : strategy.initial_weight
+            candidate = mixture(1 - w, candidate, toward)
         end
         return candidate
     end
