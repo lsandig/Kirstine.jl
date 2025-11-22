@@ -44,7 +44,7 @@ This is a variant of the basic idea in [^YBT13].
         This uses `optimizer_direction`,
         initialized with one-point prototypes at the [`points`](@ref) of the current `candidate`.
         See the low-level [`Optimizer`](@ref)s for algorithm-specific details.
-     4. If the maximum Gateaux derivative is smaller than `gateaux_tolerance`, stop early.
+     4. If the maximum Gateaux derivative is smaller than or equal to `gateaux_tolerance`, stop early.
      5. Append the single point of `d` to the support of the current `candidate`
         and give it `initial_weight`, scaling down the already existing by `1-initial_weight`.
         In the special case `initial_weight=NaN`,
@@ -227,7 +227,7 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
             e isa SingularException ? error(msg) : rethrow(e)
         end
         candidate = append_point(candidate, ord.maximizer)
-        return orw, ord, ord.maximum < strategy.gateaux_tolerance, candidate
+        return orw, ord, ord.maximum <= strategy.gateaux_tolerance, candidate
     end
     i = 1
     orw, ord, is_close_enough, candidate = full_step(strategy.candidate, i)
