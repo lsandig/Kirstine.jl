@@ -31,13 +31,14 @@ struct CompositeDesignProblem{T<:AbstractDesignProblem} <: AbstractDesignProblem
         problems::AbstractVector{<:AbstractDesignProblem},
         weights::AbstractVector{<:Real},
     )
-        if length(problems) != length(weights)
-            throw(ArgumentError("number of problems must match number of weights"))
-        elseif any(weights .< 0)
-            throw(ArgumentError("problem weights must be non-negative"))
-        elseif any(Ref(region(problems[1])) .!= region.(problems))
-            throw(ArgumentError("all problems must have identical regions"))
-        end
+        err_length = ArgumentError("number of problems must match number of weights")
+        length(problems) == length(weights) || throw(err_length)
+        err_empty = ArgumentError("component problems must not be empty")
+        !isempty(problems) || throw(err_empty)
+        err_neg = ArgumentError("problem weights must be non-negative")
+        all(>=(0), weights) || throw(err_neg)
+        err_region = ArgumentError("all problems must have identical regions")
+        allequal(region, problems) || throw(err_region)
         return new{eltype(problems)}(problems, weights)
     end
 end
@@ -69,9 +70,7 @@ weights(cdp::CompositeDesignProblem) = cdp.weights
 
 Get the common [`DesignRegion`](@ref) of the component design problems.
 """
-function region(cdp::CompositeDesignProblem)
-    return region(first(problems(cdp)))
-end
+region(cdp::CompositeDesignProblem) = region(first(problems(cdp)))
 
 function pretty_lines_cdp(cdp::CompositeDesignProblem, depth::Integer)
     lines = ["CompositeDesignProblem"]
@@ -105,6 +104,8 @@ function allocate_workspace(d::DesignMeasure, cdp::CompositeDesignProblem)
     return CDPWorkspace(map(p -> allocate_workspace(d, p), problems(cdp)))
 end
 
+Base.getindex(wk::CDPWorkspace, i::Int) = wk.component_workspaces[i]
+
 struct CDPObjectiveConstants{T<:ObjectiveConstants} <: ObjectiveConstants
     component_constants::Vector{T}
 end
@@ -112,6 +113,8 @@ end
 function objective_constants(cdp::CompositeDesignProblem)
     return CDPObjectiveConstants(map(objective_constants, problems(cdp)))
 end
+
+Base.getindex(oc::CDPObjectiveConstants, i::Int) = oc.component_constants[i]
 
 struct CDPDerivativeConstants{T<:DerivativeConstants} <: DerivativeConstants
     component_constants::Vector{T}
@@ -121,74 +124,57 @@ function derivative_constants(at::DesignMeasure, cdp::CompositeDesignProblem)
     return CDPDerivativeConstants(map(p -> derivative_constants(at, p), problems(cdp)))
 end
 
+Base.getindex(dc::CDPDerivativeConstants, i::Int) = dc.component_constants[i]
+
 function derivative_constants!(
-    cdc::CDPDerivativeConstants,
-    w::CDPWorkspace,
+    dc::CDPDerivativeConstants,
+    wk::CDPWorkspace,
     d::DesignMeasure,
     cdp::CompositeDesignProblem,
     oc::CDPObjectiveConstants,
 )
-    map(
-        cdc.component_constants,
-        w.component_workspaces,
-        problems(cdp),
-        oc.component_constants,
-    ) do dc, w, p, oc
-        derivative_constants!(dc, w, d, p, oc)
+    for i in 1:length(problems(cdp))
+        derivative_constants!(dc[i], wk[i], d, problems(cdp)[i], oc[i])
     end
-    return cdc
+    return dc
 end
 
 function objective!(
-    wsp::CDPWorkspace,
+    wk::CDPWorkspace,
     d::DesignMeasure,
     cdp::CompositeDesignProblem,
     oc::CDPObjectiveConstants,
 )
     acc = 0.0
-    numprobs = length(weights(cdp))
-    ws = weights(cdp)
-    ps = problems(cdp)
-    cc = oc.component_constants
-    wk = wsp.component_workspaces
-    for i in 1:numprobs
-        acc += ws[i] * objective!(wk[i], d, ps[i], cc[i])
+    for i in 1:length(problems(cdp))
+        acc += weights(cdp)[i] * objective!(wk[i], d, problems(cdp)[i], oc[i])
     end
+    return acc
     return acc
 end
 
 function gateauxderivative!(
-    wsp::CDPWorkspace,
-    direction::DesignMeasure,
+    wk::CDPWorkspace,
+    toward::DesignMeasure,
     cdp::CompositeDesignProblem,
     dc::CDPDerivativeConstants,
 )
     acc = 0.0
-    numprobs = length(weights(cdp))
-    ws = weights(cdp)
-    ps = problems(cdp)
-    cc = dc.component_constants
-    wk = wsp.component_workspaces
-    for i in 1:numprobs
-        acc += ws[i] * gateauxderivative!(wk[i], direction, ps[i], cc[i])
+    for i in 1:length(problems(cdp))
+        acc += weights(cdp)[i] * gateauxderivative!(wk[i], toward, problems(cdp)[i], dc[i])
     end
     return acc
 end
 
 function sensitivity!(
-    cwg::CDPWorkspace,
-    direction::DesignMeasure,
+    wk::CDPWorkspace,
+    toward::DesignMeasure,
     cdp::CompositeDesignProblem,
-    cdc::CDPDerivativeConstants,
+    dc::CDPDerivativeConstants,
 )
     acc = 0.0
-    map(
-        cwg.component_workspaces,
-        problems(cdp),
-        weights(cdp),
-        cdc.component_constants,
-    ) do wg, p, w, dc
-        acc += w * sensitivity!(wg, direction, p, dc)
+    for i in 1:length(problems(cdp))
+        acc += weights(cdp)[i] * sensitivity!(wk[i], toward, problems(cdp)[i], dc[i])
     end
     return acc
 end
@@ -221,7 +207,6 @@ function simplify(
 end
 
 function check_numerically_singular(d::DesignMeasure, cdp::CompositeDesignProblem)
-    for dp in problems(cdp)
-        check_numerically_singular(d, dp)
-    end
+    map(dp -> check_numerically_singular(d, dp), problems(cdp))
+    return nothing
 end
