@@ -132,6 +132,7 @@ function Base.show(
     println(io, "* objective evaluations: ", r.n_eval_f)
     println(io, "* gradient evaluations: ", r.n_eval_g)
     println(io, "* elapsed time: ", prettydifftime(r.seconds_elapsed))
+    println(io, "* converged: ", r.has_converged)
     println(io, "* traced states: ", length(r.trace_state))
     println(io, "* state type: ", S)
     println(io, "* maximum: ", r.maximum)
