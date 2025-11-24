@@ -362,6 +362,18 @@ function ica_assimilate!(
     return state
 end
 
+# Euclidean distance between two DesignMeasures when interpreted as the associated vectors.
+# Note that we ignore the implicitly known final weight.
+function ap_dist(p::DesignMeasure, q::DesignMeasure)
+    # we iterate through the scalar elements of the matrix,
+    # hence we don't use the points() accessor!
+    ssq = mapreduce((x, y) -> (x - y)^2, +, p.points, q.points)
+    for k in 1:(length(p.weights) - 1)
+        ssq += (p.weights[k] - q.weights[k])^2
+    end
+    return sqrt(ssq)
+end
+
 # For each empire, move a proportion of colonies around randomly. The proportion equals the
 # current revolution rate. The maximal distance is four times the distance between colony
 # and imperialist.
@@ -384,7 +396,7 @@ function ica_revolt!(
             rev_idx = randperm(num_col)[1:num_rev]
             for j in rev_idx
                 col = state.empire[k][j]
-                dist = Kirstine.ap_dist(state.country[imp], state.country[col])
+                dist = ap_dist(state.country[imp], state.country[col])
                 Kirstine.ap_rand!(state.rand, -optimizer.beta / 2, optimizer.beta / 2)
                 Kirstine.ap_add!(state.country[col], state.diff, constraints)
             end
@@ -427,7 +439,7 @@ function ica_unite!(state::IcaState, optimizer::Ica)
         while l <= length(state.empire)
             imp_k = state.imperialist[k]
             imp_l = state.imperialist[l]
-            if Kirstine.ap_dist(state.country[imp_k], state.country[imp_l]) <=
+            if ap_dist(state.country[imp_k], state.country[imp_l]) <=
                optimizer.uniting_threshold
                 idx_src, idx_dst = state.val[imp_k] > state.val[imp_l] ? (l, k) : (k, l)
                 @debug "UNITE empire $idx_src with empire $idx_dst"

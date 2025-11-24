@@ -249,16 +249,6 @@ function ap_as_difference(p::DesignMeasure)
     return SignedMeasure(deepcopy(p.points), deepcopy(p.weights))
 end
 
-function ap_dist(p::DesignMeasure, q::DesignMeasure)
-    # we iterate through the scalar elements of the matrix,
-    # hence we don't use the points() accessor!
-    ssq = mapreduce((x, y) -> (x - y)^2, +, p.points, q.points)
-    for k in 1:(length(p.weights) - 1)
-        ssq += (p.weights[k] - q.weights[k])^2
-    end
-    return sqrt(ssq)
-end
-
 function ap_rand!(v::SignedMeasure, lb::Real, ub::Real)
     rand!(v.weights)
     v.weights .*= (ub - lb)

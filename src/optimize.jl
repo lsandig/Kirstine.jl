@@ -158,4 +158,3 @@ function ap_rand! end
 function ap_mul! end
 function ap_mul! end
 function ap_add! end
-function ap_dist end
