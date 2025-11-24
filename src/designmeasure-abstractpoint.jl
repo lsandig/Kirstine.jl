@@ -63,18 +63,6 @@ function DesignConstraints(
     return DesignConstraints(dr, fixw, fixp)
 end
 
-function check_compatible(d::DesignMeasure, dr::DesignRegion{N}) where N
-    for dp in points(d)
-        msg_length = "design point length must match design region dimension"
-        length(dp) != N && throw(ArgumentError(msg_length))
-        if !isinside(dp, dr)
-            @error "" dp dr
-            throw(ArgumentError("design point is outside design region"))
-        end
-    end
-    return true
-end
-
 function assert_constraints(ds::AbstractVector{DesignMeasure}, c::DesignConstraints)
     map(d -> check_compatible(d, c.dr), ds)
     msg = "all prototypes must have $(length(c.fixw)) point(s), found $(numpoints.(ds))"

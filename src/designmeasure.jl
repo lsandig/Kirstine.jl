@@ -248,6 +248,18 @@ function Base.show(io::IO, ::MIME"text/plain", d::DesignMeasure)
     print(io, ",\n)")
 end
 
+function check_compatible(d::DesignMeasure, dr::DesignRegion{N}) where N
+    for dp in points(d)
+        msg_length = "design point length must match design region dimension"
+        length(dp) != N && throw(ArgumentError(msg_length))
+        if !isinside(dp, dr)
+            @error "" dp dr
+            throw(ArgumentError("design point is outside design region"))
+        end
+    end
+    return true
+end
+
 """
     sort_points(d::DesignMeasure; rev = false, dimorder = 1:length(first(points(d))))
 

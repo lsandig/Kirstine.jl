@@ -109,6 +109,19 @@ using Kirstine
         end
     end
 
+    @testset "check_compatible" begin
+        let dr1 = DesignInterval(:a => (0, 1)),
+            dr2 = DesignInterval(:a => (2, 3), :b => (4, 5)),
+            d1 = equidistant_design(dr1, 3),
+            d2 = one_point_design([1, 1]),
+            check = Kirstine.check_compatible
+
+            @test check(d1, dr1)
+            @test_throws "length must match" check(d1, dr2)
+            @test_throws "outside design region" (@test_warn "dp =" check(d2, dr2))
+        end
+    end
+
     @testset "==" begin
         let d1 = DesignMeasure([[1, 2], [3, 4]], [0.1, 0.9]),
             d2 = DesignMeasure([[3, 4], [1, 2]], [0.9, 0.1])
