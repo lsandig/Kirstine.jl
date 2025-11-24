@@ -39,8 +39,8 @@ ProductGrid{2}((5, 11))
 struct ProductGrid{N} <: GridSpec
     n_points::NTuple{N,Int64}
     function ProductGrid{N}(n_points::NTuple{N,Integer}) where N
-        msg_min_points = "need at least 2 points in each direction"
-        any(<(2), n_points) && throw(ArgumentError(msg_min_points))
+        err_2_points = ArgumentError("need at least 2 points in each dimension")
+        all(>=(2), n_points) || throw(err_2_points)
         return new{N}(n_points)
     end
 end
