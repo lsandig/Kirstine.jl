@@ -171,7 +171,7 @@ mutable struct FrankWolfeState{T,U,V} <: OptimizerState{T,U}
     fx::Float64              # objective at the new x
     gx::Vector{<:Float64}    # gradient at the old x
     frank_wolfe_gap::Float64 # inner product of gradient and direction
-    alpha::Vector{Float64}   # maximum feasible stepsize for pairwise variant
+    alpha::Vector{Float64}   # weights of active points / maximum feasible stepsize for pairwise variant
     active_set::Vector{T}    # active set for pairwise variant
     work::V                  # workspace for the stepsize strategy
     iteration_from_zero::Int64
@@ -204,9 +204,9 @@ function stepsize!(
     return stepsize_openloop(o.stepsize.shift, state.iteration_from_zero, gamma_max)
 end
 
-function stepsize_constnumiter(iterations::Integer, t::Integer, gamma_max::Real)
-    t > iterations && error("can't iterate past maximum number of iterations")
-    return min(1 / sqrt(iterations), gamma_max)
+function stepsize_constnumiter(max_iterations::Integer, t::Integer, gamma_max::Real)
+    t > max_iterations && error("can't iterate past maximum number of iterations")
+    return min(1 / sqrt(max_iterations), gamma_max)
 end
 
 function stepsize!(
@@ -361,7 +361,7 @@ function tick!(
     gamma_max = optimizer.pairwise ? alpha[away] : 1.0
     state.stepsize = stepsize!(g!, state, optimizer, constraints, gamma_max)
     if !optimizer.pairwise
-        alpha .*= (1 - state.stepsize)
+        alpha .*= max((1 - state.stepsize), 0)
         if !(v in active_set)
             state.active_points_added += 1
             push!(active_set, deepcopy(v))
