@@ -144,8 +144,7 @@ This prototype will be used as the starting value.
 
     Set up parameters for the Frank-Wolfe algorithm.
     The argument `iterations` sets the maximum number of iterations to run.
-    The algorithm terminates early if the Frank-Wolfe gap of the current iteration is smaller than the given tolerance.
-    Set `fw_gap_tolerance=0` to prevent early stopping.
+    The algorithm terminates early if the Frank-Wolfe gap of the current iteration is smaller than or equal to the given tolerance.
     """
     function FrankWolfe(
         iterations::Integer,
@@ -190,7 +189,7 @@ gradient(s::FrankWolfeState) = s.gx
 n_eval_f(s::FrankWolfeState) = s.n_eval_f
 n_eval_g(s::FrankWolfeState) = s.n_eval_g
 function has_converged(s::FrankWolfeState, o::FrankWolfe)
-    return s.frank_wolfe_gap < o.fw_gap_tolerance
+    return s.frank_wolfe_gap <= o.fw_gap_tolerance
 end
 
 function stepsize_openloop(shift::Integer, t::Integer, gamma_max::Real)

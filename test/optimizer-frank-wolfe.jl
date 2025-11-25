@@ -266,7 +266,7 @@ end
             # early termination
             r4 = Kirstine.optimize((f, g!), et, [prototype], constr2; trace_state = true)
 
-            @test !r1.has_converged # we compare with < against 0
+            @test !r1.has_converged
             @test r1.maximizer.x ≈ xstar rtol = 1e-4
             @test r1.maximum ≈ 0.0 atol = 1e-4
             @test length(r1.trace_gx) == 2000
@@ -286,13 +286,13 @@ end
             @test r3.maximum > r2.maximum
             @test r3.trace_state[end].frank_wolfe_gap < r2.trace_state[end].frank_wolfe_gap
             @test norm(r3.maximizer.x .- xstar) < norm(r2.maximizer.x .- xstar)
-            @test r3.trace_state[end].active_points_added == 7
+            @test r3.trace_state[end].active_points_added == 6
             @test r3.trace_state[end].active_points_removed == 3
             @test r3.trace_state[end].frank_wolfe_gap == 0
             # and even faster still with early termination
             @test r4.has_converged
             @test length(r4.trace_fx) == 44
-            @test r4.trace_state[end].frank_wolfe_gap < 1e-7
+            @test r4.trace_state[end].frank_wolfe_gap <= 1e-7
         end
     end
 end
