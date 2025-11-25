@@ -303,29 +303,27 @@ function stepsize_adaptive!(
     work.n_eval_gx = 0
     M = step.eta * work.smoothness_estimate
     while true
-        gamma = min(gx_dot_direction / (M * fw_norm(direction)^2), gamma_max)
-        gamma < 0 && error("gamma should not become negative")
+        work.gamma = min(gx_dot_direction / (M * fw_norm(direction)^2), gamma_max)
+        work.gamma >= 0 || error("gamma should not become negative")
         # in-place computation of g!(x + gamma * direction)
         ap_copy!(work.d_tmp, direction)
-        ap_mul!(work.d_tmp, gamma)
+        ap_mul!(work.d_tmp, work.gamma)
         ap_copy!(work.x_tmp, x)
         ap_add!(work.x_tmp, work.d_tmp, c)
         try
             g!(work.gx_tmp, work.x_tmp)
         catch e
             ise = step.initial_smoothness_estimate
-            throw(AdaptiveStepsizeException(e, work.x_tmp, ise, M, gamma))
+            throw(AdaptiveStepsizeException(e, work.x_tmp, ise, M, work.gamma))
         end
         work.n_eval_gx += 1
         if fw_evaluate_linearization(work.gx_tmp, direction, c) >= 0
             work.smoothness_estimate = M
-            work.gamma = gamma
             return work
         end
         if M > step.smoothness_threshold
             @warn "smoothness estimate seems to diverge, terminating step size search"
             work.has_diverged = true
-            work.gamma = gamma
             return work
         end
         M *= step.tau
@@ -364,43 +362,42 @@ function tick!(
     optimizer::FrankWolfe,
     constraints::AbstractConstraints,
 )
-    x, gx, direction, v = state.x, state.gx, state.direction, state.v
-    active_set, alpha = state.active_set, state.alpha
+    direction, active_set, alpha = state.direction, state.active_set, state.alpha
     state.iteration_from_zero += 1
-    g!(gx, x)
+    g!(state.gx, state.x)
     state.n_eval_g += 1
-    fw_linear_maximization_oracle!(v, gx, constraints)
-    ap_diff!(direction, v, x)
+    fw_linear_maximization_oracle!(state.v, state.gx, constraints)
+    ap_diff!(direction, state.v, state.x)
     # Note: this is the gap for x from the previous iteration!
-    state.frank_wolfe_gap = fw_evaluate_linearization(gx, direction, constraints)
+    state.frank_wolfe_gap = fw_evaluate_linearization(state.gx, direction, constraints)
     away = -1
     if optimizer.pairwise
         _, away = findmin(active_set) do a
-            fw_evaluate_linearization(gx, a, constraints)
+            fw_evaluate_linearization(state.gx, a, constraints)
         end
-        ap_diff!(direction, v, active_set[away])
+        ap_diff!(direction, state.v, active_set[away])
     end
     gamma_max = optimizer.pairwise ? alpha[away] : 1.0
     state.stepsize = stepsize!(g!, state, optimizer, constraints, gamma_max)
     if !optimizer.pairwise
         alpha .*= max((1 - state.stepsize), 0)
-        if !(v in active_set)
+        if !(state.v in active_set)
             state.active_points_added += 1
-            push!(active_set, deepcopy(v))
+            push!(active_set, deepcopy(state.v))
             push!(alpha, state.stepsize)
         else
-            idx = findfirst(==(v), active_set)
+            idx = findfirst(==(state.v), active_set)
             alpha[idx] += state.stepsize
             alpha[idx] = min(alpha[idx], 1.0)
         end
     else
-        if !(v in active_set)
+        if !(state.v in active_set)
             state.active_points_added += 1
-            push!(active_set, deepcopy(v))
+            push!(active_set, deepcopy(state.v))
             push!(alpha, state.stepsize)
             alpha[away] = max(alpha[away] - state.stepsize, 0)
         else
-            idx = findfirst(==(v), active_set)
+            idx = findfirst(==(state.v), active_set)
             alpha[away] = max(alpha[away] - state.stepsize, 0)
             alpha[idx] = min(alpha[idx] + state.stepsize, 1)
         end
@@ -410,8 +407,8 @@ function tick!(
             deleteat!(active_set, away)
         end
     end
-    ap_convex_combination!(x, state.alpha, active_set, constraints)
-    state.fx = f(x)
+    ap_convex_combination!(state.x, alpha, active_set, constraints)
+    state.fx = f(state.x)
     state.n_eval_f += 1
     return state
 end
