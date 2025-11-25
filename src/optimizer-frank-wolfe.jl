@@ -95,9 +95,11 @@ end
 
 mutable struct AdaptiveWorkspace{T<:AbstractPoint,U<:AbstractPointDifference} <: FWWorkspace
     smoothness_estimate::Float64
+    gamma::Float64
     x_tmp::T
     d_tmp::U
     gx_tmp::Vector{Float64}
+    n_eval_gx::Int64
     has_diverged::Bool
 end
 
@@ -105,7 +107,8 @@ function fw_workspace(step::Adaptive, x::AbstractPoint, gradient_length::Integer
     x_copy = deepcopy(x)
     d = ap_as_difference(x)
     gx = fill(NaN, gradient_length)
-    return AdaptiveWorkspace(step.initial_smoothness_estimate, x_copy, d, gx, false)
+    w = AdaptiveWorkspace(step.initial_smoothness_estimate, NaN, x_copy, d, gx, 0, false)
+    return w
 end
 
 """
@@ -274,39 +277,58 @@ function stepsize!(
     c::AbstractConstraints,
     gamma_max::Real,
 )
-    w, x, gx, direction = state.work, state.x, state.gx, state.direction
-    w.has_diverged = false
-    if isinf(w.smoothness_estimate)
-        fw_estimate_initial_smoothness!(g!, w, x, gx, direction, c, gamma_max)
+    work, x, gx, direction = state.work, state.x, state.gx, state.direction
+    if isinf(work.smoothness_estimate)
+        fw_estimate_initial_smoothness!(g!, work, x, gx, direction, c, gamma_max)
         state.n_eval_g += 1
     end
-    M = o.stepsize.eta * w.smoothness_estimate
-    dd_direction = fw_evaluate_linearization(gx, direction, c)
+    gx_dot_direction = fw_evaluate_linearization(gx, direction, c)
+    stepsize_adaptive!(work, o.stepsize, g!, x, direction, gx_dot_direction, c, gamma_max)
+    state.n_eval_g += work.n_eval_gx
+    return work.gamma
+end
+
+# Note: this only modifies `work`, but not `x` or `direction`.
+function stepsize_adaptive!(
+    work::AdaptiveWorkspace,
+    step::Adaptive,
+    g!::Function,
+    x::AbstractPoint,
+    direction::AbstractPointDifference,
+    gx_dot_direction::Real,
+    c::AbstractConstraints,
+    gamma_max::Real,
+)
+    work.has_diverged = false
+    work.n_eval_gx = 0
+    M = step.eta * work.smoothness_estimate
     while true
-        gamma = min(dd_direction / (M * fw_norm(direction)^2), gamma_max)
+        gamma = min(gx_dot_direction / (M * fw_norm(direction)^2), gamma_max)
         gamma < 0 && error("gamma should not become negative")
         # in-place computation of g!(x + gamma * direction)
-        ap_copy!(w.d_tmp, direction)
-        ap_mul!(w.d_tmp, gamma)
-        ap_copy!(w.x_tmp, x)
-        ap_add!(w.x_tmp, w.d_tmp, c)
+        ap_copy!(work.d_tmp, direction)
+        ap_mul!(work.d_tmp, gamma)
+        ap_copy!(work.x_tmp, x)
+        ap_add!(work.x_tmp, work.d_tmp, c)
         try
-            g!(w.gx_tmp, w.x_tmp)
+            g!(work.gx_tmp, work.x_tmp)
         catch e
-            ise = o.stepsize.initial_smoothness_estimate
-            throw(AdaptiveStepsizeException(e, w.x_tmp, ise, M, gamma))
+            ise = step.initial_smoothness_estimate
+            throw(AdaptiveStepsizeException(e, work.x_tmp, ise, M, gamma))
         end
-        state.n_eval_g += 1
-        if fw_evaluate_linearization(w.gx_tmp, direction, c) >= 0
-            w.smoothness_estimate = M
-            return gamma
+        work.n_eval_gx += 1
+        if fw_evaluate_linearization(work.gx_tmp, direction, c) >= 0
+            work.smoothness_estimate = M
+            work.gamma = gamma
+            return work
         end
-        if M > o.stepsize.smoothness_threshold
+        if M > step.smoothness_threshold
             @warn "smoothness estimate seems to diverge, terminating step size search"
-            w.has_diverged = true
-            return gamma
+            work.has_diverged = true
+            work.gamma = gamma
+            return work
         end
-        M *= o.stepsize.tau
+        M *= step.tau
     end
 end
 
