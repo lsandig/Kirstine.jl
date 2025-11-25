@@ -344,11 +344,12 @@ function optimizer_state(
     v = deepcopy(x)
     d = deepcopy(ap_as_difference(v))
     grad_length = fw_gradient_length(x, constraints)
+    fx = f(x)
     gx = fill(NaN, grad_length)
     as = [deepcopy(x)]
     work = fw_workspace(optimizer.stepsize, x, grad_length)
     # The iteration will be counted up towards 0 in the first call to tick!()
-    state = FrankWolfeState(x, v, d, NaN, NaN, gx, NaN, [1.0], as, work, -1, 0, 0, 0, 0)
+    state = FrankWolfeState(x, v, d, NaN, fx, gx, NaN, [1.0], as, work, -1, 0, 0, 1, 0)
     # Here we perform the update corresponding to step t=0 in [^P23].
     # With OpenLoop this always gives an x1 that is on the boundary of the compact convex set
     # since the initial step size is 1.
@@ -368,8 +369,8 @@ function tick!(
     state.n_eval_g += 1
     fw_linear_maximization_oracle!(state.v, state.gx, constraints)
     ap_diff!(direction, state.v, state.x)
-    # Note: this is the gap for x from the previous iteration!
     state.frank_wolfe_gap = fw_evaluate_linearization(state.gx, direction, constraints)
+    has_converged(state, optimizer) && return state
     away = -1
     if optimizer.pairwise
         _, away = findmin(active_set) do a

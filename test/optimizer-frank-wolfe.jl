@@ -216,7 +216,7 @@ end
             @test state.stepsize == 1
             @test state.fx == -1
             @test state.gx == [-8]
-            @test state.n_eval_f == 1
+            @test state.n_eval_f == 2
             @test state.n_eval_g == 1
             @test state.active_points_added == 1
             @test state.active_points_removed == 0
@@ -239,7 +239,7 @@ end
             @test state.v == Pnt([10, 0])
             @test state.stepsize ≈ 2 / 3
             @test state.x.x ≈ [20 / 3, 10 / 3]
-            @test state.n_eval_f == 2
+            @test state.n_eval_f == 3
             @test state.n_eval_g == 2
         end
     end
