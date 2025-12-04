@@ -31,7 +31,7 @@ end
 end
 
 @recipe function f(r::ExchangeResult)
-    layout --> @layout [panel_objective, panel_derivative]
+    layout --> @layout [panel_objective; panel_derivative]
     @series begin
         subplot := 1
         widen --> true
