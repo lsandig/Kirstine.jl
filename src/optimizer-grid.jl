@@ -38,7 +38,7 @@ ProductGrid{2}((5, 11))
 """
 struct ProductGrid{N} <: GridSpec
     n_points::NTuple{N,Int64}
-    function ProductGrid{N}(n_points::NTuple{N,Integer}) where N
+    function ProductGrid(n_points::NTuple{N,Integer}) where N
         err_2_points = ArgumentError("need at least 2 points in each dimension")
         all(>=(2), n_points) || throw(err_2_points)
         return new{N}(n_points)
@@ -46,9 +46,9 @@ struct ProductGrid{N} <: GridSpec
 end
 
 # The inner constructor for a one-dimensional product grid needs a 1-Tuple,
-# which is not very user friendly to type: `ProductGrid{1}((42,))`;
+# which is not very user friendly to type: `ProductGrid((42,))`;
 # hence we define a convenient outer splatting constructor for arbitrary dimensions.
-ProductGrid(n_points::Integer...) = ProductGrid{length(n_points)}(n_points)
+ProductGrid(n_points::Integer...) = ProductGrid(n_points)
 
 """
     GridSearch <: Kirstine.ZerothOrderOptimizer
