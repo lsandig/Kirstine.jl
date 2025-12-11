@@ -135,7 +135,7 @@ to the fields of a [`Covariate`](@ref) with the given `names`.
 This parameterization can be used with any [`Covariate`](@ref)
 that has only `Float64` fields.
 Note that the order of the `names`
-should match the the order of `dimnames(region(prob))` for the [`DesignProblem`](@ref)
+should match the order of `dimnames(region(prob))` for the [`DesignProblem`](@ref)
 in which `CopyTo` is used.
 No new method for [`map_to_covariate!`](@ref) needs to be implemented for user types
 since the package supplies a generic one that works with any [`Model`](@ref)

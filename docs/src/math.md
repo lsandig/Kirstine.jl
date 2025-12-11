@@ -130,7 +130,7 @@ The set ``\AllDesignMeasures`` denotes the set of all design measures on (some s
 ## Objective Function
 
 To construct the objective function,
-we first obtain the the Fisher information matrix
+we first obtain the Fisher information matrix
 from the expected Hessian matrix of the statistical model's log-likelihood
 
 ```math
