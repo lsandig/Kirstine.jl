@@ -428,7 +428,7 @@ end
 Return a tuple `(d, r)`.
 
   - `d`: The best [`DesignMeasure`](@ref) found.
-    As post-processing, [`simplify`](@ref) and [`sort_points`](@ref) are called.
+    As postprocessing, [`simplify`](@ref) and [`sort_points`](@ref) are called.
     Their respective keyword arguments can be mixed in `sargs`,
     since `solve` will take care to pass them along correctly.
 

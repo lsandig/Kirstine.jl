@@ -58,10 +58,10 @@ A grid search optimizer.
 This optimizer is particularly useful for the direction-finding step in [`Exchange`](@ref),
 but can also be used for [`DirectMaximization`](@ref)
 as long as all weights of the candidate are fixed,
-and there are only few non-fixed design points.
+and there are only few nonfixed design points.
 Note that for `DirectMaximization`,
 the total number of grid points is exponential both in the dimension of the design region
-and in the number of non-fixed design points.
+and in the number of nonfixed design points.
 
 (Strictly speaking this optimizer is not particle-based,
 but it uses the same internal infrastructure.)

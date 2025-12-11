@@ -59,7 +59,7 @@ This is a variant of the basic idea in [^YBT13].
     !!! note
 
         Before version 0.8.0 of Kirstine.jl,
-        the order of the re-weighting step and the derivative-maximizing step were swapped
+        the order of the reweighting step and the derivative-maximizing step were swapped
         and `initial_weight = NaN` had been hard-coded
     """
     function Exchange(
@@ -123,7 +123,7 @@ optimization_results_direction(er::ExchangeResult) = er.ord
 """
     optimization_results_weight(er::Kirstine.ExchangeResult)
 
-Get the full [`OptimizationResult`](@ref)s from the re-weighting steps.
+Get the full [`OptimizationResult`](@ref)s from the reweighting steps.
 """
 optimization_results_weight(er::ExchangeResult) = return er.orw
 
@@ -148,7 +148,7 @@ end
 """
     total_runtime_weight(er::Kirstine.ExchangeResult)
 
-Get the total time spent during the re-weighting steps.
+Get the total time spent during the reweighting steps.
 """
 function total_runtime_weight(er::ExchangeResult)
     return mapreduce(or -> or.seconds_elapsed, +, er.orw)

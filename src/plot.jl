@@ -344,7 +344,7 @@ the following things will be plotted:
 
 # Additional Keyword Arguments
 
-  - `bands::Bool=false`: plot point-wise credible bands.
+  - `bands::Bool=false`: plot pointwise credible bands.
     Currently only implemented for uniform `weights(d)`.
     Color and opacity can be controlled with the standard keyword arguments
     `fillcolor` and `fillalpha`.

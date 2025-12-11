@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: 2023,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# Vector-unit model with non-constant measurement error variance
+# Vector-unit model with nonconstant measurement error variance
 #
 # This is a modification of `example-compartment.jl`, and not necessarily meaningful
 # biologically.

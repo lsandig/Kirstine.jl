@@ -76,7 +76,6 @@ include("test-noalloc.jl")
 
             we = (:warn, r"expensive")
             wa = (:warn, r"non-anonymous")
-
             @test_logs we Kirstine.codomain_dimension(trafo_function, pk)
             @test_logs we Kirstine.codomain_dimension(trafo_closure, pk)
             @test_logs we Kirstine.codomain_dimension(trafo_anonymous, pk)

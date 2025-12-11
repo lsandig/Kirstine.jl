@@ -5,7 +5,7 @@ This page documents the notation for `Kirstine.jl`.
 
 ## Preliminaries
 
-  - The set of ``a×a`` symmetric non-negative definite matrices is denoted ``\SNNDMatrices{a}``.
+  - The set of ``a×a`` symmetric nonnegative definite matrices is denoted ``\SNNDMatrices{a}``.
 
   - The total derivative / Jacobian matrix operator is denoted ``\TotalDiff{}``.
   - The Hessian matrix operator is denoted ``\Hessian{}``.
@@ -53,7 +53,7 @@ with the following elements:
 
   - A _design criterion_ ``\DesignCriterion : \SNNDMatrices{\DimTransformedParameter} → \Reals``.
     This is the functional that maps the normalized information matrix to a real number.
-    ``\DesignCriterion`` must be concave, monotonically non-decreasing and differentiable.
+    ``\DesignCriterion`` must be concave, monotonically nondecreasing and differentiable.
     See also [D-Criterion](@ref) and [A-Criterion](@ref).
 
   - A _design region_ ``\DesignRegion ⊂ \Reals^{\DimDesignRegion}``.
@@ -593,7 +593,7 @@ and an analogous version for two different design problems.
 ## Composite Design Problems
 
 Suppose we have ``\NumComponents`` design problems
-and corresponding non-negative weights ``\ComponentWeight_{1},\dots\ComponentWeight_{\NumComponents}``.
+and corresponding nonnegative weights ``\ComponentWeight_{1},\dots\ComponentWeight_{\NumComponents}``.
 Denote the individual objective functions by ``\Objective_{1},\dots,\Objective_{\NumComponents}``.
 Then a _composite design problem_ has the objective function
 

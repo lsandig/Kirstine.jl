@@ -37,7 +37,7 @@ function criterion_functional!(
         # Note: this branch is taken when Q_or_inv_Q was obtained by a DeltaMethod transformation.
         # Hence it could be singular without having thrown an error,
         # since we have never explicitly inverted it.
-        # Taking the trace here then produces something non-positive.
+        # Taking the trace here then produces something nonpositive.
         return -tr(Q_or_inv_Q)
     else
         potrf!('U', Q_or_inv_Q) # Cholesky factor

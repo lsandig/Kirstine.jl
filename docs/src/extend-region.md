@@ -102,7 +102,7 @@ end
 ## Example
 
 To see the new region in action,
-we will re-use the [dose-time-response example](dtr.md).
+we will reuse the [dose-time-response example](dtr.md).
 Instead of the design interval
 
 ```math

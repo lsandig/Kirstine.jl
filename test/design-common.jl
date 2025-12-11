@@ -69,7 +69,7 @@ include("example-compartment.jl")
             @test res ≈ ref
         end
 
-        # vector unit with non-constant covariance
+        # vector unit with nonconstant covariance
         let d = DesignMeasure([5] => 0.25, [20] => 0.75),
             m = VUMod(0.1, 3),
             cp = EquiTime(),

@@ -204,7 +204,7 @@ cond(infomat(s_tr, dp_t)), cond(infomat(s_tr, dp_tr))
 
 Compare this to the [Bayesian optimal design](transformations.md#Time-to-Maximum-Concentration)
 for the proper prior distribution,
-which naturally has three points and is non-singular.
+which naturally has three points and is nonsingular.
 We evaluate it with the objective for unregularized locally optimal design:
 
 ```@example main

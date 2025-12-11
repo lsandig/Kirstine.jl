@@ -40,7 +40,7 @@ Compute Jacobian matrix of the mean function at `p`.
 # Implementation
 
 For user types `M <: Kirstine.NonlinearRegression`, `C <: Kirstine.Covariate`, and `P <: Kirstine.Parameter`,
-this should fill in the elements of the pre-allocated Jacobian matrix `jm`,
+this should fill in the elements of the preallocated Jacobian matrix `jm`,
 and finally return `jm`.
 
 Note that you are free how you map the partial derivatives to the columns of `jm`.
@@ -415,7 +415,7 @@ function _path_to_module_dfs!(
 )
     # a module contains a reference to itself, marking it as visited prevents infinite recursion
     push!(visited, current)
-    # we need all = true here since a sub-module could be defined but not exported
+    # we need all = true here since a submodule could be defined but not exported
     names_of_submodules = filter(names(current; all = true, imported = true)) do name
         return isdefined(current, name) && getfield(current, name) isa Module
     end

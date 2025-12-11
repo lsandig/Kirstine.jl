@@ -191,7 +191,7 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
             @test points(v) == points(v_copy) # don't touch the points
             @test_noalloc $lmo!($v, $g, $c2)
             @test_throws "fixed points" lmo!(v, g, c1)
-            @test_throws "weights non-fixed" lmo!(v, g, c3)
+            @test_throws "weights nonfixed" lmo!(v, g, c3)
         end
     end
 
@@ -262,7 +262,7 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
             # some weights fixed that already sum to one (see below)
             c4 = dcon(dr, [false, false, true, true], fill(false, 4))
 
-            # check that weights are non-negative and sum to one
+            # check that weights are nonnegative and sum to one
             @test sum(weights(r0)) ≈ 1
             @test sum(weights(r1)) ≈ 1
             @test sum(weights(r2)) ≈ 1
@@ -323,7 +323,7 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
             @test from == ref
             # check equality,...
             @test to == from
-            # ... but non-egality
+            # ... but nonegality
             @test to !== from
             # check that first argument is returned
             @test r === to

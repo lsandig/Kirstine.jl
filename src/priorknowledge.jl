@@ -17,7 +17,7 @@ struct PriorSample{T} <: PriorKnowledge{T}
     ) where T<:Parameter
         err_length = ArgumentError("number of weights and parameter values must be equal")
         length(weights) == length(parameters) || throw(err_length)
-        err_weights = ArgumentError("weights must be non-negative and sum to one")
+        err_weights = ArgumentError("weights must be nonnegative and sum to one")
         (all(weights .>= 0) && sum(weights) ≈ 1) || throw(err_weights)
         err_type = ArgumentError("parameters must all have the same concrete type")
         isconcretetype(T) || throw(err_type)

@@ -20,7 +20,7 @@ Frank-Wolfe step-size strategy ``γ(t) = l / (t + l)`` for ``t=0,1,2,…`` with 
 
     With `OpenLoop`, the algorithm will always land on a vertex of the feasible set at ``t=1``.
     For a probability simplex, these vertices are the one-point designs.
-    As a consequence, `OpenLoop` is _not_ suitable for the re-weighting step of [`Exchange`](@ref)
+    As a consequence, `OpenLoop` is _not_ suitable for the reweighting step of [`Exchange`](@ref)
     for design problems where one-point designs are singular.
 """
 @kwdef struct OpenLoop <: StepSizeStrategy
@@ -64,7 +64,7 @@ the initial estimate is computed from a local approximation at the starting valu
 
 If at any point during the search the smoothness estimate exceeds `smoothness_threshold`,
 this is interpreted as the divergence of the multiplicative search,
-and the current (non-optimal) step size is returned.
+and the current (nonoptimal) step size is returned.
 
 This strategy is an implementation of Algorithm 5 from [^P23],
 and the defaults of the parameters are taken from the adaptive line search in
@@ -122,7 +122,7 @@ a basic one that always moves towards the best vertex for the linearized problem
 and a version with pairwise steps (see Algorithm 2 in [^LJ15])
 that is better at finding an optimum on the boundary.
 
-It is currently intended to be used for the re-weighting step of [`Exchange`](@ref).
+It is currently intended to be used for the reweighting step of [`Exchange`](@ref).
 For [`DirectMaximization`](@ref) it can currently only be used
 when all design points are fixed.
 
@@ -153,7 +153,7 @@ This prototype will be used as the starting value.
         pairwise::Bool,
     )
         iterations <= 0 && throw(ArgumentError("number of iterations must be positive"))
-        msg_tolerance = "fw_gap_tolerance must be non-negative"
+        msg_tolerance = "fw_gap_tolerance must be nonnegative"
         fw_gap_tolerance < 0 && throw(ArgumentError(msg_tolerance))
         return new{typeof(s)}(iterations, fw_gap_tolerance, s, pairwise)
     end

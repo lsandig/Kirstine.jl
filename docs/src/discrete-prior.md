@@ -1,4 +1,4 @@
-# Discrete Priors With Non-Uniform Weights
+# Discrete Priors With Nonuniform Weights
 
 ```@setup main
 check_results = true
@@ -12,7 +12,7 @@ can be used as an exact representation of such a discrete prior.
 
 ## Model Setup
 
-For simplicity, we re-use the dose-response model from the [tutorial](tutorial.md).
+For simplicity, we reuse the dose-response model from the [tutorial](tutorial.md).
 
 ```@example main
 using Kirstine, Random, Plots

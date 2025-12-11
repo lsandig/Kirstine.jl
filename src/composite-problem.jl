@@ -17,7 +17,7 @@ struct CompositeDesignProblem{T<:AbstractDesignProblem} <: AbstractDesignProblem
         CompositeDesignProblem(problems, weights)
 
     Construct a composite design problem from a vector of [`AbstractDesignProblem`](@ref)s
-    and corresponding non-negative weights.
+    and corresponding nonnegative weights.
 
     All `problems` must have the same [`DesignRegion`](@ref).
 
@@ -35,7 +35,7 @@ struct CompositeDesignProblem{T<:AbstractDesignProblem} <: AbstractDesignProblem
         length(problems) == length(weights) || throw(err_length)
         err_empty = ArgumentError("component problems must not be empty")
         !isempty(problems) || throw(err_empty)
-        err_neg = ArgumentError("problem weights must be non-negative")
+        err_neg = ArgumentError("problem weights must be nonnegative")
         all(>=(0), weights) || throw(err_neg)
         err_region = ArgumentError("all problems must have identical regions")
         allequal(region, problems) || throw(err_region)

@@ -134,7 +134,7 @@ function fw_linear_maximization_oracle!(
     c::DesignConstraints,
 )
     !all(c.fixp) && error("only implemented for fixed points")
-    any(c.fixw) && error("only implemented for all weights non-fixed")
+    any(c.fixw) && error("only implemented for all weights nonfixed")
     v.weights .= 0
     v.weights[argmax(gx)] = 1
     return v
@@ -159,7 +159,7 @@ function fw_evaluate_linearization(
 end
 
 # Note: assumes that any fixed entries are identical for all design measures in qs.
-# This does _not_ handle non-convex design regions,
+# This does _not_ handle nonconvex design regions,
 # and does _not_ correct for numerical errors that might move the point outside of the region.
 function ap_convex_combination!(
     p::DesignMeasure,
@@ -206,7 +206,7 @@ function ap_rand!(d::DesignMeasure, c::DesignConstraints)
         # We need to prevent negative normalizing constants later on.
         sum_fix = min(1.0, sum(weights(d)[c.fixw]))
         sum_fix == 1.0 && @warn("fixed weights already sum to one")
-        # rationale for the weights: when no indices are fixed, re-normalized exponential
+        # rationale for the weights: when no indices are fixed, renormalized exponential
         # weights imply a uniform distribution on the simplex, i.e. Dirichlet(1, …, 1).
         sum_rand = 0.0
         while sum_rand < eps() # we don't want to divide by too small numbers
@@ -322,7 +322,7 @@ function move_handle_fixed!(
     #   sum(v.weights[.! fixw]) == 0.
     #
     # In oder not to prefer one direction over the others, we subtract the mean
-    # from every non-fixed element of v.weights.
+    # from every nonfixed element of v.weights.
     n_fixw = count(fixw)
     if n_fixw != K && fixw[K]
         mean_free = sum_vw_free / (K - n_fixw)

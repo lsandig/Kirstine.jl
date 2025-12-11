@@ -18,7 +18,7 @@ returned by a PSO run is always `false` by definition.
 # Initialization
 
 The swarm is initialized from a vector of prototypical `AbstractPoint`s,
-which are supplied by the caller via a non-exported interface.
+which are supplied by the caller via a nonexported interface.
 Construction from the vector of `prototypes` proceeds as follows:
 
  1. The first `length(prototypes)` particles are a deep copy of the `prototypes` vector.
@@ -48,7 +48,7 @@ Construction from the vector of `prototypes` proceeds as follows:
         iterations <= 0 && throw(ArgumentError("number of iterations must be positive"))
         swarmsize <= 1 && throw(ArgumentError("swarmsize must be at least 2"))
         if c1 < 0 || c2 < 0 || c1 + c2 <= 4
-            throw(ArgumentError("c1 and c2 must be non-negative, and c1 + c2 > 4"))
+            throw(ArgumentError("c1 and c2 must be nonnegative, and c1 + c2 > 4"))
         end
         return new(iterations, swarmsize, c1, c2)
     end

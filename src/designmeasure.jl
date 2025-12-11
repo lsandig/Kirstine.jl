@@ -36,7 +36,7 @@ struct DesignMeasure <: AbstractPoint
             throw(ArgumentError("number of weights and design points must be equal"))
         end
         if any(weights .< 0) || !(sum(weights) ≈ 1)
-            throw(ArgumentError("weights must be non-negative and sum to one"))
+            throw(ArgumentError("weights must be nonnegative and sum to one"))
         end
         new(points, weights)
     end
@@ -405,7 +405,7 @@ end
 Construct a new `DesignMeasure` where all design points with weights smaller than or equal to
 `maxweight` are removed.
 
-The vector of remaining weights is re-normalized.
+The vector of remaining weights is renormalized.
 """
 function simplify_drop(d::DesignMeasure, maxweight::Real)
     maxweight < 1 || throw(ArgumentError("maxweight must be < 1"))

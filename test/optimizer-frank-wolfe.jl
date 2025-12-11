@@ -82,7 +82,7 @@ end
             stepsize = OpenLoop(2),
             pairwise = false,
         )
-        @test_throws "fw_gap_tolerance must be non-negative" FrankWolfe(;
+        @test_throws "fw_gap_tolerance must be nonnegative" FrankWolfe(;
             iterations = 10,
             fw_gap_tolerance = -1,
             stepsize = OpenLoop(2),

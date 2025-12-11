@@ -12,7 +12,7 @@ using Kirstine
         # inner constructor
         @test_throws "must be equal" DesignMeasure([[1], [2]], [0])
         @test_throws "identical lengths" DesignMeasure([[1], [2, 3]], [0.5, 0.5])
-        @test_throws "non-negative" DesignMeasure([[1], [2]], [-0.5, 1.5])
+        @test_throws "nonnegative" DesignMeasure([[1], [2]], [-0.5, 1.5])
         @test_throws "sum to one" DesignMeasure([[1], [2]], [0.1, 0.2])
 
         let pts = [[1], [42], [9]], d = DesignMeasure(pts, [0.2, 0.3, 0.5])

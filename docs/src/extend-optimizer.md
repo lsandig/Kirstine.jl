@@ -43,7 +43,7 @@ as they need to perform the following operations on ``x,y∈\Reals^n`` and ``α�
   - ``(x, y) ↦ x - y``: find the directional vector for moving from ``y`` to ``x``
   - ``(x, y) ↦ x + y``: update the position
   - ``(α, x) ↦ α x``: scale
-  - ``(x, y) ↦ (x_1 y_1, …, x_n y_n)``: multiply element-wise
+  - ``(x, y) ↦ (x_1 y_1, …, x_n y_n)``: multiply elementwise
 
 Of course, the set of [`DesignMeasure`](@ref)s is not a vector space.
 But we can map a design measure
@@ -128,7 +128,7 @@ shown here for `T = DesignMeasure` and `U = SignedMeasure`:
   - `ap_rand!(v::SignedMeasure, lb::Real, ub::Real)`:
     randomize elements of `v` in place from a uniform distribution on the interval ``[lb, ub]``.
   - `ap_mul!(v1::SignedMeasure, v2::SignedMeasure)`:
-    in-place element-wise multiplication of `v1` and `v2`.
+    in-place elementwise multiplication of `v1` and `v2`.
   - `ap_mul!(v::SignedMeasure, a::Real)`:
     in-place multiplication of each element of `v` by `a`.
   - `ap_add!(v1::SignedMeasure, v2::SignedMeasure)`: update ``v_1`` to ``v_1 ⊕ v_2``.
@@ -513,7 +513,7 @@ Notable differences to the ICA implementation in the ICAOD package are:
 
 ## Example
 
-For illustration, we re-use the example with the [discrete prior](discrete-prior.md).
+For illustration, we reuse the example with the [discrete prior](discrete-prior.md).
 
 ```@example main
 using Kirstine, Random, Plots
