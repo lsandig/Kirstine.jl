@@ -216,7 +216,7 @@ function expected_function_graph_data(
     bands::Bool,
     probability::Real,
 )
-    msg_weight = "credibility bands are only implemented for uniform prior weights"
+    msg_weight = "credible bands are only implemented for uniform prior weights"
     !bands || allequal(weights(pk)) || throw(ArgumentError(msg_weight))
     err_prob = ArgumentError("probability must be in in interval [0, 1]")
     (0 <= probability <= 1) || throw(err_prob)
