@@ -300,9 +300,8 @@ function sort_points(
     dimorder::AbstractVector{<:Integer} = 1:length(first(points(d))),
 )
     ordered_dims = 1:length(first(points(d)))
-    if sort(dimorder) != ordered_dims
-        throw(ArgumentError("dimorder must be a permutation of $(ordered_dims)"))
-    end
+    err_order = ArgumentError("dimorder must be a permutation of $(ordered_dims)")
+    sort(dimorder) == ordered_dims || throw(err_order)
     # note: no (deep)copies needed because indexing with `p` generates a copy
     dp = points(d)
     w = weights(d)
@@ -348,12 +347,10 @@ Return the convex combination ``α d_1 + (1-α) d_2``.
 The result is not simplified, hence its design points might not be unique.
 """
 function mixture(alpha::Real, d1::DesignMeasure, d2::DesignMeasure)
-    if length(points(d1)[1]) != length(points(d2)[1])
-        throw(ArgumentError("design points must have identical lengths"))
-    end
-    if alpha < 0 || alpha > 1
-        throw(ArgumentError("mixture weight must be between 0 and 1"))
-    end
+    err_length = ArgumentError("design points must have identical lengths")
+    length(first(points(d1))) == length(first(points(d2))) || throw(err_length)
+    err_weight = ArgumentError("mixture weight must be between 0 and 1")
+    0 <= alpha <= 1 || throw(err_weight)
     w = vcat(alpha .* weights(d1), (1 - alpha) .* weights(d2))
     dp = vcat(points(d1), points(d2))
     return DesignMeasure(dp, w)
