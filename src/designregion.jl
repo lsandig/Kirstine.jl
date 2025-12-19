@@ -35,9 +35,8 @@ struct DesignInterval{N} <: DesignRegion{N}
         lowerbound::NTuple{N,Float64},
         upperbound::NTuple{N,Float64},
     ) where N
-        if any(upperbound .<= lowerbound)
-            throw(ArgumentError("upper bounds must be strictly larger than lower bounds"))
-        end
+        err_bound = ArgumentError("upper bounds must be strictly larger than lower bounds")
+        all(upperbound .> lowerbound) || throw(err_bound)
         return new{N}(name, lowerbound, upperbound)
     end
 end
