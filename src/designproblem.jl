@@ -295,18 +295,15 @@ function objective!(
     # level calls may throw a PosDefException or a SingularException. This also means that
     # `d` can not be a solution to the maximization problem, hence we return negative
     # infinity in these cases.
-    pk = prior_knowledge(dp)
     try
         acc = 0.0
-        pk_w = weights(pk)
-        pk_p = parameters(pk)
-        for i in 1:length(pk_p)
-            average_fishermatrix!(wk.nw.r_x_r, wk.mw, weights(d), m, wk.c, pk_p[i])
+        w, p = weights(prior_knowledge(dp)), parameters(prior_knowledge(dp))
+        for i in 1:length(p)
+            average_fishermatrix!(wk.nw.r_x_r, wk.mw, weights(d), m, wk.c, p[i])
             informationmatrix!(wk.nw.r_x_r, normal_approximation(dp))
             wk.nw.r_is_inv = false
             apply_transformation!(wk.nw, transformation(dp), oc.tc[i])
-            acc +=
-                pk_w[i] * criterion_functional!(wk.nw.t_x_t, wk.nw.t_is_inv, criterion(dp))
+            acc += w[i] * criterion_functional!(wk.nw.t_x_t, wk.nw.t_is_inv, criterion(dp))
         end
         return acc
     catch e
@@ -327,14 +324,12 @@ function gateauxderivative!(
     m = model(dp)
     update_covariates!(wk.c, toward, m, covariate_parameterization(dp))
     update_model_workspace!(wk.mw, m, wk.c)
-    pk = prior_knowledge(dp)
     acc = 0.0
-    pk_w = weights(pk)
-    pk_p = parameters(pk)
-    for i in 1:length(pk_p)
-        average_fishermatrix!(wk.nw.r_x_r, wk.mw, weights(toward), m, wk.c, pk_p[i])
+    w, p = weights(prior_knowledge(dp)), parameters(prior_knowledge(dp))
+    for i in 1:length(p)
+        average_fishermatrix!(wk.nw.r_x_r, wk.mw, weights(toward), m, wk.c, p[i])
         informationmatrix!(wk.nw.r_x_r, normal_approximation(dp))
-        acc += pk_w[i] * gateaux_integrand(dc.gc.A[i], wk.nw.r_x_r, dc.gc.tr_B[i])
+        acc += w[i] * gateaux_integrand(dc.gc.A[i], wk.nw.r_x_r, dc.gc.tr_B[i])
     end
     return acc
 end
@@ -347,12 +342,12 @@ function sensitivity!(
 )
     update_covariates!(wk.c, toward, model(dp), covariate_parameterization(dp))
     update_model_workspace!(wk.mw, model(dp), wk.c)
-    pk_w, pk_p = weights(prior_knowledge(dp)), parameters(prior_knowledge(dp))
+    w, p = weights(prior_knowledge(dp)), parameters(prior_knowledge(dp))
     acc = 0.0
-    for i in 1:length(pk_p)
-        average_fishermatrix!(wk.nw.r_x_r, wk.mw, weights(toward), model(dp), wk.c, pk_p[i])
+    for i in 1:length(p)
+        average_fishermatrix!(wk.nw.r_x_r, wk.mw, weights(toward), model(dp), wk.c, p[i])
         informationmatrix!(wk.nw.r_x_r, normal_approximation(dp))
-        acc += pk_w[i] * sensitivity_integrand(dc.gc.A[i], wk.nw.r_x_r)
+        acc += w[i] * sensitivity_integrand(dc.gc.A[i], wk.nw.r_x_r)
     end
     return acc
 end
