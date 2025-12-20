@@ -71,12 +71,11 @@ This is a variant of the basic idea in [^YBT13].
         candidate::DesignMeasure,
         simplify_args::Td,
     ) where {Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,<:Any}}
-        steps < 1 && throw(ArgumentError("steps must be >= 1"))
-        if !(isnan(initial_weight) || 0 <= initial_weight < 1)
-            throw(ArgumentError("initial_weight must be in [0, 1) or NaN"))
-        end
-        gateaux_tolerance < 0 && throw(ArgumentError("gateaux_tolerance must be >= 0"))
-        new{Tod,Tow,Td}(
+        steps >= 1 || throw(ArgumentError("steps must be >= 1"))
+        err_weight = ArgumentError("initial_weight must be in [0, 1) or NaN")
+        isnan(initial_weight) || 0 <= initial_weight < 1 || throw(err_weight)
+        gateaux_tolerance >= 0 || throw(ArgumentError("gateaux_tolerance must be >= 0"))
+        return new{Tod,Tow,Td}(
             optimizer_direction,
             optimizer_weight,
             steps,
