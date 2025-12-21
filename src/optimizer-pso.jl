@@ -47,9 +47,8 @@ Construction from the vector of `prototypes` proceeds as follows:
     function Pso(iterations::Integer, swarmsize::Integer, c1::Real, c2::Real)
         iterations <= 0 && throw(ArgumentError("number of iterations must be positive"))
         swarmsize <= 1 && throw(ArgumentError("swarmsize must be at least 2"))
-        if c1 < 0 || c2 < 0 || c1 + c2 <= 4
-            throw(ArgumentError("c1 and c2 must be nonnegative, and c1 + c2 > 4"))
-        end
+        err_c1c2 = ArgumentError("c1 and c2 must be nonnegative, and c1 + c2 > 4")
+        (c1 < 0 || c2 < 0 || c1 + c2 <= 4) && throw(err_c1c2)
         return new(iterations, swarmsize, c1, c2)
     end
 end
