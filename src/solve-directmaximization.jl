@@ -108,7 +108,6 @@ function solve_with(
     trace_state::Bool,
 )
     (; optimizer, prototype, fixedpoints, fixedweights) = strategy
-    K = numpoints(prototype)
     cstr = DesignConstraints(prototype, region(adp), fixedweights, fixedpoints)
     !all(cstr.fixp) && error("only implemented for fixed points")
     oc = objective_constants(adp)

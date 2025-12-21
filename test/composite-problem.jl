@@ -44,7 +44,8 @@ include("example-compartment.jl")
             @test_throws "must match number" CompositeDesignProblem([dp1, dp2], [0.5])
             @test_throws "must match number" CompositeDesignProblem([dp1], [0.5, 2])
             @test_throws "identical regions" CompositeDesignProblem([dp1, dp2], [0.5, 2])
-            @test_throws "non-negative" CompositeDesignProblem([dp1, dp3], [0.5, -1])
+            @test_throws "nonnegative" CompositeDesignProblem([dp1, dp3], [0.5, -1])
+            @test_throws "empty" CompositeDesignProblem(DesignProblem[], Float64[])
 
             cdp1 = CompositeDesignProblem([dp1, dp3], [0.5, 2])
             # Note: this nested construction implicitly tests region(::CompositeDesignProblem).

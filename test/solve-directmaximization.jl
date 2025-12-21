@@ -67,7 +67,7 @@ include("example-emax.jl")
             @test all(map(d -> all(weights(d) .≈ 1 / 3), design_trace))
             @test all(lower_dp_vals .== lowerbound(region(dp))[1])
             @test all(upper_dp_vals .== upperbound(region(dp))[1])
-            # non-fixed design point converges to 2.5
+            # nonfixed design point converges to 2.5
             @test issorted(middle_dp_dists, rev = true)
             # total runtime can be accessed
             @test total_runtime(r1) > 0

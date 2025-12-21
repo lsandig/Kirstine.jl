@@ -10,9 +10,8 @@ struct SignedMeasure <: AbstractPointDifference
     atoms::Matrix{Float64}
     weights::Vector{Float64}
     function SignedMeasure(atoms::AbstractMatrix{<:Real}, weights::AbstractVector{<:Real})
-        if length(weights) != size(atoms, 2)
-            throw(ArgumentError("number of weights and atoms must be equal"))
-        end
+        err_length = ArgumentError("number of weights and atoms must be equal")
+        length(weights) == size(atoms, 2) || throw(err_length)
         return new(atoms, weights)
     end
 end
@@ -35,9 +34,8 @@ struct DesignConstraints{N,T<:DesignRegion{N}} <: AbstractConstraints
         fixw::AbstractVector{Bool},
         fixp::AbstractVector{Bool},
     ) where {N,T<:DesignRegion{N}}
-        if length(fixw) != length(fixp)
-            throw(DimensionMismatch("fix vectors must have identical lengths"))
-        end
+        err_dim = DimensionMismatch("fix vectors must have identical lengths")
+        length(fixw) == length(fixp) || throw(err_dim)
         # Fixing all weights but one is mathematically equivalent to fixing them all.
         # For numerical stability and identical program behavior in both cases
         # it is better to explicitly fix them all.
@@ -63,18 +61,6 @@ function DesignConstraints(
     fixw = [k in fixedweights for k in 1:numpoints(d)]
     fixp = [k in fixedpoints for k in 1:numpoints(d)]
     return DesignConstraints(dr, fixw, fixp)
-end
-
-function check_compatible(d::DesignMeasure, dr::DesignRegion{N}) where N
-    for dp in points(d)
-        msg_length = "design point length must match design region dimension"
-        length(dp) != N && throw(ArgumentError(msg_length))
-        if !isinside(dp, dr)
-            @error "" dp dr
-            throw(ArgumentError("design point is outside design region"))
-        end
-    end
-    return true
 end
 
 function assert_constraints(ds::AbstractVector{DesignMeasure}, c::DesignConstraints)
@@ -148,7 +134,7 @@ function fw_linear_maximization_oracle!(
     c::DesignConstraints,
 )
     !all(c.fixp) && error("only implemented for fixed points")
-    any(c.fixw) && error("only implemented for all weights non-fixed")
+    any(c.fixw) && error("only implemented for all weights nonfixed")
     v.weights .= 0
     v.weights[argmax(gx)] = 1
     return v
@@ -173,7 +159,7 @@ function fw_evaluate_linearization(
 end
 
 # Note: assumes that any fixed entries are identical for all design measures in qs.
-# This does _not_ handle non-convex design regions,
+# This does _not_ handle nonconvex design regions,
 # and does _not_ correct for numerical errors that might move the point outside of the region.
 function ap_convex_combination!(
     p::DesignMeasure,
@@ -181,16 +167,16 @@ function ap_convex_combination!(
     qs::AbstractVector{DesignMeasure},
     c::DesignConstraints,
 )
-    msg_length = "not the same number of points and weights"
-    length(alpha) == length(qs) || throw(ArgumentError(msg_length))
+    err_length = ArgumentError("not the same number of points and weights")
+    length(alpha) == length(qs) || throw(err_length)
     sum(alpha) ≈ 1.0 || throw(ArgumentError("sum(alpha) must be ≈ 1"))
     for k in 1:length(p.weights)
         if c.fixw[k]
             p.weights[k] = qs[1].weights[k]
         else
             p.weights[k] = 0
-            for i in 1:length(alpha)
-                p.weights[k] += alpha[i] * qs[i].weights[k]
+            for l in 1:length(alpha)
+                p.weights[k] += alpha[l] * qs[l].weights[k]
             end
             p.weights[k] = min(p.weights[k], 1.0)
         end
@@ -201,8 +187,8 @@ function ap_convex_combination!(
             points(p)[k] .= points(qs[1])[k]
         else
             points(p)[k] .= 0
-            for i in 1:length(alpha)
-                points(p)[k] .+= alpha[i] .* points(qs[i])[k]
+            for l in 1:length(alpha)
+                points(p)[k] .+= alpha[l] .* points(qs[l])[k]
             end
         end
     end
@@ -218,20 +204,20 @@ function ap_rand!(d::DesignMeasure, c::DesignConstraints)
     if !all(c.fixw)
         # Due to rounding errors, a sum > 1.0 can happen.
         # We need to prevent negative normalizing constants later on.
-        cum_sum_fix = min(1.0, sum(weights(d)[c.fixw]))
-        cum_sum_fix == 1.0 && @warn("fixed weights already sum to one")
-        # rationale for the weights: when no indices are fixed, re-normalized exponential
+        sum_fix = min(1.0, sum(weights(d)[c.fixw]))
+        sum_fix == 1.0 && @warn("fixed weights already sum to one")
+        # rationale for the weights: when no indices are fixed, renormalized exponential
         # weights imply a uniform distribution on the simplex, i.e. Dirichlet(1, …, 1).
-        cum_sum_rand = 0.0
-        while cum_sum_rand < eps() # we don't want to divide by too small numbers
+        sum_rand = 0.0
+        while sum_rand < eps() # we don't want to divide by too small numbers
             for k in 1:numpoints(d)
                 if !c.fixw[k]
                     d.weights[k] = -log(rand())
-                    cum_sum_rand += d.weights[k]
+                    sum_rand += d.weights[k]
                 end
             end
         end
-        norm_const = (1 - cum_sum_fix) / cum_sum_rand
+        norm_const = (1 - sum_fix) / sum_rand
         for k in 1:numpoints(d)
             if !c.fixw[k]
                 d.weights[k] *= norm_const
@@ -261,16 +247,6 @@ end
 
 function ap_as_difference(p::DesignMeasure)
     return SignedMeasure(deepcopy(p.points), deepcopy(p.weights))
-end
-
-function ap_dist(p::DesignMeasure, q::DesignMeasure)
-    # we iterate through the scalar elements of the matrix,
-    # hence we don't use the points() accessor!
-    ssq = mapreduce((x, y) -> (x - y)^2, +, p.points, q.points)
-    for k in 1:(length(p.weights) - 1)
-        ssq += (p.weights[k] - q.weights[k])^2
-    end
-    return sqrt(ssq)
 end
 
 function ap_rand!(v::SignedMeasure, lb::Real, ub::Real)
@@ -346,7 +322,7 @@ function move_handle_fixed!(
     #   sum(v.weights[.! fixw]) == 0.
     #
     # In oder not to prefer one direction over the others, we subtract the mean
-    # from every non-fixed element of v.weights.
+    # from every nonfixed element of v.weights.
     n_fixw = count(fixw)
     if n_fixw != K && fixw[K]
         mean_free = sum_vw_free / (K - n_fixw)

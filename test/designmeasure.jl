@@ -12,7 +12,7 @@ using Kirstine
         # inner constructor
         @test_throws "must be equal" DesignMeasure([[1], [2]], [0])
         @test_throws "identical lengths" DesignMeasure([[1], [2, 3]], [0.5, 0.5])
-        @test_throws "non-negative" DesignMeasure([[1], [2]], [-0.5, 1.5])
+        @test_throws "nonnegative" DesignMeasure([[1], [2]], [-0.5, 1.5])
         @test_throws "sum to one" DesignMeasure([[1], [2]], [0.1, 0.2])
 
         let pts = [[1], [42], [9]], d = DesignMeasure(pts, [0.2, 0.3, 0.5])
@@ -109,6 +109,19 @@ using Kirstine
         end
     end
 
+    @testset "check_compatible" begin
+        let dr1 = DesignInterval(:a => (0, 1)),
+            dr2 = DesignInterval(:a => (2, 3), :b => (4, 5)),
+            d1 = equidistant_design(dr1, 3),
+            d2 = one_point_design([1, 1]),
+            check = Kirstine.check_compatible
+
+            @test check(d1, dr1)
+            @test_throws "length must match" check(d1, dr2)
+            @test_throws "outside design region" (@test_warn "dp =" check(d2, dr2))
+        end
+    end
+
     @testset "==" begin
         let d1 = DesignMeasure([[1, 2], [3, 4]], [0.1, 0.9]),
             d2 = DesignMeasure([[3, 4], [1, 2]], [0.9, 0.1])
@@ -193,12 +206,14 @@ using Kirstine
             l2dist(x, y) = norm(x - y),
             l1dist(x, y) = norm(x - y, 1),
             infdist(x, y) = norm(x - y, Inf),
+            neg(x, y) = sum(y - x),
             shear(dp) = [dp[1], dp[1] + dp[2]]
 
             pdm1 = Kirstine.pairwise_distance_matrix(dps, identity, l2dist)
             pdm2 = Kirstine.pairwise_distance_matrix(dps, identity, l1dist)
             pdm3 = Kirstine.pairwise_distance_matrix(dps, shear, infdist)
 
+            @test_warn "negative" Kirstine.pairwise_distance_matrix(dps, identity, neg)
             @test pdm1 == [0 4 sqrt(85); 4 0 sqrt(85); sqrt(85) sqrt(85) 0]
             @test pdm2 == [0 4 11; 4 0 11; 11 11 0]
             @test pdm3 == [0 4 11; 4 0 7; 11 7 0]
@@ -264,6 +279,17 @@ using Kirstine
 
             @test d1 == dref
             @test d2 == dref
+        end
+
+        # merging points with 0 weight should not introduce NaNs
+        let d = DesignMeasure([[1], [2], [2.1]], [1, 0, 0]),
+            dr = DesignInterval(:a => (0, 10))
+
+            merged = simplify_merge(d, dr, 0.1)
+
+            @test !any(isnan, reduce(hcat, points(merged)))
+            # equal weights of 0 are treated the same as positive equal weights
+            @test first(points(merged)) == [2.05]
         end
     end
 

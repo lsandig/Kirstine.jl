@@ -82,7 +82,7 @@ end
             stepsize = OpenLoop(2),
             pairwise = false,
         )
-        @test_throws "fw_gap_tolerance must be non-negative" FrankWolfe(;
+        @test_throws "fw_gap_tolerance must be nonnegative" FrankWolfe(;
             iterations = 10,
             fw_gap_tolerance = -1,
             stepsize = OpenLoop(2),
@@ -119,7 +119,7 @@ end
             gx = g!(zeros(4), x),
             gx_tmp = fill(NaN, 4),
             c = BoxConstraints(Pnt(fill(-1, n)), Pnt(fill(10, n))),
-            w = Kirstine.AdaptiveWorkspace(NaN, x_tmp, d_tmp, gx_tmp, false)
+            w = Kirstine.AdaptiveWorkspace(NaN, NaN, x_tmp, d_tmp, gx_tmp, 0, false)
 
             res = Kirstine.fw_estimate_initial_smoothness!(g!, w, x, gx, d, c, 1)
 
@@ -216,7 +216,7 @@ end
             @test state.stepsize == 1
             @test state.fx == -1
             @test state.gx == [-8]
-            @test state.n_eval_f == 1
+            @test state.n_eval_f == 2
             @test state.n_eval_g == 1
             @test state.active_points_added == 1
             @test state.active_points_removed == 0
@@ -239,7 +239,7 @@ end
             @test state.v == Pnt([10, 0])
             @test state.stepsize ≈ 2 / 3
             @test state.x.x ≈ [20 / 3, 10 / 3]
-            @test state.n_eval_f == 2
+            @test state.n_eval_f == 3
             @test state.n_eval_g == 2
         end
     end
@@ -266,7 +266,7 @@ end
             # early termination
             r4 = Kirstine.optimize((f, g!), et, [prototype], constr2; trace_state = true)
 
-            @test !r1.has_converged # we compare with < against 0
+            @test !r1.has_converged
             @test r1.maximizer.x ≈ xstar rtol = 1e-4
             @test r1.maximum ≈ 0.0 atol = 1e-4
             @test length(r1.trace_gx) == 2000
@@ -286,13 +286,13 @@ end
             @test r3.maximum > r2.maximum
             @test r3.trace_state[end].frank_wolfe_gap < r2.trace_state[end].frank_wolfe_gap
             @test norm(r3.maximizer.x .- xstar) < norm(r2.maximizer.x .- xstar)
-            @test r3.trace_state[end].active_points_added == 7
+            @test r3.trace_state[end].active_points_added == 6
             @test r3.trace_state[end].active_points_removed == 3
             @test r3.trace_state[end].frank_wolfe_gap == 0
             # and even faster still with early termination
             @test r4.has_converged
             @test length(r4.trace_fx) == 44
-            @test r4.trace_state[end].frank_wolfe_gap < 1e-7
+            @test r4.trace_state[end].frank_wolfe_gap <= 1e-7
         end
     end
 end

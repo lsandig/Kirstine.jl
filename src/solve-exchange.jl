@@ -44,7 +44,7 @@ This is a variant of the basic idea in [^YBT13].
         This uses `optimizer_direction`,
         initialized with one-point prototypes at the [`points`](@ref) of the current `candidate`.
         See the low-level [`Optimizer`](@ref)s for algorithm-specific details.
-     4. If the maximum Gateaux derivative is smaller than `gateaux_tolerance`, stop early.
+     4. If the maximum Gateaux derivative is smaller than or equal to `gateaux_tolerance`, stop early.
      5. Append the single point of `d` to the support of the current `candidate`
         and give it `initial_weight`, scaling down the already existing by `1-initial_weight`.
         In the special case `initial_weight=NaN`,
@@ -59,7 +59,7 @@ This is a variant of the basic idea in [^YBT13].
     !!! note
 
         Before version 0.8.0 of Kirstine.jl,
-        the order of the re-weighting step and the derivative-maximizing step were swapped
+        the order of the reweighting step and the derivative-maximizing step were swapped
         and `initial_weight = NaN` had been hard-coded
     """
     function Exchange(
@@ -71,12 +71,11 @@ This is a variant of the basic idea in [^YBT13].
         candidate::DesignMeasure,
         simplify_args::Td,
     ) where {Tod<:Optimizer,Tow<:Optimizer,Td<:AbstractDict{Symbol,<:Any}}
-        steps < 1 && throw(ArgumentError("steps must be >= 1"))
-        if !(isnan(initial_weight) || 0 <= initial_weight < 1)
-            throw(ArgumentError("initial_weight must be in [0, 1) or NaN"))
-        end
-        gateaux_tolerance < 0 && throw(ArgumentError("gateaux_tolerance must be >= 0"))
-        new{Tod,Tow,Td}(
+        steps >= 1 || throw(ArgumentError("steps must be >= 1"))
+        err_weight = ArgumentError("initial_weight must be in [0, 1) or NaN")
+        isnan(initial_weight) || 0 <= initial_weight < 1 || throw(err_weight)
+        gateaux_tolerance >= 0 || throw(ArgumentError("gateaux_tolerance must be >= 0"))
+        return new{Tod,Tow,Td}(
             optimizer_direction,
             optimizer_weight,
             steps,
@@ -123,7 +122,7 @@ optimization_results_direction(er::ExchangeResult) = er.ord
 """
     optimization_results_weight(er::Kirstine.ExchangeResult)
 
-Get the full [`OptimizationResult`](@ref)s from the re-weighting steps.
+Get the full [`OptimizationResult`](@ref)s from the reweighting steps.
 """
 optimization_results_weight(er::ExchangeResult) = return er.orw
 
@@ -148,7 +147,7 @@ end
 """
     total_runtime_weight(er::Kirstine.ExchangeResult)
 
-Get the total time spent during the re-weighting steps.
+Get the total time spent during the reweighting steps.
 """
 function total_runtime_weight(er::ExchangeResult)
     return mapreduce(or -> or.seconds_elapsed, +, er.orw)
@@ -183,31 +182,28 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
         return optimization_result(dmr)
     end
     function step_direction(candidate::DesignMeasure)
-        point_for_dim = first(points(strategy.candidate))
-        workspace_direction = allocate_workspace(one_point_design(point_for_dim), adp)
-        opds = map(one_point_design, points(candidate))
-        dc_direction = derivative_constants(candidate, adp)
-        fix_weights = DesignConstraints(region(adp), [true], [false])
-        gd = d -> gateauxderivative!(workspace_direction, d, adp, dc_direction)
-        optimizer = strategy.optimizer_direction
-        or = optimize(gd, optimizer, opds, fix_weights; trace_state = trace_state)
+        wk = allocate_workspace(one_point_design(first(points(strategy.candidate))), adp)
+        dc = derivative_constants(candidate, adp)
+        or = optimize(
+            d -> gateauxderivative!(wk, d, adp, dc),
+            strategy.optimizer_direction,
+            map(one_point_design, points(candidate)),
+            DesignConstraints(region(adp), [true], [false]);
+            trace_state = trace_state,
+        )
         return or
     end
-    function append_point(candidate::DesignMeasure, direction::DesignMeasure)
-        # The mass point of the direction can either be already in the support of the
-        # candidate, or it can be a new point. In the latter case, we simply append it the support with the given initial_weight used for mixing.
-        # In the former case, we don't want to scale the existing points unnecessarily for numerical reasons.
-        # Hence we append it with mixture weight 0 and use simplify_merge() to join it with the already existing point at the same location.
-        if !(only(points(direction)) in points(candidate))
-            if isnan(strategy.initial_weight)
-                mixture_weight = 1 / (1 + numpoints(candidate))
-            else
-                mixture_weight = strategy.initial_weight
-            end
-            candidate = mixture(1 - mixture_weight, candidate, direction)
-        else
-            candidate = simplify_merge(mixture(1, candidate, direction), region(adp), 0)
+    function append_point(candidate::DesignMeasure, toward::DesignMeasure)
+        # The mass point of the one-point design towards which the Gateaux derivative is
+        # maximal can either be already in the support of the candidate (then we don't have
+        # to do anything), or it can be new (then we append it to the support, with the
+        # indicated inital_weight).
+        if !(only(points(toward)) in points(candidate))
+            L = numpoints(candidate)
+            w = isnan(strategy.initial_weight) ? 1 / (1 + L) : strategy.initial_weight
+            candidate = mixture(1 - w, candidate, toward)
         end
+        return candidate
     end
     function full_step(candidate::DesignMeasure, i::Integer)
         orw = try
@@ -230,7 +226,7 @@ function solve_with(adp::AbstractDesignProblem, strategy::Exchange, trace_state:
             e isa SingularException ? error(msg) : rethrow(e)
         end
         candidate = append_point(candidate, ord.maximizer)
-        return orw, ord, ord.maximum < strategy.gateaux_tolerance, candidate
+        return orw, ord, ord.maximum <= strategy.gateaux_tolerance, candidate
     end
     i = 1
     orw, ord, is_close_enough, candidate = full_step(strategy.candidate, i)

@@ -46,26 +46,13 @@ include("example-compartment.jl")
             @test m1 == [1;;]
             @test m2 == [1 2; 2 3]
             @test m3 == [1 2 3; 2 4 5; 3 5 6]
+            @test_throws "square" Kirstine.mirror_to_lower_triangle!([1 2 3; 4 5 6])
         end
     end
 
     @testset "opnorm1_sym_u" begin
         let A = randn(3, 3)
             @test opnorm(Symmetric(A), 1) == Kirstine.opnorm1_sym_u(A)
-        end
-    end
-
-    @testset "informationmatrix!" begin
-        # The `FisherMatrix` normal approximation should just give the average Fisher
-        # information matrix as NIM.
-        let _ = seed!(1234),
-            afm = rand(3, 3),
-            afm_copy = deepcopy(afm),
-            na = FisherMatrix(),
-            res = Kirstine.informationmatrix!(afm, na)
-
-            @test res === afm
-            @test res == afm_copy
         end
     end
 
@@ -82,7 +69,7 @@ include("example-compartment.jl")
             @test res ≈ ref
         end
 
-        # vector unit with non-constant covariance
+        # vector unit with nonconstant covariance
         let d = DesignMeasure([5] => 0.25, [20] => 0.75),
             m = VUMod(0.1, 3),
             cp = EquiTime(),

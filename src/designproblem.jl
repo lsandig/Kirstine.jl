@@ -92,7 +92,7 @@ the corresponding field from `prototype` is copied instead.
 Note that the result does not share memory with `prototype`.
 
 This function is useful for constructing variations of a given problem
-without having to re-type a lot of code
+without having to retype a lot of code
 or having to write helper functions.
 
 # Examples
@@ -241,42 +241,35 @@ function objective_constants(dp::DesignProblem)
     return DPObjectiveConstants(tc)
 end
 
-function gateaux_constants(
-    d::DesignMeasure,
-    dp::DesignProblem{Tc,Tr,Tm,Tcp,Tp,Tt,Tn},
-) where {
-    Tc<:DesignCriterion,
-    Tr<:DesignRegion,
-    Tm<:Model,
-    Tcp<:CovariateParameterization,
-    Tp<:PriorSample,
-    Tt<:Transformation,
-    Tn<:NormalApproximation,
-}
-    (; dc, dr, m, cp, pk, trafo, na) = dp
-    t = codomain_dimension(trafo, pk)
-    r = parameter_dimension(pk)
-    numdraws = length(parameters(pk))
-    gc = GCPriorSample([zeros(r, r) for _ in 1:numdraws], zeros(numdraws))
-    mw = allocate_model_workspace(numpoints(d), m, pk)
-    nw = NIMWorkspace(r, t)
-    c = implied_covariates(d, m, cp)
-    tc = trafo_constants(trafo, pk)
-    gateaux_constants!(gc, mw, nw, c, dc, d, m, cp, pk, tc, na)
-    return gc
-end
-
 struct DPDerivativeConstants{Tgc<:GateauxConstants} <: DerivativeConstants
     gc::Tgc
 end
 
 function derivative_constants(at::DesignMeasure, dp::DesignProblem)
-    return DPDerivativeConstants(gateaux_constants(at, dp))
+    err_pktype = ErrorException("only implemented for PriorSample")
+    prior_knowledge(dp) isa PriorSample || throw(err_pktype)
+    t = codomain_dimension(transformation(dp), prior_knowledge(dp))
+    r = parameter_dimension(prior_knowledge(dp))
+    numdraws = length(parameters(prior_knowledge(dp)))
+    gc = gateaux_constants!(
+        GCPriorSample([zeros(r, r) for _ in 1:numdraws], zeros(numdraws)),
+        allocate_model_workspace(numpoints(at), model(dp), prior_knowledge(dp)),
+        NIMWorkspace(r, t),
+        implied_covariates(at, model(dp), covariate_parameterization(dp)),
+        criterion(dp),
+        at,
+        model(dp),
+        covariate_parameterization(dp),
+        prior_knowledge(dp),
+        trafo_constants(transformation(dp), prior_knowledge(dp)),
+        normal_approximation(dp),
+    )
+    return DPDerivativeConstants(gc)
 end
 
 function derivative_constants!(
     dc::DPDerivativeConstants,
-    w::DPWorkspace,
+    wk::DPWorkspace,
     d::DesignMeasure,
     dp::DesignProblem,
     oc::DPObjectiveConstants,
@@ -285,38 +278,32 @@ function derivative_constants!(
     pk = prior_knowledge(dp)
     cr = criterion(dp)
     na = normal_approximation(dp)
-    gateaux_constants!(dc.gc, w.mw, w.nw, w.c, cr, d, model(dp), cpar, pk, oc.tc, na)
+    gateaux_constants!(dc.gc, wk.mw, wk.nw, wk.c, cr, d, model(dp), cpar, pk, oc.tc, na)
     return dc
 end
 
 function objective!(
-    w::DPWorkspace,
+    wk::DPWorkspace,
     d::DesignMeasure,
     dp::DesignProblem,
     oc::DPObjectiveConstants,
 )
     m = model(dp)
-    update_covariates!(w.c, d, m, covariate_parameterization(dp))
-    update_model_workspace!(w.mw, m, w.c)
+    update_covariates!(wk.c, d, m, covariate_parameterization(dp))
+    update_model_workspace!(wk.mw, m, wk.c)
     # When the information matrix is singular, the objective function is undefined. Lower
     # level calls may throw a PosDefException or a SingularException. This also means that
     # `d` can not be a solution to the maximization problem, hence we return negative
     # infinity in these cases.
-    pk = prior_knowledge(dp)
     try
         acc = 0.0
-        pk_w = weights(pk)
-        pk_p = parameters(pk)
-        for i in 1:length(pk_p)
-            average_fishermatrix!(w.nw.r_x_r, w.mw, weights(d), m, w.c, pk_p[i])
-            informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
-            w.nw.r_is_inv = false
-            apply_transformation!(
-                w.nw,
-                transformation(dp),
-                trafo_jacobianmatrix_for_index(oc.tc, i),
-            )
-            acc += pk_w[i] * criterion_functional!(w.nw.t_x_t, w.nw.t_is_inv, criterion(dp))
+        w, p = weights(prior_knowledge(dp)), parameters(prior_knowledge(dp))
+        for i in 1:length(p)
+            average_fishermatrix!(wk.nw.r_x_r, wk.mw, weights(d), m, wk.c, p[i])
+            informationmatrix!(wk.nw.r_x_r, normal_approximation(dp))
+            wk.nw.r_is_inv = false
+            apply_transformation!(wk.nw, transformation(dp), oc.tc[i])
+            acc += w[i] * criterion_functional!(wk.nw.t_x_t, wk.nw.t_is_inv, criterion(dp))
         end
         return acc
     catch e
@@ -329,41 +316,38 @@ function objective!(
 end
 
 function gateauxderivative!(
-    w::DPWorkspace,
-    direction::DesignMeasure,
+    wk::DPWorkspace,
+    toward::DesignMeasure,
     dp::DesignProblem,
     dc::DPDerivativeConstants,
 )
     m = model(dp)
-    update_covariates!(w.c, direction, m, covariate_parameterization(dp))
-    update_model_workspace!(w.mw, m, w.c)
-    pk = prior_knowledge(dp)
+    update_covariates!(wk.c, toward, m, covariate_parameterization(dp))
+    update_model_workspace!(wk.mw, m, wk.c)
     acc = 0.0
-    pk_w = weights(pk)
-    pk_p = parameters(pk)
-    for i in 1:length(pk_p)
-        average_fishermatrix!(w.nw.r_x_r, w.mw, weights(direction), m, w.c, pk_p[i])
-        informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
-        acc += pk_w[i] * gateaux_integrand(dc.gc.A[i], w.nw.r_x_r, dc.gc.tr_B[i])
+    w, p = weights(prior_knowledge(dp)), parameters(prior_knowledge(dp))
+    for i in 1:length(p)
+        average_fishermatrix!(wk.nw.r_x_r, wk.mw, weights(toward), m, wk.c, p[i])
+        informationmatrix!(wk.nw.r_x_r, normal_approximation(dp))
+        acc += w[i] * gateaux_integrand(dc.gc.A[i], wk.nw.r_x_r, dc.gc.tr_B[i])
     end
     return acc
 end
 
 function sensitivity!(
-    w::DPWorkspace,
-    direction::DesignMeasure,
+    wk::DPWorkspace,
+    toward::DesignMeasure,
     dp::DesignProblem,
     dc::DPDerivativeConstants,
 )
-    update_covariates!(w.c, direction, model(dp), covariate_parameterization(dp))
-    update_model_workspace!(w.mw, model(dp), w.c)
-    pk_w, pk_p = weights(prior_knowledge(dp)), parameters(prior_knowledge(dp))
+    update_covariates!(wk.c, toward, model(dp), covariate_parameterization(dp))
+    update_model_workspace!(wk.mw, model(dp), wk.c)
+    w, p = weights(prior_knowledge(dp)), parameters(prior_knowledge(dp))
     acc = 0.0
-    dir_w = weights(direction)
-    for i in 1:length(pk_p)
-        average_fishermatrix!(w.nw.r_x_r, w.mw, dir_w, model(dp), w.c, pk_p[i])
-        informationmatrix!(w.nw.r_x_r, normal_approximation(dp))
-        acc += pk_w[i] * sensitivity_integrand(dc.gc.A[i], w.nw.r_x_r)
+    for i in 1:length(p)
+        average_fishermatrix!(wk.nw.r_x_r, wk.mw, weights(toward), model(dp), wk.c, p[i])
+        informationmatrix!(wk.nw.r_x_r, normal_approximation(dp))
+        acc += w[i] * sensitivity_integrand(dc.gc.A[i], wk.nw.r_x_r)
     end
     return acc
 end
@@ -486,7 +470,7 @@ See also the [mathematical background](math.md#Shannon-Information).
 function shannon_information(d::DesignMeasure, dp::DesignProblem, n::Integer)
     dpd = DesignProblem(dp; criterion = DCriterion())
     t = codomain_dimension(transformation(dp), prior_knowledge(dp))
-    return (t / 2) * (log(n) - 1 + log(2 * pi)) + 0.5 * objective(d, dpd)
+    return (t / 2) * (log(n) - 1 - log(2 * pi)) + 0.5 * objective(d, dpd)
 end
 
 function check_numerically_singular(d::DesignMeasure, dp::DesignProblem)

@@ -35,9 +35,8 @@ struct DesignInterval{N} <: DesignRegion{N}
         lowerbound::NTuple{N,Float64},
         upperbound::NTuple{N,Float64},
     ) where N
-        if any(upperbound .<= lowerbound)
-            throw(ArgumentError("upper bounds must be strictly larger than lower bounds"))
-        end
+        err_bound = ArgumentError("upper bounds must be strictly larger than lower bounds")
+        all(upperbound .> lowerbound) || throw(err_bound)
         return new{N}(name, lowerbound, upperbound)
     end
 end
@@ -141,9 +140,9 @@ function move_designpoint_how_far(dp, v, dr::DesignInterval{N}) where N
     ub = upperbound(dr)
     for j in 1:N
         # Intersect only if we would step outside when moving a distance of `t` along `v`.
-        # Do this for both bounds and set the new to to the minimum.
-        sl = dp[j] + t * v[j] > ub[j] ? (ub[j] - dp[j]) / v[j] : t
-        sr = dp[j] + t * v[j] < lb[j] ? (lb[j] - dp[j]) / v[j] : t
+        # Do this for both bounds and set the new to the minimum.
+        sl = dp[j] + t * v[j] < lb[j] ? (lb[j] - dp[j]) / v[j] : t
+        sr = dp[j] + t * v[j] > ub[j] ? (ub[j] - dp[j]) / v[j] : t
         t = min(sl, sr)
     end
     return t

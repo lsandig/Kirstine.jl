@@ -19,7 +19,7 @@ end
 
 @testset "optimizer-grid.jl" begin
     @testset "ProductGrid" begin
-        @test ProductGrid(4, 2) == ProductGrid{2}((4, 2))
+        @test ProductGrid(4, 2) == ProductGrid((4, 2))
         @test_throws "at least 2" ProductGrid(1, 2, 3)
     end
 

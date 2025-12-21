@@ -328,7 +328,7 @@ or choosing an unfilled marker shape.
 ```julia
 d = DesignMeasure([0 1 1.01 2], [0.1, 0.1, 0.7, 0.1])
 plot(d) # point at 1 not visible
-plot(sort_weights(d; rev = true)) # point at 1 visible, but legend re-ordered
+plot(sort_weights(d; rev = true)) # point at 1 visible, but legend reordered
 plot(d; markershape = :+) # all visible, but colors harder to distinguish
 ```
 

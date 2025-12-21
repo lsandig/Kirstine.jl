@@ -40,7 +40,7 @@ Compute Jacobian matrix of the mean function at `p`.
 # Implementation
 
 For user types `M <: Kirstine.NonlinearRegression`, `C <: Kirstine.Covariate`, and `P <: Kirstine.Parameter`,
-this should fill in the elements of the pre-allocated Jacobian matrix `jm`,
+this should fill in the elements of the preallocated Jacobian matrix `jm`,
 and finally return `jm`.
 
 Note that you are free how you map the partial derivatives to the columns of `jm`.
@@ -135,7 +135,7 @@ to the fields of a [`Covariate`](@ref) with the given `names`.
 This parameterization can be used with any [`Covariate`](@ref)
 that has only `Float64` fields.
 Note that the order of the `names`
-should match the the order of `dimnames(region(prob))` for the [`DesignProblem`](@ref)
+should match the order of `dimnames(region(prob))` for the [`DesignProblem`](@ref)
 in which `CopyTo` is used.
 No new method for [`map_to_covariate!`](@ref) needs to be implemented for user types
 since the package supplies a generic one that works with any [`Model`](@ref)
@@ -287,15 +287,14 @@ Further note that the `@simple_model` macro can be used together with,
 or independently of [`@simple_parameter`](@ref).
 """
 macro simple_model(name, covariate_field_names...)
+    err_nofields = ArgumentError("no covariate field names supplied")
+    !isempty(covariate_field_names) || throw(err_nofields)
     module_path = _kirstine_known_as(__module__)
     model_name = Symbol(string(name) * "Model")
     covariate_name = Symbol(string(name) * "Covariate")
-    if isempty(covariate_field_names)
-        throw(ArgumentError("no covariate field names supplied"))
-    end
     # programmatically build up the covariate struct definition
     covariate_fields = [Expr(:(::), fn, :Float64) for fn in covariate_field_names]
-    covariate_struct_expression = Expr(
+    covariate_struct = Expr(
         :struct,
         true, # mutable
         Expr(:<:, covariate_name, :($module_path.Covariate)),
@@ -314,7 +313,7 @@ macro simple_model(name, covariate_field_names...)
                     return new(sigma)
                 end
             end
-            $covariate_struct_expression
+            $covariate_struct
             function $module_path.unit_length(m::$model_name)
                 return 1
             end
@@ -389,14 +388,14 @@ macro simple_parameter(name, field_names...)
     end
     dim = length(field_names)
     par_fields = [Expr(:(::), fn, :Float64) for fn in field_names]
-    par_struct_expression = Expr(
+    par_struct = Expr(
         :struct,
         false, # immutable
         Expr(:<:, parameter_name, :($module_path.Parameter)),
         Expr(:block, par_fields...),
     )
     return esc(quote
-        @kwdef $par_struct_expression
+        @kwdef $par_struct
         $module_path.dimension(p::$parameter_name) = $dim
     end)
 end
@@ -416,7 +415,7 @@ function _path_to_module_dfs!(
 )
     # a module contains a reference to itself, marking it as visited prevents infinite recursion
     push!(visited, current)
-    # we need all = true here since a sub-module could be defined but not exported
+    # we need all = true here since a submodule could be defined but not exported
     names_of_submodules = filter(names(current; all = true, imported = true)) do name
         return isdefined(current, name) && getfield(current, name) isa Module
     end

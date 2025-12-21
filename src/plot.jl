@@ -31,7 +31,7 @@ end
 end
 
 @recipe function f(r::ExchangeResult)
-    layout --> @layout [derivative; objective]
+    layout --> @layout [panel_objective; panel_derivative]
     @series begin
         subplot := 1
         widen --> true
@@ -53,12 +53,10 @@ end
     maxmarkersize = 10,
 )
     N = length(points(d)[1])
-    if N != 1 && N != 2
-        throw(ArgumentError("only implemented for 1- or 2-dimensional design points"))
-    end
-    if minmarkersize > maxmarkersize
-        throw(ArgumentError("minmarkersize must be <= maxmarkersize"))
-    end
+    err_dim = ArgumentError("only implemented for 1- or 2-dimensional design points")
+    N == 1 || N == 2 || throw(err_dim)
+    err_markersize = ArgumentError("minmarkersize must be <= maxmarkersize")
+    minmarkersize <= maxmarkersize || throw(err_markersize)
     markersize --> permutedims(max.(minmarkersize, maxmarkersize .* sqrt.(weights(d))))
     # scatter each design point explicitly in its own series because grouping can't be used
     # in a recipe: https://github.com/JuliaPlots/Plots.jl/issues/1167
@@ -96,7 +94,7 @@ end
 
 struct DerivativePlot{N,Tdr<:DesignRegion{N}}
     dr::Tdr
-    marginal_grids::NTuple{N,Vector{Float64}}
+    mg::NTuple{N,Vector{Float64}}
     gd::Array{Float64,N}
 end
 
@@ -119,7 +117,7 @@ end
     yguide --> "Gateaux derivative"
     linecolor --> :black
     title --> "maximum: $(round(gd_max; sigdigits=3))"
-    return dplot.marginal_grids[1], dplot.gd
+    return dplot.mg[1], dplot.gd
 end
 
 @recipe function f(dplot::DerivativePlot{2,<:DesignRegion{2}})
@@ -137,7 +135,7 @@ end
     label := ""
     colorbar_title --> "Gateaux derivative"
     title --> "maximum: $(round(gd_max; sigdigits=3))"
-    return dplot.marginal_grids[1], dplot.marginal_grids[2], permutedims(dplot.gd)
+    return dplot.mg[1], dplot.mg[2], permutedims(dplot.gd)
 end
 
 """
@@ -218,12 +216,10 @@ function expected_function_graph_data(
     bands::Bool,
     probability::Real,
 )
-    if bands && any(weights(pk) .!= first(weights(pk)))
-        msg = "credibility bands are only implemented for uniform prior weights"
-        throw(ArgumentError(msg))
-    elseif probability < 0 || probability > 1
-        throw(ArgumentError("probability must be in in interval [0, 1]"))
-    end
+    msg_weight = "credible bands are only implemented for uniform prior weights"
+    !bands || allequal(weights(pk)) || throw(ArgumentError(msg_weight))
+    err_prob = ArgumentError("probability must be in interval [0, 1]")
+    (0 <= probability <= 1) || throw(err_prob)
     num_draws = length(weights(pk))
     fx = zeros(num_draws)
     fxm = zeros(length(x), numpoints(d))
@@ -276,9 +272,8 @@ end
     probability = 0.8,
 )
     (; f, g, h, x, d, m, cp, pk) = efplot
-    if minmarkersize > maxmarkersize
-        throw(ArgumentError("minmarkersize must be <= maxmarkersize"))
-    end
+    err_markersize = ArgumentError("minmarkersize must be <= maxmarkersize")
+    minmarkersize <= maxmarkersize || throw(err_markersize)
     fxm, fxl, fxu = expected_function_graph_data(f, x, d, m, cp, pk, bands, probability)
     if bands
         @series begin
@@ -349,7 +344,7 @@ the following things will be plotted:
 
 # Additional Keyword Arguments
 
-  - `bands::Bool=false`: plot point-wise credible bands.
+  - `bands::Bool=false`: plot pointwise credible bands.
     Currently only implemented for uniform `weights(d)`.
     Color and opacity can be controlled with the standard keyword arguments
     `fillcolor` and `fillalpha`.

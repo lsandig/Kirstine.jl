@@ -15,8 +15,8 @@ include("example-pnt.jl")
         @test_throws "must be positive" Pso(iterations = -1, swarmsize = 5, c1 = 3, c2 = 4)
         @test_throws "at least 2" Pso(iterations = 10, swarmsize = 1, c1 = 3, c2 = 4)
         @test_throws "c1 + c2 > 4" Pso(iterations = 10, swarmsize = 5, c1 = 1, c2 = 1)
-        @test_throws "non-negative" Pso(iterations = 10, swarmsize = 5, c1 = -1, c2 = 6)
-        @test_throws "non-negative" Pso(iterations = 10, swarmsize = 5, c1 = 6, c2 = -1)
+        @test_throws "nonnegative" Pso(iterations = 10, swarmsize = 5, c1 = -1, c2 = 6)
+        @test_throws "nonnegative" Pso(iterations = 10, swarmsize = 5, c1 = 6, c2 = -1)
     end
 
     @testset "optimizer_state" begin

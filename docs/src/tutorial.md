@@ -4,7 +4,7 @@
 check_results = true
 ```
 
-This vignette describes how to set up a simple non-linear regression model
+This vignette describes how to set up a simple nonlinear regression model
 in order to find a Bayesian D-optimal design for estimating the model parameter.
 
 ## Model
@@ -126,7 +126,7 @@ like the one in the [dose-dime-response example](dtr.md).)
 Next we implement the Jacobian matrix.
 We do this by defining a method for `Kirstine.jacobianmatrix!`
 that specializes on our newly defined model, covariate and parameter types.
-This method will later be called from the package internals with a pre-allocated matrix `jm`
+This method will later be called from the package internals with a preallocated matrix `jm`
 (of size `(1, 4)`).
 Now our job is to fill in the correct values:
 
@@ -155,7 +155,7 @@ but only its Jacobian matrix $\TotalDiff\MeanFunction$ with respect to $\Paramet
 !!! note
     
     The `jacobianmatrix!` function is the main place for achieving efficiency gains.
-    Note how we have re-arranged the derivatives
+    Note how we have rearranged the derivatives
     such that we compute the expensive exponentials only once.
     (We also follow [the conventions](https://docs.julialang.org/en/v1/manual/style-guide/#bang-convention)
     and also return the modified argument `jm`.)
@@ -259,7 +259,7 @@ nothing # hide
 
 The [`solve`](@ref) function returns two objects:
 
-  - `s1`: a slightly post-processed [`DesignMeasure`](@ref)
+  - `s1`: a slightly postprocessed [`DesignMeasure`](@ref)
   - `r1`: a [`Kirstine.DirectMaximizationResult`](@ref)
     that contains diagnostic information about the optimization run.
 
@@ -328,7 +328,7 @@ s2, r2 = solve(dp, strategy; maxweight = 1e-3, maxdist = 2e-2)
 The original, unsimplified solution can still be accessed at `solution(r2)`.
 
 In order to confirm that we have actually found the solution
-we visually check that the [Gateaux derivative](math.md#Gateaux-Derivative) is non-positive over the whole design region.
+we visually check that the [Gateaux derivative](math.md#Gateaux-Derivative) is nonpositive over the whole design region.
 In addition,
 the design points of the solution are indicated together with their weights.
 (The [`plot_gateauxderivative`](@ref) function has a keyword argument to configure the point labels.)
@@ -357,7 +357,7 @@ ef = plot_expected_function(
     prior_knowledge(dp);
     xguide = "dose",
     yguide = "response",
-    bands = true,              # prior credibility bands, by default 80%
+    bands = true,              # prior credible bands, by default 80%
 )
 savefig(ef, "tutorial-ef.png") # hide
 nothing # hide

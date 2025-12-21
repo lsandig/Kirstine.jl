@@ -20,7 +20,7 @@ Moreover, the finicky logic for moving around `DesignMeasures` is encapsulated,
 so your custom `Kirstine.Optimizer` subtype will only have to deal with `AbstractPoints`.
 The following example vignettes will show you how to implement
 
-  - a non-logarithmized determinant [design criterion](extend-criterion.md)
+  - a nonlogarithmized determinant [design criterion](extend-criterion.md)
   - an ellipsoidal [design region](extend-region.md)
   - a nonlinear logistic regression [model](extend-model.md)
   - a regularizing [normal approximation](extend-approximation.md)
@@ -29,7 +29,7 @@ The following example vignettes will show you how to implement
 
 !!! warning
     
-    Writing extensions necessarily involves working with non-exported functions.
+    Writing extensions necessarily involves working with nonexported functions.
     In addition to reading the vignettes linked above,
     it is recommended to also read the relevant parts of [the package sources](https://git.sr.ht/%7Elsandig/Kirstine.jl/tree/main/item/src/).
     While the [public API](api.md) will be kept stable between minor releases after v1.0,

@@ -42,7 +42,7 @@ and some calculations we arrive at
 ## Implementation
 
 First we introduce a new subtype of [`Kirstine.Model`](@ref),
-and a corresponding `ModelWorkspace` to hold the pre-allocated Jacobian matrix of the predictor.
+and a corresponding `ModelWorkspace` to hold the preallocated Jacobian matrix of the predictor.
 Then we implement a method for `average_fishermatrix!`
 that specializes on logistic regression models
 and returns the upper triangle of the averaged Fisher matrices.

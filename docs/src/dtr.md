@@ -7,7 +7,7 @@ check_results = true
 This vignette covers four advanced topics:
 
   - a two-dimensional[^2d] design region
-  - a non-trivial covariate parameterization
+  - a nontrivial covariate parameterization
   - vector units of observations
   - the exchange algorithm
 
@@ -212,7 +212,7 @@ There are two reason for this:
 
 If we want unique design measures,
 we must implement a method for the [`simplify_unique`](@ref) function,
-which should choose a stable representative for a non-unique design measure.
+which should choose a stable representative for a nonunique design measure.
 At the same time we should keep in mind numerical inaccuracies.
 One possibility is to
 
@@ -580,10 +580,10 @@ Looking at the optimization progress it seems that running with more iterations 
 We could try direct maximization again,
 this time with a prototype with more design points.
 But there is a smarter thing we can try instead.
-The [`Exchange`](@ref) algorithm can be understood as a kind of coordinate-wise infinite-dimensional gradient ascent,
+The [`Exchange`](@ref) algorithm can be understood as a kind of coordinatewise infinite-dimensional gradient ascent,
 since it basically alternates the following two actions
 
- 1. Re-optimize only the weights, then drop any points with zero weight.
+ 1. Reoptimize only the weights, then drop any points with zero weight.
 
  2. Find the point ``\DesignPoint ∈ \DesignRegion`` where the corresponding Gateaux derivative is largest
     and add it to the current design measure.

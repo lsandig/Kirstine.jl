@@ -11,18 +11,10 @@ mutable struct NIMWorkspace
     r_is_inv::Bool # r_x_r should be considered as inverted NIM
     t_is_inv::Bool # t_x_t should be considered as inverted tranformed NIM
     function NIMWorkspace(r::Integer, t::Integer)
-        if r < 1 || t < 1
-            throw(
-                ArgumentError("matrix dimensions must be positive, got (r, t) = ($r, $t)"),
-            )
-        end
+        err_dim = ArgumentError("matrix dimensions must be positive, got (r, t) = ($r, $t)")
+        (r >= 1 && t >= 1) || throw(err_dim)
         new(zeros(r, r), zeros(r, t), zeros(t, r), zeros(t, t), false, false)
     end
-end
-
-struct GCPriorSample <: GateauxConstants
-    A::Vector{Matrix{Float64}}
-    tr_B::Vector{Float64}
 end
 
 """
@@ -35,7 +27,7 @@ This function is useful for debugging.
 
 See also [`map_to_covariate!`](@ref).
 """
-function implied_covariates(d, m, cp)
+function implied_covariates(d::DesignMeasure, m::Model, cp::CovariateParameterization)
     K = numpoints(d)
     cs = [allocate_covariate(m) for _ in 1:K]
     update_covariates!(cs, d, m, cp)
@@ -57,21 +49,22 @@ end
 # Note: only the upper triangle of the symmetric matrix A needs to be filled out,
 # since `gateaux_integrand` uses `tr_prod` for the multiplication.
 # But producing a dense matrix does not hurt either.
-function gateaux_integrand(A::AbstractMatrix, nim_direction::AbstractMatrix, tr_B::Real)
-    return tr_prod(A, nim_direction, :U) - tr_B
+function gateaux_integrand(
+    A::AbstractMatrix{<:Real},
+    nim_toward::AbstractMatrix{<:Real},
+    tr_B::Real,
+)
+    return tr_prod(A, nim_toward, :U) - tr_B
 end
 
-function sensitivity_integrand(A::AbstractMatrix, nim_direction::AbstractMatrix)
-    return tr_prod(A, nim_direction, :U)
+function sensitivity_integrand(
+    A::AbstractMatrix{<:Real},
+    nim_toward::AbstractMatrix{<:Real},
+)
+    return tr_prod(A, nim_toward, :U)
 end
 
 ## normalized information matrix for θ ##
-
-# In the simplest case, the normalized information is just the Fisher information matrix
-# averaged wrt the design measure.
-function informationmatrix!(afm::AbstractMatrix{<:Real}, na::FisherMatrix)
-    return afm
-end
 
 # For debugging purposes, one will typically want to look at an information matrix
 # corresponding to a single parameter value, not to all thousands of them in a prior sample.
@@ -99,22 +92,17 @@ function informationmatrix(
     na::NormalApproximation,
 )
     c = implied_covariates(d, m, cp)
-    # Note: t = 1 is a dummy value, no trafo will be applied
-    nw = NIMWorkspace(dimension(p), 1)
     # wrapping `p` is a bit ugly here
     mw = allocate_model_workspace(numpoints(d), m, PriorSample([p]))
     update_model_workspace!(mw, m, c)
-    average_fishermatrix!(nw.r_x_r, mw, weights(d), m, c, p)
-    informationmatrix!(nw.r_x_r, na)
-    return Symmetric(nw.r_x_r)
+    nim = zeros(dimension(p), dimension(p))
+    informationmatrix!(average_fishermatrix!(nim, mw, weights(d), m, c, p), na)
+    return Symmetric(nim)
 end
 
 # We compare the reciprocal 1-norm condition number to machine epsilon.
 # This is also what the solve() function in R is doing with its default tol argument.
-# Note: this implicitly computes an SVD, so it is relatively expensive!
-function is_numerically_singular(m::AbstractMatrix)
-    return inv(cond(m, 1)) < eps(Float64)
-end
+is_numerically_singular(m::AbstractMatrix{<:Real}) = inv(cond(m, 1)) < eps(Float64)
 
 """
     Kirstine.apply_transformation(nim::AbstractMatrix{<:Real}, p::Kirstine.Parameter, trafo::Kirstine.Transformation)
@@ -138,12 +126,8 @@ function apply_transformation(
     nw = NIMWorkspace(r, t)
     nw.r_x_r .= M
     nw.r_is_inv = false
-    apply_transformation!(nw, trafo, trafo_jacobianmatrix_for_index(tc, 1))
-    if nw.t_is_inv
-        return inv(Symmetric(nw.t_x_t))
-    else
-        return Symmetric(deepcopy(nw.t_x_t))
-    end
+    apply_transformation!(nw, trafo, tc[1])
+    return nw.t_is_inv ? inv(Symmetric(nw.t_x_t)) : Symmetric(deepcopy(nw.t_x_t))
 end
 
 ## normalized information matrix for T(θ) ##
@@ -219,7 +203,7 @@ end
 # triangle is used. In the process, `A` is overwritten by its upper Cholesky factor.
 # See also
 # https://netlib.org/lapack/explore-html/d8/d6c/group__variants_p_ocomputational_ga2f55f604a6003d03b5cd4a0adcfb74d6.html
-function log_det!(A::AbstractMatrix)
+function log_det!(A::AbstractMatrix{<:Real})
     potrf!('U', A)
     acc = 0.0
     for i in 1:size(A, 1)
@@ -256,14 +240,15 @@ function tr_prod(A::AbstractMatrix, B::AbstractMatrix, uplo::Symbol)
     return acc
 end
 
-function mirror_to_lower_triangle!(m::AbstractMatrix)
-    n = size(m, 1) # Note: we assume m to be square
+function mirror_to_lower_triangle!(A::AbstractMatrix)
+    n = size(A, 1)
+    n == size(A, 2) || throw(ArgumentError("matrix must be square"))
     for j in 1:(n - 1)
         for i in (j + 1):n
-            m[i, j] = m[j, i]
+            A[i, j] = A[j, i]
         end
     end
-    return m
+    return A
 end
 
 function opnorm1_sym_u(A::AbstractMatrix{Float64})
@@ -331,30 +316,30 @@ end
 """
     gateauxderivative(
         at::DesignMeasure,
-        directions::AbstractArray{DesignMeasure},
+        towards::AbstractArray{DesignMeasure},
         dp::DesignProblem,
     )
 
-The directions are allowed to have different numbers of points.
+The designs towards which we compute the derivative are allowed to have different numbers of points.
 
 See also the [mathematical background](math.md#Gateaux-Derivative).
 """
 function gateauxderivative(
     at::DesignMeasure,
-    directions::AbstractArray{DesignMeasure},
+    towards::AbstractArray{DesignMeasure},
     adp::AbstractDesignProblem,
 )
-    ws = map(d -> allocate_workspace(d, adp), directions)
+    ws = map(d -> allocate_workspace(d, adp), towards)
     dc = try
         derivative_constants(at, adp)
     catch e
         if e isa SingularException
-            return fill(NaN, size(directions))
+            return fill(NaN, size(towards))
         else
             rethrow(e)
         end
     end
-    gd = map((w, d) -> gateauxderivative!(w, d, adp, dc), ws, directions)
+    gd = map((w, d) -> gateauxderivative!(w, d, adp, dc), ws, towards)
     return gd
 end
 
@@ -367,26 +352,20 @@ function gd_grid_helper(
     # Compute Gateaux derivative on a grid over the bounding box of dr.
     # Evaluate it only on those points that are inside and fill the rest with NaN.
     dim_dr = dimension(region(adp))
-    if N != dim_dr
-        msg = "length(n_grid) must match dimension of design region, here $dim_dr"
-        throw(ArgumentError(msg))
-    end
-    if any(n_grid .< 2)
-        throw(ArgumentError("n_grid must be .>= 2"))
-    end
-    dr = region(adp)
-    mg = marginal_grids(dr, n_grid)
+    msg_dim = "length(n_grid) must match dimension of design region, here $dim_dr"
+    N == dim_dr || throw(ArgumentError(msg_dim))
+    all(n_grid .>= 2) || throw(ArgumentError("n_grid must be .>= 2"))
+    mg = marginal_grids(region(adp), n_grid)
     if N == 1 && include_1d_support
         append!(mg[1], Iterators.flatten(points(d)))
         sort!(mg[1])
     end
     product_dp_grid = collect.(Iterators.product(mg...))
-    inside_dr = isinside.(product_dp_grid, Ref(dr))
+    inside_dr = isinside.(product_dp_grid, Ref(region(adp)))
     gd_grid = fill(NaN, size(product_dp_grid))
     # note: indexing and array with another array produces a vector
-    directions = [one_point_design(dp) for dp in product_dp_grid[inside_dr]]
-    gd = gateauxderivative(d, directions, adp)
-    gd_grid[inside_dr] .= gd
+    towards = [one_point_design(dp) for dp in product_dp_grid[inside_dr]]
+    gd_grid[inside_dr] .= gateauxderivative(d, towards, adp)
     return mg, gd_grid
 end
 
@@ -397,8 +376,8 @@ end
         n_grid::Union{Integer,NTuple{N,Integer}}
     )
 
-Compute the maximal Gateaux derivative over a grid
-of one-point directions on the design region.
+Compute the maximal Gateaux derivative towards one-point designs
+from a grid over the design region.
 
 The dimension of the [`DesignRegion`](@ref) of `adp` must equal `N`.
 The number of points in each dimension of the grid is given by the elements of `n_grid`.
@@ -408,7 +387,7 @@ the grid is constructed on the region's bounding box
 and grid points outside the region will be ignored.
 
 Returns the maximum of the Gateaux derivative
-and the one-point design of the direction where the maximum is attained.
+and the one-point design towards which the maximum is attained.
 """
 function max_argmax_gateauxderivative(
     at::DesignMeasure,
@@ -449,7 +428,7 @@ end
 Return a tuple `(d, r)`.
 
   - `d`: The best [`DesignMeasure`](@ref) found.
-    As post-processing, [`simplify`](@ref) and [`sort_points`](@ref) are called.
+    As postprocessing, [`simplify`](@ref) and [`sort_points`](@ref) are called.
     Their respective keyword arguments can be mixed in `sargs`,
     since `solve` will take care to pass them along correctly.
 

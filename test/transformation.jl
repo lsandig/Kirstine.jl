@@ -22,7 +22,7 @@ include("test-noalloc.jl")
             D4 = DeltaMethod(p -> [1 2; 3 4; 5 6]),
             D5 = DeltaMethod(p -> [p.a 2*p.b; 3*p.a 6*p.b])
 
-            @test_throws "2 columns" Kirstine.trafo_constants(D1, pk)
+            @test_throws "return a matrix" Kirstine.trafo_constants(D1, pk)
             @test_throws "identical" Kirstine.trafo_constants(D2, pk)
             @test_warn "more rows than cols" Kirstine.trafo_constants(D4, pk)
             @test_warn "not full rank" Kirstine.trafo_constants(D5, pk)
@@ -76,7 +76,6 @@ include("test-noalloc.jl")
 
             we = (:warn, r"expensive")
             wa = (:warn, r"non-anonymous")
-
             @test_logs we Kirstine.codomain_dimension(trafo_function, pk)
             @test_logs we Kirstine.codomain_dimension(trafo_closure, pk)
             @test_logs we Kirstine.codomain_dimension(trafo_anonymous, pk)

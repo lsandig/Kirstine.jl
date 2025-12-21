@@ -81,7 +81,7 @@ function Kirstine.solve_with(
         strategy.fixedweights,
         strategy.fixedpoints,
     )
-    # set up pre-allocated objects for the objective function to work on
+    # set up preallocated objects for the objective function to work on
     oc = Kirstine.objective_constants(adp)
     w = Kirstine.allocate_workspace(strategy.prototype, adp)
     optimization_helper(prototype) = Kirstine.optimize(

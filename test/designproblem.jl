@@ -299,7 +299,7 @@ include("example-compartment.jl")
                 prior_knowledge = prior_knowledge(dp),
             ),
             d1 = DesignMeasure([0.2288] => 1 / 3, [1.3886] => 1 / 3, [18.417] => 1 / 3),
-            c = 3 / 2 * (log(2 * pi) - 1),
+            c = 3 / 2 * (-log(2 * pi) - 1),
             half_ob = 0.5 * 7.3887,
             si = shannon_information
 

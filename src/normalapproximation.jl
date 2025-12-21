@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## concrete types for normal approximation ##
@@ -14,3 +14,9 @@ respect to the design measure. Singular information matrices can occur.
 See also the [mathematical background](math.md#Objective-Function).
 """
 struct FisherMatrix <: NormalApproximation end
+
+# In the simplest case, the normalized information is just the Fisher information matrix
+# averaged wrt the design measure.
+function informationmatrix!(afm::AbstractMatrix{<:Real}, na::FisherMatrix)
+    return afm
+end

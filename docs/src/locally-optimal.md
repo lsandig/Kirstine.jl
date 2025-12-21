@@ -18,7 +18,7 @@ making locally optimal design a special case of Bayesian optimal design.
 
 ## Model Setup
 
-For simplicity, we re-use the dose-response model from the [tutorial](tutorial.md).
+For simplicity, we reuse the dose-response model from the [tutorial](tutorial.md).
 
 ```@example main
 using Kirstine, Random, Plots

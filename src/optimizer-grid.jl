@@ -38,17 +38,17 @@ ProductGrid{2}((5, 11))
 """
 struct ProductGrid{N} <: GridSpec
     n_points::NTuple{N,Int64}
-    function ProductGrid{N}(n_points::NTuple{N,Integer}) where N
-        msg_min_points = "need at least 2 points in each direction"
-        any(<(2), n_points) && throw(ArgumentError(msg_min_points))
+    function ProductGrid(n_points::NTuple{N,Integer}) where N
+        err_2_points = ArgumentError("need at least 2 points in each dimension")
+        all(>=(2), n_points) || throw(err_2_points)
         return new{N}(n_points)
     end
 end
 
 # The inner constructor for a one-dimensional product grid needs a 1-Tuple,
-# which is not very user friendly to type: `ProductGrid{1}((42,))`;
+# which is not very user friendly to type: `ProductGrid((42,))`;
 # hence we define a convenient outer splatting constructor for arbitrary dimensions.
-ProductGrid(n_points::Integer...) = ProductGrid{length(n_points)}(n_points)
+ProductGrid(n_points::Integer...) = ProductGrid(n_points)
 
 """
     GridSearch <: Kirstine.ZerothOrderOptimizer
@@ -58,10 +58,10 @@ A grid search optimizer.
 This optimizer is particularly useful for the direction-finding step in [`Exchange`](@ref),
 but can also be used for [`DirectMaximization`](@ref)
 as long as all weights of the candidate are fixed,
-and there are only few non-fixed design points.
+and there are only few nonfixed design points.
 Note that for `DirectMaximization`,
 the total number of grid points is exponential both in the dimension of the design region
-and in the number of non-fixed design points.
+and in the number of nonfixed design points.
 
 (Strictly speaking this optimizer is not particle-based,
 but it uses the same internal infrastructure.)

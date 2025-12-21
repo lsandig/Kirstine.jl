@@ -10,11 +10,14 @@ include("example-testpar.jl")
 @testset "priorknowledge.jl" begin
     @testset "PriorSample" begin
         # error handling in constructors
-        let pars = [TestPar2(1, 2), TestPar2(3, 4)]
+        let pars = [TestPar2(1, 2), TestPar2(3, 4)],
+            mixedpars = [TestPar3opt(1, 2, 3, false), TestPar3opt(1, 2, 3, true)]
+
             @test_throws "must be equal" PriorSample(pars, [0])
-            @test_throws "non-negative" PriorSample(pars, [-0.5, 1.5])
+            @test_throws "nonnegative" PriorSample(pars, [-0.5, 1.5])
             @test_throws "sum to one" PriorSample(pars, [0.5, 1.5])
             @test_throws "same concrete" PriorSample([TestPar2(1, 2), TestPar3(1, 2, 3)])
+            @test_throws "same dimension" PriorSample(mixedpars)
         end
 
         # constructor with default uniform weights

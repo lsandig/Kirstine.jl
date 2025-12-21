@@ -81,12 +81,12 @@ function optimize(
 )
     time_start = time()
     assert_constraints(prototypes, constraints)
+    is_first_order = optimizer isa FirstOrderOptimizer
     state = optimizer_state(f_or_f_g!, optimizer, prototypes, constraints)
     check_objective(state; only_warn = false, prefix = "iteration 1: ")
     t_x = [deepcopy(maximizer(state))]
     t_fx = [maximum(state)]
     t_gx = Vector{Float64}[]
-    is_first_order = optimizer isa FirstOrderOptimizer
     if is_first_order
         check_gradient(state; only_warn = false, prefix = "iteration 1: ")
         push!(t_gx, deepcopy(gradient(state)))
@@ -132,6 +132,7 @@ function Base.show(
     println(io, "* objective evaluations: ", r.n_eval_f)
     println(io, "* gradient evaluations: ", r.n_eval_g)
     println(io, "* elapsed time: ", prettydifftime(r.seconds_elapsed))
+    println(io, "* converged: ", r.has_converged)
     println(io, "* traced states: ", length(r.trace_state))
     println(io, "* state type: ", S)
     println(io, "* maximum: ", r.maximum)
@@ -157,4 +158,3 @@ function ap_rand! end
 function ap_mul! end
 function ap_mul! end
 function ap_add! end
-function ap_dist end

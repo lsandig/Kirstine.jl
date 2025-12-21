@@ -36,7 +36,7 @@ struct DesignMeasure <: AbstractPoint
             throw(ArgumentError("number of weights and design points must be equal"))
         end
         if any(weights .< 0) || !(sum(weights) ≈ 1)
-            throw(ArgumentError("weights must be non-negative and sum to one"))
+            throw(ArgumentError("weights must be nonnegative and sum to one"))
         end
         new(points, weights)
     end
@@ -169,7 +169,6 @@ function equidistant_design(dr::DesignInterval{1}, K::Integer)
     return uniform_design(designpoints)
 end
 
-# Note: docstring for abstract type, implementation for subtypes
 """
     random_design(dr::Kirstine.DesignRegion, K::Integer)
 
@@ -178,9 +177,8 @@ Construct a random [`DesignMeasure`](@ref).
 The design points are drawn independently from the uniform distribution on the design region,
 and the weights drawn from the uniform distribution on a simplex.
 """
-function random_design(dr::DesignInterval{N}, K::Integer) where N
-    scl = upperbound(dr) .- lowerbound(dr)
-    dp = [lowerbound(dr) .+ scl .* rand(N) for _ in 1:K]
+function random_design(dr::DesignRegion{N}, K::Integer) where N
+    dp = [random_designpoint!(zeros(N), dr) for _ in 1:K]
     u = rand(K) # independent Uniform([0, 1])
     v = -log.(u) # independent Exp(1)
     w = v ./ sum(v) # Dirichlet(1, …, 1), i.e. uniform on simplex
@@ -250,6 +248,18 @@ function Base.show(io::IO, ::MIME"text/plain", d::DesignMeasure)
     print(io, ",\n)")
 end
 
+function check_compatible(d::DesignMeasure, dr::DesignRegion{N}) where N
+    for dp in points(d)
+        msg_length = "design point length must match design region dimension"
+        length(dp) != N && throw(ArgumentError(msg_length))
+        if !isinside(dp, dr)
+            @error "" dp dr
+            throw(ArgumentError("design point is outside design region"))
+        end
+    end
+    return true
+end
+
 """
     sort_points(d::DesignMeasure; rev = false, dimorder = 1:length(first(points(d))))
 
@@ -290,9 +300,8 @@ function sort_points(
     dimorder::AbstractVector{<:Integer} = 1:length(first(points(d))),
 )
     ordered_dims = 1:length(first(points(d)))
-    if sort(dimorder) != ordered_dims
-        throw(ArgumentError("dimorder must be a permutation of $(ordered_dims)"))
-    end
+    err_order = ArgumentError("dimorder must be a permutation of $(ordered_dims)")
+    sort(dimorder) == ordered_dims || throw(err_order)
     # note: no (deep)copies needed because indexing with `p` generates a copy
     dp = points(d)
     w = weights(d)
@@ -338,12 +347,10 @@ Return the convex combination ``α d_1 + (1-α) d_2``.
 The result is not simplified, hence its design points might not be unique.
 """
 function mixture(alpha::Real, d1::DesignMeasure, d2::DesignMeasure)
-    if length(points(d1)[1]) != length(points(d2)[1])
-        throw(ArgumentError("design points must have identical lengths"))
-    end
-    if alpha < 0 || alpha > 1
-        throw(ArgumentError("mixture weight must be between 0 and 1"))
-    end
+    err_length = ArgumentError("design points must have identical lengths")
+    length(first(points(d1))) == length(first(points(d2))) || throw(err_length)
+    err_weight = ArgumentError("mixture weight must be between 0 and 1")
+    0 <= alpha <= 1 || throw(err_weight)
     w = vcat(alpha .* weights(d1), (1 - alpha) .* weights(d2))
     dp = vcat(points(d1), points(d2))
     return DesignMeasure(dp, w)
@@ -352,25 +359,25 @@ end
 ## apportionment ##
 
 """
-    apportion(weights::AbstractVector{<:Real}, n::Integer)
+    apportion(w::AbstractVector{<:Real}, n::Integer)
 
-Find integers `a` with `sum(a) == n` such that `a ./ n` best approximates `weights`.
+Find integers `a` with `sum(a) == n` such that `a ./ n` best approximates the weights `w`.
 
 This is the efficient design apportionment procedure from Pukelsheim[^P06], p. 309.
 
 [^P06]: Friedrich Pukelsheim (2006). Optimal design of experiments. Wiley. [doi:10.1137/1.9780898719109](https://doi.org/10.1137/1.9780898719109)
 """
-function apportion(weights::AbstractVector{<:Real}, n::Integer)
+function apportion(w::AbstractVector{<:Real}, n::Integer)
     # Phase 1: initial multipliers
-    a = ceil.(Int64, (n - 0.5 * length(weights)) .* weights)
+    a = ceil.(Int64, (n - 0.5 * length(w)) .* w)
     # Phase 2: loop until discrepancy is zero
     discrepancy = sum(a) - n
     while discrepancy != 0
         if discrepancy < 0
-            j = argmin(a ./ weights)
+            j = argmin(a ./ w)
             a[j] += 1
         else # discrepancy > 0
-            k = argmax((a .- 1) ./ weights)
+            k = argmax((a .- 1) ./ w)
             a[k] -= 1
         end
         discrepancy = sum(a) - n
@@ -395,21 +402,16 @@ end
 Construct a new `DesignMeasure` where all design points with weights smaller than or equal to
 `maxweight` are removed.
 
-The vector of remaining weights is re-normalized.
+The vector of remaining weights is renormalized.
 """
 function simplify_drop(d::DesignMeasure, maxweight::Real)
     maxweight < 1 || throw(ArgumentError("maxweight must be < 1"))
-    if numpoints(d) == 1 # nothing to do for one-point-designs
-        return deepcopy(d) # return a copy for consistency
+    to_be_kept = weights(d) .> maxweight
+    ws = weights(d)[to_be_kept]
+    if !all(to_be_kept)
+        ws ./= sum(ws)
     end
-    enough_weight = weights(d) .> maxweight
-    if all(enough_weight)
-        return deepcopy(d)
-    end
-    dps = points(d)[enough_weight]
-    ws = weights(d)[enough_weight]
-    ws ./= sum(ws)
-    return DesignMeasure(dps, ws)
+    return DesignMeasure(points(d)[to_be_kept], ws)
 end
 
 """
@@ -501,7 +503,11 @@ function pairwise_distance_matrix(
     f::Function,
     distfun::Function,
 )
-    return map(p -> distfun(f(p[1]), f(p[2])), Iterators.product(dps, dps))
+    distmat = map(p -> distfun(f(p[1]), f(p[2])), Iterators.product(dps, dps))
+    if any(<(0), distmat)
+        @warn "distance matrix has negative elements" distmat
+    end
+    return distmat
 end
 
 # Note: design measure before functions for consistency with the design region variant
@@ -566,8 +572,6 @@ DesignMeasure(
 ```
 """
 function simplify_merge(d::DesignMeasure, f::Function, distfun::Function, maxdist::Real)
-    # nothing to do for one-point-designs, return a copy for consistency
-    numpoints(d) == 1 && return deepcopy(d)
     dps = collect.(points(d))
     ws = deepcopy(weights(d))
     cur_min_dist = 0
@@ -577,11 +581,16 @@ function simplify_merge(d::DesignMeasure, f::Function, distfun::Function, maxdis
         distmat = pairwise_distance_matrix(dps, f, distfun)
         distmat[diagind(distmat)] .= Inf
         cur_min_dist, idx = findmin(distmat) # i > j because rows vary fastest
-        i = idx[1]
-        j = idx[2]
+        i, j = Tuple(idx)
         if cur_min_dist <= maxdist
             w_new = ws[i] + ws[j]
-            dp_raw = (ws[i] .* dps[i] .+ ws[j] .* dps[j]) ./ w_new
+            if w_new > 0
+                dp_raw = (ws[i] .* dps[i] .+ ws[j] .* dps[j]) ./ w_new
+            else
+                # w_new = 0 implies ws[i] == ws[j] == 0,
+                # we treat this as the limit of equal weights that tend to zero
+                dp_raw = 0.5 .* dps[i] .+ 0.5 .* dps[j]
+            end
             dp_new = min.(max.(dps[i], dps[j]), max.(min.(dps[i], dps[j]), dp_raw))
             deleteat!(dps, (j, i))
             pushfirst!(dps, dp_new)
