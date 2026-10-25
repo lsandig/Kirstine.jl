@@ -119,8 +119,7 @@ function fw_norm(s::SignedMeasure)
 end
 
 function fw_gradient_length(d::DesignMeasure, c::DesignConstraints)
-    dim = length(first(points(d)))
-    return (numpoints(d) - sum(c.fixp)) * dim + numpoints(d) - sum(c.fixw)
+    return numpoints(d)
 end
 
 # Since we're only optimizing weights, our convex region is a probability simplex.
@@ -134,7 +133,6 @@ function fw_linear_maximization_oracle!(
     c::DesignConstraints,
 )
     !all(c.fixp) && error("only implemented for fixed points")
-    any(c.fixw) && error("only implemented for all weights nonfixed")
     v.weights .= 0
     v.weights[argmax(gx)] = 1
     return v

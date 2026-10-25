@@ -164,9 +164,9 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
             c2 = Kirstine.DesignConstraints(dr, fill(false, 3), fill(true, 3)),
             c3 = Kirstine.DesignConstraints(dr, [true, false, false], [false, true, true])
 
-            @test Kirstine.fw_gradient_length(d, c1) == 9
+            @test Kirstine.fw_gradient_length(d, c1) == 3
             @test Kirstine.fw_gradient_length(d, c2) == 3
-            @test Kirstine.fw_gradient_length(d, c3) == 4
+            @test Kirstine.fw_gradient_length(d, c3) == 3
         end
     end
 
@@ -191,7 +191,6 @@ Kirstine.isinside(dp, dr::UnitBall) = sum(dp .^ 2) <= 1
             @test points(v) == points(v_copy) # don't touch the points
             @test_noalloc $lmo!($v, $g, $c2)
             @test_throws "fixed points" lmo!(v, g, c1)
-            @test_throws "weights nonfixed" lmo!(v, g, c3)
         end
     end
 

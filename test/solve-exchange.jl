@@ -7,6 +7,7 @@ using Random: seed!
 using Kirstine
 
 include("example-emax.jl")
+include("example-dtr.jl")
 
 @testset "solve-exchange.jl" begin
     @testset "Exchange" begin
@@ -273,6 +274,44 @@ include("example-emax.jl")
                 (:error, r"singular exception in adaptive step-size computation"),
                 @test_throws Kirstine.AdaptiveStepsizeException solve(dp, str)
             )
+        end
+
+        # If a one-point design has an invertible information matrix (e.g., because the
+        # response is vector-valued), we should also be able to use it as a starting design
+        # for Exchange with Frank-Wolfe.
+        let p = DTRParameter(; a = 1, e = 0.1, e0 = 0, emax = 1, ec50 = 0.2),
+            dr = DesignInterval(:dose => (0, 1), :time => (0, 1)),
+            dop = uniform_design([[1, 0.05]]),
+            dp = DesignProblem(;
+                criterion = DCriterion(),
+                region = dr,
+                prior_knowledge = PriorSample([p]),
+                model = DTRMod(; sigma = 1, m = 10),
+                covariate_parameterization = EquidistantTimes(),
+            ),
+            pg = ProductGrid(11, 11),
+            str = Exchange(;
+                optimizer_weight = FrankWolfe(
+                    iterations = 10,
+                    stepsize = Adaptive(; initial_smoothness_estimate = 1),
+                    pairwise = true,
+                    fw_gap_tolerance = 0,
+                ),
+                optimizer_direction = GridSearch(; gridspec = pg),
+                candidate = dop,
+                steps = 1,
+                gateaux_tolerance = 0,
+                initial_weight = NaN,
+            )
+
+            sol, res = @test_logs(
+                (:info, "explicitly fixing implicitly fixed weight"),
+                solve(dp, str)
+            )
+
+            # If the search space has only one element, we should already have converged
+            # during setup.
+            @test optimization_results_weight(res)[1].has_converged
         end
     end
 end
