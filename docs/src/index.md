@@ -10,8 +10,7 @@ Markdown.MD("Version $(ver)")
 
 ## Project Status
 
-Beta.
-Mostly stable, breaking changes will be mostly cosmetic.
+Stable.
 
 ## Features
 
@@ -23,7 +22,7 @@ Mostly stable, breaking changes will be mostly cosmetic.
   - composite design problems
   - separation of design variables and model covariates
   - particle swarm optimization
-  - direct maximization and exchange algorithm
+  - direct maximization and exchange algorithm with Frank-Wolfe reweighting step
   - modular and extendable
   - minimal dependencies
 
@@ -74,7 +73,7 @@ There is also a separate repository with [additional examples](https://git.sr.ht
 ## License
 
 Kirstine.jl is free and open source software.
-The code is licensed under GPL-3.0 or later,
+The code (including the example code in the documentation) is licensed under GPL-3.0 or later,
 and the documentation under GFDL-1.3 or later.
 
 ## Citing
@@ -114,6 +113,13 @@ Kirstine.jl is an attempt to provide applied statisticians
 with a `Julia` package for optimal design in arbitrary nonlinear regression models.
 Its development goals are speed and modularity,
 as well as a small, stable and well-documented code base.
+
+To prevent potential confusion,
+note that Bayesian design here refers to designs for an objective function
+where the design criterion is integrated with respect to a prior distribution for the unknown model parameter.
+It does **not** refer to sequential adaptive design approaches
+or to regularization at the level of the information matrix,
+both of which are also sometimes called Bayesian.
 
 ## Contributing
 

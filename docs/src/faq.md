@@ -39,7 +39,7 @@ Feedback, ideas, and discussion on them are highly appreciated.
     that they use different optimization algorithms.
   - *Diagnostics.*
     Plots for high- and low-level optimizers.
-  - *Examples Repository.*
+  - [*Examples Repository.*](https://git.sr.ht/%7Elsandig/kirstine-examples)
     Collect further usage examples with more complicated models
     and reproduce already published results.
   - *Usability Improvements.*

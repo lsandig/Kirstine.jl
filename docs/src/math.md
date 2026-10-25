@@ -26,6 +26,7 @@ This page documents the notation for `Kirstine.jl`.
     
     For information on finding ``\MatDeriv{φ}{A}{·}`` for certain ``φ``,
     see the book by Magnus and Neudecker[^MN99].
+    (The overview chapter with the relevant definitions and concepts from the 2019 edition is freely available online [^MN19].)
   - The log-likelihood of a statistical model with
     observation ``\Unit``,
     covariate ``\Covariate``,
@@ -33,6 +34,7 @@ This page documents the notation for `Kirstine.jl`.
     is denoted ``\LogLikelihood(\Unit, \Covariate, \Parameter)``.
 
 [^MN99]: Jan R. Magnus and Heinz Neudecker (1999). Matrix differential calculus with applications in statistics and econometrics. Wiley. [doi:10.1002/9781119541219](https://doi.org/10.1002/9781119541219)
+[^MN19]: Jan R. Magnus and Heinz Neudecker (2019). Matrix differential calculus with applications in statistics and econometrics. Chapter 18. [mdc-ch18.pdf](https://web.archive.org/web/20250214133841/https://www.janmagnus.nl/misc/mdc-ch18.pdf)
 ## Design Problems
 
 A design problem is a tuple
