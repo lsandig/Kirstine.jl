@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2024,2025,2026 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## implement AbstractDesignProblem interface for CompositeDesignProblem ##
@@ -38,7 +38,7 @@ struct CompositeDesignProblem{T<:AbstractDesignProblem} <: AbstractDesignProblem
         err_neg = ArgumentError("problem weights must be nonnegative")
         all(>=(0), weights) || throw(err_neg)
         err_region = ArgumentError("all problems must have identical regions")
-        allequal(region, problems) || throw(err_region)
+        allequal(map(region, problems)) || throw(err_region)
         return new{eltype(problems)}(problems, weights)
     end
 end
