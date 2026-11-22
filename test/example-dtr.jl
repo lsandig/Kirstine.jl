@@ -54,6 +54,21 @@ function Kirstine.map_to_covariate!(c::DoseTimeCovariate, dp, m::DTRMod, cp::Cop
     return c
 end
 
+struct EquidistantTimes <: Kirstine.CovariateParameterization end
+
+function Kirstine.map_to_covariate!(
+    c::DoseTimeCovariate,
+    dp,
+    m::DTRMod,
+    cp::EquidistantTimes,
+)
+    c.dose = dp[1]
+    for i in 1:(m.m)
+        c.time[i] = (i - 1) * dp[2]
+    end
+    return c
+end
+
 function response(dose::Real, time::Real, p::DTRParameter)
     c = dose / (1 - p.e / p.a) * (exp(-time * p.e) - exp(-time * p.a))
     return p.e0 + p.emax * c / (p.ec50 + c)

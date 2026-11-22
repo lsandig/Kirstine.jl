@@ -37,6 +37,7 @@ we need to compute
 ```
 
 which can, for example, be accomplished with the rules for matrix differential calculus from [^MN99].
+(The overview chapter with the relevant definitions and concepts from the 2019 edition is freely available online [^MN19].)
 Plugging this into the [general expressions](math.md#Gateaux-Derivative) we obtain
 
 ```math
@@ -352,3 +353,4 @@ nothing # hide
 ![](extend-criterion-gd2.png)
 
 [^MN99]: Jan R. Magnus and Heinz Neudecker (1999). Matrix differential calculus with applications in statistics and econometrics. Wiley. [doi:10.1002/9781119541219](https://doi.org/10.1002/9781119541219)
+[^MN19]: Jan R. Magnus and Heinz Neudecker (2019). Matrix differential calculus with applications in statistics and econometrics. Chapter 18. [mdc-ch18.pdf](https://web.archive.org/web/20250214133841/https://www.janmagnus.nl/misc/mdc-ch18.pdf)

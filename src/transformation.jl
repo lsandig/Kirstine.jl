@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025,2026 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## concrete types for posterior transformations ##
@@ -103,7 +103,7 @@ function trafo_constants(trafo::DeltaMethod, pk::PriorSample)
     eltype(jm) <: Matrix || throw(err_eltype)
     r = parameter_dimension(pk)
     err_size = DimensionMismatch("trafo Jacobians must be identical in size")
-    allequal(size, jm) || throw(err_size)
+    allequal(map(size, jm)) || throw(err_size)
     # We know all elements of jm have identical sizes, so checking the first is enough
     nrow, ncol = size(jm[1])
     err_col = DimensionMismatch("trafo Jacobian must have $(r) columns, got $(ncol)")

@@ -2,7 +2,7 @@
 
 !!! note
     
-    Everything documented here is part of the API,
+    Everything documented here is part of the API
     (except for things that are explicitly declared experimental),
     including the names
     that are not exported but do have docstrings.

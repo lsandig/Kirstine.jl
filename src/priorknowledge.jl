@@ -1,4 +1,4 @@
-# SPDX-FileCopyrightText: 2023,2024,2025 Ludger Sandig <sandig@statistik.tu-dortmund.de>
+# SPDX-FileCopyrightText: 2023,2024,2025,2026 Ludger Sandig <sandig@statistik.tu-dortmund.de>
 # SPDX-License-Identifier: GPL-3.0-or-later
 
 ## concrete types for prior knowledge ##
@@ -22,7 +22,7 @@ struct PriorSample{T} <: PriorKnowledge{T}
         err_type = ArgumentError("parameters must all have the same concrete type")
         isconcretetype(T) || throw(err_type)
         err_dim = ArgumentError("parameters must all have the same dimension")
-        allequal(dimension, parameters) || throw(err_dim)
+        allequal(map(dimension, parameters)) || throw(err_dim)
         return new{T}(parameters, weights)
     end
 end
